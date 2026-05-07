@@ -1,6 +1,9 @@
 ---
 name: consult-the-expert
 description: Drafts a casual, context-rich message to consult a more experienced developer about a technical problem, decision, or blocker. Use when the user wants help framing a question for a senior teammate, mentor, or domain expert who has zero context on the project being worked on.
+metadata:
+  author: https://github.com/Jei-sKappa
+  version: 1.0.0
 ---
 
 # Consult the Expert
