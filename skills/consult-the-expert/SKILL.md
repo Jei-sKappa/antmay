@@ -3,7 +3,7 @@ name: consult-the-expert
 description: Drafts a casual, context-rich message to consult a more experienced developer about a technical problem, decision, or blocker. Use when the user wants help framing a question for a senior teammate, mentor, or domain expert who has zero context on the project being worked on.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Consult the Expert
@@ -41,6 +41,21 @@ The user is stuck on a technical problem, weighing a decision, or hitting a bloc
 - A ready-to-send message (chat/DM style)
 - Plain prose, short paragraphs, no headers, no bullet lists in the message itself
 - No artificial length cap — let the content determine the length
+
+## Workflow
+
+1. Read the user's problem description.
+2. Draft the message following the structure and guidelines above.
+3. Pipe it straight into the clipboard script via stdin — no temp file:
+
+   ```bash
+   python3 scripts/copy-to-clipboard.py <<'__consult-the-expert-skill_EOF__'
+   <drafted message here>
+   __consult-the-expert-skill_EOF__
+   ```
+
+   Use a quoted heredoc (`<<'__consult-the-expert-skill_EOF__'`) so backticks, `$`, and other shell metacharacters in the message are preserved verbatim. The sentinel is deliberately unusual so it won't appear at the start of a line inside the message and prematurely close the heredoc.
+4. Show the drafted message inline in chat so the user can review, and confirm the clipboard now holds it.
 
 ## When context is thin
 
