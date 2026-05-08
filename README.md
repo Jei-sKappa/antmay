@@ -13,3 +13,11 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 ```sh
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
+
+### [`meta-prompting`](./meta-prompting/SKILL.md)
+
+Refines a quickly written, unstructured draft prompt into a clean, self-contained version ready to feed to a fresh AI agent session, then copies the result to the system clipboard via a bundled Python script. Useful when you want to upgrade a draft prompt before kicking off a new AI conversation.
+
+```sh
+npx skills add Jei-sKappa/skills --skill meta-prompting
+```
