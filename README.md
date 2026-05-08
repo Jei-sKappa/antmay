@@ -14,18 +14,18 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
 
-### [`meta-prompting`](./meta-prompting/SKILL.md)
-
-Refines a quickly written, unstructured draft prompt into a clean, self-contained version ready to feed to a fresh AI agent session, then copies the result to the system clipboard via a bundled Python script. Useful when you want to upgrade a draft prompt before kicking off a new AI conversation.
-
-```sh
-npx skills add Jei-sKappa/skills --skill meta-prompting
-```
-
 ### [`report-to-the-owner`](./report-to-the-owner/SKILL.md)
 
 Drafts a casual, context-rich message to a code owner about something in their code that's blocking you — a bug, a missing capability, or a design that doesn't extend to a new use case — along with a proposed change. Useful when you've hit a blocker in code owned by another developer or team and want to hand off the work, not ask for advice.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill report-to-the-owner
+```
+
+### [`meta-prompting`](./meta-prompting/SKILL.md)
+
+Refines a quickly written, unstructured draft prompt into a clean, self-contained version ready to feed to a fresh AI agent session, then copies the result to the system clipboard via a bundled Python script. Useful when you want to upgrade a draft prompt before kicking off a new AI conversation.
+
+```sh
+npx skills add Jei-sKappa/skills --skill meta-prompting
 ```
