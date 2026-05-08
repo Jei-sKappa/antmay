@@ -16,7 +16,7 @@ npx skills add Jei-sKappa/skills --skill consult-the-expert
 
 ### [`brief-the-implementer`](./skills/brief-the-implementer/SKILL.md)
 
-Drafts a self-contained outcome briefing — the verdict, why, caveats, and next steps — that someone who wasn't part of the discussion can pick up and act on, then copies it to the system clipboard. Useful when you want to hand off the conclusion of a discussion (a decision, answer, diagnosis, or recommendation) to a separate context: a fresh AI session, a follow-up task, or a teammate catching up.
+Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on, then copies it to the system clipboard. Useful when you want to hand off the conclusion of a discussion (a decision, answer, diagnosis, or recommendation) to a separate context: a fresh AI session, a follow-up task, or a teammate catching up.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill brief-the-implementer

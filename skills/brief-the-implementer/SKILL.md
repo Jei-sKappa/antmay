@@ -1,9 +1,9 @@
 ---
 name: brief-the-implementer
-description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and next steps — that someone who wasn't part of the discussion can pick up and act on, then copies it to the system clipboard. Use when the user asks for a handoff, briefing, or paste-ready outcome to relay the conclusion of the current discussion to a separate context (a fresh AI session, a follow-up task, a teammate), says "brief this for the other session" / "wrap this up to paste back" / "pack the outcome", or invokes the brief-the-implementer skill explicitly.
+description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on, then copies it to the system clipboard. Use when the user asks for a handoff, briefing, or paste-ready outcome to relay the conclusion of the current discussion to a separate context (a fresh AI session, a follow-up task, a teammate), says "brief this for the other session" / "wrap this up to paste back" / "pack the outcome", or invokes the brief-the-implementer skill explicitly.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Brief the Implementer
@@ -29,7 +29,7 @@ The output is a markdown document with explicit headings. Use the section names 
 2. **Verdict** — the conclusion in 1–3 sentences. Front-loaded. If a reader stops after this section they should still know the bottom line.
 3. **Why** — the rationale: the reasoning that supports the verdict, alternatives weighed, why they lost. As long as needed; no padding.
 4. **Caveats** — known gotchas, edge cases, assumptions made, things that could invalidate the verdict. Bullet list.
-5. **Next steps** — concrete actions for the implementer, ordered. Bullet list. Imperative voice ("do X", not "you should do X").
+5. **Pointers** — suggestions, leads, and cues for the implementer to weigh: things worth checking, options to consider, questions to resolve before settling on an approach. Bullet list. Suggestive voice ("worth checking whether X", "consider Y") — not imperative. The implementer's session is where the *how* gets decided; this section feeds that discussion, it doesn't replace it. Omit the section if no useful leads came up.
 6. **Worth knowing** — bonus context that came up during the discussion that the asker didn't explicitly ask about but matters. Optional — omit the section entirely if nothing fits.
 
 ## Guidelines
@@ -38,8 +38,8 @@ The output is a markdown document with explicit headings. Use the section names 
 - Reference, don't duplicate. If the discussion produced or relied on a concrete artifact (a written plan, a PR, an ADR, a file in the repo, an issue link), point to it by path or URL — don't reproduce it inline. Saves the recipient's token budget and prevents drift.
 - Keep `Why` proportional to the surprise of the verdict. An obvious answer needs one line of justification; a counterintuitive one needs the full reasoning chain.
 - Be honest about caveats. If the verdict only holds under specific conditions, say so. If a discarded alternative had a real argument going for it, flag it. The recipient should be able to sanity-check the conclusion, not take it on faith.
-- Next steps are actions, not advice. "Run the migration on staging first" beats "you might want to consider running it on staging." The implementer needs a plan, not a discussion.
-- If the user passed an argument when invoking the skill, treat it as the focus the implementer cares about and weight `Next steps` and `Worth knowing` toward that focus. The other sections stay structured the same way.
+- Pointers are leads, not orders. Surface what the implementer should weigh — open questions, options worth considering, gotchas to watch for — but leave the actual "how" decisions to the next session. "Worth checking whether the migration can run online" beats "run the migration on staging first." The implementer needs the inputs to plan, not a plan baked in this session that may be poorly thought out.
+- If the user passed an argument when invoking the skill, treat it as the focus the implementer cares about and weight `Pointers` and `Worth knowing` toward that focus. The other sections stay structured the same way.
 
 ## Output format
 
@@ -66,4 +66,4 @@ The output is a markdown document with explicit headings. Use the section names 
 
 ## When context is thin
 
-Don't fabricate verdicts, rationale, caveats, or next steps. The skill packages a conclusion that already exists in the discussion — it doesn't manufacture one. If the current session hasn't actually reached a clear conclusion, say so: list what's still unresolved, what would need to be settled before a useful briefing could be written, and wait for the user to either continue the discussion or confirm a partial conclusion before drafting.
+Don't fabricate verdicts, rationale, caveats, or pointers. The skill packages a conclusion that already exists in the discussion — it doesn't manufacture one. If the current session hasn't actually reached a clear conclusion, say so: list what's still unresolved, what would need to be settled before a useful briefing could be written, and wait for the user to either continue the discussion or confirm a partial conclusion before drafting.
