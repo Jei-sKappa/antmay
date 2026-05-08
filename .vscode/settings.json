@@ -1,4 +1,10 @@
 {
   "conventionalCommits.gitmoji": false,
-  "conventionalCommits.promptFooter": false
+  "conventionalCommits.promptFooter": false,
+  "conventionalCommits.scopes": [
+    "brief-the-implementer",
+    "consult-the-expert",
+    "meta-prompting",
+    "report-to-the-owner"
+  ]
 }

@@ -67,8 +67,12 @@ Bump `version` in the frontmatter on any meaningful change to a skill's behavior
 1. Create `skills/<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`).
 2. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet.
 3. Register the skill folder in `.claude-plugin/marketplace.json` under the appropriate plugin's `skills` array as `./skills/<skill-name>` (default plugin: `JeisKappa-skills`).
+4. Add the skill's folder name to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
 
 ## Commits
 
 Never commit unless explicitly asked to do so.
-Make sure to follow the commit message guidelines of the project.
+
+This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(brief-the-implementer): …`, `fix(report-to-the-owner): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" above).
+
+Repo-wide changes (touching multiple skills, tooling under `tools/`, `bundled-scripts/`, `README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
