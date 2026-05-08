@@ -1,9 +1,9 @@
 ---
 name: meta-prompting
-description: Refines a quickly written, unstructured draft prompt into a clean, self-contained version ready to feed to a fresh AI agent session, then copies the result to the system clipboard. Use when the user wants to upgrade a draft prompt before kicking off a new AI conversation, says "meta-prompt this" / "improve this prompt for a new session", or invokes the meta-prompting skill explicitly.
+description: Refines a draft prompt for a fresh AI session. Use only when the user mentions "meta-prompt" or "meta-prompting" — do not infer the request from context.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Meta-Prompting
@@ -12,9 +12,9 @@ Take the user's raw prompt — usually quickly typed, possibly rambling, missing
 
 ## When to use
 
-The user has a draft prompt (often pasted in or just typed inline) and wants the refined version. Common cues: "meta-prompt this", "improve this prompt for a new session", "clean this up before I start a new chat", or an explicit skill invocation.
+Only when the user has explicitly asked to meta-prompt a draft or invoked this skill by name. Do not run it on your own initiative — a pasted-in draft, a rambling message, or a "before I start a new chat…" aside is **not** a trigger. Wait for the intent to be stated.
 
-The output is going to a *new* AI session with zero context. Whatever the user assumed in their head must end up explicitly written in the refined prompt, or the new session will flounder.
+When it does run, the output is going to a *new* AI session with zero context. Whatever the user assumed in their head must end up explicitly written in the refined prompt, or the new session will flounder.
 
 ## Principles
 
