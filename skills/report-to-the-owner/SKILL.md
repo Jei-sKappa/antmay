@@ -1,9 +1,9 @@
 ---
 name: report-to-the-owner
-description: Drafts a casual, context-rich message to a code owner about something in their code that's blocking the user — a bug, missing capability, or design that doesn't extend to a new use case — along with a proposed change. Use when the user has hit a blocker in code owned by another developer or team and wants to hand off the work, not ask for advice.
+description: Drafts a casual, context-rich message to a code owner about something in their code that's blocking the user — a bug, missing capability, or design that doesn't extend to a new use case — along with a proposed change. Use when the user has hit a blocker in code owned by another developer or team and explicitly wants to hand off the work, not ask for advice.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Report to the Owner
