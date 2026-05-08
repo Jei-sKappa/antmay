@@ -14,6 +14,14 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
 
+### [`brief-the-implementer`](./skills/brief-the-implementer/SKILL.md)
+
+Drafts a self-contained outcome briefing — the verdict, why, caveats, and next steps — that someone who wasn't part of the discussion can pick up and act on, then copies it to the system clipboard. Useful when you want to hand off the conclusion of a discussion (a decision, answer, diagnosis, or recommendation) to a separate context: a fresh AI session, a follow-up task, or a teammate catching up.
+
+```sh
+npx skills add Jei-sKappa/skills --skill brief-the-implementer
+```
+
 ### [`report-to-the-owner`](./skills/report-to-the-owner/SKILL.md)
 
 Drafts a casual, context-rich message to a code owner about something in their code that's blocking you — a bug, a missing capability, or a design that doesn't extend to a new use case — along with a proposed change. Useful when you've hit a blocker in code owned by another developer or team and want to hand off the work, not ask for advice.

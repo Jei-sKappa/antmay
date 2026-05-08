@@ -25,6 +25,7 @@ COPY_TO_CLIPBOARD_CONSUMERS=(
   "meta-prompting"
   "consult-the-expert"
   "report-to-the-owner"
+  "brief-the-implementer"
 )
 
 if [[ ! -f "$CANONICAL" ]]; then
