@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    {
+      "name": "JeisKappa-skills",
+      "source": "./",
+      "skills": [
+        "./consult-the-expert",
+        "./meta-prompting"
+      ]
+    }
+  ]
+}

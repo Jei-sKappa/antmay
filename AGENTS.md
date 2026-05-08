@@ -26,6 +26,7 @@ There is no build, test, or lint pipeline — this is a content repository. Vali
 
 - `<skill-name>/SKILL.md` — one directory per skill at the repo root. The directory name MUST match the `name:` field in the frontmatter.
 - `README.md` — index of available skills; update when adding/removing a skill.
+- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin so installs are grouped under a named heading (e.g. `JeisKappa Skills`) instead of `General` in `npx skills list`. Every skill folder MUST be listed in the appropriate plugin's `skills` array. To introduce a new group/heading, add another entry to the `plugins` array with its own `name` and `skills` list. Display rule: the CLI splits `name` on `-`, uppercases the first char of each segment, then joins with spaces — so `JeisKappa-skills` renders as `JeisKappa Skills`. Dashes cannot survive into the displayed title.
 
 ## SKILL.md format
 
@@ -50,6 +51,7 @@ Bump `version` in the frontmatter on any meaningful change to a skill's behavior
 
 1. Create `<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`).
 2. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet.
+3. Register the skill folder in `.claude-plugin/marketplace.json` under the appropriate plugin's `skills` array (default: `JeisKappa-skills`).
 
 ## Commits
 
