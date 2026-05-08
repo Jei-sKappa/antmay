@@ -1,9 +1,9 @@
 ---
 name: brief-the-implementer
-description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on, then copies it to the system clipboard. Use when the user asks for a handoff, briefing, or paste-ready outcome to relay the conclusion of the current discussion to a separate context (a fresh AI session, a follow-up task, a teammate), says "brief this for the other session" / "wrap this up to paste back" / "pack the outcome", or invokes the brief-the-implementer skill explicitly.
+description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Use when the user wants the conclusion of the current discussion packaged as a paste-ready handoff for a separate context — a fresh AI session, a follow-up task, or a teammate catching up.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.3.0
 ---
 
 # Brief the Implementer
