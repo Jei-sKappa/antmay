@@ -5,7 +5,8 @@
       "source": "./",
       "skills": [
         "./consult-the-expert",
-        "./meta-prompting"
+        "./meta-prompting",
+        "./report-to-the-owner"
       ]
     }
   ]

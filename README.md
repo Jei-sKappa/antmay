@@ -21,3 +21,11 @@ Refines a quickly written, unstructured draft prompt into a clean, self-containe
 ```sh
 npx skills add Jei-sKappa/skills --skill meta-prompting
 ```
+
+### [`report-to-the-owner`](./report-to-the-owner/SKILL.md)
+
+Drafts a casual, context-rich message to a code owner about something in their code that's blocking you — a bug, a missing capability, or a design that doesn't extend to a new use case — along with a proposed change. Useful when you've hit a blocker in code owned by another developer or team and want to hand off the work, not ask for advice.
+
+```sh
+npx skills add Jei-sKappa/skills --skill report-to-the-owner
+```
