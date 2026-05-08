@@ -4,9 +4,9 @@
       "name": "JeisKappa-skills",
       "source": "./",
       "skills": [
-        "./consult-the-expert",
-        "./meta-prompting",
-        "./report-to-the-owner"
+        "./skills/consult-the-expert",
+        "./skills/meta-prompting",
+        "./skills/report-to-the-owner"
       ]
     }
   ]
