@@ -37,3 +37,11 @@ Refines a quickly written, unstructured draft prompt into a clean, self-containe
 ```sh
 npx skills add Jei-sKappa/skills --skill meta-prompting
 ```
+
+### [`afk-exploration`](./skills/afk-exploration/SKILL.md)
+
+Researches a rough idea autonomously — new project, new feature, or bug fix — and writes a folder of research notes that lay the groundwork for a spec. Useful when you have a rough idea and are stepping away from the computer (cooking, errands, away from keyboard) and want the agent to develop it further unattended, so you return to a populated knowledge base instead of a stalled chat.
+
+```sh
+npx skills add Jei-sKappa/skills --skill afk-exploration
+```

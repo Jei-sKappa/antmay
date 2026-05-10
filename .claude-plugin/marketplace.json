@@ -4,6 +4,7 @@
       "name": "JeisKappa-skills",
       "source": "./",
       "skills": [
+        "./skills/afk-exploration",
         "./skills/brief-the-implementer",
         "./skills/consult-the-expert",
         "./skills/meta-prompting",

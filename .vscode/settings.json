@@ -2,6 +2,7 @@
   "conventionalCommits.gitmoji": false,
   "conventionalCommits.promptFooter": false,
   "conventionalCommits.scopes": [
+    "afk-exploration",
     "brief-the-implementer",
     "consult-the-expert",
     "meta-prompting",
