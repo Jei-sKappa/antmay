@@ -122,13 +122,13 @@ Send a message to the user (under 10 lines): the run folder path, the list of an
 
 ## Choosing research angles
 
-Pick the ones that earn their slot for *this* request. Don't run every item.
+The catalog below is a starting point, not a checklist. Pick the angles that earn their slot for *this* request — choose from the catalog, invent fresh angles the catalog doesn't list, or mix both. Never run an angle just because it appears here, and never feel limited to what's listed when the request calls for something else.
 
 - **New project** — prior art and existing solutions; target users and core use cases; technical stack candidates; MVP scope and what to defer; risks and unknowns; architectural sketch.
 - **Feature in an existing project** — current architecture and integration points; data model and migration impact; UX surface and existing patterns to mirror; edge cases and failure modes; alternative designs; observability and rollback story.
 - **Bug fix** — reproducer and minimal failing case; root-cause hypotheses; blast radius and affected code paths; existing tests in the area; fix candidates with trade-offs; regression risk and required new coverage.
 
-When the trigger is ambiguous, pick the closest category and note the choice under `Assumptions` in the brief.
+When the trigger is ambiguous, pick the closest category as a starting point and note the choice under `Assumptions` in the brief. Borrow angles from another category, or invent fresh ones, whenever the request calls for them.
 
 ## Subagent briefs
 
