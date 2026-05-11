@@ -3,7 +3,7 @@ name: afk-exploration
 description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # AFK Exploration
@@ -37,6 +37,7 @@ A run folder under a project-scoped tree:
 │   ├── 2026-05-10_01/                # one folder per run; date + per-day index
 │   │   ├── .metadata.json            # started_at, budget_seconds, topic, request
 │   │   ├── 00-brief.md               # human-readable framing; no time data
+│   │   ├── workflow-notes.md         # append-only journal of orchestrator decisions
 │   │   ├── 01-<angle>.md             # initial research note (subagent)
 │   │   ├── 01-<angle>-pre-mortem.md  # critique: failure narratives
 │   │   ├── 01-<angle>-red-team.md    # critique: adversarial attack vectors
@@ -54,6 +55,7 @@ Why this shape:
 - **Project-scoped**: research lives next to the code it concerns, so it's discoverable from inside the project later.
 - **Topic-numbered**: `0001`, `0002`, … sort topics by creation order at a glance.
 - **Date + per-day run-index**: multiple runs on the same topic in a day are distinguishable; runs sort chronologically.
+- **Decision journal**: `workflow-notes.md` is an append-only log of the orchestrator's choices — which angles were picked at Phase 2, what each Phase 6 clock check decided (continue or wrap, which moves, picked or invented), and the rationale. The user can audit the run's choices without reading the research notes themselves.
 - **Five files per angle**: the initial research, three critique passes (pre-mortem, red team adversarial, Socratic), and a per-angle synthesis that distils all four into a single digestible note.
 - **Per-angle synthesis, no whole-run digest**: each angle ends in a synthesis file so the reader can act on the angle without opening the other four. There is no top-level full exploration summary — the orchestrator never combines angles into a run-wide summary. If a cross-angle digest is wanted later, the user can ask for one in a follow-up.
 
@@ -86,10 +88,11 @@ The workflow runs as numbered phases. **Phases run in order**; *inside a phase*,
    - `High-risk assumptions` — assumptions that, if wrong, invalidate large parts of the research. Surface for the user on return.
    - `Missing pieces` (only if the request is genuinely thin) — questions that would unblock deeper research.
    - `Planned angles` — the 3–5 angles the orchestrator will dispatch.
+4. **Create `workflow-notes.md`** with a placeholder header (e.g. `# Workflow notes`). This is the append-only decision journal — every orchestrator choice (Phase 2 angle picks, Phase 6 clock-check outcomes, invented moves) gets a new entry with its rationale. Subsequent phases append; never rewrite earlier entries.
 
 ### Phase 2 — Plan
 
-Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request.
+Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request. Append an entry to `workflow-notes.md` recording the picks, what was considered and skipped, and the rationale.
 
 ### Phase 3 — Initial research
 
@@ -107,18 +110,20 @@ Dispatch one synthesiser subagent per angle in a single parallel tool call cover
 
 Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
-- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves from the list below, then **loop back to Phase 3** with the new angles — they go through Phase 4 (critiques) and Phase 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis.
+- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves and **loop back to Phase 3** with the new angles — they go through Phase 4 (critiques) and Phase 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. The moves below are a starting point, not a checklist — invented moves outside this list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
   - An unpicked angle from the catalog above for the request's trigger shape.
   - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
-  If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick from this list — not to wrap up.
+  If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick a move — not to wrap up.
 - Otherwise: done. Proceed to Phase 7.
+
+**Log every Phase 6 outcome to `workflow-notes.md`** before continuing — what was decided (continue or wrap), which moves were picked or invented, and the rationale. No wave happens silently.
 
 ### Phase 7 — Final message
 
-Send a message to the user (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>-synthesis.md` as the entry point per angle (four source files remain for drill-down), and a pointer to `00-brief.md` for the assumptions and any missing pieces. No whole-run synthesis — the per-angle notes are the deliverable.
+Send a message to the user (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>-synthesis.md` as the entry point per angle (four source files remain for drill-down), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
 
 ## Choosing research angles
 
@@ -197,10 +202,11 @@ If the user returns mid-run, they can interrupt manually. The folder is already 
 
 The folder must be useful at every point during the run, not only at the end:
 
-- `.metadata.json` and `00-brief.md` are written before any subagent is dispatched. Interruption between brief and the first dispatch still leaves the framing.
+- `.metadata.json`, `00-brief.md`, and `workflow-notes.md` are written before any subagent is dispatched. Interruption between bootstrap and the first dispatch still leaves the framing and an empty journal.
+- `workflow-notes.md` is appended to as decisions are made (Phase 2 angle picks, every Phase 6 clock check). Mid-run interruption leaves the entries that were already written, so the user can still see which decisions had been made up to that point.
 - Each subagent writes its file directly to disk. Mid-run interruption leaves whatever notes have been completed so far — initial angles only, initial + partial critiques, or critiques + partial syntheses.
 - Per-angle synthesis is always the last step for that angle. A missing synthesis file just means the reader falls back to the four source files for that angle; it is still actionable.
-- There is no `SUMMARY.md` or `INDEX.md` to be missing. The per-angle notes (and their syntheses, where present) are the artifact.
+- There is no `SUMMARY.md` or `INDEX.md` to be missing. The per-angle notes (and their syntheses, where present) are the artifact; `workflow-notes.md` records the reasoning behind them.
 
 If the same topic is invoked again later (the user wants more depth, has more time, or wants to retry under different assumptions), the orchestrator creates a new run folder under the existing topic folder (`YYYY-MM-DD_02`, the next day's `YYYY-MM-DD_01`, etc.) and starts fresh. Earlier runs are never overwritten.
 
