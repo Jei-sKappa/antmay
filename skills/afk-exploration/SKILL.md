@@ -3,7 +3,7 @@ name: afk-exploration
 description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # AFK Exploration
@@ -18,7 +18,7 @@ This is the unattended counterpart to `brainstorming`. There is no human to dial
 - Triggers across three shapes: a new project, a feature in an existing project, or a bug fix.
 - Don't use for interactive brainstorming or anywhere the user is at the keyboard waiting on each step.
 
-The agent receiving the request becomes the **orchestrator**. The orchestrator does no first-hand research itself — it analyses the request, plans research angles, dispatches subagents in parallel, follows up each angle with three critique subagents, and never reads notes back into its own context. This keeps the orchestrator's window clear so it can track the clock and coordinate the run end-to-end.
+The agent receiving the request becomes the **orchestrator**. The orchestrator does no first-hand research itself — it analyses the request, plans research angles, dispatches subagents in parallel, follows up each angle with three critique subagents and a per-angle synthesiser, and never reads notes back into its own context. This keeps the orchestrator's window clear so it can track the clock and coordinate the run end-to-end.
 
 ## Anti-pattern: clarifying questions
 
@@ -41,6 +41,7 @@ A run folder under a project-scoped tree:
 │   │   ├── 01-<angle>-pre-mortem.md  # critique: failure narratives
 │   │   ├── 01-<angle>-red-team.md    # critique: adversarial attack vectors
 │   │   ├── 01-<angle>-socratic.md    # critique: assumption probes
+│   │   ├── 01-<angle>-synthesis.md   # per-angle synthesis of the four files above
 │   │   ├── 02-<angle>.md
 │   │   ├── 02-<angle>-pre-mortem.md
 │   │   ├── ...
@@ -53,8 +54,8 @@ Why this shape:
 - **Project-scoped**: research lives next to the code it concerns, so it's discoverable from inside the project later.
 - **Topic-numbered**: `0001`, `0002`, … sort topics by creation order at a glance.
 - **Date + per-day run-index**: multiple runs on the same topic in a day are distinguishable; runs sort chronologically.
-- **Four files per angle**: the initial research, plus three critique passes (pre-mortem, red team adversarial, Socratic) — every finding gets stress-tested.
-- **No `INDEX.md`, no `SUMMARY.md`**: the user reads the notes directly; the orchestrator never synthesises into a single summary file. If a summary is wanted later, the user can ask for one in a follow-up.
+- **Five files per angle**: the initial research, three critique passes (pre-mortem, red team adversarial, Socratic), and a per-angle synthesis that distils all four into a single digestible note.
+- **Per-angle synthesis, no whole-run digest**: each angle ends in a synthesis file so the reader can act on the angle without opening the other four. There is no top-level full exploration summary — the orchestrator never combines angles into a run-wide summary. If a cross-angle digest is wanted later, the user can ask for one in a follow-up.
 
 Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (e.g. "Add OAuth login to admin panel" → `oauth-admin-login`).
 
@@ -84,10 +85,17 @@ Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (
 4. **Plan research angles.** Pick 3–5 from the catalog below — the ones that earn their slot for *this* request.
 5. **Dispatch initial angle subagents in parallel.** One per angle, all in a single tool call. See *Subagent briefs* below.
 6. **For every initial angle that returns, dispatch its three critique subagents in parallel.** Pre-mortem, red team adversarial, Socratic. Issue them as a single tool call with all critiques for all returned angles — maximum parallelism. Each critique subagent reads the initial note from disk, applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk.
-7. **Re-read `.metadata.json`. Check the clock.** Compute `elapsed = $(date +%s) - started_at`.
-   - If a `budget_seconds` is set and `elapsed < budget_seconds`: plan one or two adjacent angles (e.g. alternative design, deeper dive on a high-leverage finding, steelman of a discarded option), then loop back to step 5 — but only for the new angles. Existing angles already have their critiques.
+7. **Once an angle's three critiques have returned, dispatch its synthesiser subagent.** Synthesisers across angles run in parallel — issue them as a single tool call covering every angle whose critiques are in. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>-synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
+8. **Re-read `.metadata.json`. Check the clock.** Compute `elapsed = $(date +%s) - started_at`.
+   - **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves from the list below and loop back to step 5 with the new angles. Existing angles already have their critiques and synthesis.
+     - An unpicked angle from the catalog above for the request's trigger shape.
+     - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
+     - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
+     - A steelman of an option the initial angles discarded or argued against.
+     - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
+     If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick from this list — not to wrap up.
    - Otherwise: done. Proceed to the final message.
-8. **Final message to the user** (under 10 lines): the run folder path, the list of angles explored, a one-line note that pre-mortem / red-team / Socratic passes were applied, and a pointer to `00-brief.md` for the assumptions and any missing pieces. No synthesis — the artifact is the deliverable.
+9. **Final message to the user** (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>-synthesis.md` as the entry point per angle (four source files remain for drill-down), and a pointer to `00-brief.md` for the assumptions and any missing pieces. No whole-run synthesis — the per-angle notes are the deliverable.
 
 ## Choosing research angles
 
@@ -128,14 +136,36 @@ For each returned initial angle, dispatch three critique subagents in parallel. 
 
 The reference files describe each critique method in full (process, templates, output shape). They are adapted from the `the-fool` skill — see those files for the canonical method. The orchestrator itself does not read them; only the critique subagents do.
 
+### Synthesiser subagent (one per angle)
+
+After the three critiques for an angle have all returned, dispatch one synthesiser for that angle. Synthesisers for different angles in the same wave run in parallel.
+
+- **Input note paths** — the four absolute paths for this angle: `NN-<angle>.md`, `NN-<angle>-pre-mortem.md`, `NN-<angle>-red-team.md`, `NN-<angle>-socratic.md`.
+- **Output path** — the absolute path to write the synthesis to: `<run-folder>/NN-<angle>-synthesis.md`.
+- **Output shape** — markdown distilling the angle into a single digestible note. Suggested sections (adapt to what the four files actually hold):
+  - `## What this angle covers` — one or two sentences framing the angle.
+  - `## Key findings` — the load-bearing points from the initial note, kept or revised in light of the critiques.
+  - `## What the critiques changed` — concrete adjustments: which initial findings were invalidated, weakened, or reinforced; which attack vectors, failure narratives, or assumption probes mattered.
+  - `## Recommendations` — the synthesiser's own judgement calls falling out of reading all four files together (e.g. "the red-team's attack vector X invalidates the initial finding Y, so pursue Z instead"). This is the part that makes the file more than a summary.
+  - `## Open questions` — anything still unresolved after the critiques.
+  The file must be materially shorter than the four source files combined; the point is digestibility.
+- **Return contract** — write the synthesis file directly; reply to the orchestrator with **only** a 2–3 sentence summary plus the file path. Do **not** paste the synthesis back.
+- **Hard constraints** — read all four input files before writing; do not invent findings that aren't grounded in at least one of them; do not edit code or other files. A reader must be able to act on the angle from the synthesis alone, with the four source files available only when they want to drill deeper.
+
 ## Time budget — a floor, not a ceiling
 
-The optional time budget exists only to prevent under-using the gap the user is away. It is **not** a deadline.
+The optional time budget exists only to prevent under-using the gap the user is away. It is **not** a deadline — coming in under budget is a failure, not a success.
 
-- **Never stop early to come in under budget.** If `elapsed < budget_seconds`, plan another angle and dispatch.
-- **Never abort a wave to come in under budget.** If `elapsed >= budget_seconds` mid-run with critique subagents in flight, let them finish. It is forbidden to leave the workflow half-done — every dispatched initial angle gets all three of its critiques.
-- **Never start a new initial angle after the budget is reached.** Once the loop's clock check fails, the next step is the final user message — not another wave.
-- **No budget given**: do the 3–5 planned angles plus their critiques and stop. Cap at ~6 initial angles total to avoid drift even when generously paced.
+- **As long as `elapsed < budget_seconds`, there is always more useful work to do.** Treat that inequality as a standing instruction to dispatch another wave, not as permission to consider finishing. The thought "I've covered the angles" is not a stop signal — it is a prompt to pick one of the moves below.
+- **Concrete moves when you can't think of more original angles** (any of these earns the next wave; combine as needed):
+  - An unpicked angle from the catalog above for the request's trigger shape.
+  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
+  - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
+  - A steelman of an option the initial angles discarded or argued against.
+  - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
+- **Never abort a wave to come in under budget.** If `elapsed >= budget_seconds` mid-run with critique or synthesis subagents in flight, let them finish. It is forbidden to leave the workflow half-done — every dispatched initial angle gets all three of its critiques **and** its synthesis.
+- **Never start a new initial angle after the budget is reached.** Once the loop's clock check fails (after letting in-flight subagents finish), the next step is the final user message — not another wave.
+- **No budget given**: do the 3–5 planned angles plus their critiques and syntheses and stop. Cap at ~6 initial angles total to avoid drift even when generously paced.
 - The orchestrator cannot watch a wall clock — every check is an explicit `date +%s` compared to `started_at` from `.metadata.json`.
 
 If the user returns mid-run, they can interrupt manually. The folder is already useful (see *Resumability*).
@@ -145,8 +175,9 @@ If the user returns mid-run, they can interrupt manually. The folder is already 
 The folder must be useful at every point during the run, not only at the end:
 
 - `.metadata.json` and `00-brief.md` are written before any subagent is dispatched. Interruption between brief and the first dispatch still leaves the framing.
-- Each subagent writes its file directly to disk. Mid-run interruption leaves whatever notes have been completed so far — initial angles only, or initial + partial critiques.
-- There is no `SUMMARY.md` or `INDEX.md` to be missing. The notes themselves are the artifact.
+- Each subagent writes its file directly to disk. Mid-run interruption leaves whatever notes have been completed so far — initial angles only, initial + partial critiques, or critiques + partial syntheses.
+- Per-angle synthesis is always the last step for that angle. A missing synthesis file just means the reader falls back to the four source files for that angle; it is still actionable.
+- There is no `SUMMARY.md` or `INDEX.md` to be missing. The per-angle notes (and their syntheses, where present) are the artifact.
 
 If the same topic is invoked again later (the user wants more depth, has more time, or wants to retry under different assumptions), the orchestrator creates a new run folder under the existing topic folder (`YYYY-MM-DD_02`, the next day's `YYYY-MM-DD_01`, etc.) and starts fresh. Earlier runs are never overwritten.
 
@@ -158,4 +189,4 @@ If the rough idea is too vague to pick angles without inventing requirements, **
 - A `Missing pieces` section listing the questions that would unblock real research.
 - The most defensible assumptions to proceed under, marked clearly as assumptions.
 
-Then run a reduced set of angles (e.g. prior art, candidate framings, glossary of terms) — and still apply the three critique passes to each — so the user returns to *something* (even if it's a "we'd need X, Y, Z to go further" dossier) instead of an empty folder and an apology.
+Then run a reduced set of angles (e.g. prior art, candidate framings, glossary of terms) — and still apply the three critique passes and the per-angle synthesis to each — so the user returns to *something* (even if it's a "we'd need X, Y, Z to go further" dossier) instead of an empty folder and an apology.
