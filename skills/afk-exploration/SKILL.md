@@ -61,6 +61,10 @@ Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (
 
 ## Workflow
 
+The workflow runs as numbered phases. **Phases run in order**; *inside a phase*, every subagent the phase dispatches runs in parallel and the orchestrator waits for them all to return before advancing to the next phase. If a single tool call would dispatch too many subagents to run reliably in parallel, fall back to smaller batches **inside the same phase** (e.g. split Phase 3's angles into two batches, waiting for the first to return before issuing the second) — never collapse phases into each other or change their order.
+
+### Phase 1 — Bootstrap
+
 1. **Resolve the run folder.**
    - `ls <cwd>/docs/afk-exploration/` to find existing topics. If a topic with the same or near-identical slug exists and the request is clearly a continuation, reuse it; otherwise pick the next zero-padded 4-digit prefix (`0001`, `0002`, …).
    - Inside the topic folder, list runs matching `YYYY-MM-DD_NN`. Pick today's date with the next zero-padded 2-digit index (`01` if no runs today, otherwise `02`, `03`, …). Separate the date from the per-day index with `_`, not `-`, so the index is visually distinct from the date components.
@@ -82,20 +86,39 @@ Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (
    - `High-risk assumptions` — assumptions that, if wrong, invalidate large parts of the research. Surface for the user on return.
    - `Missing pieces` (only if the request is genuinely thin) — questions that would unblock deeper research.
    - `Planned angles` — the 3–5 angles the orchestrator will dispatch.
-4. **Plan research angles.** Pick 3–5 from the catalog below — the ones that earn their slot for *this* request.
-5. **Dispatch initial angle subagents in parallel.** One per angle, all in a single tool call. See *Subagent briefs* below.
-6. **For every initial angle that returns, dispatch its three critique subagents in parallel.** Pre-mortem, red team adversarial, Socratic. Issue them as a single tool call with all critiques for all returned angles — maximum parallelism. Each critique subagent reads the initial note from disk, applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk.
-7. **Once an angle's three critiques have returned, dispatch its synthesiser subagent.** Synthesisers across angles run in parallel — issue them as a single tool call covering every angle whose critiques are in. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>-synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
-8. **Re-read `.metadata.json`. Check the clock.** Compute `elapsed = $(date +%s) - started_at`.
-   - **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves from the list below and loop back to step 5 with the new angles. Existing angles already have their critiques and synthesis.
-     - An unpicked angle from the catalog above for the request's trigger shape.
-     - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
-     - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
-     - A steelman of an option the initial angles discarded or argued against.
-     - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
-     If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick from this list — not to wrap up.
-   - Otherwise: done. Proceed to the final message.
-9. **Final message to the user** (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>-synthesis.md` as the entry point per angle (four source files remain for drill-down), and a pointer to `00-brief.md` for the assumptions and any missing pieces. No whole-run synthesis — the per-angle notes are the deliverable.
+
+### Phase 2 — Plan
+
+Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request.
+
+### Phase 3 — Initial research
+
+Dispatch one initial-angle subagent per planned angle, all in a single parallel tool call, and wait for **every** angle to return before moving to Phase 4. See *Subagent briefs* below.
+
+### Phase 4 — Critiques
+
+Process angles **one at a time** so this phase never has more than three subagents in flight at once. For each returned initial angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the initial note from disk, applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk.
+
+### Phase 5 — Synthesis
+
+Only once the **last** angle's three critiques have returned (i.e. Phase 4 is complete for every angle in the wave) does this phase start. Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>-synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
+
+### Phase 6 — Clock check
+
+Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
+
+- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves from the list below, then **loop back to Phase 3** with the new angles — they go through Phase 4 (critiques) and Phase 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis.
+  - An unpicked angle from the catalog above for the request's trigger shape.
+  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
+  - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
+  - A steelman of an option the initial angles discarded or argued against.
+  - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
+  If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick from this list — not to wrap up.
+- Otherwise: done. Proceed to Phase 7.
+
+### Phase 7 — Final message
+
+Send a message to the user (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>-synthesis.md` as the entry point per angle (four source files remain for drill-down), and a pointer to `00-brief.md` for the assumptions and any missing pieces. No whole-run synthesis — the per-angle notes are the deliverable.
 
 ## Choosing research angles
 
