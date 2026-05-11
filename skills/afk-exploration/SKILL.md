@@ -97,11 +97,11 @@ Dispatch one initial-angle subagent per planned angle, all in a single parallel 
 
 ### Phase 4 — Critiques
 
-Process angles **one at a time** so this phase never has more than three subagents in flight at once. For each returned initial angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the initial note from disk, applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk.
+Process angles **one at a time** so this phase never has more than three subagents in flight at once. For each returned initial angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the initial note from disk, applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk. Only advance to Phase 5 once **every** angle in the wave has its three critique files on disk.
 
 ### Phase 5 — Synthesis
 
-Only once the **last** angle's three critiques have returned (i.e. Phase 4 is complete for every angle in the wave) does this phase start. Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>-synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
+Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Phase 6. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>-synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
 
 ### Phase 6 — Clock check
 
