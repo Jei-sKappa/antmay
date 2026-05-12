@@ -3,7 +3,7 @@ name: afk-exploration
 description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.3.0
 ---
 
 # AFK Exploration
@@ -38,14 +38,14 @@ A run folder under a project-scoped tree:
 │   │   ├── .metadata.json            # started_at, budget_seconds, topic, request
 │   │   ├── 00-brief.md               # human-readable framing; no time data
 │   │   ├── workflow-notes.md         # append-only journal of orchestrator decisions
-│   │   ├── 01-<angle>.md             # initial research note (subagent)
-│   │   ├── 01-<angle>-pre-mortem.md  # critique: failure narratives
-│   │   ├── 01-<angle>-red-team.md    # critique: adversarial attack vectors
-│   │   ├── 01-<angle>-socratic.md    # critique: assumption probes
-│   │   ├── 01-<angle>-synthesis.md   # per-angle synthesis of the four files above
-│   │   ├── 02-<angle>.md
-│   │   ├── 02-<angle>-pre-mortem.md
-│   │   ├── ...
+│   │   ├── 01-<angle>/               # one folder per angle; numeric prefix sorts by dispatch order
+│   │   │   ├── research.md           # initial research note (subagent)
+│   │   │   ├── pre-mortem.md         # critique: failure narratives
+│   │   │   ├── red-team.md           # critique: adversarial attack vectors
+│   │   │   ├── socratic.md           # critique: assumption probes
+│   │   │   └── synthesis.md          # per-angle synthesis of the four files above
+│   │   ├── 02-<angle>/
+│   │   │   └── ...
 │   └── 2026-05-12_01/                # later run on the same topic, e.g. with different assumptions
 └── 0002-<topic-slug>/                # different topic
 ```
@@ -56,7 +56,7 @@ Why this shape:
 - **Topic-numbered**: `0001`, `0002`, … sort topics by creation order at a glance.
 - **Date + per-day run-index**: multiple runs on the same topic in a day are distinguishable; runs sort chronologically.
 - **Decision journal**: `workflow-notes.md` is an append-only log of the orchestrator's choices — which angles were picked at Phase 2, what each Phase 6 clock check decided (continue or wrap, which moves, picked or invented), and the rationale. The user can audit the run's choices without reading the research notes themselves.
-- **Five files per angle**: the initial research, three critique passes (pre-mortem, red team adversarial, Socratic), and a per-angle synthesis that distils all four into a single digestible note.
+- **One subfolder per angle, five files inside**: the initial research, three critique passes (pre-mortem, red team adversarial, Socratic), and a per-angle synthesis that distils all four into a single digestible note. Grouping by folder keeps `00-brief.md` and `workflow-notes.md` legible at the run root even when a wave or two of follow-ups push the angle count into the double digits.
 - **Per-angle synthesis, no whole-run digest**: each angle ends in a synthesis file so the reader can act on the angle without opening the other four. There is no top-level full exploration summary — the orchestrator never combines angles into a run-wide summary. If a cross-angle digest is wanted later, the user can ask for one in a follow-up.
 
 Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (e.g. "Add OAuth login to admin panel" → `oauth-admin-login`).
@@ -70,7 +70,7 @@ The workflow runs as numbered phases. **Phases run in order**; *inside a phase*,
 1. **Resolve the run folder.**
    - `ls <cwd>/docs/afk-exploration/` to find existing topics. If a topic with the same or near-identical slug exists and the request is clearly a continuation, reuse it; otherwise pick the next zero-padded 4-digit prefix (`0001`, `0002`, …).
    - Inside the topic folder, list runs matching `YYYY-MM-DD_NN`. Pick today's date with the next zero-padded 2-digit index (`01` if no runs today, otherwise `02`, `03`, …). Separate the date from the per-day index with `_`, not `-`, so the index is visually distinct from the date components.
-   - `mkdir -p` the run folder.
+   - `mkdir -p` the run folder. Per-angle subfolders are **not** pre-created here — each initial-angle subagent creates its own (`NN-<angle>/`) when it writes `research.md`, which keeps creation uniform across both Phase 3 and any Phase 6 follow-up waves where new angles are decided on the fly.
 2. **Write `.metadata.json`.**
    ```json
    {
@@ -104,7 +104,7 @@ Process angles **one at a time** so this phase never has more than three subagen
 
 ### Phase 5 — Synthesis
 
-Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Phase 6. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>-synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
+Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Phase 6. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>/synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
 
 ### Phase 6 — Clock check
 
@@ -112,7 +112,7 @@ Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
 - **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves and **loop back to Phase 3** with the new angles — they go through Phase 4 (critiques) and Phase 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. The moves below are a starting point, not a checklist — invented moves outside this list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
   - An unpicked angle from the catalog above for the request's trigger shape.
-  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
+  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md`.
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
@@ -123,7 +123,7 @@ Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
 ### Phase 7 — Final message
 
-Send a message to the user (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>-synthesis.md` as the entry point per angle (four source files remain for drill-down), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
+Send a message to the user (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>/synthesis.md` as the entry point per angle (the four source files in the same folder remain for drill-down), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
 
 ## Choosing research angles
 
@@ -143,7 +143,7 @@ Each dispatched agent gets a self-contained prompt. The orchestrator never inher
 
 - **Scope** — paste the `Scope` and `Out of scope` sections from `00-brief.md`.
 - **Angle** — the single angle this agent investigates, framed as one focused question.
-- **Output path** — the absolute path to write the note to (e.g. `<run-folder>/01-existing-architecture.md`). Each subagent gets a different path so they cannot collide.
+- **Output path** — the absolute path to write the note to (e.g. `<run-folder>/01-existing-architecture/research.md`). Each subagent gets a different angle folder so they cannot collide. The subagent must `mkdir -p` the angle subfolder before writing — it does not exist yet.
 - **Output shape** — markdown with `## Findings`, `## Evidence` (file paths, doc URLs, snippets), `## Open questions`. No prose padding.
 - **Sources** — codebase via direct read/grep; library docs via `find-docs` (Context7) or web search; prior art via web search. Whatever the angle needs.
 - **Return contract** — write the note file directly; reply to the orchestrator with **only** a 2–3 sentence summary plus the file path. Do **not** paste the note back.
@@ -158,7 +158,7 @@ For each returned initial angle, dispatch three critique subagents in parallel. 
   - Pre-mortem → `<skill-base>/references/pre-mortem-analysis.md`
   - Red team adversarial → `<skill-base>/references/red-team-adversarial.md`
   - Socratic questioning → `<skill-base>/references/socratic-questioning.md`
-- **Output path** — the absolute path to write the critique to (`<initial-note-stem>-pre-mortem.md`, `…-red-team.md`, `…-socratic.md`).
+- **Output path** — the absolute path to write the critique to, inside the same angle subfolder as the initial note (`<angle-folder>/pre-mortem.md`, `<angle-folder>/red-team.md`, `<angle-folder>/socratic.md`). The folder already exists — the initial-angle subagent created it.
 - **Return contract** — write the critique file directly; reply with **only** a 2–3 sentence summary. Do not paste the critique back.
 - **Hard constraints** — read the input note and the reference; apply the reference's method to the *content* of the note (not to the abstract idea); do not edit code or other files.
 
@@ -168,8 +168,8 @@ The reference files describe each critique method in full (process, templates, o
 
 After the three critiques for an angle have all returned, dispatch one synthesiser for that angle. Synthesisers for different angles in the same wave run in parallel.
 
-- **Input note paths** — the four absolute paths for this angle: `NN-<angle>.md`, `NN-<angle>-pre-mortem.md`, `NN-<angle>-red-team.md`, `NN-<angle>-socratic.md`.
-- **Output path** — the absolute path to write the synthesis to: `<run-folder>/NN-<angle>-synthesis.md`.
+- **Input note paths** — the four absolute paths for this angle, all inside the same angle subfolder: `NN-<angle>/research.md`, `NN-<angle>/pre-mortem.md`, `NN-<angle>/red-team.md`, `NN-<angle>/socratic.md`.
+- **Output path** — the absolute path to write the synthesis to, alongside the four source files: `<run-folder>/NN-<angle>/synthesis.md`.
 - **Output shape** — markdown distilling the angle into a single digestible note. Suggested sections (adapt to what the four files actually hold):
   - `## What this angle covers` — one or two sentences framing the angle.
   - `## Key findings` — the load-bearing points from the initial note, kept or revised in light of the critiques.
@@ -187,7 +187,7 @@ The optional time budget exists only to prevent under-using the gap the user is 
 - **As long as `elapsed < budget_seconds`, there is always more useful work to do.** Treat that inequality as a standing instruction to dispatch another wave, not as permission to consider finishing. The thought "I've covered the angles" is not a stop signal — it is a prompt to pick one of the moves below.
 - **Concrete moves when you can't think of more original angles** (any of these earns the next wave; combine as needed):
   - An unpicked angle from the catalog above for the request's trigger shape.
-  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>.md`.
+  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md`.
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
