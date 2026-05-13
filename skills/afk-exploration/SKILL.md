@@ -3,7 +3,7 @@ name: afk-exploration
 description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.0
+  version: 1.4.0
 ---
 
 # AFK Exploration
@@ -38,14 +38,20 @@ A run folder under a project-scoped tree:
 │   │   ├── .metadata.json            # started_at, budget_seconds, topic, request
 │   │   ├── 00-brief.md               # human-readable framing; no time data
 │   │   ├── workflow-notes.md         # append-only journal of orchestrator decisions
-│   │   ├── 01-<angle>/               # one folder per angle; numeric prefix sorts by dispatch order
+│   │   ├── 01-<angle>/               # research angle
 │   │   │   ├── research.md           # initial research note (subagent)
 │   │   │   ├── pre-mortem.md         # critique: failure narratives
 │   │   │   ├── red-team.md           # critique: adversarial attack vectors
 │   │   │   ├── socratic.md           # critique: assumption probes
 │   │   │   └── synthesis.md          # per-angle synthesis of the four files above
-│   │   ├── 02-<angle>/
-│   │   │   └── ...
+│   │   ├── 02-<angle>/               # prototype angle (same shape, different artifacts)
+│   │   │   ├── prototype-pointer.md  # /tmp path + how to run + status; written before deps
+│   │   │   ├── findings.md           # what the prototype taught (in place of research.md)
+│   │   │   ├── <materials>           # optional: load-bearing files preserved outside /tmp
+│   │   │   ├── pre-mortem.md
+│   │   │   ├── red-team.md
+│   │   │   ├── socratic.md
+│   │   │   └── synthesis.md
 │   └── 2026-05-12_01/                # later run on the same topic, e.g. with different assumptions
 └── 0002-<topic-slug>/                # different topic
 ```
@@ -56,7 +62,7 @@ Why this shape:
 - **Topic-numbered**: `0001`, `0002`, … sort topics by creation order at a glance.
 - **Date + per-day run-index**: multiple runs on the same topic in a day are distinguishable; runs sort chronologically.
 - **Decision journal**: `workflow-notes.md` is an append-only log of the orchestrator's choices — which angles were picked at Phase 2, what each Phase 6 clock check decided (continue or wrap, which moves, picked or invented), and the rationale. The user can audit the run's choices without reading the research notes themselves.
-- **One subfolder per angle, five files inside**: the initial research, three critique passes (pre-mortem, red team adversarial, Socratic), and a per-angle synthesis that distils all four into a single digestible note. Grouping by folder keeps `00-brief.md` and `workflow-notes.md` legible at the run root even when a wave or two of follow-ups push the angle count into the double digits.
+- **One subfolder per angle**: research angles hold `research.md` plus three critique files (pre-mortem, red team adversarial, Socratic) and a per-angle synthesis. Prototype angles swap `research.md` for `findings.md`, add `prototype-pointer.md` (and optionally auxiliary materials preserved outside `/tmp`), and otherwise share the same critique-and-synthesis structure. Grouping by folder keeps `00-brief.md` and `workflow-notes.md` legible at the run root even when a wave or two of follow-ups push the angle count into the double digits.
 - **Per-angle synthesis, no whole-run digest**: each angle ends in a synthesis file so the reader can act on the angle without opening the other four. There is no top-level full exploration summary — the orchestrator never combines angles into a run-wide summary. If a cross-angle digest is wanted later, the user can ask for one in a follow-up.
 
 Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (e.g. "Add OAuth login to admin panel" → `oauth-admin-login`).
@@ -92,19 +98,19 @@ The workflow runs as numbered phases. **Phases run in order**; *inside a phase*,
 
 ### Phase 2 — Plan
 
-Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request. Append an entry to `workflow-notes.md` recording the picks, what was considered and skipped, and the rationale.
+Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request. An angle may be a **prototype angle** if the hypothesis is already sharp from the request and research wouldn't refine it; otherwise defer prototypes to Phase 6 once research has surfaced what's worth testing in code (see *When to spawn a prototype*). Append an entry to `workflow-notes.md` recording the picks, what was considered and skipped, and the rationale — including the prototype/research decision for any prototype angle.
 
 ### Phase 3 — Initial research
 
-Dispatch one initial-angle subagent per planned angle, all in a single parallel tool call, and wait for **every** angle to return before moving to Phase 4. See *Subagent briefs* below.
+Dispatch one subagent per planned angle, all in a single parallel tool call, and wait for **every** angle to return before moving to Phase 4. Research angles get the initial-angle subagent; prototype angles get the prototyper subagent. See *Subagent briefs* below.
 
 ### Phase 4 — Critiques
 
-Process angles **one at a time** so this phase never has more than three subagents in flight at once. For each returned initial angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the initial note from disk, applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk. Only advance to Phase 5 once **every** angle in the wave has its three critique files on disk.
+Process angles **one at a time** so this phase never has more than three subagents in flight at once. For each returned angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the angle's note from disk (`research.md` for research angles, `findings.md` for prototype angles), applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk. Only advance to Phase 5 once **every** angle in the wave has its three critique files on disk.
 
 ### Phase 5 — Synthesis
 
-Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Phase 6. Each synthesiser reads its angle's initial note plus the three critiques from disk and writes `NN-<angle>/synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
+Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Phase 6. Each synthesiser reads its angle's note (`research.md` or `findings.md`) plus the three critiques from disk and writes `NN-<angle>/synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
 
 ### Phase 6 — Clock check
 
@@ -112,10 +118,11 @@ Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
 - **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves and **loop back to Phase 3** with the new angles — they go through Phase 4 (critiques) and Phase 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. The moves below are a starting point, not a checklist — invented moves outside this list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
   - An unpicked angle from the catalog above for the request's trigger shape.
-  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md`.
+  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md` or `NN-<angle>/findings.md`.
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
+  - A prototype angle to test a sharp hypothesis the research has surfaced (see *When to spawn a prototype*). Usually the right move when an earlier synthesis flagged a load-bearing question better answered with code than more reading. Budget-aware: a prototype angle costs ~3–5× a research angle.
   If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick a move — not to wrap up.
 - Otherwise: done. Proceed to Phase 7.
 
@@ -123,7 +130,7 @@ Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
 ### Phase 7 — Final message
 
-Send a message to the user (under 10 lines): the run folder path, the list of angles explored, a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>/synthesis.md` as the entry point per angle (the four source files in the same folder remain for drill-down), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
+Send a message to the user (under 10 lines): the run folder path, the list of angles explored (flag prototype angles inline, e.g. `02 oauth-flow [prototype]`), a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>/synthesis.md` as the entry point per angle (the four source files in the same folder remain for drill-down; prototype angles also have `prototype-pointer.md` recording the temp-directory location while it still exists in `/tmp`), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
 
 ## Choosing research angles
 
@@ -134,6 +141,36 @@ The catalog below is a starting point, not a checklist. Pick the angles that ear
 - **Bug fix** — reproducer and minimal failing case; root-cause hypotheses; blast radius and affected code paths; existing tests in the area; fix candidates with trade-offs; regression risk and required new coverage.
 
 When the trigger is ambiguous, pick the closest category as a starting point and note the choice under `Assumptions` in the brief. Borrow angles from another category, or invent fresh ones, whenever the request calls for them.
+
+## When to spawn a prototype
+
+A **prototype angle** builds a disposable codebase that exercises a hypothesis in actual code, in place of (not alongside) the standard research note. Its value is what it teaches — a research note can describe an API, but only running real code against it tells you whether the API actually feels right. Size the prototype to the hypothesis, not to a notion of "small": a feel-check of one API call might be 50 lines; a multi-subsystem integration check might reasonably be several hundred. The constraint is on *unnecessary* code (scaffolding, polish, error handling the question doesn't need), not on *total* code.
+
+Spawn a prototype when the request involves any of:
+
+- **Library or SDK ergonomics** — only running real code with an API tells you whether it fits.
+- **Performance claims worth measuring** — latency, throughput, memory; benchmark, don't argue.
+- **Integration end-to-end behavior** — OAuth flows, webhooks, payments; "should work on paper" until it doesn't.
+- **UX or DX feel** — animation APIs, state-machine libraries, validation syntax; only writing with it reveals the feel.
+- **Comparison by measurement** — library A vs library B, DuckDB vs Postgres on representative data.
+
+Skip a prototype when:
+
+- The question is purely organizational (rename, refactor strategy, team process).
+- The answer is documentable from docs and prior art alone.
+- Required credentials or infrastructure aren't available.
+- The request is too vague to pick a sharp hypothesis.
+
+**When to fire**:
+
+- **Phase 2** — only when the hypothesis is already sharp from the request itself and research wouldn't refine it. (E.g. "does Auth.js feel right for our session model?" is sharp on day one.)
+- **Phase 6** — the default. Research first, then pick a prototype to test the load-bearing question the research surfaced.
+
+Log the decision in `workflow-notes.md` either way, including the explicit hypothesis the prototype is testing.
+
+**Cap**: 1 prototype per run by default. Up to 2 when the request is genuinely comparative (A vs B). Beyond that requires explicit rationale in `workflow-notes.md`.
+
+**Cost**: a prototype angle eats roughly 3–5× a research angle's wall-clock and gates whatever wave it's in. Factor this into Phase 2 / Phase 6 planning, especially under a tight `budget_seconds`.
 
 ## Subagent briefs
 
@@ -180,6 +217,21 @@ After the three critiques for an angle have all returned, dispatch one synthesis
 - **Return contract** — write the synthesis file directly; reply to the orchestrator with **only** a 2–3 sentence summary plus the file path. Do **not** paste the synthesis back.
 - **Hard constraints** — read all four input files before writing; do not invent findings that aren't grounded in at least one of them; do not edit code or other files. A reader must be able to act on the angle from the synthesis alone, with the four source files available only when they want to drill deeper.
 
+### Prototyper subagent
+
+When a prototype angle is dispatched (Phase 3 or Phase 6), use one prototyper subagent. The detailed method — step ordering, `mktemp` invocation, codebase-copy options, `findings.md` template, materials guidance, and the full hard-constraints list — lives in the reference file; the orchestrator does not read it.
+
+- **Scope** — paste the `Scope` and `Out of scope` sections from `00-brief.md`.
+- **Hypothesis** — the single question the prototype is built to answer, framed as one sentence (e.g. "does Auth.js's OAuth flow integrate cleanly with our session middleware?").
+- **Method reference path** — the absolute path of the prototyping reference: `<skill-base>/references/throwaway-prototyping.md`. Resolve from this skill's base directory.
+- **Topic slug** — the run's topic slug, used by the agent to compose `mktemp -d /tmp/afkprt.<topic-slug>.XXXXXX`.
+- **Angle folder** — the absolute path of the angle folder (e.g. `<run-folder>/02-oauth-flow/`). The prototyper `mkdir -p`s this; auxiliary materials (load-bearing artifacts too bulky for inline in `findings.md`) may also be written here.
+- **Findings output path** — the absolute path to write the findings note to: `<angle-folder>/findings.md`.
+- **Pointer output path** — the absolute path to write the temp-directory pointer to: `<angle-folder>/prototype-pointer.md`. The reference requires this to be written **before** any heavy work (dependency installation, code copying) so an interrupted run still leaves a record.
+- **Codebase context** — for incremental prototypes (the experiment modifies the user's existing project), the absolute path of the user's project to copy from; null for from-scratch prototypes. The reference describes the copy methods.
+- **Return contract** — write the findings file, the pointer file, the prototype code (inside `/tmp`), and any auxiliary materials; reply to the orchestrator with **only** a 2–3 sentence summary plus the findings path and the temp directory path. Do **not** paste findings or code back.
+- **Hard constraints** — see the reference for the full list. Summary: writes confined to the temp directory + the two named files in the angle folder + any auxiliary materials in the angle folder; the user's actual project is read-only; no sudo; no global installs; no long-running background processes; dependency-install failure is a finding, not an abort.
+
 ## Time budget — a floor, not a ceiling
 
 The optional time budget exists only to prevent under-using the gap the user is away. It is **not** a deadline — coming in under budget is a failure, not a success.
@@ -187,10 +239,11 @@ The optional time budget exists only to prevent under-using the gap the user is 
 - **As long as `elapsed < budget_seconds`, there is always more useful work to do.** Treat that inequality as a standing instruction to dispatch another wave, not as permission to consider finishing. The thought "I've covered the angles" is not a stop signal — it is a prompt to pick one of the moves below.
 - **Concrete moves when you can't think of more original angles** (any of these earns the next wave; combine as needed):
   - An unpicked angle from the catalog above for the request's trigger shape.
-  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md`.
+  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md` or `NN-<angle>/findings.md`.
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
+  - A prototype angle to test a sharp hypothesis surfaced by earlier waves (see *When to spawn a prototype*). Budget-aware: a prototype angle costs ~3–5× a research angle.
 - **Never abort a wave to come in under budget.** If `elapsed >= budget_seconds` mid-run with critique or synthesis subagents in flight, let them finish. It is forbidden to leave the workflow half-done — every dispatched initial angle gets all three of its critiques **and** its synthesis.
 - **Never start a new initial angle after the budget is reached.** Once the loop's clock check fails (after letting in-flight subagents finish), the next step is the final user message — not another wave.
 - **No budget given**: do the 3–5 planned angles plus their critiques and syntheses and stop. Cap at ~6 initial angles total to avoid drift even when generously paced.
@@ -206,6 +259,7 @@ The folder must be useful at every point during the run, not only at the end:
 - `workflow-notes.md` is appended to as decisions are made (Phase 2 angle picks, every Phase 6 clock check). Mid-run interruption leaves the entries that were already written, so the user can still see which decisions had been made up to that point.
 - Each subagent writes its file directly to disk. Mid-run interruption leaves whatever notes have been completed so far — initial angles only, initial + partial critiques, or critiques + partial syntheses.
 - Per-angle synthesis is always the last step for that angle. A missing synthesis file just means the reader falls back to the four source files for that angle; it is still actionable.
+- Prototype angles write `prototype-pointer.md` **before** any dependency installation or codebase copy, so an interrupted prototype still leaves a record of the temp-directory location for the user to inspect manually. A missing `findings.md` for a prototype angle is the same signal as a missing `research.md` for a research angle — the angle didn't finish. The temp directory in `/tmp` is volatile; the angle folder is the durable record.
 - There is no `SUMMARY.md` or `INDEX.md` to be missing. The per-angle notes (and their syntheses, where present) are the artifact; `workflow-notes.md` records the reasoning behind them.
 
 If the same topic is invoked again later (the user wants more depth, has more time, or wants to retry under different assumptions), the orchestrator creates a new run folder under the existing topic folder (`YYYY-MM-DD_02`, the next day's `YYYY-MM-DD_01`, etc.) and starts fresh. Earlier runs are never overwritten.
