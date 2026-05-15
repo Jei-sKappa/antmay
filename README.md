@@ -45,3 +45,11 @@ Researches a rough idea autonomously — new project, new feature, or bug fix �
 ```sh
 npx skills add Jei-sKappa/skills --skill afk-exploration
 ```
+
+### [`review-decision-document`](./skills/review-decision-document/SKILL.md)
+
+Reviews a decision document — spec, ADR, plan, design proposal, context doc, anything that captures an idea before someone acts on it — and stress-tests it against the bar that a recipient could deliver the same work the author had in mind. Useful when you have a document you want stress-tested for clarity, internal consistency, gaps, hidden assumptions, and readiness to be built upon — before anyone acts on it.
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-decision-document
+```

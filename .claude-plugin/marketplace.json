@@ -8,7 +8,8 @@
         "./skills/brief-the-implementer",
         "./skills/consult-the-expert",
         "./skills/meta-prompting",
-        "./skills/report-to-the-owner"
+        "./skills/report-to-the-owner",
+        "./skills/review-decision-document"
       ]
     }
   ]
