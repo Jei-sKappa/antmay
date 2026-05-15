@@ -3,7 +3,7 @@ name: review-decision-document
 description: Reviews a decision document — spec, plan, design proposal, anything that captures an idea before someone acts on it — and stress-tests it against the bar that a recipient could deliver the same work the author had in mind. Use when the user has a document they want stress-tested for clarity, internal consistency, gaps, hidden assumptions, and readiness to be built upon.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Review Decision Document
@@ -59,7 +59,8 @@ Use these sections, in this order:
 3. **Implied but not stated** — assumptions the doc rests on without articulating. One bullet per assumption, with the section that depends on it.
 4. **Open decisions** — what the author still has to choose. Frame as decisions, not edits.
 5. **Readiness verdict** — one overall verdict (e.g. *Ready / Partially ready / Not ready* to be built upon) plus a one-line "what's blocking it" tied to the findings above.
-6. **Clarifications to answer before proceeding** — a numbered list of specific questions the author should answer next. Each should be answerable in 1–3 sentences. "What's your overall vision" is too broad; "when call X fails, do we retry, fall back to Y, or surface the error to the caller?" is the right grain.
+
+The review ends at section 5. Do **not** append a numbered list of clarifications, follow-up questions, or "next steps" inside the review itself — those belong to the optional discussion that comes after (see Workflow).
 
 Skip a section entirely rather than padding it. If `Implied but not stated` has nothing real to say, drop the section — don't fill it with weak filler.
 
@@ -76,7 +77,8 @@ Skip a section entirely rather than padding it. If `Implied but not stated` has 
 2. Read any prerequisite docs the user pointed to (project conventions, related context).
 3. Read the document under review carefully — at least once end-to-end before noting findings.
 4. Draft the review following the structure above. Order by impact, separate the three layers, tether each finding to what would break when someone acts on the doc.
-5. Output the review directly. The response IS the deliverable — no preamble, no chat framing, no "Sure, here is…", no closing remark.
+5. Output the review directly. The response IS the deliverable — no preamble, no chat framing, no "Sure, here is…", no closing remark. The review ends at the `Readiness verdict` section.
+6. After the review, on a new line below it, ask the author once whether they want to start discussing the open clarifications that came out of the review — then stop and wait. Don't pre-list the questions, don't suggest answers, don't continue into a discussion unprompted. If they say yes, the discussion happens in subsequent turns; if they say no or move on, leave it alone.
 
 ## When the document is genuinely solid
 
