@@ -3,18 +3,12 @@ name: meta-prompting
 description: Refines a draft prompt for a fresh AI session. Use only when the user mentions "meta-prompt" or "meta-prompting" — do not infer the request from context.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.2.1
 ---
 
 # Meta-Prompting
 
 Take the user's raw prompt — usually quickly typed, possibly rambling, missing structure — and rewrite it as a polished prompt that can be pasted into a fresh AI agent session.
-
-## When to use
-
-Only when the user has explicitly asked to meta-prompt a draft or invoked this skill by name. Do not run it on your own initiative — a pasted-in draft, a rambling message, or a "before I start a new chat…" aside is **not** a trigger. Wait for the intent to be stated.
-
-When it does run, the output is going to a *new* AI session with zero context. Whatever the user assumed in their head must end up explicitly written in the refined prompt, or the new session will flounder.
 
 ## Principles
 

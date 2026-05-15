@@ -3,16 +3,12 @@ name: consult-the-expert
 description: Drafts a casual, context-rich message to consult a more experienced developer about a technical problem, decision, or blocker. Use when the user wants help framing a question for a senior teammate, mentor, or domain expert who has zero context on the project being worked on.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.2.1
 ---
 
 # Consult the Expert
 
 Transform a raw problem description into a ready-to-send message that gives a zero-context expert enough background to actually help — without burying them in noise.
-
-## When to use
-
-The user is stuck on a technical problem, weighing a decision, or hitting a blocker, and wants to ping someone more experienced for input. The recipient is a peer or senior — not a stranger, not a support channel — so the message stays direct and conversational.
 
 ## Tone
 

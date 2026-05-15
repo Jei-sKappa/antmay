@@ -3,18 +3,16 @@ name: brief-the-implementer
 description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Use when the user wants the conclusion of the current discussion packaged as a paste-ready handoff for a separate context — a fresh AI session, a follow-up task, or a teammate catching up.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.0
+  version: 1.4.1
 ---
 
 # Brief the Implementer
 
 Transform the conclusion of a discussion into a tight, paste-ready briefing that someone picking up the work — a fresh AI session, a teammate catching up, a future-you — can read once and act on, without sitting through the discussion that got there.
 
-## When to use
+## Recipient
 
-The user explicitly asks for the outcome of the current discussion to be packaged as a paste-ready briefing for a separate context — another AI session, a follow-up task, a teammate catching up. The trigger is the user's request, not a judgment about whether the conversation has reached a "good enough" conclusion: if they're asking for the briefing, draft it from whatever the discussion has produced. The recipient already knows their own work; what they're missing is the conclusion of *this* discussion and the reasoning behind it. They are not stepping into the user's shoes — they're receiving a reply they can act on.
-
-Recipient knowledge profile, in one line: **full project context, zero session context.** They have the codebase, the repo docs, the conventions, the tooling. They do not have the chat that produced this brief.
+Recipient knowledge profile, in one line: **full project context, zero session context.** They have the codebase, the repo docs, the conventions, the tooling. They do not have the chat that produced this brief. They are not stepping into the user's shoes — they're receiving a reply they can act on.
 
 ## Tone
 

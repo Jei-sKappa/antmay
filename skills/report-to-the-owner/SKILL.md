@@ -3,16 +3,12 @@ name: report-to-the-owner
 description: Drafts a casual, context-rich message to a code owner about something in their code that's blocking the user — a bug, missing capability, or design that doesn't extend to a new use case — along with a proposed change. Use when the user has hit a blocker in code owned by another developer or team and explicitly wants to hand off the work, not ask for advice.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.0
+  version: 1.3.1
 ---
 
 # Report to the Owner
 
 Transform a blocker — a bug, a missing capability, or a design that doesn't extend to a new use case — into a ready-to-send message that gives a zero-context owner the situation, what's in the way, and the proposed change. Enough for them to act, without making them rediscover what the user already worked out.
-
-## When to use
-
-The user is blocked by code, a service, or a package owned by someone else — a bug, a missing feature, or a feature whose current design doesn't accommodate the user's use case. They are not asking for advice — they have a candidate change in mind. The intent is "FYI + please address," not "what do you think?" Recipient is a peer or owning team — chat/DM, not a public bug tracker or support channel.
 
 ## Tone
 

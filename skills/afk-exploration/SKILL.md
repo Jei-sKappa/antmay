@@ -3,7 +3,7 @@ name: afk-exploration
 description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.0
+  version: 1.4.1
 ---
 
 # AFK Exploration
@@ -12,11 +12,7 @@ The user has a rough idea — a new project, a feature in an existing one, or a 
 
 This is the unattended counterpart to `brainstorming`. There is no human to dialogue with mid-run; recorded assumptions replace clarifying questions.
 
-## When to use
-
-- The user has a rough idea and signals they're stepping away (or explicitly asks for unattended exploration / research).
-- Triggers across three shapes: a new project, a feature in an existing project, or a bug fix.
-- Don't use for interactive brainstorming or anywhere the user is at the keyboard waiting on each step.
+## Orchestrator role
 
 The agent receiving the request becomes the **orchestrator**. The orchestrator does no first-hand research itself — it analyses the request, plans research angles, dispatches subagents in parallel, follows up each angle with three critique subagents and a per-angle synthesiser, and never reads notes back into its own context. This keeps the orchestrator's window clear so it can track the clock and coordinate the run end-to-end.
 
