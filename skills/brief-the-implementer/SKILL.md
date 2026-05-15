@@ -3,7 +3,7 @@ name: brief-the-implementer
 description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Use when the user wants the conclusion of the current discussion packaged as a paste-ready handoff for a separate context — a fresh AI session, a follow-up task, or a teammate catching up.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.0
+  version: 1.4.0
 ---
 
 # Brief the Implementer
@@ -50,23 +50,14 @@ The output is a markdown document with explicit headings. Use the section names 
 - Markdown document with explicit `##` headings using the exact names listed above.
 - Bullet lists where the structure says so; short paragraphs otherwise.
 - Code blocks, file paths, and links are encouraged when they make the briefing concrete.
-- No greeting, no sign-off, no chat-style framing. The artifact is a document, not a message.
+- No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff. The artifact is a document, not a message.
 - No artificial length cap — let the content determine the length. A simple verdict can fit in 10 lines; a subtle one might need 50.
 
 ## Workflow
 
 1. Identify the conclusion the current session has reached and the question it was answering. If the user passed an argument when invoking the skill, treat it as the focus the implementer will be acting on, and weight the briefing accordingly.
 2. Draft the briefing following the structure and guidelines above.
-3. Pipe it straight into the clipboard script via stdin — no temp file:
-
-   ```bash
-   python3 scripts/copy-to-clipboard.py <<'__brief-the-implementer-skill_EOF__'
-   <drafted briefing here>
-   __brief-the-implementer-skill_EOF__
-   ```
-
-   Use a quoted heredoc (`<<'__brief-the-implementer-skill_EOF__'`) so backticks, `$`, and other shell metacharacters in the briefing are preserved verbatim. The sentinel is deliberately unusual so it won't appear at the start of a line inside the briefing and prematurely close the heredoc.
-4. Show the drafted briefing inline in chat so the user can review, and confirm the clipboard now holds it.
+3. Output the drafted briefing directly in chat. The response IS the deliverable — no preamble, no closing remark.
 
 ## When context is thin
 

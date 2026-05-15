@@ -3,12 +3,12 @@ name: meta-prompting
 description: Refines a draft prompt for a fresh AI session. Use only when the user mentions "meta-prompt" or "meta-prompting" — do not infer the request from context.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Meta-Prompting
 
-Take the user's raw prompt — usually quickly typed, possibly rambling, missing structure — and rewrite it as a polished prompt that can be pasted into a fresh AI agent session. Deliver the rewritten prompt on the system clipboard via the bundled script.
+Take the user's raw prompt — usually quickly typed, possibly rambling, missing structure — and rewrite it as a polished prompt that can be pasted into a fresh AI agent session.
 
 ## When to use
 
@@ -39,22 +39,15 @@ Skip sections that don't apply. Don't pad.
 
 ## Output format
 
-A single block of plain markdown — no surrounding commentary, no "here's your prompt" preamble. Headings and lists *inside* the prompt are fine where they aid clarity.
+A single block of plain markdown delivered directly in chat. Headings and lists *inside* the prompt are fine where they aid clarity.
+
+No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
 
 ## Workflow
 
 1. Read the user's raw draft.
 2. Generate the refined prompt following the principles above.
-3. Pipe it straight into the clipboard script via stdin — no temp file:
-
-   ```bash
-   python3 scripts/copy-to-clipboard.py <<'__meta-prompting-skill_EOF__'
-   <refined prompt here>
-   __meta-prompting-skill_EOF__
-   ```
-
-   Use a quoted heredoc (`<<'__meta-prompting-skill_EOF__'`) so backticks, `$`, and other shell metacharacters in the prompt are preserved verbatim. The sentinel is deliberately unusual so it won't appear at the start of a line inside the prompt and prematurely close the heredoc.
-4. Show the refined prompt inline in chat so the user can review, and confirm the clipboard now holds it.
+3. Output the refined prompt directly in chat. The response IS the deliverable — no preamble, no closing remark.
 
 ## When the draft is too thin
 

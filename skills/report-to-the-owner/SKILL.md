@@ -3,7 +3,7 @@ name: report-to-the-owner
 description: Drafts a casual, context-rich message to a code owner about something in their code that's blocking the user — a bug, missing capability, or design that doesn't extend to a new use case — along with a proposed change. Use when the user has hit a blocker in code owned by another developer or team and explicitly wants to hand off the work, not ask for advice.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.3.0
 ---
 
 # Report to the Owner
@@ -47,21 +47,13 @@ The user is blocked by code, a service, or a package owned by someone else — a
 - Plain prose, short paragraphs, no headers in the message itself.
 - A small `Repro:`, `Use case:`, or code block is fine when it materially helps.
 - No artificial length cap — let the content determine the length.
+- No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
 
 ## Workflow
 
 1. Read the user's description of the blocker and proposed change.
 2. Draft the report following the structure and guidelines above.
-3. Pipe it straight into the clipboard script via stdin — no temp file:
-
-   ```bash
-   python3 scripts/copy-to-clipboard.py <<'__report-to-the-owner-skill_EOF__'
-   <drafted report here>
-   __report-to-the-owner-skill_EOF__
-   ```
-
-   Use a quoted heredoc (`<<'__report-to-the-owner-skill_EOF__'`) so backticks, `$`, and other shell metacharacters in the report are preserved verbatim. The sentinel is deliberately unusual so it won't appear at the start of a line inside the report and prematurely close the heredoc.
-4. Show the drafted report inline in chat so the user can review, and confirm the clipboard now holds it.
+3. Output the drafted report directly in chat. The response IS the deliverable — no preamble, no closing remark.
 
 ## When context is thin
 
