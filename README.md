@@ -14,6 +14,14 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
 
+### [`discussion-loop`](./skills/discussion-loop/SKILL.md)
+
+Walks through existing discussion points one at a time, always presenting options and a recommendation, then appends each decision to a simple log. Useful when you have findings, open questions, review comments, design points, or a concrete plan you want to discuss and decide interactively.
+
+```sh
+npx skills add Jei-sKappa/skills --skill discussion-loop
+```
+
 ### [`the-librarian`](./skills/the-librarian/SKILL.md)
 
 Manages a local library of reference repositories: stocks new repos into `.library` for later use, and consults already-stored ones to answer the current task. Useful when you want external projects cloned locally as reference material before work begins, and again when the agent is researching, planning, debugging, implementing, or comparing approaches and those repos may help.
@@ -61,4 +69,3 @@ Reviews a decision document — spec, ADR, plan, design proposal, context doc, a
 ```sh
 npx skills add Jei-sKappa/skills --skill review-decision-document
 ```
-
