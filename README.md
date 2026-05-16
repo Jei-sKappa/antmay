@@ -53,3 +53,11 @@ Reviews a decision document — spec, ADR, plan, design proposal, context doc, a
 ```sh
 npx skills add Jei-sKappa/skills --skill review-decision-document
 ```
+
+### [`stock-the-library`](./skills/stock-the-library/SKILL.md)
+
+Clones reference repositories into a local library folder so the agent can read and grep the real source instead of leaning on memory or web fetches. Useful when you want one or more external projects cloned locally as reference material before new work begins — pre-loading "how others solved this" so the agent can look at actual code instead of guessing.
+
+```sh
+npx skills add Jei-sKappa/skills --skill stock-the-library
+```

@@ -9,7 +9,8 @@
         "./skills/consult-the-expert",
         "./skills/meta-prompting",
         "./skills/report-to-the-owner",
-        "./skills/review-decision-document"
+        "./skills/review-decision-document",
+        "./skills/stock-the-library"
       ]
     }
   ]
