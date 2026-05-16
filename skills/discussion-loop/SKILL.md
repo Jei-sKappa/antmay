@@ -22,7 +22,7 @@ docs/discussions/YYYY-MM-DD-<topic>-<purpose>-discussion.md
 
 Use:
 - <topic>: short kebab-case topic from the discussion.
-- <purpose>: why the discussion is happening: `review`, `brainstorming`, `plan`, `design`, `implementation`, `testing`, `deployment`, `maintenance`, `support`, `documentation`, or another label that fits the surrounding context. Coin a new one only if nothing existing fits.
+- <purpose>: why the discussion is happening: `review`, `brainstorming`, `plan`, `design`, `implementation`, `testing`, `deployment`, `maintenance`, `support`, `documentation`, or another label that fits the surrounding context.
 
 Start the file with a `#` heading and one sentence describing what is being discussed.
 
@@ -30,9 +30,9 @@ Start the file with a `#` heading and one sentence describing what is being disc
 
 For each point, ask one question at a time and always include:
 
-1. **Point** — what needs to be decided.
-2. **Context** — only the background needed to decide.
-3. **Options** — concrete choices, each with real trade-offs.
+1. **Decision** — what this point is about.
+2. **What you need to know** — just enough background to answer.
+3. **Options** — concrete choices, each with real pros and cons.
 4. **Recommendation** — your recommended choice and why.
 
 If the point or its options would benefit from codebase context, inspect the relevant files before presenting the options.
