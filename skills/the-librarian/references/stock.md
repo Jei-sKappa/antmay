@@ -11,7 +11,7 @@ Clone the repo(s) the user mentions, record where they landed, report the paths,
      - If a name could mean multiple repos, ask for the URL or the owner.
 2. Save clones under `<project-root>/.library/<owner>_<repo>/`.
 3. If a repo is already cloned, ask the user if he wants to refresh it.
-4. Clone shallow by default: `git clone --depth 1 --single-branch <url> <library-root>/<owner>_<repo>`. Honor a branch, tag, or ref if the user names one.
+4. Clone shallow by default: `git clone --depth 1 --single-branch <url> <library-root>/<owner>_<repo>`. Honor a branch, tag, or ref if the user names one. When cloning multiple repos, run clones sequentially — never in parallel — to avoid hitting rate limits.
 5. Keep `<library-root>/INDEX.md` with exactly one bullet per cloned repo:
    `- <owner>/<repo> - <path> - <short description>`
    Do not add usage notes, status logs, or extra sections.

@@ -3,7 +3,7 @@ name: the-librarian
 description: Route local reference-repository work to stock or consult flows. Use when cloning repos into the library or consulting already-stocked repos.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # The Librarian
