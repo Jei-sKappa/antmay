@@ -14,6 +14,14 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
 
+### [`consult-the-library`](./skills/consult-the-library/SKILL.md)
+
+Explores locally cloned reference repositories in `.library` and reports concise findings with supporting paths. Useful when the agent is researching, planning, debugging, implementing, comparing approaches, or answering a question where repos previously stocked with `stock-the-library` may help.
+
+```sh
+npx skills add Jei-sKappa/skills --skill consult-the-library
+```
+
 ### [`brief-the-implementer`](./skills/brief-the-implementer/SKILL.md)
 
 Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Useful when you want to hand off the conclusion of a discussion (a decision, answer, diagnosis, or recommendation) to a separate context: a fresh AI session, a follow-up task, or a teammate catching up.
