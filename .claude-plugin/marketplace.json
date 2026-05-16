@@ -7,11 +7,10 @@
         "./skills/afk-exploration",
         "./skills/brief-the-implementer",
         "./skills/consult-the-expert",
-        "./skills/consult-the-library",
         "./skills/meta-prompting",
         "./skills/report-to-the-owner",
         "./skills/review-decision-document",
-        "./skills/stock-the-library"
+        "./skills/the-librarian"
       ]
     }
   ]

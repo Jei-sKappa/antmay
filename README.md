@@ -14,12 +14,12 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
 
-### [`consult-the-library`](./skills/consult-the-library/SKILL.md)
+### [`the-librarian`](./skills/the-librarian/SKILL.md)
 
-Explores locally cloned reference repositories in `.library` and reports concise findings with supporting paths. Useful when the agent is researching, planning, debugging, implementing, comparing approaches, or answering a question where repos previously stocked with `stock-the-library` may help.
+Manages a local library of reference repositories: stocks new repos into `.library` for later use, and consults already-stored ones to answer the current task. Useful when you want external projects cloned locally as reference material before work begins, and again when the agent is researching, planning, debugging, implementing, or comparing approaches and those repos may help.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill consult-the-library
+npx skills add Jei-sKappa/skills --skill the-librarian
 ```
 
 ### [`brief-the-implementer`](./skills/brief-the-implementer/SKILL.md)
@@ -62,10 +62,3 @@ Reviews a decision document — spec, ADR, plan, design proposal, context doc, a
 npx skills add Jei-sKappa/skills --skill review-decision-document
 ```
 
-### [`stock-the-library`](./skills/stock-the-library/SKILL.md)
-
-Clones reference repositories into a local library folder so the agent can read and grep the real source instead of leaning on memory or web fetches. Useful when you want one or more external projects cloned locally as reference material before new work begins — pre-loading "how others solved this" so the agent can look at actual code instead of guessing.
-
-```sh
-npx skills add Jei-sKappa/skills --skill stock-the-library
-```

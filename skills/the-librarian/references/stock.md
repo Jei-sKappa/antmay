@@ -1,11 +1,3 @@
----
-name: stock-the-library
-description: Clone one or more user-mentioned repositories into a local library folder and report their saved paths. Use when the user asks to stock, clone, or keep external repos locally as reference material before work begins.
-metadata:
-  author: https://github.com/Jei-sKappa
-  version: 1.1.0
----
-
 # Stock the Library
 
 Clone the repo(s) the user mentions, record where they landed, report the paths, then stop.

@@ -1,11 +1,3 @@
----
-name: consult-the-library
-description: Explore locally cloned reference repositories in `.library` and report concise findings. Use when the agent is researching, planning, debugging, implementing, comparing approaches, or answering a question where stocked local repos may contain useful reference material, even without an explicit user request to consult the library.
-metadata:
-  author: https://github.com/Jei-sKappa
-  version: 1.0.0
----
-
 # Consult the Library
 
 Use the local library of cloned repositories as reference material during research.
