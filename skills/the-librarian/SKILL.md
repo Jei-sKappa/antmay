@@ -1,9 +1,9 @@
 ---
 name: the-librarian
-description: Route local reference-repository work to stock or consult flows. Use when cloning repos into the library or consulting already-stocked repos.
+description: Route local reference-repository work to stock, consult, or research flows. Use when cloning repos into the library, consulting already-stocked repos, or producing in-depth reports from them.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.0
+  version: 1.4.0
 ---
 
 # The Librarian
@@ -11,4 +11,5 @@ metadata:
 Read the appropriate reference before acting:
 
 - **Stock**: user wants to clone, add, refresh, store, or keep repo(s) as reference material. Instructions in `references/stock.md`.
-- **Consult**: user or task needs insight from already-stocked repos. Instructions in `references/consult.md`.
+- **Consult**: user or task needs a quick insight or answer from already-stocked repos. Instructions in `references/consult.md`.
+- **Research**: user wants an in-depth report, note, or document produced from stocked repos and saved under `<library-root>/reports/`. Instructions in `references/research.md`.
