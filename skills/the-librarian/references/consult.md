@@ -5,9 +5,9 @@ Use the local library of cloned repositories as reference material during resear
 ## Workflow
 
 1. Find the library root:
-   - Usually `<project-root>/.library/`.
+   - Usually `<project-root>/.library/`. Cloned repos live under `<library-root>/sources/<owner>_<repo>/`.
    - If no library exists, tell the user to stock it first.
-2. Read `<library-root>/INDEX.md` first when it exists. Use it to choose the relevant repo(s).
+2. Read `<library-root>/sources/INDEX.md` first when it exists. Use it to choose the relevant repo(s).
 3. Inspect only the relevant clone(s). If the target is unclear and cannot be inferred from the task, ask one clarifying question.
 4. Default to an `explorer` subagent for library research to keep scans out of the main context. If subagents are unavailable, do a narrow inline search.
 5. Give the explorer a bounded task: instruct it to explore what's needed.
