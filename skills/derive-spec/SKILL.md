@@ -26,7 +26,11 @@ The skill's value is **coverage and traceability**, not stylistic polish. Bugs o
 
 ## Orchestrator role
 
-The agent receiving the request becomes the **orchestrator**. The orchestrator plans angles, dispatches exploration subagents in parallel, then writes the spec from their notes. The orchestrator does **not** do first-hand exploration of large surfaces; it delegates so its context stays clean enough to maintain global consistency (IDs, cross-references). Trivial reads — repo root listing, top-level manifest files — are fine to do directly.
+The agent receiving the request becomes the **orchestrator**. The orchestrator plans angles, dispatches exploration subagents in parallel, then writes the spec from their notes.
+
+The orchestrator does **no** first-hand reading of the source codebase. Every search, listing, file read, or `grep` against the source goes through a subagent — without exception, including trivial repo-root listings and top-level manifest files. The orchestrator's tools touch only its own scratch outputs (the run folder's `.metadata.json` and the notes files written by subagents) and the final spec output path. This is what keeps the orchestrator's context window clean enough to maintain global consistency across the whole document (IDs, cross-references, holistic phrasing).
+
+Subagents never feed information back through their reply. They write to disk and acknowledge; the orchestrator reads the file on disk. The reply is treated as a no-op signal — useful only to know the subagent has returned, never as content. If a notes file is missing after a subagent reports success, the orchestrator re-spawns the subagent with the same brief and waits for the file to appear on disk. The reply is never trusted as a source of truth; the file on disk is the only signal that work is complete.
 
 The writer is the orchestrator itself. Document writing is **serialized**, never parallelized, because FR/NFR IDs must remain globally unique within the document.
 
@@ -209,26 +213,32 @@ The workflow runs as numbered phases. Phases run in order; **inside a phase**, s
 
 ### Phase 2 — Survey
 
-The orchestrator performs (or delegates to one survey subagent for very large repos — > ~500 files at the top two levels) a quick high-level pass: list the repo root, read top-level manifest/config files, identify the project shape (single app, monorepo, multi-package), enumerate top-level folders and what they appear to contain. Write `<run-folder>/00-survey.md` capturing:
+The orchestrator dispatches a **survey subagent** — always, regardless of repo size, because the orchestrator never reads the source directly. The subagent performs a quick high-level pass (repo root listing, top-level manifest/config files, project shape, top-level folders) and writes `<run-folder>/00-survey.md` capturing:
 
 - Project shape and top-level layout.
 - Candidate feature areas (folder names, route prefixes, package names).
 - Which angles from the catalog apply, which don't, and any fresh angles to add.
 
-Append the chosen angles to `.metadata.json` under a `planned_angles` field so the run is auditable later.
+After the subagent returns, the orchestrator **verifies `00-survey.md` exists on disk**. If it doesn't, re-spawn the survey subagent with the same brief. Re-spawn as many times as needed until the file is on disk.
+
+The orchestrator then reads `00-survey.md` from disk to extract the planned angles, and appends them to `.metadata.json` under a `planned_angles` field so the run is auditable later.
 
 ### Phase 3 — Parallel exploration
 
-Dispatch one subagent per planned angle in a single tool call. Each subagent writes to `<run-folder>/NN-<angle-slug>/notes.md`. Wait for **every** angle to return before Phase 4.
+Dispatch one subagent per planned angle in a single tool call. Each subagent writes to `<run-folder>/NN-<angle-slug>/notes.md`.
+
+After every subagent in a batch has returned, the orchestrator **verifies each expected `notes.md` exists on disk** under its angle folder. If any file is missing — for any reason, including a subagent that reported success — re-spawn that subagent with the same brief. Re-spawn as many times as needed until every expected file is on disk. The subagent's reply is never trusted; the file is the only completion signal.
 
 If the number of angles is too large to dispatch in one parallel batch reliably, split into smaller batches — but never collapse Phase 3 into Phase 4. All exploration finishes before any writing starts.
+
+Do **not** read the notes files during Phase 3. Reading is deferred to Phase 4 so it can be done sequentially in a single, predictable order.
 
 ### Phase 4 — Writing
 
 The orchestrator (writer is the orchestrator itself; **never delegated to a subagent**, because global ID consistency depends on a single writer) composes the document from the notes:
 
-1. Read every angle's notes file from disk.
-2. Write the methodology preamble first, then product overview, feature inventory, FRs, NFRs, technical architecture, business rules, glossary, open questions — assigning `FR-XXXX` / `NFR-XXXX` IDs sequentially as requirements are written.
+1. **Read the notes files one at a time, in numerical order** of the angle folder prefix — `00-survey.md` first, then `01-<angle>/notes.md`, then `02-<angle>/notes.md`, and so on. Use a separate Read call per file; do not batch reads in parallel. This sequential intake gives the orchestrator a predictable, ordered build-up of context.
+2. Once **all** notes are read, write the methodology preamble first, then product overview, feature inventory, FRs, NFRs, technical architecture, business rules, glossary, open questions — assigning `FR-XXXX` / `NFR-XXXX` IDs sequentially as requirements are written.
 3. Cross-reference: every Trace pointer should be a real file path or route, ideally with a line number when it sharpens the reference. Every Open Question should cross-reference the FRs/NFRs/rules that depend on it.
 4. Write the final document in one pass to the `output_path`, overwriting any prior file there.
 
@@ -255,7 +265,7 @@ Used only for large repos where a direct survey by the orchestrator would burn t
 - **Output path** — `<run-folder>/00-survey.md`.
 - **Output shape** — markdown with `## Project shape`, `## Top-level layout`, `## Candidate feature areas`, `## Recommended angles`, `## Notes` (anything surprising — e.g. apparent dead code, multiple apps in one repo, signs of an in-progress feature that's only partially wired up).
 - **Hard constraints** — read-only on the source. Read directories and config files at the top two levels only; do **not** descend deeply. No code edits, no destructive commands.
-- **Return contract** — write the file; reply with **only** a 3-sentence summary plus the file path. Do not paste the file back.
+- **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the survey. The orchestrator does not parse the reply — it reads the file from disk during Phase 2's verification step.
 
 ### Exploration subagent (Phase 3, one per angle)
 
@@ -274,13 +284,15 @@ Used only for large repos where a direct survey by the orchestrator would burn t
   - Never name source-stack or target-stack technologies in the body of draft requirements. Describe behavior, not implementation. ("Persists session across app restarts" — yes. "Uses Redux Persist with localStorage" — no.)
   - Never include code snippets in draft requirements. Evidence can cite snippets; requirements must be stack-neutral prose.
 - **Hard constraints** — read-only on the source codebase. No writes outside the angle folder. No code edits anywhere.
-- **Return contract** — write the file; reply with **only** a 3-sentence summary plus the file path.
+- **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the notes. The orchestrator does not parse the reply — it reads the file from disk in Phase 4.
 
 The orchestrator dispatches one of these per planned angle, in parallel.
 
 ## Discipline (for the orchestrator)
 
-- **Read-only on the source.** Never edit, refactor, or "clean up" source files. The spec is the only output.
+- **No inline reads of the source.** Every read, listing, search, or `grep` of the source codebase goes through a subagent — without exception. The orchestrator's tools touch only its own scratch outputs (the run folder) and the spec output path. Even a single inline `ls` or `cat` of a source file is a discipline violation: it bypasses the file-on-disk handoff that keeps the context clean.
+- **Trust the file, not the reply.** A subagent's reply is acknowledgment only. If the expected file is missing on disk, re-spawn the subagent with the same brief, however many times it takes. Never "stitch" a missing report from memory or from anything the reply said.
+- **Read-only on the source even via subagents.** Subagents never edit, refactor, or "clean up" source files. The spec is the only output.
 - **Stack-neutral language in the document.** Source-stack and target-stack names belong nowhere in the body. They may appear in the methodology preamble's *what was inspected* list only when the artifact name is itself load-bearing context for understanding the inspection (e.g. "iOS Info.plist parsed for declared capabilities") — and even then, lean toward describing the artifact, not the technology.
 - **No invented requirements.** Every FR/NFR/rule must trace to code or to an explicit Open Question. If you're tempted to add an NFR because "every app needs this", route it to Open Questions instead.
 - **No migration content.** No "Implementation Hints", no "Rebuild Considerations", no source→target mapping under any name. This is non-negotiable.
