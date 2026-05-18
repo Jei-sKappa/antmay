@@ -7,6 +7,7 @@
         "./skills/afk-exploration",
         "./skills/brief-the-implementer",
         "./skills/consult-the-expert",
+        "./skills/derive-spec",
         "./skills/discussion-loop",
         "./skills/meta-prompting",
         "./skills/report-to-the-owner",

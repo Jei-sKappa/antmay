@@ -69,3 +69,11 @@ Reviews a decision document — spec, ADR, plan, design proposal, context doc, a
 ```sh
 npx skills add Jei-sKappa/skills --skill review-decision-document
 ```
+
+### [`derive-spec`](./skills/derive-spec/SKILL.md)
+
+Derives a comprehensive, stack-agnostic specification document from an existing codebase — a hybrid SRS + PRD with append-only requirement IDs, traceability back to source files, and a consolidated open-questions list. Useful when you want to extract a single source of truth for a 1:1 rebuild (same stack or different), or to document an undocumented application, without baking any migration or target-stack guidance into the output.
+
+```sh
+npx skills add Jei-sKappa/skills --skill derive-spec
+```
