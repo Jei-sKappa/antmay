@@ -192,17 +192,107 @@ Deferred to future releases.
 
 ## Traceability
 
-(Populated by `gsd-roadmapper` during roadmap creation.)
+Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` for phase details.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pending) | — | Pending |
+| THRD-01 | Phase 1: Foundations | Pending |
+| THRD-02 | Phase 1: Foundations | Pending |
+| THRD-03 | Phase 1: Foundations | Pending |
+| THRD-04 | Phase 1: Foundations | Pending |
+| THRD-05 | Phase 1: Foundations | Pending |
+| THRD-06 | Phase 1: Foundations | Pending |
+| THRD-07 | Phase 1: Foundations | Pending |
+| THRD-08 | Phase 1: Foundations | Pending |
+| DIST-04 | Phase 1: Foundations | Pending |
+| INBX-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| INBX-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| INBX-03 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| INBX-04 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-03 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-04 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-05 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-06 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-07 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-08 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-09 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| PROP-01 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| PROP-02 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| PROP-03 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| SPEC-01 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| SPEC-02 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| SPEC-03 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| SPEC-04 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| SPEC-05 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| PLAN-01 | Phase 4: Plan Family | Pending |
+| PLAN-02 | Phase 4: Plan Family | Pending |
+| PLAN-03 | Phase 4: Plan Family | Pending |
+| PLAN-04 | Phase 4: Plan Family | Pending |
+| PLAN-05 | Phase 4: Plan Family | Pending |
+| PLAN-06 | Phase 4: Plan Family | Pending |
+| PLAN-07 | Phase 4: Plan Family | Pending |
+| PLAN-08 | Phase 4: Plan Family | Pending |
+| PLAN-09 | Phase 4: Plan Family | Pending |
+| IMPL-01 | Phase 5: Implementation Family | Pending |
+| IMPL-02 | Phase 5: Implementation Family | Pending |
+| IMPL-03 | Phase 5: Implementation Family | Pending |
+| IMPL-04 | Phase 5: Implementation Family | Pending |
+| IMPL-05 | Phase 5: Implementation Family | Pending |
+| IMPL-06 | Phase 5: Implementation Family | Pending |
+| IMPL-07 | Phase 5: Implementation Family | Pending |
+| IMPL-08 | Phase 5: Implementation Family | Pending |
+| IMPL-09 | Phase 5: Implementation Family | Pending |
+| IMPL-10 | Phase 5: Implementation Family | Pending |
+| IMPL-11 | Phase 5: Implementation Family | Pending |
+| IMPL-12 | Phase 5: Implementation Family | Pending |
+| IMPL-13 | Phase 5: Implementation Family | Pending |
+| IMPL-14 | Phase 5: Implementation Family | Pending |
+| REVW-01 | Phase 6: Review Family | Pending |
+| REVW-02 | Phase 6: Review Family | Pending |
+| REVW-03 | Phase 6: Review Family | Pending |
+| REVW-04 | Phase 6: Review Family | Pending |
+| REVW-05 | Phase 6: Review Family | Pending |
+| REVW-06 | Phase 6: Review Family | Pending |
+| REVW-07 | Phase 6: Review Family | Pending |
+| REVW-08 | Phase 6: Review Family | Pending |
+| REVW-09 | Phase 6: Review Family | Pending |
+| MERG-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| MERG-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| MERG-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| MERG-04 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| MERG-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| MERG-06 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| FNSH-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| FNSH-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| FNSH-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| NAV-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| NAV-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| NAV-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| DIST-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| DIST-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| DIST-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| DIST-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
 
 **Coverage:**
-- v1 requirements: 73 total
-- Mapped to phases: 0
-- Unmapped: 73 ⚠️ (filled in by roadmapper)
+- v1 requirements: 78 total (re-counted from checkboxes; the original "73 total" line was stale)
+- Mapped to phases: 78
+- Unmapped: 0 ✓
+
+**Per-phase counts:**
+
+| Phase | Requirements |
+|-------|-------------:|
+| Phase 1: Foundations | 9 (THRD-01..08, DIST-04) |
+| Phase 2: Capture & Discussion Infrastructure | 13 (INBX-01..04, DISC-01..09) |
+| Phase 3: Forward Spine — Propose & Spec | 8 (PROP-01..03, SPEC-01..05) |
+| Phase 4: Plan Family | 9 (PLAN-01..09) |
+| Phase 5: Implementation Family | 14 (IMPL-01..14) |
+| Phase 6: Review Family | 9 (REVW-01..09) |
+| Phase 7: Merge, Finish, Navigation & Distribution Surface | 16 (MERG-01..06, FNSH-01..03, NAV-01..03, DIST-01, DIST-02, DIST-03, DIST-05) |
+| **Total** | **78** |
 
 ---
 *Requirements defined: 2026-05-20*
-*Last updated: 2026-05-20 after initial definition*
+*Last updated: 2026-05-20 — Traceability populated by gsd-roadmapper; v1 count corrected from 73 → 78 (re-counted from checkboxes).*
