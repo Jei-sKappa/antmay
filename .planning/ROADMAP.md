@@ -104,7 +104,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can rely on every `review-*-interactive` walking one topic / component / finding at a time, asking the user for their view when useful, testing user explanations against the artifact, writing a decision log under `discussions/`, and *only* dumping unresolved actionable findings to `inbox/open/` (no Inbox file when nothing remains).
   4. The legacy `skills/review-decision-document/` is evolved into `skills/review-spec-auto/` and `skills/review-spec-interactive/` (or explicitly retired with a documented migration), and `review-spec-auto` enforces the handoff-grade bar defined in Phase 3.
   5. Users see in `README.md` that adversarial review is delegated to the external `the-fool` skill (no native V1 adversarial-review skill) and that verification of implementations is covered by `review-implementation-*` rather than a separate `verify-*` skill.
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 06-01-PLAN.md — Ship review-proposal-auto + review-proposal-interactive + register touchpoints
+  - [ ] 06-02-PLAN.md — Ship review-spec-auto + review-spec-interactive + RETIRE review-decision-document + register touchpoints
+  - [ ] 06-03-PLAN.md — Ship review-plan-auto + review-plan-interactive + register touchpoints
+  - [ ] 06-04-PLAN.md — Ship review-implementation-auto + review-implementation-interactive + add README verification-coverage note + register touchpoints
+  - [ ] 06-05-PLAN.md — Ship review-code-auto + review-code-interactive + add README the-fool delegation note + register touchpoints
 
 ### Phase 7: Merge, Finish, Navigation & Distribution Surface
 **Goal**: Users have the closing skills of the V1 catalog — merge for reconciling artifact variants, `finish` for closing the thread, `whats-next` for advisory navigation — plus the public-facing distribution surface that makes the workflow discoverable: hybrid README, `JeisKappa-workflow` marketplace plugin populated with every V1 skill, and per-skill installability confirmed.
@@ -130,6 +135,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Forward Spine — Propose & Spec | 2/2 | Complete   | 2026-05-21 |
 | 4. Plan Family | 3/3 | Complete   | 2026-05-21 |
 | 5. Implementation Family | 3/3 | Complete   | 2026-05-21 |
-| 6. Review Family | 0/TBD | Not started | - |
+| 6. Review Family | 0/5 | Not started | - |
 | 7. Merge, Finish, Navigation & Distribution Surface | 0/TBD | Not started | - |
 </content>
