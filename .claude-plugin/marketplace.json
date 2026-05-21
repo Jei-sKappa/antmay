@@ -10,7 +10,6 @@
         "./skills/derive-spec",
         "./skills/meta-prompting",
         "./skills/report-to-the-owner",
-        "./skills/review-decision-document",
         "./skills/the-librarian"
       ]
     },
@@ -36,6 +35,8 @@
         "./skills/propose-interactive",
         "./skills/review-proposal-auto",
         "./skills/review-proposal-interactive",
+        "./skills/review-spec-auto",
+        "./skills/review-spec-interactive",
         "./skills/seeded-discussion",
         "./skills/spec-auto",
         "./skills/spec-interactive"

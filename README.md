@@ -54,14 +54,6 @@ Researches a rough idea autonomously — new project, new feature, or bug fix �
 npx skills add Jei-sKappa/skills --skill afk-exploration
 ```
 
-### [`review-decision-document`](./skills/review-decision-document/SKILL.md)
-
-Reviews a decision document — spec, ADR, plan, design proposal, context doc, anything that captures an idea before someone acts on it — and stress-tests it against the bar that a recipient could deliver the same work the author had in mind. Useful when you have a document you want stress-tested for clarity, internal consistency, gaps, hidden assumptions, and readiness to be built upon — before anyone acts on it.
-
-```sh
-npx skills add Jei-sKappa/skills --skill review-decision-document
-```
-
 ### [`derive-spec`](./skills/derive-spec/SKILL.md)
 
 Derives a comprehensive, stack-agnostic specification document from an existing codebase — a hybrid SRS + PRD with append-only requirement IDs, traceability back to source files, and a consolidated open-questions list. Useful when you want to extract a single source of truth for a 1:1 rebuild (same stack or different), or to document an undocumented application, without baking any migration or target-stack guidance into the output.
@@ -124,6 +116,22 @@ Walks an emitted V1 proposal artifact one finding at a time — ASKING the user 
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-proposal-interactive
+```
+
+### [`review-spec-auto`](./skills/review-spec-auto/SKILL.md)
+
+Reads an emitted V1 spec artifact under the active thread's `specs/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` end-to-end, with no clarifying questions — applying the **handoff-grade bar** by checking all EIGHT D50 semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) present and coherent against the contract owned by Phase 3's `spec-auto` / `spec-interactive` skills. The six-section report covers Verdict / Findings (severity-tagged `blocker | issue | nit`) / Evidence / References / Open Questions / Next Actions. Evolves the legacy `review-decision-document` handoff-grade-bar logic against the locked Phase 3 spec contract. Adversarial pressure on a spec is delegated to the external `the-fool` skill — no native V1 adversarial-review skill. Useful when you want autonomous end-to-end handoff-grade-bar review of a spec — not when you want to walk findings together one at a time (use `review-spec-interactive` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-spec-auto
+```
+
+### [`review-spec-interactive`](./skills/review-spec-interactive/SKILL.md)
+
+Walks an emitted V1 spec artifact one D50 element (or one finding) at a time — ASKING the user for their view AND TESTING that view against the spec (do not just accept) — applying the **handoff-grade bar** by checking all EIGHT D50 semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance). Settles each finding as resolved / rejected / accepted / deferred / parked and appends per-finding records to a decision log under `discussions/`. At the end of the session, ONLY unresolved actionable findings dump to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` (no Inbox file when nothing remains). Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a review-stance amplifier — a review is most valuable when it disagrees with the author; the cheap moment to push back is during the walk, before the spec is escalated to planning or implementation. Evolves the legacy `review-decision-document` handoff-grade-bar logic against the locked Phase 3 spec contract. Adversarial pressure on a spec is delegated to the external `the-fool` skill. Useful when you want to think the spec review through collaboratively with the agent and have the resolved-vs-unresolved split captured for you — not when you want autonomous end-to-end review (use `review-spec-auto` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-spec-interactive
 ```
 
 ### [`spec-auto`](./skills/spec-auto/SKILL.md)
@@ -241,3 +249,4 @@ npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-interacti
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
+- **`review-decision-document`** — retired 2026-05-21. Evolved into `review-spec-auto` (autonomous) and `review-spec-interactive` (collaborative) to check against the locked Phase 3 spec semantic contract (the 8 D50 handoff-grade-bar elements). The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing review outputs produced by the legacy skill remain valid as-is and require no migration.
