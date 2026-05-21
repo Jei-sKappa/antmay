@@ -19,7 +19,9 @@
       "name": "JeisKappa-workflow",
       "source": "./",
       "skills": [
-        "./skills/capture-inbox"
+        "./skills/capture-inbox",
+        "./skills/discussion",
+        "./skills/seeded-discussion"
       ]
     }
   ]
