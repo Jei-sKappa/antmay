@@ -27,15 +27,15 @@
 
 ### Discussion (DISC)
 
-- [ ] **DISC-01**: User can invoke a `discussion` skill for open-ended interviews where the agent discovers questions live [D16, D17]
-- [ ] **DISC-02**: User can invoke a `seeded-discussion` skill that walks predetermined points one at a time with options + recommendation default-on [D16, D17, D21]
-- [ ] **DISC-03**: User can invoke `discussion` and get options + recommendation only when a concrete decision point emerges (opt-in) [D21]
-- [ ] **DISC-04**: User can rely on discussion logs being appended incrementally to `discussions/` as decisions are made, surviving interruptions [D18, D19]
-- [ ] **DISC-05**: User can reference discussion decisions by sequential local IDs (`## D1`, `## D2`, …) in downstream artifacts [D53]
-- [ ] **DISC-06**: User can invoke discussion skills without a pre-existing thread and have the skill resolve thread location with light judgment (ask or auto-create when obvious) [D18]
-- [ ] **DISC-07**: User can interview indefinitely — discussion skills do not impose a hard question cap [D22]
-- [ ] **DISC-08**: User can rely on discussion skills proposing to split or park non-blocking branches instead of dragging the current discussion sideways [D23]
-- [ ] **DISC-09**: User understands the durable output of `discussion`/`seeded-discussion` is named "decision log" / "decision record" [D94]
+- [x] **DISC-01**: User can invoke a `discussion` skill for open-ended interviews where the agent discovers questions live [D16, D17]
+- [x] **DISC-02**: User can invoke a `seeded-discussion` skill that walks predetermined points one at a time with options + recommendation default-on [D16, D17, D21]
+- [x] **DISC-03**: User can invoke `discussion` and get options + recommendation only when a concrete decision point emerges (opt-in) [D21]
+- [x] **DISC-04**: User can rely on discussion logs being appended incrementally to `discussions/` as decisions are made, surviving interruptions [D18, D19]
+- [x] **DISC-05**: User can reference discussion decisions by sequential local IDs (`## D1`, `## D2`, …) in downstream artifacts [D53]
+- [x] **DISC-06**: User can invoke discussion skills without a pre-existing thread and have the skill resolve thread location with light judgment (ask or auto-create when obvious) [D18]
+- [x] **DISC-07**: User can interview indefinitely — discussion skills do not impose a hard question cap [D22]
+- [x] **DISC-08**: User can rely on discussion skills proposing to split or park non-blocking branches instead of dragging the current discussion sideways [D23]
+- [x] **DISC-09**: User understands the durable output of `discussion`/`seeded-discussion` is named "decision log" / "decision record" [D94]
 
 ### Propose (PROP)
 
@@ -209,15 +209,15 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | INBX-02 | Phase 2: Capture & Discussion Infrastructure | Complete |
 | INBX-03 | Phase 2: Capture & Discussion Infrastructure | Complete |
 | INBX-04 | Phase 2: Capture & Discussion Infrastructure | Complete |
-| DISC-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-03 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-04 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-05 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-06 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-07 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-08 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| DISC-09 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| DISC-01 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-02 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-03 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-04 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-05 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-06 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-07 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-08 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| DISC-09 | Phase 2: Capture & Discussion Infrastructure | Complete |
 | PROP-01 | Phase 3: Forward Spine — Propose & Spec | Pending |
 | PROP-02 | Phase 3: Forward Spine — Propose & Spec | Pending |
 | PROP-03 | Phase 3: Forward Spine — Propose & Spec | Pending |
