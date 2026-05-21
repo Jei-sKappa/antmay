@@ -85,3 +85,19 @@ Captures a short markdown note into the active V1 thread's `inbox/open/` folder,
 ```sh
 npx skills add Jei-sKappa/skills --skill capture-inbox
 ```
+
+### [`discussion`](./skills/discussion/SKILL.md)
+
+Conducts an open-ended interview where questions are discovered live as the conversation unfolds, surfaces options and a recommendation only when a concrete decision point emerges, and appends each decided point to a sequentially-numbered, append-only decision log under the active thread's `discussions/` folder. Useful when you want to think a topic through with the agent — not knowing yet what every question is — and have the resulting decisions captured as a referenceable, thread-local artifact you can point downstream skills at.
+
+```sh
+npx skills add Jei-sKappa/skills --skill discussion
+```
+
+### [`seeded-discussion`](./skills/seeded-discussion/SKILL.md)
+
+Walks a predetermined list of points one at a time — passed as a markdown file or pasted inline — using the Decision / What you need to know / Options / Recommendation loop default-on for every point, then appends each decided point to an append-only decision log under the active thread's `discussions/` folder. Useful when you already have a concrete list to settle (findings, open questions, review comments, design points, a plan to walk) and want options plus a recommendation surfaced for every point by default.
+
+```sh
+npx skills add Jei-sKappa/skills --skill seeded-discussion
+```
