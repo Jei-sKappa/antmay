@@ -20,10 +20,10 @@
 
 ### Inbox (INBX)
 
-- [ ] **INBX-01**: User can invoke a standalone `capture-inbox` skill to write a thread-local Inbox item from any context [D26]
-- [ ] **INBX-02**: User can rely on `capture-inbox` items being short markdown notes that always explain *why* the item is captured, without a rigid section template [D25]
-- [ ] **INBX-03**: Workflow skills use `inbox/{open,processed,dropped}/` subfolders to reflect Inbox item status; no Backlog primitives in V1 [D24]
-- [ ] **INBX-04**: Workflow skills decide whether to ask before capturing or auto-capture based on whether the run is user-active or autonomous/AFK [D27]
+- [x] **INBX-01**: User can invoke a standalone `capture-inbox` skill to write a thread-local Inbox item from any context [D26]
+- [x] **INBX-02**: User can rely on `capture-inbox` items being short markdown notes that always explain *why* the item is captured, without a rigid section template [D25]
+- [x] **INBX-03**: Workflow skills use `inbox/{open,processed,dropped}/` subfolders to reflect Inbox item status; no Backlog primitives in V1 [D24]
+- [x] **INBX-04**: Workflow skills decide whether to ask before capturing or auto-capture based on whether the run is user-active or autonomous/AFK [D27]
 
 ### Discussion (DISC)
 
@@ -205,10 +205,10 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | THRD-07 | Phase 1: Foundations | Complete |
 | THRD-08 | Phase 1: Foundations | Complete |
 | DIST-04 | Phase 1: Foundations | Complete |
-| INBX-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| INBX-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| INBX-03 | Phase 2: Capture & Discussion Infrastructure | Pending |
-| INBX-04 | Phase 2: Capture & Discussion Infrastructure | Pending |
+| INBX-01 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| INBX-02 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| INBX-03 | Phase 2: Capture & Discussion Infrastructure | Complete |
+| INBX-04 | Phase 2: Capture & Discussion Infrastructure | Complete |
 | DISC-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
 | DISC-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
 | DISC-03 | Phase 2: Capture & Discussion Infrastructure | Pending |

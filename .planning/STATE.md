@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-foundations/01-03-PLAN.md — Phase 1 ready for verification
-last_updated: "2026-05-21T08:08:26.762Z"
-last_activity: 2026-05-21 -- Phase 2 planning complete
+stopped_at: Completed 02-capture-and-discussion-infrastructure/02-01-PLAN.md (capture-inbox shipped)
+last_updated: "2026-05-21T08:15:23.893Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 14
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** A user picking up any single skill or composing the whole spine can drive a feature end-to-end without depending on a CLI, runtime, or project-local state file — every artifact is reviewable Markdown on disk under `docs/threads/<thread>/`.
-**Current focus:** Phase 1 — Foundations
+**Current focus:** Phase 2 — Capture & Discussion Infrastructure
 
 ## Current Position
 
-Phase: 1 (Foundations) — EXECUTING
-Plan: 3 of 3
+Phase: 2 (Capture & Discussion Infrastructure) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-05-21 -- Phase 2 planning complete
+Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 1 P01 | ~9min | 2 tasks | 2 files |
 | Phase 1 P02 | ~2min | 2 tasks | 2 files |
 | Phase 1 P3 | ~2min | 3 tasks | 3 files |
+| Phase 02 P01 | 3min | 4 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 1]: V1 emitted-artifact immutability + reference-resolution rules codified at docs/workflow/v1/immutability.md — emitted artifacts NEVER edited, drafts editable under .wip/, source-relation frontmatter forbidden, ambiguous references resolved by asking the user
 - [Phase 1]: V1 reference doc tree complete — README.md + thread-layout.md + filename-grammar.md + immutability.md under docs/workflow/v1/; Plan 03 wires registration baseline (.gitignore, marketplace.json, AGENTS.md pointer)
 - [Phase 1]: Registration baseline wired — .gitignore docs/threads/**/.wip/ rule, JeisKappa-workflow marketplace plugin (empty skills array), AGENTS.md pointer section to docs/workflow/v1/README.md; .vscode/settings.json + README.md intentionally untouched per CONTEXT.md (entries land per skill in later phases; README hybrid is Phase 7 work)
+- [Phase 2]: capture-inbox V1 spine skill shipped — Frontmatter + 5 body sections (Workflow / Capture Trigger / Inbox Item Format / State by Folder / Ambiguous Thread Resolution); registered under JeisKappa-workflow marketplace plugin, .vscode scopes (alphabetical), and README Available skills section. Plans 02-02 and 02-03 can now cite capture-inbox as the canonical scope-drift parking lot.
+- [Phase 2]: Trigger encoding stays in the skill body, not runtime detection — Per D27/INBX-04 — the skill instructs the agent to decide interactive vs autonomous based on its session context (presence of a human, AFK invocation, scripted run). The skill does NOT try to detect runtime programmatically.
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T07:30:46.564Z
-Stopped at: Completed 01-foundations/01-03-PLAN.md — Phase 1 ready for verification
+Last session: 2026-05-21T08:15:23.853Z
+Stopped at: Completed 02-capture-and-discussion-infrastructure/02-01-PLAN.md (capture-inbox shipped)
 Resume file: None
