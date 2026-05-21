@@ -77,3 +77,11 @@ Derives a comprehensive, stack-agnostic specification document from an existing 
 ```sh
 npx skills add Jei-sKappa/skills --skill derive-spec
 ```
+
+### [`capture-inbox`](./skills/capture-inbox/SKILL.md)
+
+Captures a short markdown note into the active V1 thread's `inbox/open/` folder, with a mandatory `**Why:**` first line and free-form body after it. Useful when a side-finding, follow-up, or deferred idea surfaces while working on something else and you want it parked under the current thread — without derailing the task at hand — knowing the agent will ask first in interactive sessions and auto-capture in AFK / autonomous runs.
+
+```sh
+npx skills add Jei-sKappa/skills --skill capture-inbox
+```
