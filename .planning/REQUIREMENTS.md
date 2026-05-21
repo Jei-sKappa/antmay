@@ -67,8 +67,8 @@
 
 - [x] **IMPL-01**: User can invoke `implement-auto` to implement from less structured input (spec, proposal, issue, Inbox item, code context, direct prompt) [D64, D65]
 - [x] **IMPL-02**: User can invoke `implement-interactive` to implement less structured input collaboratively [D64, D65]
-- [ ] **IMPL-03**: User can invoke `implement-plan-auto` to execute a plan or specific plan task without spawning subagents, relying on the current agent + self-review [D65, D67]
-- [ ] **IMPL-04**: User can invoke `implement-plan-interactive` to execute a plan with user-confirmed transitions [D65, D67]
+- [x] **IMPL-03**: User can invoke `implement-plan-auto` to execute a plan or specific plan task without spawning subagents, relying on the current agent + self-review [D65, D67]
+- [x] **IMPL-04**: User can invoke `implement-plan-interactive` to execute a plan with user-confirmed transitions [D65, D67]
 - [ ] **IMPL-05**: User can invoke `implement-plan-with-subagents-auto` to run the full subagent loop (implementer → spec-compliance reviewer → code-quality reviewer; respawn fixer + re-review until pass) [D66, D68, D70, D71, D72]
 - [ ] **IMPL-06**: User can invoke `implement-plan-with-subagents-interactive` to run the subagent loop with a human-confirmed checkpoint at every transition [D68]
 - [ ] **IMPL-07**: User can rely on `implement-plan-with-subagents-*` skills declaring subagent capability as a precondition (no inline fallback) [D69]
@@ -237,8 +237,8 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | PLAN-09 | Phase 4: Plan Family | Complete |
 | IMPL-01 | Phase 5: Implementation Family | Complete |
 | IMPL-02 | Phase 5: Implementation Family | Complete |
-| IMPL-03 | Phase 5: Implementation Family | Pending |
-| IMPL-04 | Phase 5: Implementation Family | Pending |
+| IMPL-03 | Phase 5: Implementation Family | Complete |
+| IMPL-04 | Phase 5: Implementation Family | Complete |
 | IMPL-05 | Phase 5: Implementation Family | Pending |
 | IMPL-06 | Phase 5: Implementation Family | Pending |
 | IMPL-07 | Phase 5: Implementation Family | Pending |

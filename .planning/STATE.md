@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-plan-family/04-02-PLAN.md (plan-strict-auto + plan-strict-interactive shipped; Phase 4 plan-authoring family complete — 11 of 13 workflow entries; Plan 04-03 adjust-plan-granularity pair is the last)
-last_updated: "2026-05-21T12:05:06.844Z"
+stopped_at: Completed 05-implementation-family/05-02-PLAN.md (implement-plan-auto + implement-plan-interactive shipped; plan-driven single-agent pair; JeisKappa-workflow 17 of Phase 5 target 19; Plan 05-03 implement-plan-with-subagents-* pair is the last)
+last_updated: "2026-05-21T12:16:08.530Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 57
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 5 (Implementation Family) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 86%
 | Phase 04 P02 | 6min | 3 tasks | 5 files |
 | Phase 04-plan-family P03 | 8min | 3 tasks | 5 files |
 | Phase 05-implementation-family P01 | 9min | 3 tasks | 5 files |
+| Phase 05 P02 | 7min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [Phase 05]: Failed-commit handling is BLOCKED + halt for both auto and interactive variants; no in-skill retry loop — Per D77, the implementer does not iterate on a failed commit autonomously. Recovery is user-driven outside the skill.
 - [Phase 05]: Dirty-worktree check is owned by the skill itself in the single-agent variant (D79); pre-existing dirty changes folded into first commit only with explicit user consent — Single-agent variant has no orchestrator; the skill itself is the only place the check can live.
 - [Phase 05]: Less-structured-input pair has no *-with-subagents-* variant in V1 per D66 — Subagent topology is plan-driven only; users wanting subagent review on less-structured input first shape a plan via the plan-* family.
+- [Phase 05]: [Phase 05]: implement-plan-auto + implement-plan-interactive V1 spine skills shipped — plan-driven single-agent pair. Both accept a V1 plan artifact path under docs/threads/<thread>/plans/<UTC>-v<N>[-<descriptor>]-plan.md (loose OR strict granularity from any Phase 4 plan-* skill) plus an optional task identifier. Both honor D74 four-state status protocol (DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT), D75/D76 per-plan-task commit cadence (auto-commits vs ASK-before-committing), D77 failed-commit → BLOCKED halt, no-history-rewriting prohibition (--amend / rebase / force-push named and forbidden), D79 single-agent dirty-worktree check owned by the skill itself, D80 plan-deviation policy (judgment-based, surfaced via four-state task report), and D39 plan-artifact READ-ONLY immutability with revision routing via adjust-plan-granularity-{auto,interactive}. implement-plan-interactive carries the 4 anti-sycophancy markers verbatim from discussion/SKILL.md with the execution-time stakes amplifier (bad commits become expensive to rewind) + D93 no-auto-decision-log default + scope-drift handling. Registered under JeisKappa-workflow plugin (15 → 17); JeisKappa-skills unchanged at 8. Three commits: feat(implement-plan-auto) + feat(implement-plan-interactive) + chore: register (matches Phase 4 + Plan 05-01 pattern).
+- [Phase 05]: [Phase 05]: Plan-driven single-agent implementation skill body shape established — opening clarifier with all 5 sibling references (including subagent variants) and the 2 axes (input-shape × topology) per D64/D65/D66; Inputs section names the V1 plan artifact path under docs/threads/<thread>/plans/ as the SOLE input form with optional task identifier; Single-Agent Topology section explicitly names the subagent siblings as the alternative for the heavier review loop; Workflow uses per-plan-task implement → self-review → commit (auto) or implement → self-review → ASK-before-committing (interactive) cycle; both skill bodies cite docs/workflow/v1/immutability.md and docs/workflow/v1/thread-layout.md by absolute path AND at least one Phase 4 plan-family skill (skills/plan-loose-auto/SKILL.md, skills/plan-strict-auto/SKILL.md, etc.) to anchor 'expected input shape'. Pattern reusable for Plan 05-03 subagent siblings — the per-plan-task cadence, four-state protocol, failed-commit → BLOCKED, no-history-rewriting language, and anti-sycophancy stance transfer verbatim; the delta is the orchestrator role (which owns the dirty-worktree check per D79's subagent variant and dispatches implementer + reviewer subagents per D70/D71/D72).
+- [Phase 05]: [Phase 05]: Granularity is a property of the plan artifact, not a switch on the implementation skill — both implement-plan-auto and implement-plan-interactive accept loose-granularity AND strict-granularity plan artifacts as valid input, executed identically (read plan READ-ONLY, walk tasks in plan order, self-review, commit per plan task). The loose-vs-strict distinction lives at plan-authoring time (Phase 4 plan family); at implementation time the difference is whether the implementer infers obvious substeps (loose) or follows them literally from the strict per-task six-field block. Documented in the ## Inputs section of both skill bodies with explicit cross-references to skills/plan-strict-auto/SKILL.md for the six-field strict contract. Same pattern will apply to Plan 05-03 subagent skills.
 
 ### Pending Todos
 
@@ -136,7 +140,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T12:01:47.041Z
-Stopped at: Completed 04-plan-family/04-02-PLAN.md (plan-strict-auto + plan-strict-interactive shipped; Phase 4 plan-authoring family complete — 11 of 13 workflow entries; Plan 04-03 adjust-plan-granularity pair is the last)
+Last session: 2026-05-21T12:15:42.985Z
+Stopped at: Completed 05-implementation-family/05-02-PLAN.md (implement-plan-auto + implement-plan-interactive shipped; plan-driven single-agent pair; JeisKappa-workflow 17 of Phase 5 target 19; Plan 05-03 implement-plan-with-subagents-* pair is the last)
 Resume file: 
 None
