@@ -65,8 +65,8 @@
 
 ### Implementation (IMPL)
 
-- [ ] **IMPL-01**: User can invoke `implement-auto` to implement from less structured input (spec, proposal, issue, Inbox item, code context, direct prompt) [D64, D65]
-- [ ] **IMPL-02**: User can invoke `implement-interactive` to implement less structured input collaboratively [D64, D65]
+- [x] **IMPL-01**: User can invoke `implement-auto` to implement from less structured input (spec, proposal, issue, Inbox item, code context, direct prompt) [D64, D65]
+- [x] **IMPL-02**: User can invoke `implement-interactive` to implement less structured input collaboratively [D64, D65]
 - [ ] **IMPL-03**: User can invoke `implement-plan-auto` to execute a plan or specific plan task without spawning subagents, relying on the current agent + self-review [D65, D67]
 - [ ] **IMPL-04**: User can invoke `implement-plan-interactive` to execute a plan with user-confirmed transitions [D65, D67]
 - [ ] **IMPL-05**: User can invoke `implement-plan-with-subagents-auto` to run the full subagent loop (implementer → spec-compliance reviewer → code-quality reviewer; respawn fixer + re-review until pass) [D66, D68, D70, D71, D72]
@@ -74,11 +74,11 @@
 - [ ] **IMPL-07**: User can rely on `implement-plan-with-subagents-*` skills declaring subagent capability as a precondition (no inline fallback) [D69]
 - [ ] **IMPL-08**: User can rely on the reviewer prompts inside `implement-plan-with-subagents-*` being embedded supporting files in the skill folder, not standalone V1 skills [D87]
 - [ ] **IMPL-09**: User can rely on every fix from a reviewer issue being re-reviewed before the workflow advances [D72]
-- [ ] **IMPL-10**: User can read implementation outcomes using the four-state status protocol `DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT` [D74]
-- [ ] **IMPL-11**: User can rely on `implement-*-auto` skills auto-committing per the granularity rule (per plan task; per orchestration cycle; per implicit task or explicit Git instruction in `implement-auto`) without rewriting history or manipulating commits [D75, D76]
-- [ ] **IMPL-12**: User can rely on `implement-*-interactive` skills asking before committing at each equivalent checkpoint [D75, D76]
-- [ ] **IMPL-13**: User can rely on implementation skills reporting `BLOCKED` when an expected commit fails [D77]
-- [ ] **IMPL-14**: User can rely on implementation skills asking before proceeding when the worktree is dirty (orchestrator owns the check in subagent variants) [D79]
+- [x] **IMPL-10**: User can read implementation outcomes using the four-state status protocol `DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT` [D74]
+- [x] **IMPL-11**: User can rely on `implement-*-auto` skills auto-committing per the granularity rule (per plan task; per orchestration cycle; per implicit task or explicit Git instruction in `implement-auto`) without rewriting history or manipulating commits [D75, D76]
+- [x] **IMPL-12**: User can rely on `implement-*-interactive` skills asking before committing at each equivalent checkpoint [D75, D76]
+- [x] **IMPL-13**: User can rely on implementation skills reporting `BLOCKED` when an expected commit fails [D77]
+- [x] **IMPL-14**: User can rely on implementation skills asking before proceeding when the worktree is dirty (orchestrator owns the check in subagent variants) [D79]
 
 ### Review (REVW)
 
@@ -235,8 +235,8 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | PLAN-07 | Phase 4: Plan Family | Complete |
 | PLAN-08 | Phase 4: Plan Family | Complete |
 | PLAN-09 | Phase 4: Plan Family | Complete |
-| IMPL-01 | Phase 5: Implementation Family | Pending |
-| IMPL-02 | Phase 5: Implementation Family | Pending |
+| IMPL-01 | Phase 5: Implementation Family | Complete |
+| IMPL-02 | Phase 5: Implementation Family | Complete |
 | IMPL-03 | Phase 5: Implementation Family | Pending |
 | IMPL-04 | Phase 5: Implementation Family | Pending |
 | IMPL-05 | Phase 5: Implementation Family | Pending |
@@ -244,11 +244,11 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | IMPL-07 | Phase 5: Implementation Family | Pending |
 | IMPL-08 | Phase 5: Implementation Family | Pending |
 | IMPL-09 | Phase 5: Implementation Family | Pending |
-| IMPL-10 | Phase 5: Implementation Family | Pending |
-| IMPL-11 | Phase 5: Implementation Family | Pending |
-| IMPL-12 | Phase 5: Implementation Family | Pending |
-| IMPL-13 | Phase 5: Implementation Family | Pending |
-| IMPL-14 | Phase 5: Implementation Family | Pending |
+| IMPL-10 | Phase 5: Implementation Family | Complete |
+| IMPL-11 | Phase 5: Implementation Family | Complete |
+| IMPL-12 | Phase 5: Implementation Family | Complete |
+| IMPL-13 | Phase 5: Implementation Family | Complete |
+| IMPL-14 | Phase 5: Implementation Family | Complete |
 | REVW-01 | Phase 6: Review Family | Pending |
 | REVW-02 | Phase 6: Review Family | Pending |
 | REVW-03 | Phase 6: Review Family | Pending |

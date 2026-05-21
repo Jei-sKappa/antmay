@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Completed 04-plan-family/04-02-PLAN.md (plan-strict-auto + plan-strict-interactive shipped; Phase 4 plan-authoring family complete — 11 of 13 workflow entries; Plan 04-03 adjust-plan-granularity pair is the last)
-last_updated: "2026-05-21T10:36:40.506Z"
+last_updated: "2026-05-21T12:05:06.844Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 14
+  completed_plans: 12
   percent: 57
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** A user picking up any single skill or composing the whole spine can drive a feature end-to-end without depending on a CLI, runtime, or project-local state file — every artifact is reviewable Markdown on disk under `docs/threads/<thread>/`.
-**Current focus:** Phase 4 — Plan Family
+**Current focus:** Phase 5 — Implementation Family
 
 ## Current Position
 
-Phase: 4 (Plan Family) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 5 (Implementation Family) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [██████████] 100%
 | Phase 04 P01 | 18min | 3 tasks | 5 files |
 | Phase 04 P02 | 6min | 3 tasks | 5 files |
 | Phase 04-plan-family P03 | 8min | 3 tasks | 5 files |
+| Phase 05-implementation-family P01 | 9min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 04]: adjust-plan-granularity pair shipped — adjust-plan-granularity-auto (autonomous: existing plan + target instruction -> new versioned plan) + adjust-plan-granularity-interactive (collaborative: per-task SPLIT/MERGE/EXPAND/CONTRACT/LEAVE walk). Both accept TWO inputs (source plan path + target instruction in coarse or specific-phrase form), read source READ-ONLY per D39, emit NEW versioned plan at v<N+1>-<descriptor>-plan.md (MANDATORY descriptor encodes the granularity shift). Enforce D59 (verbatim phrase twice), D60 (4 named-and-forbidden constructs + citation), D61 (4-check self-review with under/over-splitting checks specialized for MERGE-vs-SPLIT actions), D62 (NEVER-commits phrase). Interactive carries 4 anti-sycophancy markers verbatim with granularity-compound stakes amplifier; 5 walk verbs with per-action push-back angles. Registered: workflow plugin 11->13 (Phase 4 target reached); skills plugin unchanged at 8. Phase 4 plan-family COMPLETE.
 - [Phase ?]: [Phase 04]: Granularity-shift skill pair pattern established — one auto (consumes source-plan path + target instruction, end-to-end, no clarifying questions) plus one interactive sibling (per-task SPLIT/MERGE/EXPAND/CONTRACT/LEAVE walk, anti-sycophancy with granularity-compound stakes amplifier, D93 no-auto-decision-log, capture-inbox for scope drift). Both require TWO inputs, open source READ-ONLY, emit NEW versioned plan with MANDATORY descriptor encoding the shift, honor D39/D59/D60/D61/D62. Per-action push-back refines per-task push-back (Plan 04-01) and per-field push-back (Plan 04-02) with verb-based action grammar. Pattern reusable for any future V1 skill emitting a transformed variant of an existing artifact.
 - [Phase ?]: [Phase 04]: Mandatory-descriptor convention on adjusted-plan filenames — unlike first-emission from-scratch plans (which default to NO descriptor per Plans 04-01 and 04-02), adjusted plans REQUIRE a descriptor that encodes the granularity shift. Recommended descriptors: looser / stricter / impl-ready / high-level for coarse directions; kebab-case summary (under 5 words) for specific-phrase shifts. Distinguishes adjusted plans from from-scratch next-version emissions at the filesystem level — a reader seeing v1-plan.md + v2-stricter-plan.md side by side recognizes the granularity-shift relationship without consulting metadata. Convention reusable for any future V1 skill emitting a transformed variant of an existing versioned artifact.
+- [Phase 05]: Interactive-variant implementation skills carry the discussion-skill anti-sycophancy stance verbatim with execution-time stakes amplifier (bad commits become expensive to rewind) replacing the planning-stage amplifier — Per the Phase 5 CONTEXT, the execution stage's irreversibility (no --amend / rebase / force-push) is where the cheap-now-vs-expensive-later asymmetry lives in V1. The amplifier ties directly to the no-history-rewriting prohibition in the same skill body.
+- [Phase 05]: Failed-commit handling is BLOCKED + halt for both auto and interactive variants; no in-skill retry loop — Per D77, the implementer does not iterate on a failed commit autonomously. Recovery is user-driven outside the skill.
+- [Phase 05]: Dirty-worktree check is owned by the skill itself in the single-agent variant (D79); pre-existing dirty changes folded into first commit only with explicit user consent — Single-agent variant has no orchestrator; the skill itself is the only place the check can live.
+- [Phase 05]: Less-structured-input pair has no *-with-subagents-* variant in V1 per D66 — Subagent topology is plan-driven only; users wanting subagent review on less-structured input first shape a plan via the plan-* family.
 
 ### Pending Todos
 
@@ -131,7 +136,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T10:35:45.310Z
+Last session: 2026-05-21T12:01:47.041Z
 Stopped at: Completed 04-plan-family/04-02-PLAN.md (plan-strict-auto + plan-strict-interactive shipped; Phase 4 plan-authoring family complete — 11 of 13 workflow entries; Plan 04-03 adjust-plan-granularity pair is the last)
 Resume file: 
 None
