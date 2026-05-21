@@ -122,7 +122,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User opening `README.md` sees the hybrid layout — toolbox model framing, layered workflow map, recommended common paths, per-module catalog — and can install any V1 skill individually via `npx skills add Jei-sKappa/skills --skill <name>` with no nested directories and no name prefixes; every new V1 skill description explicitly states its interaction mode and there are no unsuffixed convenience aliases in V1.
   5. User running `npx skills list` sees every V1 workflow skill grouped under a single marketplace plugin rendered as `JeisKappa Workflow` (from the `JeisKappa-workflow` plugin name in `.claude-plugin/marketplace.json`), and every new skill folder is registered in `marketplace.json` and `.vscode/settings.json` `conventionalCommits.scopes` per CLAUDE.md rules.
 **Plans**: 3 plans
-  - [ ] 07-01-PLAN.md — Ship merge-artifacts-auto + merge-artifacts-interactive + register touchpoints
+  - [x] 07-01-PLAN.md — Ship merge-artifacts-auto + merge-artifacts-interactive + register touchpoints
   - [ ] 07-02-PLAN.md — Ship finish + whats-next + register touchpoints
   - [ ] 07-03-PLAN.md — Redesign README.md with hybrid layout (toolbox model + layered map + recommended paths + per-module catalog)
 
@@ -139,6 +139,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Plan Family | 3/3 | Complete   | 2026-05-21 |
 | 5. Implementation Family | 3/3 | Complete   | 2026-05-21 |
 | 6. Review Family | 5/5 | Complete   | 2026-05-21 |
-| 7. Merge, Finish, Navigation & Distribution Surface | 0/3 | Not started | - |
+| 7. Merge, Finish, Navigation & Distribution Surface | 1/3 | In Progress|  |
 </content>
 </invoke>

@@ -94,12 +94,12 @@
 
 ### Merge (MERG)
 
-- [ ] **MERG-01**: User can invoke `merge-artifacts-auto` to merge two or more same-type artifacts into the next mainline integer version [D45, D99, D100]
-- [ ] **MERG-02**: User can invoke `merge-artifacts-interactive` to merge artifacts with user-resolved conflicts [D99, D103]
-- [ ] **MERG-03**: User can merge cross-type when the desired output type is explicitly stated or obvious from context [D100]
-- [ ] **MERG-04**: User can rely on merge output landing in the target artifact type's normal folder [D101]
-- [ ] **MERG-05**: User can rely on `merge-artifacts-interactive` writing a decision log; `merge-artifacts-auto` writing no separate log [D102]
-- [ ] **MERG-06**: User can rely on `merge-artifacts-auto` preserving conflicts explicitly when it cannot confidently resolve [D103]
+- [x] **MERG-01**: User can invoke `merge-artifacts-auto` to merge two or more same-type artifacts into the next mainline integer version [D45, D99, D100]
+- [x] **MERG-02**: User can invoke `merge-artifacts-interactive` to merge artifacts with user-resolved conflicts [D99, D103]
+- [x] **MERG-03**: User can merge cross-type when the desired output type is explicitly stated or obvious from context [D100]
+- [x] **MERG-04**: User can rely on merge output landing in the target artifact type's normal folder [D101]
+- [x] **MERG-05**: User can rely on `merge-artifacts-interactive` writing a decision log; `merge-artifacts-auto` writing no separate log [D102]
+- [x] **MERG-06**: User can rely on `merge-artifacts-auto` preserving conflicts explicitly when it cannot confidently resolve [D103]
 
 ### Finish (FNSH)
 
@@ -258,12 +258,12 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | REVW-07 | Phase 6: Review Family | Complete |
 | REVW-08 | Phase 6: Review Family | Complete |
 | REVW-09 | Phase 6: Review Family | Complete |
-| MERG-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| MERG-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| MERG-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| MERG-04 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| MERG-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| MERG-06 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| MERG-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| MERG-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| MERG-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| MERG-04 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| MERG-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| MERG-06 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 | FNSH-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
 | FNSH-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
 | FNSH-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |

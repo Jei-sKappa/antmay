@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
-last_updated: "2026-05-21T14:13:41.951Z"
+last_updated: "2026-05-21T14:58:14.873Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 22
+  completed_plans: 20
   percent: 86
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** A user picking up any single skill or composing the whole spine can drive a feature end-to-end without depending on a CLI, runtime, or project-local state file — every artifact is reviewable Markdown on disk under `docs/threads/<thread>/`.
-**Current focus:** Phase 6 — Review Family
+**Current focus:** Phase 7 — Merge, Finish, Navigation & Distribution Surface
 
 ## Current Position
 
-Phase: 6 (Review Family) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
+Phase: 7 (Merge, Finish, Navigation & Distribution Surface) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress: [██████████] 100%
 | Phase 06-review-family P03 | 8min | 3 tasks | 5 files |
 | Phase 06 P04 | 8min | 3 tasks | 5 files |
 | Phase 06 P05 | 8min | 3 tasks | 5 files |
+| Phase 07 P01 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,9 @@ Recent decisions affecting current work:
 - [Phase 06]: review-code-auto + review-code-interactive V1 spine skills shipped — Phase 6's FIFTH and FINAL paired review. Both target a code reference (git ref / commit range / diff / file / directory) for GENERAL-PURPOSE code review per D86 — NO source artifact required (distinguishing trait from review-implementation-*'s TWO-input contract). Four primary axes: quality / safety / idioms / testability with per-axis severity heuristics; optional additional axes (performance / dependency hygiene / API design / accessibility / documentation drift) at executor discretion. review-code-auto emits 6-section findings-first report to inbox/open/<UTC>-<kebab-desc>-review-finding.md. review-code-interactive walks per-finding OR per-file / per-hunk (TWO grains — Plan 06-04's third per-source-acceptance-item / per-plan-task grain dropped because no source artifact); 4 anti-sycophancy markers verbatim + review-stance amplifier; D89 ASK-AND-TEST against code (do-not-just-accept); 5-way settlement; decision log + conditional inbox dump per D92/D95. Both carry explicit redirection to review-implementation-* when source exists. NO the-fool reference in SKILL bodies. Registered JeisKappa-workflow 27→29 (Phase 6 target REACHED); scopes 34→36; README 34→36.
 - [Phase 06]: SHORT README the-fool adversarial-delegation blockquote ADDED per D88, REVW-09 — 1-line > **Note:** stating V1 adversarial review is delegated to the external the-fool skill (no native V1 adversarial-review skill). Placed directly above the new review-code-auto entry. Two SHORT documentation notes now coexist in Phase 6's final README state: verification-coverage (Plan 06-04; D85) + the-fool delegation (this plan; D88). Pattern reusable for any future V1 decision that subsumes what users might expect to find as a separate skill — SHORT in-skill statement (when applicable) PLUS SHORT README note findable by scanning for the keyword. REVW-09 is now FULLY COMPLETE.
 - [Phase 06]: PHASE 6 COMPLETE — all 5 paired review plans shipped (06-01 proposal, 06-02 spec + review-decision-document retirement, 06-03 plan, 06-04 implementation + verification-coverage note, 06-05 code + the-fool delegation note). 10 new V1 review skills installed. 1 legacy skill retired. 2 SHORT README documentation notes added. Final state: JeisKappa-workflow=29 entries (target REACHED from 19; +10), JeisKappa-skills=7 entries (target REACHED from 8; -1 retirement for review-decision-document via Plan 06-02); .vscode scopes=36 (target REACHED from 27; +10 -1); README Available skills=36 (target REACHED with same arithmetic); README Retired skills=2 entries (discussion-loop from Phase 2 + review-decision-document from Plan 06-02); README documentation notes=2 entries (verification + the-fool). REVW-05/06/07/08/09 all COMPLETE. Phase 6 ROADMAP entry flipped to Complete. Phase 7 (Merge / Finish / Navigation + Distribution surface + README hybrid) unblocked.
+- [Phase ?]: merge-artifacts-auto refuses cross-type inference explicitly — takes one clarifying question when inputs are mixed-type without explicit target-type direction per D100
+- [Phase ?]: merge-artifacts-auto preserves unresolvable conflicts via inline <!-- CONFLICT: --> HTML-comment marker per D103; downstream readers grep for marker
+- [Phase ?]: merge-artifacts-interactive resolves conflicts in-place during walk; decision log per D102 is mandatory — explicit exception to D93's interactive-may-or-may-not-log default
 
 ### Pending Todos
 
@@ -168,7 +172,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T14:11:31.097Z
+Last session: 2026-05-21T14:57:43.683Z
 Stopped at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
 Resume file: 
 None
