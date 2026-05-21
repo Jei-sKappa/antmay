@@ -10,6 +10,7 @@
     "consult-the-expert",
     "derive-spec",
     "discussion",
+    "finish",
     "implement-auto",
     "implement-interactive",
     "implement-plan-auto",
@@ -39,6 +40,7 @@
     "seeded-discussion",
     "spec-auto",
     "spec-interactive",
-    "the-librarian"
+    "the-librarian",
+    "whats-next"
   ]
 }

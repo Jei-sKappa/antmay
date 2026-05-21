@@ -314,6 +314,22 @@ Reconciles two or more V1 artifacts (same-type default — two specs become one 
 npx skills add Jei-sKappa/skills --skill merge-artifacts-interactive
 ```
 
+### [`finish`](./skills/finish/SKILL.md)
+
+Closes a V1 workflow thread by running a lightweight 4-item thread check (final artifacts present under `proposals/` / `specs/` / `plans/` / `discussions/`, open Inbox items in `inbox/open/`, recent implementation commits on the current branch, obvious unresolved workflow concerns) and then ASKING the user the closure question with FOUR options — `merge into main` / `merge into other branch` / `create PR` / `leave as is` — confirming each git command BEFORE execution and NEVER force-pushing, NEVER rewriting history (no `--amend`, no `rebase` in any flavor, no `git push --force` / `--force-with-lease`, no `git reset --hard` against pushed history, no `git filter-branch`, no `git filter-repo`). This is the SINGLE V1 skill with NO `-auto` / `-interactive` sibling — an intentional V1 EXCEPTION to the mode-variant convention per D97, because branch disposition is inherently user-directed and there is no autonomous default that would be safe across users / repos / branch contexts. Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a closure-stance amplifier — branch operations are hard to undo, push back if the user picks an option that would lose work. Useful when implementation is complete (or the thread is otherwise in a stop-and-decide state) and you want the agent to surface the thread's signals and walk you through the closure choice without picking by default.
+
+```sh
+npx skills add Jei-sKappa/skills --skill finish
+```
+
+### [`whats-next`](./skills/whats-next/SKILL.md)
+
+Advisory CHAT-FIRST V1 navigation skill — inspects the current thread context (artifacts present under `proposals/` / `specs/` / `plans/` / `discussions/` / `inbox/open/` and recent commits on the current branch, all READ-ONLY) and suggests 2–4 coherent next actions in chat, each citing the V1 skill that would execute the action. The primary output is the chat reply; the skill NEVER writes an artifact by default. AFTER the suggestions land, the skill MAY ask whether to save any suggestion as an Inbox item — ONLY on EXPLICIT user opt-in does the skill route to `capture-inbox` to save (no auto-capture, no default capture, no capture without affirmative user consent). The V1 body MAY be thin per D33, NAV-03 and point the agent at the canonical README hybrid for the full workflow map. Carries the 4-marker anti-sycophancy stance from `discussion` verbatim — NO stage-specific amplifier (the skill is advisory, not opinion-driven). Useful when you want to figure out what to do next in the active thread (you just finished a phase, you have an open inbox item and aren't sure whether to address it, the thread feels stuck, or you simply want a quick map of where you are) — not when you want to close the thread with a branch action (use `finish` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill whats-next
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
