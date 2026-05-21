@@ -103,15 +103,15 @@
 
 ### Finish (FNSH)
 
-- [ ] **FNSH-01**: User can invoke a single `finish` skill (no auto/interactive split) [D97]
-- [ ] **FNSH-02**: User can rely on `finish` performing a lightweight thread check (final artifacts, open Inbox items, implementation commits/status, obvious unresolved concerns) before asking the closure question [D98]
-- [ ] **FNSH-03**: User can choose from merge-into-main, merge-into-other-branch, create PR, or leave-as-is at `finish` [D98]
+- [x] **FNSH-01**: User can invoke a single `finish` skill (no auto/interactive split) [D97]
+- [x] **FNSH-02**: User can rely on `finish` performing a lightweight thread check (final artifacts, open Inbox items, implementation commits/status, obvious unresolved concerns) before asking the closure question [D98]
+- [x] **FNSH-03**: User can choose from merge-into-main, merge-into-other-branch, create PR, or leave-as-is at `finish` [D98]
 
 ### Navigation (NAV)
 
-- [ ] **NAV-01**: User can invoke `whats-next` for advisory navigation that inspects current thread context/artifacts and suggests coherent next actions in chat [D33, D105, D106]
-- [ ] **NAV-02**: User can rely on `whats-next` capturing meaningful deferred actions to Inbox when appropriate [D105]
-- [ ] **NAV-03**: User accepts that V1 `whats-next` may be thin (e.g., point the agent to the canonical README guidance) [D33]
+- [x] **NAV-01**: User can invoke `whats-next` for advisory navigation that inspects current thread context/artifacts and suggests coherent next actions in chat [D33, D105, D106]
+- [x] **NAV-02**: User can rely on `whats-next` capturing meaningful deferred actions to Inbox when appropriate [D105]
+- [x] **NAV-03**: User accepts that V1 `whats-next` may be thin (e.g., point the agent to the canonical README guidance) [D33]
 
 ### Distribution Surface (DIST)
 
@@ -264,12 +264,12 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | MERG-04 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 | MERG-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 | MERG-06 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
-| FNSH-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| FNSH-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| FNSH-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| NAV-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| NAV-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| NAV-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| FNSH-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| FNSH-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| FNSH-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| NAV-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| NAV-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| NAV-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 | DIST-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
 | DIST-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
 | DIST-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |

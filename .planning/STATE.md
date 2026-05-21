@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
-last_updated: "2026-05-21T14:58:14.873Z"
+last_updated: "2026-05-21T15:15:17.052Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 86
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 7 (Merge, Finish, Navigation & Distribution Surface) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [█████████░] 91%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [█████████░] 91%
 | Phase 06 P04 | 8min | 3 tasks | 5 files |
 | Phase 06 P05 | 8min | 3 tasks | 5 files |
 | Phase 07 P01 | 8min | 3 tasks | 5 files |
+| Phase 07 P02 | 9min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,9 @@ Recent decisions affecting current work:
 - [Phase ?]: merge-artifacts-auto refuses cross-type inference explicitly — takes one clarifying question when inputs are mixed-type without explicit target-type direction per D100
 - [Phase ?]: merge-artifacts-auto preserves unresolvable conflicts via inline <!-- CONFLICT: --> HTML-comment marker per D103; downstream readers grep for marker
 - [Phase ?]: merge-artifacts-interactive resolves conflicts in-place during walk; decision log per D102 is mandatory — explicit exception to D93's interactive-may-or-may-not-log default
+- [Phase ?]: 07-02: finish is the V1 single-skill exception per D97 — branch disposition is inherently user-directed; no -auto/-interactive siblings
+- [Phase ?]: 07-02: whats-next is V1 advisory chat-first navigation; NEVER writes an artifact by default; opt-in inbox capture routes through capture-inbox only on explicit affirmative user consent
+- [Phase ?]: 07-02: finish carries the closure-stance amplifier (branch operations are hard to undo) plus explicit NEVER force-push / NEVER rewrite history with the forbidden-constructs list enumerated (--amend / rebase / push --force / --force-with-lease / reset --hard / filter-branch / filter-repo)
 
 ### Pending Todos
 
@@ -172,7 +176,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T14:57:43.683Z
+Last session: 2026-05-21T15:12:08.046Z
 Stopped at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
 Resume file: 
 None
