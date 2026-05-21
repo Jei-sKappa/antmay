@@ -9,6 +9,8 @@
     "derive-spec",
     "discussion",
     "meta-prompting",
+    "plan-loose-auto",
+    "plan-loose-interactive",
     "propose-auto",
     "propose-interactive",
     "report-to-the-owner",

@@ -126,6 +126,22 @@ Walks the user through the eight handoff-grade semantic-contract elements of a s
 npx skills add Jei-sKappa/skills --skill spec-interactive
 ```
 
+### [`plan-loose-auto`](./skills/plan-loose-auto/SKILL.md)
+
+Turns a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity v1 plan markdown file under the active V1 thread's `plans/` folder, end-to-end, with no clarifying questions. Loose plans use brief 1–3 sentence task descriptions optimized for a human-leaning implementer who fills in details. V1 plans are sequential, isolated, independently implementable, self-reviewed before emission, and NEVER auto-committed. Useful when you already have the upstream input in hand and want a loose plan written down autonomously — not when you want to walk it together (use `plan-loose-interactive`), and not when the downstream implementer is agent-leaning and needs unambiguous prescriptive steps (use `plan-strict-auto` or `plan-strict-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill plan-loose-auto
+```
+
+### [`plan-loose-interactive`](./skills/plan-loose-interactive/SKILL.md)
+
+Walks the user through a loose-granularity plan task-by-task — drafting numbered tasks with brief 1–3 sentence descriptions per task — pushing back on weak reasoning, then assembles and writes a v1 plan markdown file under the active V1 thread's `plans/` folder. Loose plans suit human-leaning implementers who fill in details. V1 plans are sequential, isolated, independently implementable, self-reviewed before emission, and NEVER auto-committed. Useful when you want to think the plan through together with the agent and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `plan-loose-auto` for that), and not when the downstream implementer is agent-leaning and needs unambiguous prescriptive steps (use `plan-strict-auto` or `plan-strict-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill plan-loose-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
