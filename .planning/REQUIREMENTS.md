@@ -86,7 +86,7 @@
 - [x] **REVW-02**: User can invoke `review-spec-auto` (evolved `review-decision-document`) / `review-spec-interactive` against the handoff-grade bar [D81, D82]
 - [x] **REVW-03**: User can invoke `review-plan-auto` / `review-plan-interactive` to check plan adherence to source artifact, project conventions, granularity fit, and ambiguity (esp. for strict plans) [D81, D83]
 - [x] **REVW-04**: User can invoke `review-implementation-auto` / `review-implementation-interactive` to check implemented code against original intent (covers V1 verification role) [D81, D85]
-- [ ] **REVW-05**: User can invoke `review-code-auto` / `review-code-interactive` as a general-purpose code review independent of a spec or implementation [D81, D86]
+- [x] **REVW-05**: User can invoke `review-code-auto` / `review-code-interactive` as a general-purpose code review independent of a spec or implementation [D81, D86]
 - [x] **REVW-06**: User can rely on `review-*-auto` writing findings-first reports to `inbox/open/` with verdict, findings, evidence, references, open questions, next actions [D90, D91]
 - [x] **REVW-07**: User can rely on `review-*-interactive` walking one topic/component/finding at a time, asking the user for their view when useful, and testing the user's explanation against the artifact [D89]
 - [x] **REVW-08**: User can rely on `review-*-interactive` writing a decision log to `discussions/` and dumping only unresolved actionable findings to `inbox/open/` (no Inbox file when nothing remains) [D92, D95]
@@ -253,7 +253,7 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | REVW-02 | Phase 6: Review Family | Complete |
 | REVW-03 | Phase 6: Review Family | Complete |
 | REVW-04 | Phase 6: Review Family | Complete |
-| REVW-05 | Phase 6: Review Family | Pending |
+| REVW-05 | Phase 6: Review Family | Complete |
 | REVW-06 | Phase 6: Review Family | Complete |
 | REVW-07 | Phase 6: Review Family | Complete |
 | REVW-08 | Phase 6: Review Family | Complete |
