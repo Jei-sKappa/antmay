@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
-last_updated: "2026-05-21T13:18:32.070Z"
+last_updated: "2026-05-21T13:30:46.713Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 19
-  completed_plans: 15
+  completed_plans: 16
   percent: 71
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 6 (Review Family) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [████████░░] 79%
 | Phase 05 P02 | 7min | 3 tasks | 5 files |
 | Phase 05 P03 | 14min | - tasks | - files |
 | Phase 06-review-family P01 | 6min | 3 tasks | 5 files |
+| Phase 06-review-family P02 | 8min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -124,6 +125,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 05]: Reviewer prompt reference file shape established — top-of-file framing line (loaded-by-which-subagent note), Focus Area with SINGLE question stated verbatim, What X Is / Is NOT (citing the sibling reviewer by name), Process numbered list (read task READ-ONLY → inspect diff → run verification (spec-compliance) or evaluate readability/safety/idiomatic/regression-risk axes (code-quality) → identify findings → write structured review), Output Template (Verdict PASS / Verdict ISSUES + findings + references), Hard Constraints (no code modification, no plan-artifact modification, no commit). ~50–100 lines per file; no YAML frontmatter. Duplicated across auto / interactive subagent skill folders per D28 + D87/IMPL-08. Pattern reusable for any future V1 skill that needs embedded subagent prompts.
 - [Phase ?]: [Phase 06]: review-proposal-auto + review-proposal-interactive V1 spine skills shipped — Phase 6 review-pair anchor. Both target V1 proposal artifact under docs/threads/<thread>/proposals/ per D81 (lightweight: gaps/risks/ambiguities). review-proposal-auto emits 6-section findings-first report (Verdict / Findings with severity blocker|issue|nit / Evidence / References / Open Questions / Next Actions) to inbox/open/<UTC>-<kebab-desc>-review-finding.md. review-proposal-interactive walks one finding at a time with 4 anti-sycophancy markers verbatim from discussion/SKILL.md + review-stance amplifier (review most valuable when it disagrees with author; push back hard; never soften because user pushes back), D89 ASK-AND-TEST do-not-just-accept phrasing, 5-way settlement (resolved/rejected/accepted/deferred/parked). resolved+rejected stay in decision log only; accepted/deferred/parked dump to inbox/open/ at end-of-session per D92/D95 (no Inbox file when nothing remains). Both carry optional the-fool delegation note per D88. Registered under JeisKappa-workflow 19→21; JeisKappa-skills unchanged at 8. Three commits: feat+feat+chore (matches Phase 3/4/5 pattern).
 - [Phase ?]: [Phase 06]: V1 review-pair body shape established — opening clarifier with sibling reference + lightweight-vs-stricter-bar framing; Inputs naming target artifact path + ambiguity fallback per docs/workflow/v1/immutability.md; What This Skill Reviews enumerating target-specific finding categories; Findings Report Shape with 6 required sections in auto sibling + same 6 sections in conditional inbox-dump of interactive sibling; Output Artifact naming canonical folder + artifact-type token (review-finding for auto + inbox-dump of interactive; decision-log for primary output of interactive); The Fool delegation note per D88; Workflow with READ-ONLY-input + write-output steps; NEVER auto-commits; Immutability citing Phase 1 docs by absolute path. Interactive variants add Anti-Sycophancy Stance with 4 markers verbatim + review-stance amplifier + Walk Format (per-finding loop modeled on seeded-discussion: surface → cite-evidence → ASK → TEST → settle → log) + Decision Log Lazy Creation rule + Scope Drift section (capture-inbox / split / defer). Pattern reusable verbatim by Plans 06-02 (review-spec-*), 06-03 (review-plan-*), 06-04 (review-implementation-*), 06-05 (review-code-*) — only the target-specific finding categories and optional stricter-bar / adversarial-delegation hint differ.
+- [Phase ?]: Handoff-grade bar (D82) evolves from legacy review-decision-document into review-spec-* against the locked Phase 3 spec contract (8 D50 elements)
+- [Phase ?]: Severity mapping for spec reviews: missing D50 element = blocker; partially-covered = issue; vague-but-present = nit (V1 standard per CONTEXT.md)
+- [Phase ?]: Per-element walk as recommended default for review-spec-interactive (the 8 D50 elements in canonical sequence); per-finding walk available as executor-discretion alternative
+- [Phase ?]: review-decision-document soft-retired: SKILL.md rewritten as 31-line deprecation notice (version 1.1.0 -> 2.0.0 MAJOR); folder kept on disk; reverse-registered from marketplace + .vscode scopes + README Available skills; new bullet added to README Retired skills subsection (matches Phase 2 discussion-loop precedent)
 
 ### Pending Todos
 
@@ -147,7 +152,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T13:18:31.995Z
+Last session: 2026-05-21T13:30:37.850Z
 Stopped at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
 Resume file: 
 None
