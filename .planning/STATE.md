@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Completed 04-plan-family/04-02-PLAN.md (plan-strict-auto + plan-strict-interactive shipped; Phase 4 plan-authoring family complete — 11 of 13 workflow entries; Plan 04-03 adjust-plan-granularity pair is the last)
-last_updated: "2026-05-21T10:23:30.437Z"
+last_updated: "2026-05-21T10:36:40.506Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
-  percent: 43
+  completed_plans: 11
+  percent: 57
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 4 (Plan Family) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-21
 
-Progress: [█████████░] 91%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [█████████░] 91%
 | Phase 03 P02 | 6min | 3 tasks | 5 files |
 | Phase 04 P01 | 18min | 3 tasks | 5 files |
 | Phase 04 P02 | 6min | 3 tasks | 5 files |
+| Phase 04-plan-family P03 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 04]: plan-strict-auto + plan-strict-interactive V1 spine skills shipped — both emit versioned-form v1 plan artifacts at docs/threads/<thread>/plans/ per Phase 1 grammar (first emission defaults to NO descriptor). Both enforce D59 sequential-isolated-independent contract (verbatim phrase 'sequential, isolated, independently implementable' present twice each), D60 strict no-parallelization prohibition with 4 named-and-forbidden constructs + D60 citation, D61 four-check self-review pass (with strict-granularity-fit recommendation), D62 NEVER-commits phrase, D58 loose-vs-strict-as-user-choice framing. plan-strict-interactive carries the 4 anti-sycophancy markers verbatim with both the forward-direction heightened framing AND a strict-specific stakes amplifier. Registered under JeisKappa-workflow plugin (9 to 11 entries); JeisKappa-skills unchanged at 8. Three commits total: feat(plan-strict-auto) + feat(plan-strict-interactive) + chore: register (matches Phase 3 + Plan 04-01 pattern).
 - [Phase ?]: [Phase 04]: Strict-granularity plan-pair emission pattern established — six-field per-task structure (Objective / Input-context / Steps-substeps / Files modified / Verification / Acceptance criteria) is the MUST minimum any V1 strict-granularity plan task carries; extra fields (notes, rollback, performance budget) are MAY. Both skill bodies enumerate the six fields identically and share the same parallelization-free worked-example task block. The worked block doubles as the D60 negative test inside each skill body AND as format-by-example pedagogy. Reusable verbatim by Plan 04-03 as the strict-target shape reference; consumable by Phase 5 implementation skills as a literal execution contract.
 - [Phase ?]: [Phase 04]: Per-field push-back in plan-strict-interactive — each of the six task fields has its own anti-sycophancy angle (Steps: concrete-action-not-sub-objective; Files modified: nothing missing; Verification: mechanical-not-interpretive; Acceptance: observable-not-aspirational). Refines plan-loose-interactive's per-task push-back model for strict granularity's higher field density. Pattern Plan 04-03 (adjust-plan-granularity-interactive) should follow when its walk has multi-field internal structure.
+- [Phase ?]: [Phase 04]: adjust-plan-granularity pair shipped — adjust-plan-granularity-auto (autonomous: existing plan + target instruction -> new versioned plan) + adjust-plan-granularity-interactive (collaborative: per-task SPLIT/MERGE/EXPAND/CONTRACT/LEAVE walk). Both accept TWO inputs (source plan path + target instruction in coarse or specific-phrase form), read source READ-ONLY per D39, emit NEW versioned plan at v<N+1>-<descriptor>-plan.md (MANDATORY descriptor encodes the granularity shift). Enforce D59 (verbatim phrase twice), D60 (4 named-and-forbidden constructs + citation), D61 (4-check self-review with under/over-splitting checks specialized for MERGE-vs-SPLIT actions), D62 (NEVER-commits phrase). Interactive carries 4 anti-sycophancy markers verbatim with granularity-compound stakes amplifier; 5 walk verbs with per-action push-back angles. Registered: workflow plugin 11->13 (Phase 4 target reached); skills plugin unchanged at 8. Phase 4 plan-family COMPLETE.
+- [Phase ?]: [Phase 04]: Granularity-shift skill pair pattern established — one auto (consumes source-plan path + target instruction, end-to-end, no clarifying questions) plus one interactive sibling (per-task SPLIT/MERGE/EXPAND/CONTRACT/LEAVE walk, anti-sycophancy with granularity-compound stakes amplifier, D93 no-auto-decision-log, capture-inbox for scope drift). Both require TWO inputs, open source READ-ONLY, emit NEW versioned plan with MANDATORY descriptor encoding the shift, honor D39/D59/D60/D61/D62. Per-action push-back refines per-task push-back (Plan 04-01) and per-field push-back (Plan 04-02) with verb-based action grammar. Pattern reusable for any future V1 skill emitting a transformed variant of an existing artifact.
+- [Phase ?]: [Phase 04]: Mandatory-descriptor convention on adjusted-plan filenames — unlike first-emission from-scratch plans (which default to NO descriptor per Plans 04-01 and 04-02), adjusted plans REQUIRE a descriptor that encodes the granularity shift. Recommended descriptors: looser / stricter / impl-ready / high-level for coarse directions; kebab-case summary (under 5 words) for specific-phrase shifts. Distinguishes adjusted plans from from-scratch next-version emissions at the filesystem level — a reader seeing v1-plan.md + v2-stricter-plan.md side by side recognizes the granularity-shift relationship without consulting metadata. Convention reusable for any future V1 skill emitting a transformed variant of an existing versioned artifact.
 
 ### Pending Todos
 
@@ -127,7 +131,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T10:23:18.089Z
+Last session: 2026-05-21T10:35:45.310Z
 Stopped at: Completed 04-plan-family/04-02-PLAN.md (plan-strict-auto + plan-strict-interactive shipped; Phase 4 plan-authoring family complete — 11 of 13 workflow entries; Plan 04-03 adjust-plan-granularity pair is the last)
 Resume file: 
 None
