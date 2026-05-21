@@ -298,6 +298,22 @@ Takes a V1 plan artifact path (loose or strict granularity, produced by any of t
 npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-interactive
 ```
 
+### [`merge-artifacts-auto`](./skills/merge-artifacts-auto/SKILL.md)
+
+Reconciles two or more V1 artifacts (same-type default — two specs become one spec, two plans become one plan, two proposals become one proposal — cross-type allowed only when the user EXPLICITLY states the target type, e.g. "merge proposal + discussion into a spec") into ONE merged artifact at the next mainline integer of the TARGET TYPE's normal folder (`proposals/` / `specs/` / `plans/` / `discussions/` / `inbox/open/` — NEVER a separate `merges/` folder per D101 + thread-layout's excluded-folder-names rule), end-to-end, with no clarifying questions. Preserves unresolvable subjective conflicts EXPLICITLY in the merged body via a `<!-- CONFLICT: <description> -->` HTML-comment marker per D103 so a downstream reader can grep them out, and writes NO decision log per D102 (the autonomous merge is a pure generator; the marker is the auto-merge equivalent of capturing trade-offs). Useful when you already know which artifacts you want to reconcile and want the merged artifact written down autonomously — not when you want to walk conflicts one at a time with the agent and have user resolutions captured in a decision log (use `merge-artifacts-interactive` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill merge-artifacts-auto
+```
+
+### [`merge-artifacts-interactive`](./skills/merge-artifacts-interactive/SKILL.md)
+
+Reconciles two or more V1 artifacts (same-type default — two specs become one spec, two plans become one plan — cross-type when the user EXPLICITLY states the target type per D100) into ONE merged artifact at the next mainline integer of the TARGET TYPE's normal folder (NEVER `merges/` per D101) by walking each subjective conflict ONE AT A TIME — ASKING the user for the resolution AND TESTING that resolution against BOTH input artifacts (do not just accept) — folding objective additions automatically and writing a MANDATORY decision log to `discussions/<UTC>-<kebab-desc>-decision-log.md` capturing every user resolution (this is an EXPLICIT EXCEPTION to D93's "interactive may or may not log" default per D102 — merge interactions ARE the durable trade-offs and the log is the only place those resolutions are recoverable; interactive merge does NOT use the `<!-- CONFLICT: -->` marker the auto sibling preserves). Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a merge-stance amplifier — when inputs disagree, push back on the user's first instinct because the merged artifact must survive later review. Useful when you want to walk merge conflicts one at a time with the agent and have the user resolutions captured in a decision log — not when you want autonomous end-to-end merge with conflicts preserved via marker and no decision log (use `merge-artifacts-auto` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill merge-artifacts-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.

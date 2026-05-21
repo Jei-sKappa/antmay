@@ -16,6 +16,8 @@
     "implement-plan-interactive",
     "implement-plan-with-subagents-auto",
     "implement-plan-with-subagents-interactive",
+    "merge-artifacts-auto",
+    "merge-artifacts-interactive",
     "meta-prompting",
     "plan-loose-auto",
     "plan-loose-interactive",
