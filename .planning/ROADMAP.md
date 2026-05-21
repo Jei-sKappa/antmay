@@ -108,7 +108,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 06-01-PLAN.md — Ship review-proposal-auto + review-proposal-interactive + register touchpoints
   - [x] 06-02-PLAN.md — Ship review-spec-auto + review-spec-interactive + RETIRE review-decision-document + register touchpoints
   - [x] 06-03-PLAN.md — Ship review-plan-auto + review-plan-interactive + register touchpoints
-  - [ ] 06-04-PLAN.md — Ship review-implementation-auto + review-implementation-interactive + add README verification-coverage note + register touchpoints
+  - [x] 06-04-PLAN.md — Ship review-implementation-auto + review-implementation-interactive + add README verification-coverage note + register touchpoints
   - [ ] 06-05-PLAN.md — Ship review-code-auto + review-code-interactive + add README the-fool delegation note + register touchpoints
 
 ### Phase 7: Merge, Finish, Navigation & Distribution Surface
@@ -135,6 +135,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Forward Spine — Propose & Spec | 2/2 | Complete   | 2026-05-21 |
 | 4. Plan Family | 3/3 | Complete   | 2026-05-21 |
 | 5. Implementation Family | 3/3 | Complete   | 2026-05-21 |
-| 6. Review Family | 3/5 | In Progress|  |
+| 6. Review Family | 4/5 | In Progress|  |
 | 7. Merge, Finish, Navigation & Distribution Surface | 0/TBD | Not started | - |
 </content>

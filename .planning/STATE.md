@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
-last_updated: "2026-05-21T13:44:07.051Z"
+last_updated: "2026-05-21T13:57:57.321Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
   percent: 71
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 6 (Review Family) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [█████████░] 89%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 89%
 | Phase 06-review-family P01 | 6min | 3 tasks | 5 files |
 | Phase 06-review-family P02 | 8min | - tasks | - files |
 | Phase 06-review-family P03 | 8min | 3 tasks | 5 files |
+| Phase 06 P04 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,13 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 06] review-plan-auto + review-plan-interactive V1 spine skills shipped — V1 review-pair third instance, applying the four-axis D83 review (source-spec adherence + project conventions + granularity fit + per-task ambiguity) to V1 plan artifacts. Loose-vs-strict detection step is the unique twist — reads the plan body and routes the per-task-ambiguity axis to MANDATORY-strict mode (where the six-field block must leave no inference required per skills/plan-strict-auto/SKILL.md) or granularity-fit-signal-loose mode (per skills/plan-loose-auto/SKILL.md, both cited by absolute path). Optional source-artifact input drives source-adherence axis; when not supplied, axis is skipped with Open-Questions note. D59 sequential-isolated-independent contract + D60 no-parallelization rule enforced as review criteria. Registered under JeisKappa-workflow 23->25.
 - [Phase ?]: [Phase 06] Phase 4 regression guard reinforced for review-plan-* — descriptive prose phrases (bracketed wave prefixes on tasks / dependency arrays / depends_on fields / task-graph notation / fork-join syntax / parallelization markers) used in BOTH skill bodies when naming D60 forbidden constructs, NOT literal [W1] or unquoted depends_on: tokens. Phase 4 lesson: executor's structural-notation negative grep runs against ENTIRE skill body — literal tokens in skill prose self-trigger false positives even when used to NAME the forbidden construct. Reusable for Plans 06-04 and 06-05.
 - [Phase ?]: [Phase 06] Loose-vs-strict detection step is the structural twist for the plan-review target — first instance of an in-skill granularity-detection step in Phase 6. Cites skills/plan-loose-auto/SKILL.md AND skills/plan-strict-auto/SKILL.md by absolute path as the shape sources. Mixed-granularity body flagged as issue under granularity-fit axis. Detection determines per-task-ambiguity axis mode (MANDATORY-strict vs granularity-fit-signal-loose). Same flexible-grain walk pattern as review-spec-interactive (per-finding OR per-task, executor's discretion).
+- [Phase ?]: Five-axis fidelity review per D85 — acceptance/outcome coverage + constraint adherence + scope adherence + behavior fidelity + test coverage
+- [Phase ?]: TWO mandatory inputs (implementation reference + source artifact) — implementation review NEEDS both because the question is fidelity (input vs. source), not standalone quality
+- [Phase ?]: V1 Verification Role explicit in both review-implementation-* bodies (D85, REVW-09) — covers V1 verification; no separate verify-* skill
+- [Phase ?]: Two-citation Evidence requirement — every fidelity finding cites BOTH the diff (file:line) AND the source-artifact section
+- [Phase ?]: Plan-driven additional checks (per-task commit cadence per D75 + four-state status alignment per D74) ONLY apply when source artifact is a plan
+- [Phase ?]: Three-grain walk in review-implementation-interactive (per-finding OR per-source-acceptance-item OR per-plan-task) — upper bound for V1 walk-format flexibility
+- [Phase ?]: README verification-coverage placed as 1-line blockquote directly above the new review-implementation-* entries — findable by users scanning for 'verify'
 
 ### Pending Todos
 
@@ -156,7 +164,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T13:43:54.764Z
+Last session: 2026-05-21T13:57:25.952Z
 Stopped at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
 Resume file: 
 None
