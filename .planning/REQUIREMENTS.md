@@ -115,11 +115,11 @@
 
 ### Distribution Surface (DIST)
 
-- [ ] **DIST-01**: User sees a hybrid README explaining the toolbox model, layered workflow map, recommended common paths, and per-module catalog [D109, D34]
-- [ ] **DIST-02**: User can rely on V1 workflow skills being grouped under one marketplace plugin (e.g. `JeisKappa-workflow`) [D110]
-- [ ] **DIST-03**: User can install any V1 skill individually via `npx skills add Jei-sKappa/skills --skill <name>` (no nested directories, no name prefixes) [D3]
+- [x] **DIST-01**: User sees a hybrid README explaining the toolbox model, layered workflow map, recommended common paths, and per-module catalog [D109, D34]
+- [x] **DIST-02**: User can rely on V1 workflow skills being grouped under one marketplace plugin (e.g. `JeisKappa-workflow`) [D110]
+- [x] **DIST-03**: User can install any V1 skill individually via `npx skills add Jei-sKappa/skills --skill <name>` (no nested directories, no name prefixes) [D3]
 - [x] **DIST-04**: User can rely on every new V1 skill folder being registered in `.claude-plugin/marketplace.json` and `.vscode/settings.json` conventional-commit scopes per CLAUDE.md rules
-- [ ] **DIST-05**: User can rely on every V1 skill body explicitly stating its interaction mode in its description, with no unsuffixed convenience aliases in V1 [D29, D30]
+- [x] **DIST-05**: User can rely on every V1 skill body explicitly stating its interaction mode in its description, with no unsuffixed convenience aliases in V1 [D29, D30]
 
 ## v2 Requirements
 
@@ -270,10 +270,10 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | NAV-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 | NAV-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 | NAV-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
-| DIST-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| DIST-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| DIST-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
-| DIST-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Pending |
+| DIST-01 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| DIST-02 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| DIST-03 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
+| DIST-05 | Phase 7: Merge, Finish, Navigation & Distribution Surface | Complete |
 
 **Coverage:**
 - v1 requirements: 78 total (re-counted from checkboxes; the original "73 total" line was stale)

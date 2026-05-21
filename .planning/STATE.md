@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
-last_updated: "2026-05-21T15:15:17.052Z"
+last_updated: "2026-05-21T15:23:20.088Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 22
-  completed_plans: 21
-  percent: 86
+  completed_plans: 22
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 7 (Merge, Finish, Navigation & Distribution Surface) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-21
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [██████████] 95%
 | Phase 06 P05 | 8min | 3 tasks | 5 files |
 | Phase 07 P01 | 8min | 3 tasks | 5 files |
 | Phase 07 P02 | 9min | 3 tasks | 5 files |
+| Phase 07-merge-finish-navigation-distribution P03 | 4min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 07-02: finish is the V1 single-skill exception per D97 — branch disposition is inherently user-directed; no -auto/-interactive siblings
 - [Phase ?]: 07-02: whats-next is V1 advisory chat-first navigation; NEVER writes an artifact by default; opt-in inbox capture routes through capture-inbox only on explicit affirmative user consent
 - [Phase ?]: 07-02: finish carries the closure-stance amplifier (branch operations are hard to undo) plus explicit NEVER force-push / NEVER rewrite history with the forbidden-constructs list enumerated (--amend / rebase / push --force / --force-with-lease / reset --hard / filter-branch / filter-repo)
+- [Phase ?]: [Phase 07] V1 MILESTONE COMPLETE — README hybrid redesign shipped per DIST-01/D34/D109. 7-section hybrid layout (title + value statement / Toolbox Model / Layered Workflow Map / Recommended Common Paths / Skills by Module catalog with 9 families × 40 entries / Retired skills / Installation). All 33 V1 workflow skills + 7 non-V1 skills present with flat npx skills add commands (DIST-03). Every V1 description carries bolded interaction-mode prefix (DIST-05). Installation note documents JeisKappa Workflow plugin grouping rendering (DIST-02). Phase 6 documentation notes preserved (verification-coverage + the-fool delegation). NO NFA/state-machine notation (V2 deferral per D34). 78 V1 requirements all satisfied.
+- [Phase ?]: [Phase 07] V1 hybrid README pattern established — title + 1-sentence value statement + Toolbox Model narrative (composable / harness-agnostic / spine + overlays) + Layered Workflow Map (table + ASCII; NO NFA notation) + Recommended Common Paths (3–5 onboarding paths) + Per-Module Catalog (9 families with interaction-mode prefix per V1 entry) + Retired Skills + Installation note documenting plugin rendering. Pattern is V1-final and reusable for any future V2 README evolution.
+- [Phase ?]: [Phase 07] Two-placement documentation-note pattern — verification-coverage (D85) placed inside Review module header; the-fool delegation (D88) placed in BOTH Review module header AND Propose family callout. Doubles discoverability without bloating the catalog. Pattern reusable for any future V1 design decision that subsumes what users might expect as a separate skill.
 
 ### Pending Todos
 
@@ -176,7 +180,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T15:12:08.046Z
+Last session: 2026-05-21T15:23:09.679Z
 Stopped at: Completed 06-review-family/06-01-PLAN.md (review-proposal-auto + review-proposal-interactive shipped; Phase 6 review-pair anchor; JeisKappa-workflow at 21 of Phase 6 target 29; Plans 06-02..06-05 remain — review-spec-* pair + review-decision-document retirement next)
 Resume file: 
 None
