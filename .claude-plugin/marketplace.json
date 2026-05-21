@@ -33,6 +33,8 @@
         "./skills/plan-strict-interactive",
         "./skills/propose-auto",
         "./skills/propose-interactive",
+        "./skills/review-implementation-auto",
+        "./skills/review-implementation-interactive",
         "./skills/review-plan-auto",
         "./skills/review-plan-interactive",
         "./skills/review-proposal-auto",

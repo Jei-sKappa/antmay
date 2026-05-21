@@ -24,6 +24,8 @@
     "propose-auto",
     "propose-interactive",
     "report-to-the-owner",
+    "review-implementation-auto",
+    "review-implementation-interactive",
     "review-plan-auto",
     "review-plan-interactive",
     "review-proposal-auto",
