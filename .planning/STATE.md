@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: Completed 02-capture-and-discussion-infrastructure/02-03-PLAN.md (discussion-loop retired; Phase 2 complete)
-last_updated: "2026-05-21T08:39:42.821Z"
+last_updated: "2026-05-21T09:14:26.155Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 29
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** A user picking up any single skill or composing the whole spine can drive a feature end-to-end without depending on a CLI, runtime, or project-local state file — every artifact is reviewable Markdown on disk under `docs/threads/<thread>/`.
-**Current focus:** Phase 2 — Capture & Discussion Infrastructure
+**Current focus:** Phase 3 — Forward Spine — Propose & Spec
 
 ## Current Position
 
-Phase: 2 (Capture & Discussion Infrastructure) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 3 (Forward Spine — Propose & Spec) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 02 P01 | 3min | 4 tasks | 4 files |
 | Phase 02 P02 | 5min | 5 tasks | 5 files |
 | Phase 02 P03 | 2min | 4 tasks | 4 files |
+| Phase 03 P01 | 6min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 2]: Section-name divergence between sibling discussion skills is intentional — discussion uses ## Decision Point Format (opt-in label) and ## Logging Format; seeded-discussion uses ## Loop (matching legacy discussion-loop's section name; default-on label) and ## Logging. The names diverge to make the behavioral difference loud — readers should not infer behavior from a shared section name.
 - [Phase 02]: discussion-loop soft-retired (1.1.0 → 2.0.0) — SKILL.md body replaced with 31-line deprecation notice naming discussion + seeded-discussion as replacements with install snippets; folder stays on disk so existing installs don't 404; marketplace JeisKappa-skills (9→8 entries), .vscode scopes (12→11 entries), README Available skills entry all removed; new README Retired skills subsection documents the migration with date 2026-05-21 and the no-migration guarantee for pre-existing docs/discussions/*-discussion.md logs.
 - [Phase 02]: Skill retirement ritual codified — Rewrite SKILL.md (don't delete folder), MAJOR semver bump, drop marketplace plugin entry, drop conventional-commit scope, replace README Available-skills entry with a Retired skills bullet. Four atomic commits, one per touchpoint. Captured in the patterns-established field of 02-03-SUMMARY.md frontmatter for any future skill retirement.
+- [Phase 03]: propose-auto + propose-interactive V1 spine skills shipped — Both skills emit freeform proposal artifacts at docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md per V1 record-form grammar. propose-auto is a pure generator (no clarifying questions, no anti-sycophancy section). propose-interactive walks 4 suggested elements (intent / context / rough shape / open questions) with the full anti-sycophancy stance from discussion/SKILL.md carried verbatim (4 marker phrases preserved). Per D93, propose-interactive does NOT auto-write a decision log unless durable trade-offs / rejected alternatives emerge. Registered under JeisKappa-workflow plugin (3 to 5 entries). Forward direction only — derive-spec untouched.
+- [Phase 03]: Paired-skill emission pattern established for V1 forward-spine generators — One auto skill (pure input → artifact, no clarifying questions, no anti-sycophancy section) plus one interactive sibling (collaborative element-by-element walk, anti-sycophancy carried verbatim from discussion/SKILL.md, D93 no-auto-decision-log default, capture-inbox referenced for scope drift). Both skills emit the same artifact-type under the same target folder with the V1 grammar mandatory artifact-type suffix. Both NEVER auto-commit. Registration follows the 4-touchpoint rule (skill folder + marketplace + scopes + README) — three of the touchpoints land in one chore: commit, skill bodies in two per-skill feat: commits. Pattern applies directly to Plan 03-02 (spec-* under specs/) and Plan 4 (plan-* under plans/).
 
 ### Pending Todos
 
@@ -113,7 +116,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T08:39:42.811Z
+Last session: 2026-05-21T09:10:24.055Z
 Stopped at: Completed 02-capture-and-discussion-infrastructure/02-03-PLAN.md (discussion-loop retired; Phase 2 complete)
 Resume file: 
 None

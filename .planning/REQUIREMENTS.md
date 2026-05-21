@@ -39,9 +39,9 @@
 
 ### Propose (PROP)
 
-- [ ] **PROP-01**: User can invoke `propose-auto` to produce a freeform-markdown proposal artifact from a rough prompt [D35, D36]
-- [ ] **PROP-02**: User can invoke `propose-interactive` to produce a proposal collaboratively [D35]
-- [ ] **PROP-03**: User can rely on proposal skills suggesting structure (intent/context/rough shape/open questions) without enforcing a template [D36, D37]
+- [x] **PROP-01**: User can invoke `propose-auto` to produce a freeform-markdown proposal artifact from a rough prompt [D35, D36]
+- [x] **PROP-02**: User can invoke `propose-interactive` to produce a proposal collaboratively [D35]
+- [x] **PROP-03**: User can rely on proposal skills suggesting structure (intent/context/rough shape/open questions) without enforcing a template [D36, D37]
 
 ### Spec (SPEC)
 
@@ -218,9 +218,9 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | DISC-07 | Phase 2: Capture & Discussion Infrastructure | Complete |
 | DISC-08 | Phase 2: Capture & Discussion Infrastructure | Complete |
 | DISC-09 | Phase 2: Capture & Discussion Infrastructure | Complete |
-| PROP-01 | Phase 3: Forward Spine — Propose & Spec | Pending |
-| PROP-02 | Phase 3: Forward Spine — Propose & Spec | Pending |
-| PROP-03 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| PROP-01 | Phase 3: Forward Spine — Propose & Spec | Complete |
+| PROP-02 | Phase 3: Forward Spine — Propose & Spec | Complete |
+| PROP-03 | Phase 3: Forward Spine — Propose & Spec | Complete |
 | SPEC-01 | Phase 3: Forward Spine — Propose & Spec | Pending |
 | SPEC-02 | Phase 3: Forward Spine — Propose & Spec | Pending |
 | SPEC-03 | Phase 3: Forward Spine — Propose & Spec | Pending |
