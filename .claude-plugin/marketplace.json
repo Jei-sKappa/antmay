@@ -18,6 +18,8 @@
       "name": "JeisKappa-workflow",
       "source": "./",
       "skills": [
+        "./skills/adjust-plan-granularity-auto",
+        "./skills/adjust-plan-granularity-interactive",
         "./skills/capture-inbox",
         "./skills/discussion",
         "./skills/plan-loose-auto",

@@ -2,6 +2,8 @@
   "conventionalCommits.gitmoji": false,
   "conventionalCommits.promptFooter": false,
   "conventionalCommits.scopes": [
+    "adjust-plan-granularity-auto",
+    "adjust-plan-granularity-interactive",
     "afk-exploration",
     "brief-the-implementer",
     "capture-inbox",

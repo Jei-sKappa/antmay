@@ -158,6 +158,22 @@ Walks the user through a strict-granularity plan task-by-task — fleshing out e
 npx skills add Jei-sKappa/skills --skill plan-strict-interactive
 ```
 
+### [`adjust-plan-granularity-auto`](./skills/adjust-plan-granularity-auto/SKILL.md)
+
+Reads an existing v1+ plan markdown file under the active V1 thread's `plans/` folder and emits a NEW versioned plan whose body matches a requested granularity target (looser / stricter / more-implementation-ready / more-high-level OR a specific phrase like "split task 3 into substeps"), end-to-end, with no clarifying questions. The source plan is NEVER modified — the original stays immutable per D39 and the new artifact lands alongside it as `<UTC>-v<N+1>-<descriptor>-plan.md` in the same `plans/` folder. V1 plans are sequential, isolated, independently implementable, self-reviewed before emission, and NEVER auto-committed. Useful when you already started with the wrong granularity, or when you need to adapt an existing plan for a different implementer (e.g., handing a loose human-authored plan to an agent-leaning implementer) — not when you want to walk the source plan task-by-task together (use `adjust-plan-granularity-interactive`), and not when you are authoring a plan from scratch (use the `plan-loose-*` or `plan-strict-*` pair).
+
+```sh
+npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-auto
+```
+
+### [`adjust-plan-granularity-interactive`](./skills/adjust-plan-granularity-interactive/SKILL.md)
+
+Walks the user through an existing v1+ plan task-by-task — deciding per task whether to SPLIT (break into substeps) / MERGE (combine with adjacent task) / EXPAND (add files-modified / verification / acceptance) / CONTRACT (remove substeps or per-task fields) / LEAVE (keep as-is) — pushing back on weak reasoning, then assembles and writes a NEW versioned plan whose body matches the requested granularity target. The source plan is NEVER modified — the original stays immutable per D39 and the new artifact lands alongside it as `<UTC>-v<N+1>-<descriptor>-plan.md` in the same `plans/` folder. V1 plans are sequential, isolated, independently implementable, self-reviewed before emission, and NEVER auto-committed. Useful when you want to think the granularity shift through together with the agent and have the resulting adjusted artifact written for you — not when you already have the source plan and target instruction fully shaped (use `adjust-plan-granularity-auto` for that), and not when you are authoring a plan from scratch (use the `plan-loose-*` or `plan-strict-*` pair).
+
+```sh
+npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
