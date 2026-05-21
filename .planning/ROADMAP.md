@@ -48,7 +48,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User can reference any decision from a discussion log using sequential `## D<N>` headings (starting at D1) from any downstream artifact, and discussion skills append decisions incrementally so an interrupted session leaves a usable partial log.
   5. Discussion skills propose to split or park non-blocking branches instead of dragging the current discussion sideways, do not impose a hard question cap, and can resolve thread location with light judgment (ask the user, or auto-create when obvious) without a pre-existing thread.
   6. The legacy `skills/discussion-loop/` is either evolved into `skills/discussion/` + `skills/seeded-discussion/` or explicitly retired with a note documenting the migration; the public `name`, folder, `marketplace.json` entry, `.vscode/settings.json` scope, and `README.md` index all reflect the new state.
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 02-01-PLAN.md — Author capture-inbox skill + register in marketplace/scopes/README
+  - [ ] 02-02-PLAN.md — Author discussion + seeded-discussion skills + register in marketplace/scopes/README
+  - [ ] 02-03-PLAN.md — Retire legacy discussion-loop: rewrite SKILL.md as deprecation notice + remove from marketplace/scopes/README + add Retired skills subsection
 
 ### Phase 3: Forward Spine — Propose & Spec
 **Goal**: Users have the upstream artifact-producing half of the spine. `propose-*` turns a rough prompt into a freeform proposal; `spec-*` turns a proposal / discussion / issue / prompt into a handoff-grade implementation spec, kept separate from the existing reverse-engineering `derive-spec` skill.
@@ -118,7 +121,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations | 3/3 | Complete   | 2026-05-21 |
-| 2. Capture & Discussion Infrastructure | 0/TBD | Not started | - |
+| 2. Capture & Discussion Infrastructure | 0/3 | Not started | - |
 | 3. Forward Spine — Propose & Spec | 0/TBD | Not started | - |
 | 4. Plan Family | 0/TBD | Not started | - |
 | 5. Implementation Family | 0/TBD | Not started | - |
