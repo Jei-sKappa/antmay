@@ -12,6 +12,8 @@
     "discussion",
     "implement-auto",
     "implement-interactive",
+    "implement-plan-auto",
+    "implement-plan-interactive",
     "meta-prompting",
     "plan-loose-auto",
     "plan-loose-interactive",

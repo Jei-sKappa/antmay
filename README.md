@@ -190,6 +190,22 @@ Takes a less-structured input (spec, proposal, decision log, GitHub issue, Inbox
 npx skills add Jei-sKappa/skills --skill implement-interactive
 ```
 
+### [`implement-plan-auto`](./skills/implement-plan-auto/SKILL.md)
+
+Takes a V1 plan artifact path (loose or strict granularity, produced by any of the Phase 4 `plan-*` skills) and executes every plan task in order on the current working tree — autonomously, self-reviewing after each task, and auto-committing per plan task. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the V1 four-state status protocol (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`). Never rewrites history — no `--amend`, no rebase, no force-push; a failed commit reports `BLOCKED` and stops. Useful when you have a plan artifact under `docs/threads/<thread>/plans/` and want it executed end-to-end without a per-commit ASK — not when you want to confirm each commit (use `implement-plan-interactive`), not when the input is less-structured rather than a plan artifact (use `implement-auto` or `implement-interactive`), and not when you want a heavier subagent-driven review loop on each task (use `implement-plan-with-subagents-auto` or `implement-plan-with-subagents-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill implement-plan-auto
+```
+
+### [`implement-plan-interactive`](./skills/implement-plan-interactive/SKILL.md)
+
+Takes a V1 plan artifact path (loose or strict granularity, produced by any of the Phase 4 `plan-*` skills) and executes its tasks in order on the current working tree COLLABORATIVELY — presenting each plan task to the user, pushing back per the anti-sycophancy stance, self-reviewing after each task, and ASKING the user before committing at each plan-task boundary. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the V1 four-state status protocol. Never rewrites history; a failed commit reports `BLOCKED` and stops. Useful when you have a plan artifact under `docs/threads/<thread>/plans/` and want the agent to ASK before each commit — not when you want autonomous end-to-end execution (use `implement-plan-auto`), not when the input is less-structured rather than a plan artifact (use `implement-auto` or `implement-interactive`), and not when you want a heavier subagent-driven review loop on each task (use `implement-plan-with-subagents-auto` or `implement-plan-with-subagents-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill implement-plan-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.

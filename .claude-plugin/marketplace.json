@@ -24,6 +24,8 @@
         "./skills/discussion",
         "./skills/implement-auto",
         "./skills/implement-interactive",
+        "./skills/implement-plan-auto",
+        "./skills/implement-plan-interactive",
         "./skills/plan-loose-auto",
         "./skills/plan-loose-interactive",
         "./skills/plan-strict-auto",
