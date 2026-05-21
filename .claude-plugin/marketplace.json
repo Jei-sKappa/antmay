@@ -20,6 +20,8 @@
       "skills": [
         "./skills/capture-inbox",
         "./skills/discussion",
+        "./skills/propose-auto",
+        "./skills/propose-interactive",
         "./skills/seeded-discussion"
       ]
     }

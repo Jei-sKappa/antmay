@@ -94,6 +94,22 @@ Walks a predetermined list of points one at a time — passed as a markdown file
 npx skills add Jei-sKappa/skills --skill seeded-discussion
 ```
 
+### [`propose-auto`](./skills/propose-auto/SKILL.md)
+
+Turns a rough prompt (or a referenced artifact) into a freeform proposal markdown file under the active V1 thread's `proposals/` folder, end-to-end, with no clarifying questions. Useful when you already know what you want and just need the proposal written down — not when you want to think it through together (use `propose-interactive` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill propose-auto
+```
+
+### [`propose-interactive`](./skills/propose-interactive/SKILL.md)
+
+Walks the user through the four suggested elements of a proposal — intent, context, rough shape, open questions — one at a time, then assembles and writes a freeform proposal markdown file under the active V1 thread's `proposals/` folder. Useful when you want to think the proposal through together with the agent, surface open questions live, and have the resulting artifact written for you — not when you already have the prompt fully shaped (use `propose-auto` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill propose-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.

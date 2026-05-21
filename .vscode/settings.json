@@ -9,6 +9,8 @@
     "derive-spec",
     "discussion",
     "meta-prompting",
+    "propose-auto",
+    "propose-interactive",
     "report-to-the-owner",
     "review-decision-document",
     "seeded-discussion",
