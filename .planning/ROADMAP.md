@@ -79,7 +79,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. User can rely on every plan skill never auto-committing the plan artifact — commits happen only if explicitly requested by the surrounding session.
 **Plans**: 3 plans
   - [x] 04-01-PLAN.md — Ship plan-loose-auto + plan-loose-interactive + register touchpoints
-  - [ ] 04-02-PLAN.md — Ship plan-strict-auto + plan-strict-interactive + register touchpoints
+  - [x] 04-02-PLAN.md — Ship plan-strict-auto + plan-strict-interactive + register touchpoints
   - [ ] 04-03-PLAN.md — Ship adjust-plan-granularity-auto + adjust-plan-granularity-interactive + register touchpoints
 
 ### Phase 5: Implementation Family
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundations | 3/3 | Complete   | 2026-05-21 |
 | 2. Capture & Discussion Infrastructure | 3/3 | Complete   | 2026-05-21 |
 | 3. Forward Spine — Propose & Spec | 2/2 | Complete   | 2026-05-21 |
-| 4. Plan Family | 1/3 | In Progress|  |
+| 4. Plan Family | 2/3 | In Progress|  |
 | 5. Implementation Family | 0/TBD | Not started | - |
 | 6. Review Family | 0/TBD | Not started | - |
 | 7. Merge, Finish, Navigation & Distribution Surface | 0/TBD | Not started | - |
