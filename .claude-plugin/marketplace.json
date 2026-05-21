@@ -18,7 +18,9 @@
     {
       "name": "JeisKappa-workflow",
       "source": "./",
-      "skills": []
+      "skills": [
+        "./skills/capture-inbox"
+      ]
     }
   ]
 }
