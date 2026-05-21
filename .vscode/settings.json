@@ -10,6 +10,8 @@
     "consult-the-expert",
     "derive-spec",
     "discussion",
+    "implement-auto",
+    "implement-interactive",
     "meta-prompting",
     "plan-loose-auto",
     "plan-loose-interactive",

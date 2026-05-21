@@ -174,6 +174,22 @@ Walks the user through an existing v1+ plan task-by-task — deciding per task w
 npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-interactive
 ```
 
+### [`implement-auto`](./skills/implement-auto/SKILL.md)
+
+Takes a less-structured input (spec, proposal, decision log, GitHub issue, Inbox item, code context, or raw prompt) and implements it end-to-end on the current working tree — autonomously deriving implicit tasks from the input itself, self-reviewing after each task, and auto-committing per implicit task or per explicit Git instruction. Single-agent (current session + self-review); no subagents are spawned. Reports each implicit task by the V1 four-state status protocol (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`). Never rewrites history — no `--amend`, no rebase, no force-push; a failed commit reports `BLOCKED` and stops. Useful when you have a less-structured input in hand and want autonomous end-to-end implementation without an element-by-element walk — not when you want to ASK before each commit (use `implement-interactive`), and not when the input is a plan artifact under `docs/threads/<thread>/plans/` (use one of the `implement-plan-*` skills).
+
+```sh
+npx skills add Jei-sKappa/skills --skill implement-auto
+```
+
+### [`implement-interactive`](./skills/implement-interactive/SKILL.md)
+
+Takes a less-structured input (spec, proposal, decision log, GitHub issue, Inbox item, code context, or raw prompt) and implements it collaboratively on the current working tree — walking the implicit task list with the user, pushing back per the anti-sycophancy stance, self-reviewing after each task, and ASKING the user before each commit at every equivalent checkpoint to the autonomous sibling. Single-agent (current session + self-review); no subagents are spawned. Reports each implicit task by the V1 four-state status protocol. Never rewrites history; a failed commit reports `BLOCKED` and stops. Useful when you want to think the implementation through with the agent and have it ASK before each commit lands — not when you want autonomous end-to-end execution (use `implement-auto`), and not when the input is a plan artifact under `docs/threads/<thread>/plans/` (use one of the `implement-plan-*` skills).
+
+```sh
+npx skills add Jei-sKappa/skills --skill implement-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
