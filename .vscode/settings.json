@@ -7,10 +7,12 @@
     "capture-inbox",
     "consult-the-expert",
     "derive-spec",
+    "discussion",
     "discussion-loop",
     "meta-prompting",
     "report-to-the-owner",
     "review-decision-document",
+    "seeded-discussion",
     "the-librarian"
   ]
 }
