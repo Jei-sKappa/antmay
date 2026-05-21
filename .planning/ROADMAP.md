@@ -105,7 +105,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. The legacy `skills/review-decision-document/` is evolved into `skills/review-spec-auto/` and `skills/review-spec-interactive/` (or explicitly retired with a documented migration), and `review-spec-auto` enforces the handoff-grade bar defined in Phase 3.
   5. Users see in `README.md` that adversarial review is delegated to the external `the-fool` skill (no native V1 adversarial-review skill) and that verification of implementations is covered by `review-implementation-*` rather than a separate `verify-*` skill.
 **Plans**: 5 plans
-  - [ ] 06-01-PLAN.md — Ship review-proposal-auto + review-proposal-interactive + register touchpoints
+  - [x] 06-01-PLAN.md — Ship review-proposal-auto + review-proposal-interactive + register touchpoints
   - [ ] 06-02-PLAN.md — Ship review-spec-auto + review-spec-interactive + RETIRE review-decision-document + register touchpoints
   - [ ] 06-03-PLAN.md — Ship review-plan-auto + review-plan-interactive + register touchpoints
   - [ ] 06-04-PLAN.md — Ship review-implementation-auto + review-implementation-interactive + add README verification-coverage note + register touchpoints
@@ -135,6 +135,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Forward Spine — Propose & Spec | 2/2 | Complete   | 2026-05-21 |
 | 4. Plan Family | 3/3 | Complete   | 2026-05-21 |
 | 5. Implementation Family | 3/3 | Complete   | 2026-05-21 |
-| 6. Review Family | 0/5 | Not started | - |
+| 6. Review Family | 1/5 | In Progress|  |
 | 7. Merge, Finish, Navigation & Distribution Surface | 0/TBD | Not started | - |
 </content>
