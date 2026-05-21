@@ -11,6 +11,8 @@
     "meta-prompting",
     "plan-loose-auto",
     "plan-loose-interactive",
+    "plan-strict-auto",
+    "plan-strict-interactive",
     "propose-auto",
     "propose-interactive",
     "report-to-the-owner",

@@ -142,6 +142,22 @@ Walks the user through a loose-granularity plan task-by-task — drafting number
 npx skills add Jei-sKappa/skills --skill plan-loose-interactive
 ```
 
+### [`plan-strict-auto`](./skills/plan-strict-auto/SKILL.md)
+
+Turns a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity v1 plan markdown file under the active V1 thread's `plans/` folder, end-to-end, with no clarifying questions. Strict plans carry explicit substeps, verification notes, files modified, and acceptance criteria per task — optimized for an agent-leaning implementer that needs unambiguous prescriptive steps. V1 plans are sequential, isolated, independently implementable, self-reviewed before emission, and NEVER auto-committed. Useful when you already have the upstream input in hand and want a strict plan written down autonomously — not when you want to walk it together (use `plan-strict-interactive`), and not when the downstream implementer is human-leaning and a brief task description suffices (use `plan-loose-auto` or `plan-loose-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill plan-strict-auto
+```
+
+### [`plan-strict-interactive`](./skills/plan-strict-interactive/SKILL.md)
+
+Walks the user through a strict-granularity plan task-by-task — fleshing out each task's objective, input, substeps, files modified, verification, and acceptance criteria — pushing back on weak reasoning, then assembles and writes a v1 plan markdown file under the active V1 thread's `plans/` folder. Strict plans suit agent-leaning implementers and tighter handoff where ambiguity is expensive. V1 plans are sequential, isolated, independently implementable, self-reviewed before emission, and NEVER auto-committed. Useful when you want to think the strict plan through together with the agent and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `plan-strict-auto` for that), and not when the downstream implementer is human-leaning and a brief task description suffices (use `plan-loose-auto` or `plan-loose-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill plan-strict-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
