@@ -32,7 +32,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A reader looking at any artifact filename can tell from the name alone whether it is a record (`<UTC>-<kebab-desc>-<type>.md`) or a versioned artifact (`<UTC>-v<N>[-<descriptor>]-<type>.md`), and which artifact-type it is, because the grammar is documented and referenced by every emitting skill in this phase's deliverables.
   4. User can rely on the registration baseline being correct: the V1 marketplace plugin `JeisKappa-workflow` exists in `.claude-plugin/marketplace.json` (empty `skills` array OK at this point) and the `conventionalCommits.scopes` array in `.vscode/settings.json` is ready to receive new skill folder names per CLAUDE.md rules.
   5. There is an explicit written statement (e.g. in a foundational reference doc / shared CONVENTIONS section) that emitted versioned and record artifacts are immutable, that lineage frontmatter is forbidden, and that ambiguous artifact references must be resolved by asking the user — not by a global "latest" algorithm.
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 01-01-PLAN.md — Create V1 workflow reference doc tree: index + thread-layout.md
+  - [ ] 01-02-PLAN.md — Add filename-grammar.md + immutability.md to complete the reference doc set
+  - [ ] 01-03-PLAN.md — Wire registration baseline: .gitignore .wip rule + JeisKappa-workflow marketplace plugin + AGENTS.md pointer
 
 ### Phase 2: Capture & Discussion Infrastructure
 **Goal**: Users have a working capture-and-decide layer underneath the rest of the workflow: any agent or user can capture a thread-local Inbox item with an explicit "why", and both open-ended and seeded discussion skills produce sequentially-numbered decision logs under `discussions/`. The legacy `discussion-loop` is retired in favor of the new discussion / seeded-discussion split.
@@ -114,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations | 0/TBD | Not started | - |
+| 1. Foundations | 0/3 | Not started | - |
 | 2. Capture & Discussion Infrastructure | 0/TBD | Not started | - |
 | 3. Forward Spine — Propose & Spec | 0/TBD | Not started | - |
 | 4. Plan Family | 0/TBD | Not started | - |
