@@ -8,11 +8,9 @@ The docs in this directory describe how V1 threads are laid out on disk, how art
 
 Read in this order; each doc is short and self-contained.
 
-- [`thread-layout.md`](./thread-layout.md) — V1 thread root path and folder set (`proposals/`, `specs/`, `plans/`, `discussions/`, `inbox/{open,processed,dropped}/`, `.wip/`). Created by Plan 01.
-- [`filename-grammar.md`](./filename-grammar.md) — Record-form and versioned-form filename grammars, UTC stamp pattern, mandatory artifact-type suffix. Created by Plan 02.
-- [`immutability.md`](./immutability.md) — Emitted-artifact immutability rule, no source-relation frontmatter, ambiguous reference resolution by asking. Created by Plan 02.
-
-The links to `filename-grammar.md` and `immutability.md` are intentional forward references; Plan 02 of Phase 1 creates those files.
+- [`thread-layout.md`](./thread-layout.md) — V1 thread root path and folder set (`proposals/`, `specs/`, `plans/`, `discussions/`, `inbox/{open,processed,dropped}/`, `.wip/`).
+- [`filename-grammar.md`](./filename-grammar.md) — Record-form and versioned-form filename grammars, UTC stamp pattern, mandatory artifact-type suffix.
+- [`immutability.md`](./immutability.md) — Emitted-artifact immutability rule, no source-relation frontmatter, ambiguous reference resolution by asking.
 
 ## Entry Points
 
