@@ -53,15 +53,15 @@
 
 ### Plan (PLAN)
 
-- [ ] **PLAN-01**: User can invoke `plan-loose-auto` to produce a goal-oriented sequential plan from an input artifact [D55, D56, D59]
-- [ ] **PLAN-02**: User can invoke `plan-loose-interactive` to produce the same plan collaboratively [D56]
+- [x] **PLAN-01**: User can invoke `plan-loose-auto` to produce a goal-oriented sequential plan from an input artifact [D55, D56, D59]
+- [x] **PLAN-02**: User can invoke `plan-loose-interactive` to produce the same plan collaboratively [D56]
 - [ ] **PLAN-03**: User can invoke `plan-strict-auto` to produce a detailed, task/phase-oriented sequential plan with steps/substeps and verification notes [D55, D56, D59]
 - [ ] **PLAN-04**: User can invoke `plan-strict-interactive` to produce a strict plan collaboratively [D56]
 - [ ] **PLAN-05**: User can invoke `adjust-plan-granularity-auto` / `adjust-plan-granularity-interactive` to shift an existing plan's granularity (looser / stricter / more implementation-ready / more high-level) [D57]
-- [ ] **PLAN-06**: User can rely on plan tasks being sequential, isolated, independently implementable, and independently reviewable [D59]
-- [ ] **PLAN-07**: User can rely on V1 plan artifacts containing no parallelization, wave markers, dependency arrays, or task graph notation [D60]
-- [ ] **PLAN-08**: User can rely on plan skills self-reviewing output before emission (coherence, granularity fit, no under/over-splitting) [D61]
-- [ ] **PLAN-09**: User can rely on plan skills never auto-committing; commits only happen if explicitly asked in the surrounding session [D62]
+- [x] **PLAN-06**: User can rely on plan tasks being sequential, isolated, independently implementable, and independently reviewable [D59]
+- [x] **PLAN-07**: User can rely on V1 plan artifacts containing no parallelization, wave markers, dependency arrays, or task graph notation [D60]
+- [x] **PLAN-08**: User can rely on plan skills self-reviewing output before emission (coherence, granularity fit, no under/over-splitting) [D61]
+- [x] **PLAN-09**: User can rely on plan skills never auto-committing; commits only happen if explicitly asked in the surrounding session [D62]
 
 ### Implementation (IMPL)
 
@@ -226,15 +226,15 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | SPEC-03 | Phase 3: Forward Spine — Propose & Spec | Complete |
 | SPEC-04 | Phase 3: Forward Spine — Propose & Spec | Complete |
 | SPEC-05 | Phase 3: Forward Spine — Propose & Spec | Complete |
-| PLAN-01 | Phase 4: Plan Family | Pending |
-| PLAN-02 | Phase 4: Plan Family | Pending |
+| PLAN-01 | Phase 4: Plan Family | Complete |
+| PLAN-02 | Phase 4: Plan Family | Complete |
 | PLAN-03 | Phase 4: Plan Family | Pending |
 | PLAN-04 | Phase 4: Plan Family | Pending |
 | PLAN-05 | Phase 4: Plan Family | Pending |
-| PLAN-06 | Phase 4: Plan Family | Pending |
-| PLAN-07 | Phase 4: Plan Family | Pending |
-| PLAN-08 | Phase 4: Plan Family | Pending |
-| PLAN-09 | Phase 4: Plan Family | Pending |
+| PLAN-06 | Phase 4: Plan Family | Complete |
+| PLAN-07 | Phase 4: Plan Family | Complete |
+| PLAN-08 | Phase 4: Plan Family | Complete |
+| PLAN-09 | Phase 4: Plan Family | Complete |
 | IMPL-01 | Phase 5: Implementation Family | Pending |
 | IMPL-02 | Phase 5: Implementation Family | Pending |
 | IMPL-03 | Phase 5: Implementation Family | Pending |

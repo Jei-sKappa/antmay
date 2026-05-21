@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-forward-spine-propose-and-spec/03-02-PLAN.md (spec-auto + spec-interactive shipped; Phase 3 forward spine complete)
-last_updated: "2026-05-21T09:49:43.959Z"
-last_activity: 2026-05-21 -- Phase 4 execution started
+last_updated: "2026-05-21T10:12:21.776Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
   percent: 43
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 4 (Plan Family) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 4
-Last activity: 2026-05-21 -- Phase 4 execution started
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 02 P03 | 2min | 4 tasks | 4 files |
 | Phase 03 P01 | 6min | 3 tasks | 5 files |
 | Phase 03 P02 | 6min | 3 tasks | 5 files |
+| Phase 04 P01 | 18min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Paired-skill emission pattern established for V1 forward-spine generators — One auto skill (pure input → artifact, no clarifying questions, no anti-sycophancy section) plus one interactive sibling (collaborative element-by-element walk, anti-sycophancy carried verbatim from discussion/SKILL.md, D93 no-auto-decision-log default, capture-inbox referenced for scope drift). Both skills emit the same artifact-type under the same target folder with the V1 grammar mandatory artifact-type suffix. Both NEVER auto-commit. Registration follows the 4-touchpoint rule (skill folder + marketplace + scopes + README) — three of the touchpoints land in one chore: commit, skill bodies in two per-skill feat: commits. Pattern applies directly to Plan 03-02 (spec-* under specs/) and Plan 4 (plan-* under plans/).
 - [Phase ?]: [Phase 03]: spec-auto + spec-interactive V1 spine skills shipped — Both skills emit versioned-form v1 spec artifacts at docs/threads/<thread>/specs/<UTC>-v1-spec.md per the Phase 1 versioned-form filename grammar (first emission defaults to NO descriptor; mainline integer-only). Both cover all 8 D50 semantic-contract elements with settled decisions inlined and source decision logs cited by path + D<N> per SPEC-05; no mandatory Decisions section heading per D52. spec-auto is a pure generator accepting 4 input forms (proposal / decision-log / GitHub issue / raw prompt); no anti-sycophancy section. spec-interactive walks the user through the 8 elements one at a time with the V1 anti-sycophancy stance carried verbatim (4 markers preserved; refuse-to-log doubled) and a heightened framing line (bad design calls in the spec become expensive in implementation). Per D93, spec-interactive does NOT auto-write a decision log unless durable trade-offs emerge. Both skills NEVER auto-commit. derive-spec/SKILL.md UNTOUCHED — directionality split communicated via opening clarifier paragraph in both skill bodies AND README inline (Option A). Registered under JeisKappa-workflow plugin (5 to 7); JeisKappa-skills unchanged at 8. Phase 3 is COMPLETE — forward spine (propose -> spec) fully shipped.
 - [Phase ?]: [Phase 03]: Versioned-form forward generator pair pattern established — one auto + one interactive sibling for FORWARD VERSIONED-ARTIFACT generation; both accept 4 input forms (proposal / decision-log / GitHub issue / raw prompt); both emit the same artifact-type using V1 versioned-form filename grammar with first emission defaulting to NO kebab-descriptor (mainline integer-only); both enforce immutability after emission; both NEVER auto-commit; both bodies carry an opening directionality clarifier when an inverse-direction sibling skill exists in the repo; registration follows the 4-touchpoint rule in 3 atomic commits per plan; README directionality clarifier defaults to Option A (inline) when the clarifier covers 2 entries. Pattern applies directly to Plan 4 (plan-* family under plans/) and any future forward-direction versioned-artifact pair.
+- [Phase ?]: [Phase 04]: plan-loose-auto + plan-loose-interactive V1 spine skills shipped — both emit versioned-form v1 plan artifacts at docs/threads/<thread>/plans/<UTC>-v<N>[-<descriptor>]-plan.md per Phase 1 grammar (first emission defaults to NO descriptor). Both enforce D59 sequential-isolated-independent contract (verbatim phrase 'sequential, isolated, independently implementable' present twice each), D60 strict no-parallelization prohibition (4 forbidden constructs named with explicit 'do not emit' language + D60 citation), D61 four-check self-review pass (coherence / granularity fit / no under-splitting / no over-splitting), D62 NEVER-commits phrase, D58 loose-vs-strict-as-user-choice framing with no 'better' recommendation. plan-loose-interactive carries the 4 anti-sycophancy markers verbatim from discussion/SKILL.md (Disagree when you disagree / Push back on weak or incomplete reasoning / Do not treat pushback as correctness / Refuse to log a plan task you believe is wrong without flagging it) + the forward-direction heightened framing line + D93 no-auto-decision-log default. Registered under JeisKappa-workflow plugin (7 to 9 entries); JeisKappa-skills unchanged at 8. Three commits total: feat(plan-loose-auto) + feat(plan-loose-interactive) + chore: register (matches Phase 3 pattern).
+- [Phase ?]: [Phase 04]: Loose-granularity plan-pair emission pattern established — one auto skill (pure input -> artifact, no clarifying questions, no anti-sycophancy section, no decision-log section) plus one interactive sibling (collaborative task-by-task walk, anti-sycophancy carried verbatim with forward-direction heightened framing, D93 no-auto-decision-log default, capture-inbox referenced for scope drift). Both skills emit the same artifact-type at the same target folder with the V1 versioned-form grammar; first emission defaults to v1 with NO descriptor. Both share the D59 contract, the D60 prohibition with D60 citation, the D61 four-check self-review, and the worked example as a D60 negative test. Pattern applies directly to Plan 04-02 (strict pair) and Plan 04-03 (adjust-plan-granularity pair) — reusable elements: opening clarifier with sibling references, verbatim D59 phrase, D60 4-named-and-prohibited-constructs language, D61 4-check self-review, D62 NEVER-commits phrase, 4-input acceptance with ambiguity fallback, V1 versioned-form filename grammar section, anti-sycophancy stance (interactive sibling only).
+- [Phase ?]: [Phase 04]: Forbidden-construct mentions in plan-family skill bodies use descriptive prose phrases, not literal token strings — to keep D60 enforcement loud while passing the executor's structural-notation negative grep. The executor's automated verify runs '! grep -qE "\[W[0-9]+\]|^wave:|^depends_on:"' against the ENTIRE skill body (not just the worked example). Literal tokens like '[W1]', '[W2]', or unquoted 'depends_on:' in prose trigger false positives even when wrapped in markdown backticks or used to NAME the forbidden construct. Replace with descriptive phrases: 'bracketed wave prefixes on tasks' instead of '[W1] task prefixes'; 'depends_on fields' (unquoted) instead of literal-quoted depends_on. The forbidden construct is still named, the D60 citation is still present, the prohibition language is unchanged. Important for Plan 04-02 and Plan 04-03 — both must follow the same convention.
 
 ### Pending Todos
 
@@ -119,7 +123,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T09:25:32.546Z
+Last session: 2026-05-21T10:12:00.596Z
 Stopped at: Completed 03-forward-spine-propose-and-spec/03-02-PLAN.md (spec-auto + spec-interactive shipped; Phase 3 forward spine complete)
 Resume file: 
 None
