@@ -14,6 +14,8 @@
     "report-to-the-owner",
     "review-decision-document",
     "seeded-discussion",
+    "spec-auto",
+    "spec-interactive",
     "the-librarian"
   ]
 }

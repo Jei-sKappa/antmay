@@ -22,7 +22,9 @@
         "./skills/discussion",
         "./skills/propose-auto",
         "./skills/propose-interactive",
-        "./skills/seeded-discussion"
+        "./skills/seeded-discussion",
+        "./skills/spec-auto",
+        "./skills/spec-interactive"
       ]
     }
   ]

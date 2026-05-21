@@ -110,6 +110,22 @@ Walks the user through the four suggested elements of a proposal — intent, con
 npx skills add Jei-sKappa/skills --skill propose-interactive
 ```
 
+### [`spec-auto`](./skills/spec-auto/SKILL.md)
+
+Turns a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade v1 spec markdown file under the active V1 thread's `specs/` folder — end-to-end, with no clarifying questions, covering all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance). Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`derive-spec`](./skills/derive-spec/SKILL.md) instead. Useful when you already have the upstream input in hand and just need the spec written down — not when you want to author it together (use `spec-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill spec-auto
+```
+
+### [`spec-interactive`](./skills/spec-interactive/SKILL.md)
+
+Walks the user through the eight handoff-grade semantic-contract elements of a spec — intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance — one at a time, then assembles and writes a v1 spec markdown file under the active V1 thread's `specs/` folder. Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`derive-spec`](./skills/derive-spec/SKILL.md) instead. Useful when you want to think the spec through together with the agent, push back on weak reasoning before it becomes expensive in implementation, and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `spec-auto` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill spec-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
