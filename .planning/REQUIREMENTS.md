@@ -45,11 +45,11 @@
 
 ### Spec (SPEC)
 
-- [ ] **SPEC-01**: User can invoke `spec-auto` to produce a forward-looking implementation spec from a proposal, discussion, issue, or user prompt [D38]
-- [ ] **SPEC-02**: User can invoke `spec-interactive` to author a spec collaboratively [D38]
-- [ ] **SPEC-03**: User can rely on official spec skills meeting the handoff-grade semantic contract: intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance [D50]
-- [ ] **SPEC-04**: User keeps `derive-spec` separate from the V1 forward spec skills [D38]
-- [ ] **SPEC-05**: User can rely on spec skills referencing source decision logs (by path + `D<N>`) and inlining settled decisions in the spec body — no mandatory decisions section [D52]
+- [x] **SPEC-01**: User can invoke `spec-auto` to produce a forward-looking implementation spec from a proposal, discussion, issue, or user prompt [D38]
+- [x] **SPEC-02**: User can invoke `spec-interactive` to author a spec collaboratively [D38]
+- [x] **SPEC-03**: User can rely on official spec skills meeting the handoff-grade semantic contract: intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance [D50]
+- [x] **SPEC-04**: User keeps `derive-spec` separate from the V1 forward spec skills [D38]
+- [x] **SPEC-05**: User can rely on spec skills referencing source decision logs (by path + `D<N>`) and inlining settled decisions in the spec body — no mandatory decisions section [D52]
 
 ### Plan (PLAN)
 
@@ -221,11 +221,11 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | PROP-01 | Phase 3: Forward Spine — Propose & Spec | Complete |
 | PROP-02 | Phase 3: Forward Spine — Propose & Spec | Complete |
 | PROP-03 | Phase 3: Forward Spine — Propose & Spec | Complete |
-| SPEC-01 | Phase 3: Forward Spine — Propose & Spec | Pending |
-| SPEC-02 | Phase 3: Forward Spine — Propose & Spec | Pending |
-| SPEC-03 | Phase 3: Forward Spine — Propose & Spec | Pending |
-| SPEC-04 | Phase 3: Forward Spine — Propose & Spec | Pending |
-| SPEC-05 | Phase 3: Forward Spine — Propose & Spec | Pending |
+| SPEC-01 | Phase 3: Forward Spine — Propose & Spec | Complete |
+| SPEC-02 | Phase 3: Forward Spine — Propose & Spec | Complete |
+| SPEC-03 | Phase 3: Forward Spine — Propose & Spec | Complete |
+| SPEC-04 | Phase 3: Forward Spine — Propose & Spec | Complete |
+| SPEC-05 | Phase 3: Forward Spine — Propose & Spec | Complete |
 | PLAN-01 | Phase 4: Plan Family | Pending |
 | PLAN-02 | Phase 4: Plan Family | Pending |
 | PLAN-03 | Phase 4: Plan Family | Pending |
