@@ -63,7 +63,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can invoke `spec-auto` or `spec-interactive` and receive an emitted spec artifact under `specs/` that visibly satisfies the handoff-grade semantic contract — intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance — by reading the artifact alone.
   4. User can rely on `spec-*` skills referencing source decision logs by path + `D<N>` (and inlining settled decisions in the spec body) rather than forcing a dedicated "Decisions" section, and rely on emitted spec artifacts being immutable while in-session drafts remain editable.
   5. User can see in `README.md` that `derive-spec` (reverse) and the new `spec-*` skills (forward) are documented as separate skills with non-overlapping triggers; both remain installable individually via `npx skills add`.
-**Plans**: TBD
+**Plans**: 2 plans
+  - [ ] 03-01-PLAN.md — Ship propose-auto + propose-interactive + register touchpoints
+  - [ ] 03-02-PLAN.md — Ship spec-auto + spec-interactive + register touchpoints + SPEC-04 README clarifier
 
 ### Phase 4: Plan Family
 **Goal**: Users have the full V1 planning catalog: loose and strict granularities, auto and interactive modes, and a granularity-shifting helper. Plans are sequential, isolated, independently implementable/reviewable, never auto-committed, and self-reviewed before emission.
@@ -122,7 +124,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundations | 3/3 | Complete   | 2026-05-21 |
 | 2. Capture & Discussion Infrastructure | 3/3 | Complete   | 2026-05-21 |
-| 3. Forward Spine — Propose & Spec | 0/TBD | Not started | - |
+| 3. Forward Spine — Propose & Spec | 0/2 | Not started | - |
 | 4. Plan Family | 0/TBD | Not started | - |
 | 5. Implementation Family | 0/TBD | Not started | - |
 | 6. Review Family | 0/TBD | Not started | - |
