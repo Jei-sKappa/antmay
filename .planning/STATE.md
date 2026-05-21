@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Completed 02-capture-and-discussion-infrastructure/02-02-PLAN.md (discussion + seeded-discussion shipped)
-last_updated: "2026-05-21T08:25:07.584Z"
+last_updated: "2026-05-21T08:39:02.521Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 14
+  completed_plans: 6
+  percent: 29
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 2 (Capture & Discussion Infrastructure) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-21
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [████████░░] 83%
 | Phase 1 P3 | ~2min | 3 tasks | 3 files |
 | Phase 02 P01 | 3min | 4 tasks | 4 files |
 | Phase 02 P02 | 5min | 5 tasks | 5 files |
+| Phase 02 P03 | 2min | 4 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 2]: Trigger encoding stays in the skill body, not runtime detection — Per D27/INBX-04 — the skill instructs the agent to decide interactive vs autonomous based on its session context (presence of a human, AFK invocation, scripted run). The skill does NOT try to detect runtime programmatically.
 - [Phase 2]: discussion + seeded-discussion V1 spine skills shipped — Both bodies preserve the legacy discussion-loop anti-sycophancy stance verbatim (8 clauses + prefatory sentence), cite all three Phase 1 canonical docs by absolute path, and write append-only decision logs to docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md with sequential per-log local ## D<N>: <Title> headings. discussion: open-ended (options+rec opt-in); seeded-discussion: predetermined point walk (options+rec default-on, reuses legacy Loop). Registered under JeisKappa-workflow plugin (3 entries total).
 - [Phase 2]: Section-name divergence between sibling discussion skills is intentional — discussion uses ## Decision Point Format (opt-in label) and ## Logging Format; seeded-discussion uses ## Loop (matching legacy discussion-loop's section name; default-on label) and ## Logging. The names diverge to make the behavioral difference loud — readers should not infer behavior from a shared section name.
+- [Phase 02]: discussion-loop soft-retired (1.1.0 → 2.0.0) — SKILL.md body replaced with 31-line deprecation notice naming discussion + seeded-discussion as replacements with install snippets; folder stays on disk so existing installs don't 404; marketplace JeisKappa-skills (9→8 entries), .vscode scopes (12→11 entries), README Available skills entry all removed; new README Retired skills subsection documents the migration with date 2026-05-21 and the no-migration guarantee for pre-existing docs/discussions/*-discussion.md logs.
+- [Phase 02]: Skill retirement ritual codified — Rewrite SKILL.md (don't delete folder), MAJOR semver bump, drop marketplace plugin entry, drop conventional-commit scope, replace README Available-skills entry with a Retired skills bullet. Four atomic commits, one per touchpoint. Captured in the patterns-established field of 02-03-SUMMARY.md frontmatter for any future skill retirement.
 
 ### Pending Todos
 
@@ -110,6 +113,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T08:25:07.573Z
+Last session: 2026-05-21T08:31:39.276Z
 Stopped at: Completed 02-capture-and-discussion-infrastructure/02-02-PLAN.md (discussion + seeded-discussion shipped)
 Resume file: 
+None

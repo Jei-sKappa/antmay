@@ -13,7 +13,7 @@ This roadmap delivers the V1 Modular Agentic Workflow as a bundle of `SKILL.md` 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundations** - Thread folder set, filename grammars, immutability, gitignore rule, registration baseline (completed 2026-05-21)
-- [ ] **Phase 2: Capture & Discussion Infrastructure** - `capture-inbox`, `discussion`, `seeded-discussion` (legacy `discussion-loop` migration)
+- [x] **Phase 2: Capture & Discussion Infrastructure** - `capture-inbox`, `discussion`, `seeded-discussion` (legacy `discussion-loop` migration) (completed 2026-05-21)
 - [ ] **Phase 3: Forward Spine — Propose & Spec** - `propose-*` and `spec-*` skill pairs delivering the upstream spine artifacts
 - [ ] **Phase 4: Plan Family** - `plan-loose-*`, `plan-strict-*`, and `adjust-plan-granularity-*` with self-review and sequential-only contract
 - [ ] **Phase 5: Implementation Family** - `implement-*`, `implement-plan-*`, and `implement-plan-with-subagents-*` with four-state status protocol and embedded reviewer prompts
@@ -51,7 +51,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
   - [x] 02-01-PLAN.md — Author capture-inbox skill + register in marketplace/scopes/README
   - [x] 02-02-PLAN.md — Author discussion + seeded-discussion skills + register in marketplace/scopes/README
-  - [ ] 02-03-PLAN.md — Retire legacy discussion-loop: rewrite SKILL.md as deprecation notice + remove from marketplace/scopes/README + add Retired skills subsection
+  - [x] 02-03-PLAN.md — Retire legacy discussion-loop: rewrite SKILL.md as deprecation notice + remove from marketplace/scopes/README + add Retired skills subsection
 
 ### Phase 3: Forward Spine — Propose & Spec
 **Goal**: Users have the upstream artifact-producing half of the spine. `propose-*` turns a rough prompt into a freeform proposal; `spec-*` turns a proposal / discussion / issue / prompt into a handoff-grade implementation spec, kept separate from the existing reverse-engineering `derive-spec` skill.
@@ -121,7 +121,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations | 3/3 | Complete   | 2026-05-21 |
-| 2. Capture & Discussion Infrastructure | 2/3 | In Progress|  |
+| 2. Capture & Discussion Infrastructure | 3/3 | Complete   | 2026-05-21 |
 | 3. Forward Spine — Propose & Spec | 0/TBD | Not started | - |
 | 4. Plan Family | 0/TBD | Not started | - |
 | 5. Implementation Family | 0/TBD | Not started | - |
