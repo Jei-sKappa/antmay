@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Capture & Discussion Infrastructure** - `capture-inbox`, `discussion`, `seeded-discussion` (legacy `discussion-loop` migration) (completed 2026-05-21)
 - [x] **Phase 3: Forward Spine — Propose & Spec** - `propose-*` and `spec-*` skill pairs delivering the upstream spine artifacts (completed 2026-05-21)
 - [x] **Phase 4: Plan Family** - `plan-loose-*`, `plan-strict-*`, and `adjust-plan-granularity-*` with self-review and sequential-only contract (completed 2026-05-21)
-- [ ] **Phase 5: Implementation Family** - `implement-*`, `implement-plan-*`, and `implement-plan-with-subagents-*` with four-state status protocol and embedded reviewer prompts
+- [x] **Phase 5: Implementation Family** - `implement-*`, `implement-plan-*`, and `implement-plan-with-subagents-*` with four-state status protocol and embedded reviewer prompts (completed 2026-05-21)
 - [ ] **Phase 6: Review Family** - `review-proposal/-spec/-plan/-implementation/-code-*` with findings-to-Inbox routing (evolves legacy `review-decision-document`)
 - [ ] **Phase 7: Merge, Finish, Navigation & Distribution Surface** - `merge-artifacts-*`, `finish`, `whats-next`, README hybrid, `JeisKappa-workflow` marketplace plugin
 
@@ -129,7 +129,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Capture & Discussion Infrastructure | 3/3 | Complete   | 2026-05-21 |
 | 3. Forward Spine — Propose & Spec | 2/2 | Complete   | 2026-05-21 |
 | 4. Plan Family | 3/3 | Complete   | 2026-05-21 |
-| 5. Implementation Family | 2/3 | In Progress|  |
+| 5. Implementation Family | 3/3 | Complete   | 2026-05-21 |
 | 6. Review Family | 0/TBD | Not started | - |
 | 7. Merge, Finish, Navigation & Distribution Surface | 0/TBD | Not started | - |
 </content>

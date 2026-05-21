@@ -69,11 +69,11 @@
 - [x] **IMPL-02**: User can invoke `implement-interactive` to implement less structured input collaboratively [D64, D65]
 - [x] **IMPL-03**: User can invoke `implement-plan-auto` to execute a plan or specific plan task without spawning subagents, relying on the current agent + self-review [D65, D67]
 - [x] **IMPL-04**: User can invoke `implement-plan-interactive` to execute a plan with user-confirmed transitions [D65, D67]
-- [ ] **IMPL-05**: User can invoke `implement-plan-with-subagents-auto` to run the full subagent loop (implementer → spec-compliance reviewer → code-quality reviewer; respawn fixer + re-review until pass) [D66, D68, D70, D71, D72]
-- [ ] **IMPL-06**: User can invoke `implement-plan-with-subagents-interactive` to run the subagent loop with a human-confirmed checkpoint at every transition [D68]
-- [ ] **IMPL-07**: User can rely on `implement-plan-with-subagents-*` skills declaring subagent capability as a precondition (no inline fallback) [D69]
-- [ ] **IMPL-08**: User can rely on the reviewer prompts inside `implement-plan-with-subagents-*` being embedded supporting files in the skill folder, not standalone V1 skills [D87]
-- [ ] **IMPL-09**: User can rely on every fix from a reviewer issue being re-reviewed before the workflow advances [D72]
+- [x] **IMPL-05**: User can invoke `implement-plan-with-subagents-auto` to run the full subagent loop (implementer → spec-compliance reviewer → code-quality reviewer; respawn fixer + re-review until pass) [D66, D68, D70, D71, D72]
+- [x] **IMPL-06**: User can invoke `implement-plan-with-subagents-interactive` to run the subagent loop with a human-confirmed checkpoint at every transition [D68]
+- [x] **IMPL-07**: User can rely on `implement-plan-with-subagents-*` skills declaring subagent capability as a precondition (no inline fallback) [D69]
+- [x] **IMPL-08**: User can rely on the reviewer prompts inside `implement-plan-with-subagents-*` being embedded supporting files in the skill folder, not standalone V1 skills [D87]
+- [x] **IMPL-09**: User can rely on every fix from a reviewer issue being re-reviewed before the workflow advances [D72]
 - [x] **IMPL-10**: User can read implementation outcomes using the four-state status protocol `DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT` [D74]
 - [x] **IMPL-11**: User can rely on `implement-*-auto` skills auto-committing per the granularity rule (per plan task; per orchestration cycle; per implicit task or explicit Git instruction in `implement-auto`) without rewriting history or manipulating commits [D75, D76]
 - [x] **IMPL-12**: User can rely on `implement-*-interactive` skills asking before committing at each equivalent checkpoint [D75, D76]
@@ -239,11 +239,11 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | IMPL-02 | Phase 5: Implementation Family | Complete |
 | IMPL-03 | Phase 5: Implementation Family | Complete |
 | IMPL-04 | Phase 5: Implementation Family | Complete |
-| IMPL-05 | Phase 5: Implementation Family | Pending |
-| IMPL-06 | Phase 5: Implementation Family | Pending |
-| IMPL-07 | Phase 5: Implementation Family | Pending |
-| IMPL-08 | Phase 5: Implementation Family | Pending |
-| IMPL-09 | Phase 5: Implementation Family | Pending |
+| IMPL-05 | Phase 5: Implementation Family | Complete |
+| IMPL-06 | Phase 5: Implementation Family | Complete |
+| IMPL-07 | Phase 5: Implementation Family | Complete |
+| IMPL-08 | Phase 5: Implementation Family | Complete |
+| IMPL-09 | Phase 5: Implementation Family | Complete |
 | IMPL-10 | Phase 5: Implementation Family | Complete |
 | IMPL-11 | Phase 5: Implementation Family | Complete |
 | IMPL-12 | Phase 5: Implementation Family | Complete |
