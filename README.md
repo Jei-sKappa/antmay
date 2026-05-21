@@ -102,6 +102,22 @@ Walks the user through the four suggested elements of a proposal — intent, con
 npx skills add Jei-sKappa/skills --skill propose-interactive
 ```
 
+### [`review-plan-auto`](./skills/review-plan-auto/SKILL.md)
+
+Reads an emitted V1 plan artifact under the active thread's `plans/` folder (loose OR strict granularity from any of the Phase 4 `plan-*` skills) and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` end-to-end, with no clarifying questions — checking four review axes per D83: source-spec adherence (when an optional source artifact is supplied), project conventions, granularity fit, and per-task ambiguity (mandatory for strict plans; granularity-fit signal for loose plans). Detects loose-vs-strict granularity from the plan body and applies the appropriate ambiguity check. The six-section report covers Verdict / Findings (severity-tagged `blocker | issue | nit`) / Evidence / References / Open Questions / Next Actions. Honors the D59 sequential-isolated-independent contract and the D60 no-parallelization rule as review criteria. Useful when you want autonomous end-to-end plan review — not when you want to walk findings together one at a time (use `review-plan-interactive` for that), and not when you want to review the upstream spec (use `review-spec-*`) or the downstream implementation (use `review-implementation-*`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-plan-auto
+```
+
+### [`review-plan-interactive`](./skills/review-plan-interactive/SKILL.md)
+
+Walks an emitted V1 plan artifact (loose OR strict granularity from any of the Phase 4 `plan-*` skills) one finding (or one task) at a time — ASKING the user for their view AND TESTING that view against the plan (and against the optional source artifact when supplied; do not just accept) — checking four review axes per D83: source-spec adherence, project conventions, granularity fit, and per-task ambiguity (mandatory for strict plans; granularity-fit signal for loose plans). Settles each finding as resolved / rejected / accepted / deferred / parked and appends per-finding records to a decision log under `discussions/`. At the end of the session, ONLY unresolved actionable findings dump to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` (no Inbox file when nothing remains). Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a review-stance amplifier — a review is most valuable when it disagrees with the author; the cheap moment to push back is during the walk, before the plan is escalated to implementation where commits land before the implementer asks follow-ups. Honors the D59 sequential-isolated-independent contract and the D60 no-parallelization rule as review criteria. Useful when you want to think the plan review through collaboratively with the agent and have the resolved-vs-unresolved split captured for you — not when you want autonomous end-to-end review (use `review-plan-auto` for that), and not when you want to review the upstream spec (use `review-spec-*`) or the downstream implementation (use `review-implementation-*`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-plan-interactive
+```
+
 ### [`review-proposal-auto`](./skills/review-proposal-auto/SKILL.md)
 
 Reads an emitted V1 proposal artifact under the active thread's `proposals/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` end-to-end, with no clarifying questions — surfacing gaps, risks, and ambiguities (lightweight proposal review only; the stricter bar for handing a spec downstream lives in `review-spec-*`). The six-section report covers Verdict / Findings (severity-tagged) / Evidence / References / Open Questions / Next Actions. Adversarial pressure on a proposal is delegated to the external `the-fool` skill — no native V1 adversarial-review skill. Useful when you want autonomous end-to-end proposal review — not when you want to walk findings together one at a time (use `review-proposal-interactive` for that).
