@@ -206,6 +206,22 @@ Takes a V1 plan artifact path (loose or strict granularity, produced by any of t
 npx skills add Jei-sKappa/skills --skill implement-plan-interactive
 ```
 
+### [`implement-plan-with-subagents-auto`](./skills/implement-plan-with-subagents-auto/SKILL.md)
+
+Takes a V1 plan artifact path (loose or strict granularity, produced by any of the Phase 4 `plan-*` skills) and executes every plan task in order on the current working tree by orchestrating a dispatch loop — implementer subagent → spec-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer on issues with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop — and auto-commits per orchestration cycle. Autonomous (no per-commit ASK). REQUIRES subagent capability — this skill does NOT fall back to inline execution; if your runtime does not support subagents, use `implement-plan-auto` or `implement-plan-interactive` instead. Reports each plan task by the V1 four-state status protocol (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`) with the subagent audit (which subagents ran, fix iteration counts). Never rewrites history — no `--amend`, no rebase, no force-push; a failed commit reports `BLOCKED` and stops. Useful when you have a plan artifact under `docs/threads/<thread>/plans/` and want the heavier dual-reviewer loop applied per task without a per-commit ASK — not when you want the same subagent loop with ASK-before-commit (use `implement-plan-with-subagents-interactive`), not when you want single-agent execution (use `implement-plan-auto` or `implement-plan-interactive`), and not when the input is less-structured rather than a plan artifact (use `implement-auto` or `implement-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-auto
+```
+
+### [`implement-plan-with-subagents-interactive`](./skills/implement-plan-with-subagents-interactive/SKILL.md)
+
+Takes a V1 plan artifact path (loose or strict granularity, produced by any of the Phase 4 `plan-*` skills) and executes every plan task in order on the current working tree by orchestrating the same dual-reviewer dispatch loop as `implement-plan-with-subagents-auto` (implementer → spec-compliance reviewer FIRST pass → fix loop respawning a NEW implementer with re-review → code-quality reviewer SECOND pass → same fix loop) — and ASKS the user before committing each orchestration cycle. Collaborative (per-commit ASK; live anti-sycophancy push-back during the walk surfaces reviewer findings to the user as they emerge). REQUIRES subagent capability — this skill does NOT fall back to inline execution; if your runtime does not support subagents, use `implement-plan-auto` or `implement-plan-interactive` instead. Reports each plan task by the V1 four-state status protocol with the subagent audit. Never rewrites history; a failed commit reports `BLOCKED` and stops. Useful when you have a plan artifact under `docs/threads/<thread>/plans/` and want the heavier dual-reviewer loop applied per task WITH the user in-loop at every commit boundary — not when you want autonomous end-to-end execution with the same subagent loop (use `implement-plan-with-subagents-auto`), not when you want single-agent execution (use `implement-plan-auto` or `implement-plan-interactive`), and not when the input is less-structured rather than a plan artifact (use `implement-auto` or `implement-interactive`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-interactive
+```
+
 ## Retired skills
 
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.

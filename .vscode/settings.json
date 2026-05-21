@@ -14,6 +14,8 @@
     "implement-interactive",
     "implement-plan-auto",
     "implement-plan-interactive",
+    "implement-plan-with-subagents-auto",
+    "implement-plan-with-subagents-interactive",
     "meta-prompting",
     "plan-loose-auto",
     "plan-loose-interactive",
