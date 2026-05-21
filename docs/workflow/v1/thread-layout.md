@@ -1,5 +1,5 @@
 # V1 Thread Layout
-**Codifies:** D7, D107
+**Codifies:** D7, D8, D107
 
 ## Thread Root
 
@@ -43,7 +43,7 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 - `inbox/open/` — actionable findings still awaiting triage; populated by `review-*-auto` and by `capture-inbox` in user-active flows.
 - `inbox/processed/` — inbox items moved here after they have been addressed; status is reflected by folder, not by frontmatter.
 - `inbox/dropped/` — inbox items intentionally discarded after triage; kept for audit, not for action.
-- `.wip/` — per-thread scratch and draft material; gitignored via the recursive `docs/threads/**/.wip/` rule and never emitted as a reviewable artifact [D107].
+- `.wip/` — per-thread scratch and draft material; gitignored via the recursive `docs/threads/**/.wip/` rule and never emitted as a reviewable artifact [D8, D107].
 
 ## On-Demand Creation
 
