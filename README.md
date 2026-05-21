@@ -14,14 +14,6 @@ Drafts a casual, context-rich message to consult a more experienced developer ab
 npx skills add Jei-sKappa/skills --skill consult-the-expert
 ```
 
-### [`discussion-loop`](./skills/discussion-loop/SKILL.md)
-
-Walks through existing discussion points one at a time, always presenting options and a recommendation, then appends each decision to a simple log. Useful when you have findings, open questions, review comments, design points, or a concrete plan you want to discuss and decide interactively.
-
-```sh
-npx skills add Jei-sKappa/skills --skill discussion-loop
-```
-
 ### [`the-librarian`](./skills/the-librarian/SKILL.md)
 
 Manages a local library of reference repositories: stocks new repos into `.library` for later use, and consults already-stored ones to answer the current task. Useful when you want external projects cloned locally as reference material before work begins, and again when the agent is researching, planning, debugging, implementing, or comparing approaches and those repos may help.
@@ -101,3 +93,7 @@ Walks a predetermined list of points one at a time — passed as a markdown file
 ```sh
 npx skills add Jei-sKappa/skills --skill seeded-discussion
 ```
+
+## Retired skills
+
+- **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
