@@ -14,6 +14,11 @@
         "./skills/review-decision-document",
         "./skills/the-librarian"
       ]
+    },
+    {
+      "name": "JeisKappa-workflow",
+      "source": "./",
+      "skills": []
     }
   ]
 }
