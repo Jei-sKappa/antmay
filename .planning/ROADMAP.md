@@ -77,7 +77,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can rely on V1 plan artifacts containing **no** parallelization markers, wave numbers, dependency arrays, or task-graph notation — the absence is observable by reading any emitted plan.
   4. User can rely on plan skills self-reviewing their output before emission (coherence, granularity fit, no under/over-splitting), with the self-review step explicitly documented in each plan skill's body.
   5. User can rely on every plan skill never auto-committing the plan artifact — commits happen only if explicitly requested by the surrounding session.
-**Plans**: TBD
+**Plans**: 3 plans
+  - [ ] 04-01-PLAN.md — Ship plan-loose-auto + plan-loose-interactive + register touchpoints
+  - [ ] 04-02-PLAN.md — Ship plan-strict-auto + plan-strict-interactive + register touchpoints
+  - [ ] 04-03-PLAN.md — Ship adjust-plan-granularity-auto + adjust-plan-granularity-interactive + register touchpoints
 
 ### Phase 5: Implementation Family
 **Goal**: Users have the full V1 implementation catalog covering both less-structured input (`implement-*`) and plan-driven input (`implement-plan-*`), with subagent-driven variants (`implement-plan-with-subagents-*`) providing the heavier review loop. The four-state status protocol and commit/dirty-worktree behavior are honored uniformly.
@@ -125,7 +128,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundations | 3/3 | Complete   | 2026-05-21 |
 | 2. Capture & Discussion Infrastructure | 3/3 | Complete   | 2026-05-21 |
 | 3. Forward Spine — Propose & Spec | 2/2 | Complete   | 2026-05-21 |
-| 4. Plan Family | 0/TBD | Not started | - |
+| 4. Plan Family | 0/3 | Not started | - |
 | 5. Implementation Family | 0/TBD | Not started | - |
 | 6. Review Family | 0/TBD | Not started | - |
 | 7. Merge, Finish, Navigation & Distribution Surface | 0/TBD | Not started | - |
+</content>
