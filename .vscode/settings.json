@@ -25,6 +25,8 @@
     "propose-interactive",
     "report-to-the-owner",
     "review-decision-document",
+    "review-proposal-auto",
+    "review-proposal-interactive",
     "seeded-discussion",
     "spec-auto",
     "spec-interactive",

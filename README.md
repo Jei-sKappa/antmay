@@ -110,6 +110,22 @@ Walks the user through the four suggested elements of a proposal — intent, con
 npx skills add Jei-sKappa/skills --skill propose-interactive
 ```
 
+### [`review-proposal-auto`](./skills/review-proposal-auto/SKILL.md)
+
+Reads an emitted V1 proposal artifact under the active thread's `proposals/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` end-to-end, with no clarifying questions — surfacing gaps, risks, and ambiguities (lightweight proposal review only; the stricter bar for handing a spec downstream lives in `review-spec-*`). The six-section report covers Verdict / Findings (severity-tagged) / Evidence / References / Open Questions / Next Actions. Adversarial pressure on a proposal is delegated to the external `the-fool` skill — no native V1 adversarial-review skill. Useful when you want autonomous end-to-end proposal review — not when you want to walk findings together one at a time (use `review-proposal-interactive` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-proposal-auto
+```
+
+### [`review-proposal-interactive`](./skills/review-proposal-interactive/SKILL.md)
+
+Walks an emitted V1 proposal artifact one finding at a time — ASKING the user for their view AND TESTING that view against the proposal (do not just accept) — settling each finding as resolved / rejected / accepted / deferred / parked and appending per-finding records to a decision log under `discussions/`. At the end of the session, ONLY unresolved actionable findings dump to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` (no Inbox file when nothing remains). Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a review-stance amplifier — a review is most valuable when it disagrees with the author; push back hard on weak reasoning, never soften findings just because the user pushes back. Adversarial pressure on a proposal is delegated to the external `the-fool` skill. Useful when you want to think the proposal review through collaboratively with the agent and have the resolved-vs-unresolved split captured for you — not when you want autonomous end-to-end review (use `review-proposal-auto` for that).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-proposal-interactive
+```
+
 ### [`spec-auto`](./skills/spec-auto/SKILL.md)
 
 Turns a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade v1 spec markdown file under the active V1 thread's `specs/` folder — end-to-end, with no clarifying questions, covering all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance). Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`derive-spec`](./skills/derive-spec/SKILL.md) instead. Useful when you already have the upstream input in hand and just need the spec written down — not when you want to author it together (use `spec-interactive`).

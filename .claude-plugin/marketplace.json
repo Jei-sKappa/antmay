@@ -34,6 +34,8 @@
         "./skills/plan-strict-interactive",
         "./skills/propose-auto",
         "./skills/propose-interactive",
+        "./skills/review-proposal-auto",
+        "./skills/review-proposal-interactive",
         "./skills/seeded-discussion",
         "./skills/spec-auto",
         "./skills/spec-interactive"
