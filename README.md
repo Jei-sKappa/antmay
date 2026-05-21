@@ -102,6 +102,24 @@ Walks the user through the four suggested elements of a proposal — intent, con
 npx skills add Jei-sKappa/skills --skill propose-interactive
 ```
 
+> **Note:** V1 adversarial review is delegated to the external `the-fool` skill — no native V1 adversarial-review skill. Use `the-fool` against a proposal or spec draft to surface adversarial risks before the spec / plan / implementation phases (per D88, REVW-09).
+
+### [`review-code-auto`](./skills/review-code-auto/SKILL.md)
+
+Reads a CODE REFERENCE (a git ref / diff / file path / directory path) and writes a general-purpose findings-first code review to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` end-to-end, with no clarifying questions — covering quality / safety / idioms / testability per D86 (plus optional axes: performance / dependency hygiene / API design / accessibility / documentation drift when warranted). The six-section report covers Verdict / Findings (severity-tagged `blocker | issue | nit`) / Evidence / References / Open Questions / Next Actions. **This is GENERAL-PURPOSE code review — NO source artifact (spec / proposal / plan / GitHub issue / Inbox item) is required, and that is what distinguishes this skill from `review-implementation-*`.** If you have a source artifact AND want code-vs-original-intent fidelity, use `review-implementation-auto` / `review-implementation-interactive` instead. Useful when you want autonomous general-purpose code review independent of a source artifact — not when you want to walk findings together one at a time (use `review-code-interactive` for that), and not when you want to review the upstream proposal / spec / plan (use `review-proposal-*` / `review-spec-*` / `review-plan-*`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-code-auto
+```
+
+### [`review-code-interactive`](./skills/review-code-interactive/SKILL.md)
+
+Walks a CODE REFERENCE (a git ref / diff / file path / directory path) one finding (or one file / one hunk) at a time — ASKING the user for their view AND TESTING that view against the code (do not just accept) — covering general-purpose code review axes per D86: quality / safety / idioms / testability. Settles each finding as resolved / rejected / accepted / deferred / parked and appends per-finding records to a decision log under `discussions/`. At the end of the session, ONLY unresolved actionable findings dump to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` (no Inbox file when nothing remains). Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a review-stance amplifier — a review is most valuable when it disagrees with the author; the cheap moment to push back is during the walk, before the code is merged or released. **This is GENERAL-PURPOSE code review — NO source artifact is required, and that is what distinguishes this skill from `review-implementation-*`.** If you have a source artifact AND want code-vs-original-intent fidelity, use `review-implementation-auto` / `review-implementation-interactive` instead. Useful when you want to think the code review through collaboratively with the agent and have the resolved-vs-unresolved split captured for you — not when you want autonomous end-to-end review (use `review-code-auto` for that), and not when you want to review the upstream proposal / spec / plan (use `review-proposal-*` / `review-spec-*` / `review-plan-*`).
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-code-interactive
+```
+
 > **Note:** V1 verification of implementations is covered by `review-implementation-auto` and `review-implementation-interactive` — there is no separate `verify-*` skill in V1 (per D85, REVW-09).
 
 ### [`review-implementation-auto`](./skills/review-implementation-auto/SKILL.md)
