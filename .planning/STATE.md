@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-foundations/01-01-PLAN.md
-last_updated: "2026-05-21T07:19:12.502Z"
+stopped_at: Completed 01-foundations/01-02-PLAN.md
+last_updated: "2026-05-21T07:24:37.515Z"
 last_activity: 2026-05-21
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 1 (Foundations) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-21
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 33%
 
 *Updated after each plan completion*
 | Phase 1 P01 | ~9min | 2 tasks | 2 files |
+| Phase 1 P02 | ~2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 1]: Reference doc directory is docs/workflow/v1/ — Versioned ruleset directory; v2 lives at docs/workflow/v2/ without disturbing V1 readers
 - [Phase 1]: Reference docs carry no YAML frontmatter — Reference docs are docs, not skills — frontmatter would be misleading and forbidden by the doc shape lock
 - [Phase 1]: Excluded folder names (reviews/, verifications/, merges/, adrs/) are explicitly routed in thread-layout.md — Active rerouting beats silent omission — readers arriving with prior expectations cannot accidentally reintroduce a rejected folder
+- [Phase 1]: V1 record + versioned filename grammars codified at docs/workflow/v1/filename-grammar.md — UTC stamp YYMMDDHHMMSSZ, record form with mandatory artifact-type suffix, versioned form with target-version semantics and N starting at 1
+- [Phase 1]: V1 emitted-artifact immutability + reference-resolution rules codified at docs/workflow/v1/immutability.md — emitted artifacts NEVER edited, drafts editable under .wip/, source-relation frontmatter forbidden, ambiguous references resolved by asking the user
+- [Phase 1]: V1 reference doc tree complete — README.md + thread-layout.md + filename-grammar.md + immutability.md under docs/workflow/v1/; Plan 03 wires registration baseline (.gitignore, marketplace.json, AGENTS.md pointer)
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-21T07:19:12.491Z
-Stopped at: Completed 01-foundations/01-01-PLAN.md
+Last session: 2026-05-21T07:24:15.413Z
+Stopped at: Completed 01-foundations/01-02-PLAN.md
 Resume file: None

@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. There is an explicit written statement (e.g. in a foundational reference doc / shared CONVENTIONS section) that emitted versioned and record artifacts are immutable, that lineage frontmatter is forbidden, and that ambiguous artifact references must be resolved by asking the user — not by a global "latest" algorithm.
 **Plans**: 3 plans
   - [x] 01-01-PLAN.md — Create V1 workflow reference doc tree: index + thread-layout.md
-  - [ ] 01-02-PLAN.md — Add filename-grammar.md + immutability.md to complete the reference doc set
+  - [x] 01-02-PLAN.md — Add filename-grammar.md + immutability.md to complete the reference doc set
   - [ ] 01-03-PLAN.md — Wire registration baseline: .gitignore .wip rule + JeisKappa-workflow marketplace plugin + AGENTS.md pointer
 
 ### Phase 2: Capture & Discussion Infrastructure
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations | 1/3 | In Progress|  |
+| 1. Foundations | 2/3 | In Progress|  |
 | 2. Capture & Discussion Infrastructure | 0/TBD | Not started | - |
 | 3. Forward Spine — Propose & Spec | 0/TBD | Not started | - |
 | 4. Plan Family | 0/TBD | Not started | - |

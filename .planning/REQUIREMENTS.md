@@ -12,11 +12,11 @@
 - [x] **THRD-01**: User can create thread roots at `docs/threads/<YYMMDDHHMMSSZ-slug>/` and the workflow treats that path as the durable artifact root [D7]
 - [x] **THRD-02**: User can rely on the V1 thread folder set (`proposals/`, `specs/`, `plans/`, `discussions/`, `inbox/{open,processed,dropped}/`, `.wip/`) being recognized everywhere skills write artifacts [D107]
 - [ ] **THRD-03**: User's repo gitignores thread-local WIP scratch via a recursive rule `docs/threads/**/.wip/` [D8]
-- [ ] **THRD-04**: Workflow skills emit record artifacts as `<YYMMDDHHMMSSZ>-<kebab-description>-<artifact-type>.md` with mandatory artifact-type suffix [D11, D12, D43]
-- [ ] **THRD-05**: Workflow skills emit versioned artifacts as `<YYMMDDHHMMSSZ>-v<N>[-<kebab-descriptor>]-<artifact-type>.md` with target-version semantics and N starting at 1 [D42, D46, D47]
-- [ ] **THRD-06**: Workflow skills treat emitted versioned and record artifacts as immutable; in-session drafts are editable until emission [D39, D40, D41]
-- [ ] **THRD-07**: Workflow skills do not use lineage frontmatter or `Supersedes:`/`Alternative to:`/`Forked from:` source-relation metadata [D44]
-- [ ] **THRD-08**: Workflow skills resolve ambiguous artifact references by asking the user, not via a global "latest artifact" algorithm [D49]
+- [x] **THRD-04**: Workflow skills emit record artifacts as `<YYMMDDHHMMSSZ>-<kebab-description>-<artifact-type>.md` with mandatory artifact-type suffix [D11, D12, D43]
+- [x] **THRD-05**: Workflow skills emit versioned artifacts as `<YYMMDDHHMMSSZ>-v<N>[-<kebab-descriptor>]-<artifact-type>.md` with target-version semantics and N starting at 1 [D42, D46, D47]
+- [x] **THRD-06**: Workflow skills treat emitted versioned and record artifacts as immutable; in-session drafts are editable until emission [D39, D40, D41]
+- [x] **THRD-07**: Workflow skills do not use lineage frontmatter or `Supersedes:`/`Alternative to:`/`Forked from:` source-relation metadata [D44]
+- [x] **THRD-08**: Workflow skills resolve ambiguous artifact references by asking the user, not via a global "latest artifact" algorithm [D49]
 
 ### Inbox (INBX)
 
@@ -199,11 +199,11 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 | THRD-01 | Phase 1: Foundations | Complete |
 | THRD-02 | Phase 1: Foundations | Complete |
 | THRD-03 | Phase 1: Foundations | Pending |
-| THRD-04 | Phase 1: Foundations | Pending |
-| THRD-05 | Phase 1: Foundations | Pending |
-| THRD-06 | Phase 1: Foundations | Pending |
-| THRD-07 | Phase 1: Foundations | Pending |
-| THRD-08 | Phase 1: Foundations | Pending |
+| THRD-04 | Phase 1: Foundations | Complete |
+| THRD-05 | Phase 1: Foundations | Complete |
+| THRD-06 | Phase 1: Foundations | Complete |
+| THRD-07 | Phase 1: Foundations | Complete |
+| THRD-08 | Phase 1: Foundations | Complete |
 | DIST-04 | Phase 1: Foundations | Pending |
 | INBX-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
 | INBX-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
