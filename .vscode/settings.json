@@ -4,6 +4,7 @@
   "conventionalCommits.scopes": [
     "afk-exploration",
     "brief-the-implementer",
+    "capture-inbox",
     "consult-the-expert",
     "derive-spec",
     "discussion-loop",
