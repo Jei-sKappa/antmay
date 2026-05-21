@@ -11,7 +11,7 @@
 
 - [x] **THRD-01**: User can create thread roots at `docs/threads/<YYMMDDHHMMSSZ-slug>/` and the workflow treats that path as the durable artifact root [D7]
 - [x] **THRD-02**: User can rely on the V1 thread folder set (`proposals/`, `specs/`, `plans/`, `discussions/`, `inbox/{open,processed,dropped}/`, `.wip/`) being recognized everywhere skills write artifacts [D107]
-- [ ] **THRD-03**: User's repo gitignores thread-local WIP scratch via a recursive rule `docs/threads/**/.wip/` [D8]
+- [x] **THRD-03**: User's repo gitignores thread-local WIP scratch via a recursive rule `docs/threads/**/.wip/` [D8]
 - [x] **THRD-04**: Workflow skills emit record artifacts as `<YYMMDDHHMMSSZ>-<kebab-description>-<artifact-type>.md` with mandatory artifact-type suffix [D11, D12, D43]
 - [x] **THRD-05**: Workflow skills emit versioned artifacts as `<YYMMDDHHMMSSZ>-v<N>[-<kebab-descriptor>]-<artifact-type>.md` with target-version semantics and N starting at 1 [D42, D46, D47]
 - [x] **THRD-06**: Workflow skills treat emitted versioned and record artifacts as immutable; in-session drafts are editable until emission [D39, D40, D41]
@@ -118,7 +118,7 @@
 - [ ] **DIST-01**: User sees a hybrid README explaining the toolbox model, layered workflow map, recommended common paths, and per-module catalog [D109, D34]
 - [ ] **DIST-02**: User can rely on V1 workflow skills being grouped under one marketplace plugin (e.g. `JeisKappa-workflow`) [D110]
 - [ ] **DIST-03**: User can install any V1 skill individually via `npx skills add Jei-sKappa/skills --skill <name>` (no nested directories, no name prefixes) [D3]
-- [ ] **DIST-04**: User can rely on every new V1 skill folder being registered in `.claude-plugin/marketplace.json` and `.vscode/settings.json` conventional-commit scopes per CLAUDE.md rules
+- [x] **DIST-04**: User can rely on every new V1 skill folder being registered in `.claude-plugin/marketplace.json` and `.vscode/settings.json` conventional-commit scopes per CLAUDE.md rules
 - [ ] **DIST-05**: User can rely on every V1 skill body explicitly stating its interaction mode in its description, with no unsuffixed convenience aliases in V1 [D29, D30]
 
 ## v2 Requirements
@@ -198,13 +198,13 @@ Every v1 requirement is mapped to exactly one phase. See `.planning/ROADMAP.md` 
 |-------------|-------|--------|
 | THRD-01 | Phase 1: Foundations | Complete |
 | THRD-02 | Phase 1: Foundations | Complete |
-| THRD-03 | Phase 1: Foundations | Pending |
+| THRD-03 | Phase 1: Foundations | Complete |
 | THRD-04 | Phase 1: Foundations | Complete |
 | THRD-05 | Phase 1: Foundations | Complete |
 | THRD-06 | Phase 1: Foundations | Complete |
 | THRD-07 | Phase 1: Foundations | Complete |
 | THRD-08 | Phase 1: Foundations | Complete |
-| DIST-04 | Phase 1: Foundations | Pending |
+| DIST-04 | Phase 1: Foundations | Complete |
 | INBX-01 | Phase 2: Capture & Discussion Infrastructure | Pending |
 | INBX-02 | Phase 2: Capture & Discussion Infrastructure | Pending |
 | INBX-03 | Phase 2: Capture & Discussion Infrastructure | Pending |

@@ -12,7 +12,7 @@ This roadmap delivers the V1 Modular Agentic Workflow as a bundle of `SKILL.md` 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundations** - Thread folder set, filename grammars, immutability, gitignore rule, registration baseline
+- [x] **Phase 1: Foundations** - Thread folder set, filename grammars, immutability, gitignore rule, registration baseline (completed 2026-05-21)
 - [ ] **Phase 2: Capture & Discussion Infrastructure** - `capture-inbox`, `discussion`, `seeded-discussion` (legacy `discussion-loop` migration)
 - [ ] **Phase 3: Forward Spine — Propose & Spec** - `propose-*` and `spec-*` skill pairs delivering the upstream spine artifacts
 - [ ] **Phase 4: Plan Family** - `plan-loose-*`, `plan-strict-*`, and `adjust-plan-granularity-*` with self-review and sequential-only contract
@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
   - [x] 01-01-PLAN.md — Create V1 workflow reference doc tree: index + thread-layout.md
   - [x] 01-02-PLAN.md — Add filename-grammar.md + immutability.md to complete the reference doc set
-  - [ ] 01-03-PLAN.md — Wire registration baseline: .gitignore .wip rule + JeisKappa-workflow marketplace plugin + AGENTS.md pointer
+  - [x] 01-03-PLAN.md — Wire registration baseline: .gitignore .wip rule + JeisKappa-workflow marketplace plugin + AGENTS.md pointer
 
 ### Phase 2: Capture & Discussion Infrastructure
 **Goal**: Users have a working capture-and-decide layer underneath the rest of the workflow: any agent or user can capture a thread-local Inbox item with an explicit "why", and both open-ended and seeded discussion skills produce sequentially-numbered decision logs under `discussions/`. The legacy `discussion-loop` is retired in favor of the new discussion / seeded-discussion split.
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations | 2/3 | In Progress|  |
+| 1. Foundations | 3/3 | Complete   | 2026-05-21 |
 | 2. Capture & Discussion Infrastructure | 0/TBD | Not started | - |
 | 3. Forward Spine — Propose & Spec | 0/TBD | Not started | - |
 | 4. Plan Family | 0/TBD | Not started | - |
