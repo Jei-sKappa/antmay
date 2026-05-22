@@ -1,9 +1,9 @@
 ---
 name: discussion
-description: Conduct an open-ended interview where questions are discovered live as the conversation unfolds; surface options and a recommendation only when a concrete decision point emerges, then append the decision to a thread-local append-only decision log under the active thread's `discussions/` folder. Use when you want to think a topic through with the agent — not knowing yet what every question is — and have the resulting decisions captured as a referenceable, sequentially-numbered log.
+description: Conduct an open-ended interview where questions are discovered live, surfacing options only at concrete decision points and appending decisions to a thread-local log when the user wants to think a topic through without knowing every question up front.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Discussion

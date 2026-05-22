@@ -1,9 +1,9 @@
 ---
 name: implement-auto
-description: Take a less-structured input (spec, proposal, decision log, GitHub issue, inbox item, code context, or raw prompt) and implement it end-to-end on the current working tree — deriving implicit tasks from the input itself, self-reviewing after each task, and auto-committing per task. Use when you want autonomous end-to-end implementation from a less-structured input without per-step confirmation.
+description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task when the user wants autonomous implementation without per-step confirmation.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Implement Auto
@@ -21,7 +21,7 @@ This skill accepts ONE of the following SEVEN input forms. Detect which form was
 3. **A decision-log artifact path** under a thread's `discussions/` folder. The log carries one or more settled decisions. Each settled decision may map to an implicit task (or constrain one); cite the source log by absolute path and decision identifier in the task report where the decision is operative.
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the input; treat the issue title and labels as additional framing.
 5. **An Inbox item path** under a thread's `inbox/open/` folder. The Inbox item's `**Why:**` line names the intended outcome and the body sketches the work. The implementer is implicitly moving the item from `inbox/open/` to `inbox/processed/` as part of completion — note this in the final task report so the inbox status reflects the work done.
-6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and derives implicit tasks from the observed state (e.g., "remove dead code in `src/legacy/`", "fix the import order in `src/foo.ts`"). Use when the user's intent is "look at this and do the obvious thing" rather than a written input.
+6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and derives implicit tasks from the observed state (e.g., "remove dead code in `src/legacy/`", "fix the import order in `src/foo.ts`"). This input form fits requests where the user's intent is "look at this and do the obvious thing" rather than a written input.
 7. **A raw user prompt**. When no artifact or code reference is passed, the user's prompt is itself the input. Derive implicit tasks directly from the prompt's stated intent.
 
 If the input is ambiguous — multiple plausible specs share the same version number, multiple inbox items match the same slug, the issue identifier is incomplete, the prompt references "the spec" with no clear referent, the code context reference points at a directory containing multiple in-progress changes — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency.
@@ -108,7 +108,7 @@ The policy is judgment-based and surfaced via task report — not pre-clearance,
 - **Follow the input or the implicit task list derived from it.** The input is the contract; the implicit task list is the implementer's interpretation. Do not silently invent tasks the input does not call for. Do not silently skip tasks the input does call for.
 - **Use judgment when warranted.** If the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the input's intent. A blocked import path, a missing helper the input assumed existed, a renamed dependency the input did not know about: fix and continue.
 - **Surface deviations in the task report.** Every deviation goes into the four-state status block. Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the input did not specify) are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations (the implementer made a structural choice the input did not anticipate, the implementer skipped a sub-step because it was unsafe to apply blindly) are `NEEDS_CONTEXT` with a clear "user clarification on X" next-action.
-- **Do not pre-clear minor deviations.** This is the autonomous variant; it does not stop for every judgment call. The four-state report is where the user reads the trail.
+- **Do not pre-clear minor deviations.** This run is autonomous; it does not stop for every judgment call. The four-state report is where the user reads the trail.
 
 ## Immutability
 
@@ -116,4 +116,4 @@ Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. Specs, prop
 
 If during implementation the implementer discovers that the input is wrong (a spec acceptance criterion contradicts the observed code state, an inbox item names a fix that has already been applied), the correct move is to surface the finding in the four-state task report with a `DONE_WITH_CONCERNS` or `NEEDS_CONTEXT` status and let the surrounding session decide what to do. The input artifact stays as it was. A revised spec is a new spec version; a revised inbox item is a new inbox item or a status-folder move. The implementer does not perform that revision as part of this run.
 
-What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also MAY (a) create a new inbox item using an available inbox-capture capability if a side-finding emerges that should be parked rather than implemented, and (b) move an inbox item that was itself the input from `inbox/open/` to `inbox/processed/` as part of completion. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this skill's run; those are the responsibility of dedicated authoring skills invoked separately.
+What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also MAY (a) create a new inbox item using an available inbox-capture capability if a side-finding emerges that should be parked rather than implemented, and (b) move an inbox item that was itself the input from `inbox/open/` to `inbox/processed/` as part of completion. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.

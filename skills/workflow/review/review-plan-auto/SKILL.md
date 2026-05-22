@@ -1,14 +1,14 @@
 ---
 name: review-plan-auto
-description: Read an emitted plan artifact and write a findings-first review report covering four axes — source-spec adherence, project conventions, granularity fit, and per-task ambiguity — end-to-end, without clarifying questions or a per-finding chat walk. Use when you want autonomous review of a plan.
+description: Read an emitted plan artifact and write a findings-first report covering source adherence, project conventions, granularity fit, and per-task ambiguity when the user wants an autonomous plan review.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Review Plan Auto
 
-Read a plan artifact READ-ONLY and emit a findings-first review report to the active thread's `inbox/open/` folder. This skill detects whether the plan is loose-granularity or strict-granularity, runs four review axes against it, drafts the report end-to-end, and writes one record per review run. It does not ask clarifying questions, does not walk findings with the user one-at-a-time, and does not commit. For a collaborative per-finding walk with push-back, use the interactive variant of this skill.
+Read a plan artifact READ-ONLY and emit a findings-first review report to the active thread's `inbox/open/` folder. This skill detects whether the plan is loose-granularity or strict-granularity, runs four review axes against it, drafts the report end-to-end, and writes one record per review run. It does not ask clarifying questions, does not walk findings with the user one-at-a-time, and does not commit. For a collaborative per-finding walk with push-back, run that review interactively instead.
 
 ## Inputs
 
@@ -102,7 +102,7 @@ Plans MUST NOT contain wave numbers, dependency arrays, task-graph notation, for
 
 When naming the forbidden constructs in the review report, use descriptive prose phrases — "bracketed wave prefixes on tasks", "dependency arrays", "depends_on fields", "task-graph notation", "fork/join syntax", "parallelization markers" — to keep the review's own evidence quotations readable. Cite the offending passage by section heading or short quote.
 
-This skill does NOT promise: handoff-grade-bar coverage of an upstream spec, code-vs-original-intent fidelity for an implementation, general-purpose code review, or the lightweight proposal review for an early sketch. A finding that escalates beyond the four plan-review axes is out of scope here — flag it as a suggestion to escalate to the appropriate review skill rather than performing the heavier check inline.
+This skill does NOT promise: handoff-grade-bar coverage of an upstream spec, code-vs-original-intent fidelity for an implementation, general-purpose code review, or the lightweight proposal review for an early sketch. A finding that escalates beyond the four plan-review axes is out of scope here — flag it as a suggestion for a separate review rather than performing the heavier check inline.
 
 ## Findings Report Shape
 
@@ -183,6 +183,6 @@ Emitted review-finding artifacts are immutable. Once the file is written into `i
 
 The plan under review is ALSO IMMUTABLE. The reviewer reads READ-ONLY and does NOT edit the plan. Findings that warrant revisions to the plan are surfaced under `## Next Actions` with the explicit recommendation to emit a NEW `v<N+1>` plan record — never an instruction to edit the existing plan in place.
 
-When the optional source artifact was supplied, it is ALSO IMMUTABLE — the source spec, proposal, or decision-log is read READ-ONLY and is not edited by this skill regardless of what findings the review surfaces. Findings against the source artifact (e.g., source-adherence findings that trace back to spec ambiguity) are out of scope for this skill — flag them in `## Next Actions` and let the user invoke the appropriate upstream-target review skill separately.
+When the optional source artifact was supplied, it is ALSO IMMUTABLE — the source spec, proposal, or decision-log is read READ-ONLY and is not edited by this skill regardless of what findings the review surfaces. Findings against the source artifact (e.g., source-adherence findings that trace back to spec ambiguity) are out of scope for this skill — flag them in `## Next Actions` and recommend reviewing the source artifact separately.
 
 No source-relation YAML frontmatter is added to the review body — lineage between a review-finding and the plan it reviews lives in the `## References` section (by absolute path), not in metadata on the file. The accepted trade-off is that the filename alone cannot tell you which plan a review reviewed — that mapping is recovered from the body's references section.

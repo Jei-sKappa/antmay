@@ -1,9 +1,9 @@
 ---
 name: spec-interactive
-description: Walk the user through the eight semantic-contract elements of a spec one at a time — interviewing, pushing back on weak reasoning, and assembling the result — then write the versioned spec artifact to the active thread's `specs/` folder. Use when you want to think the spec through collaboratively with the agent and surface gaps and trade-offs live.
+description: Walk the user through the eight semantic-contract elements of a spec one at a time, then write the versioned spec artifact when the user wants to surface gaps and trade-offs collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Spec Interactive

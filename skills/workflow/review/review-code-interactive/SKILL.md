@@ -1,9 +1,9 @@
 ---
 name: review-code-interactive
-description: Walk a code reference (git ref, diff, file path, or directory path) collaboratively with the user — one finding at a time, asking for their view and testing it against the code — covering quality, safety, idioms, and testability; settles each finding and captures decisions in a log, dumping only unresolved actionable findings to an inbox artifact at the end. Use when you want to think through a general-purpose code review collaboratively with the agent and have the resolved-vs-unresolved split captured for you.
+description: Walk a code reference collaboratively one finding at a time, testing each finding against the code and capturing the resolved-vs-unresolved split when the user wants a general-purpose code review kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Review Code Interactive
@@ -12,7 +12,7 @@ Walk a CODE REFERENCE (a git ref / diff / file path / directory path) READ-ONLY 
 
 This skill performs GENERAL-PURPOSE code review: NO mandatory source artifact, NO fidelity-to-source check, and NO promise to verify that the code implements what some upstream document said it would. It reviews the code on its own merits — quality, safety, idioms, and testability. The cheap moment to push back is during this walk — once the code is merged or released, the cost of unflagged findings compounds.
 
-**Scope boundary:** If the user has a source artifact (a spec, a proposal, a plan, a GitHub issue, or an inbox item) AND wants to check whether the code delivers what the source promised — code-vs-original-intent fidelity — that is a different review target and they should invoke a code-vs-source fidelity review skill instead. This skill's findings are about code QUALITY, not code FIDELITY.
+**Scope boundary:** If the user has a source artifact (a spec, a proposal, a plan, a GitHub issue, or an inbox item) AND wants to check whether the code delivers what the source promised — code-vs-original-intent fidelity — that is a different review target and belongs in a code-vs-source fidelity review instead. This skill's findings are about code QUALITY, not code FIDELITY.
 
 ## Anti-Sycophancy Stance
 
@@ -98,7 +98,7 @@ Executor MAY add other general-purpose axes when warranted: performance characte
 
 ### What this skill does NOT review
 
-This skill does NOT check "does the code implement what was intended" — that is a code-vs-original-intent fidelity question and belongs in a separate code-fidelity review. This skill's findings are about code QUALITY, not code FIDELITY. **If the user has a source artifact (spec / proposal / plan / GitHub issue / Inbox item) AND wants to check whether the code delivers what the source promised, redirect them to a code-fidelity review skill instead.** That redirection should also surface in `## Next Actions` when this skill's review surfaces concerns that would benefit from a fidelity check.
+This skill does NOT check "does the code implement what was intended" — that is a code-vs-original-intent fidelity question and belongs in a separate code-fidelity review. This skill's findings are about code QUALITY, not code FIDELITY. **If the user has a source artifact (spec / proposal / plan / GitHub issue / Inbox item) AND wants to check whether the code delivers what the source promised, redirect them to a code-fidelity review instead.** That redirection should also surface in `## Next Actions` when this skill's review surfaces concerns that would benefit from a fidelity check.
 
 This skill ALSO does NOT review the upstream proposal, spec, or plan that may have driven the code. If review findings trace back to upstream artifact ambiguity, surface that in `## Next Actions` with a suggestion to review the relevant upstream artifact separately.
 
@@ -211,7 +211,7 @@ If the user pauses mid-walk after at least one settlement has landed, the partia
 When the user introduces a branch that is outside the code-review walk — a finding about a different code reference, a tangent unrelated to code quality, a critique of an upstream artifact (spec / proposal / plan) the code was supposed to deliver, a code-vs-original-intent fidelity concern that needs a source artifact — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
 1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this review's decision log.
-2. **Split into its own decision log or review.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/`. If the branch is "the code does not deliver what the spec said it would", recommend a code-fidelity review skill with the source artifact in a separate session. If the branch is "the upstream spec / proposal / plan has the same problem", recommend an upstream artifact review skill instead.
+2. **Split into its own decision log or review.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/`. If the branch is "the code does not deliver what the spec said it would", recommend a code-fidelity review with the source artifact in a separate session. If the branch is "the upstream spec / proposal / plan has the same problem", recommend reviewing that upstream artifact separately.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
 ASK the user which. Do not pick silently.
@@ -222,7 +222,7 @@ This skill NEVER auto-commits any emitted artifact — neither the decision log 
 
 The same prohibition applies to any draft material under `docs/threads/<thread>/.wip/` — drafts are editable during the session but are never committed by this skill.
 
-This skill ALSO does not modify the code under review. Code modifications belong in a separate implementation phase. If the walk surfaces findings that require code changes, surface them in `## Next Actions` of the inbox-open dump (when written) or note them in the decision log — let the surrounding session handle implementation separately on a fresh invocation.
+This skill ALSO does not modify the code under review. Code modifications belong in a separate implementation pass. If the walk surfaces findings that require code changes, surface them in `## Next Actions` of the inbox-open dump (when written) or note them in the decision log — let the surrounding session handle implementation separately on a fresh run.
 
 ## Immutability
 
@@ -230,6 +230,6 @@ Emitted decision logs are append-only. Once a `## D<N>` record has been written,
 
 Emitted review-finding artifacts (the conditional inbox-open dump) are also immutable. Once written into `inbox/open/`, the review-finding is part of the thread's reviewable history and is NOT edited. A revision to a review-finding is a NEW review-finding record (new UTC stamp, new kebab-desc), not an in-place edit.
 
-The code under review is READ-ONLY for this skill. This skill does NOT modify source code, does NOT check out branches, does NOT mutate git state, and does NOT run tests against the code. Code modifications belong in a separate implementation phase; this skill's role is review only. If the walk surfaces findings that require code changes, the surrounding session handles implementation separately on a fresh invocation — this skill never crosses into implementation territory.
+The code under review is READ-ONLY for this skill. This skill does NOT modify source code, does NOT check out branches, does NOT mutate git state, and does NOT run tests against the code. Code modifications belong in a separate implementation pass; this skill's role is review only. If the walk surfaces findings that require code changes, the surrounding session handles implementation separately on a fresh run — this skill never crosses into implementation territory.
 
 No source-relation YAML frontmatter is added to any emitted artifact — lineage between the decision log, the review-finding dump, and the code reference lives in the `## References` section (by absolute path for files / directories / saved diff files, by commit SHA / range / branch name with the repo identifier for git refs), not in metadata on the files. That history is recovered from the body's references, not from the filename.

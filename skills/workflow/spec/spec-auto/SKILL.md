@@ -1,9 +1,9 @@
 ---
 name: spec-auto
-description: Turn a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade spec markdown file, end-to-end, with no clarifying questions. Use when you already have the upstream input in hand and want a complete spec forward-designed from it without interactive authoring.
+description: Turn a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade spec markdown file without clarifying questions when the user has upstream input in hand and wants a complete forward-designed spec.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Spec Auto

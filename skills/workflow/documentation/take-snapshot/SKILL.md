@@ -1,9 +1,9 @@
 ---
 name: take-snapshot
-description: Derive a comprehensive, stack-agnostic snapshot document of an existing codebase — a frozen snapshot of what the application currently does, suitable as the single source of truth for a 1:1 rebuild. Use when the user wants to extract a hybrid SRS + PRD from a codebase they already have — for a rewrite, a port to a different stack, or to document an undocumented application — and explicitly does not want migration or target-stack guidance baked into it.
+description: Derive a comprehensive, stack-agnostic snapshot document of an existing codebase when the user wants a hybrid SRS and PRD for a 1:1 rebuild, rewrite, port, or documentation pass without migration or target-stack guidance.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.2.1
 ---
 
 # Take Snapshot
@@ -48,7 +48,7 @@ Exploration notes (durable evidence trail; useful for human verification and aud
 <cwd>/docs/take-snapshot/
 └── YYYY-MM-DD_NN/              # one folder per run; date + per-day index separated by `_`
     ├── .metadata.json          # started_at, source_root, output_path, scope_filter, skill_version
-    ├── 00-survey.md            # high-level overview produced in Phase 2
+    ├── 00-survey.md            # high-level overview produced in Step 2
     ├── 01-<angle>/             # one folder per exploration angle
     │   └── notes.md            # findings, evidence, draft requirements
     ├── 02-<angle>/
@@ -164,7 +164,7 @@ Inside a single document run:
 
 There is no cross-run ID stability requirement. A re-run produces a fresh snapshot with fresh IDs.
 
-## Exploration spine
+## Exploration Plan
 
 The orchestrator dispatches one subagent per applicable angle. The catalog below is the **starting set** — pick the angles that actually apply to this codebase. A frontend-only repo doesn't need a database-schema angle; a backend repo doesn't need a screen-inventory angle. Add fresh angles when the codebase has surfaces this list doesn't cover (e.g. ML model registry, hardware integrations, payment flows complex enough to warrant their own angle).
 
@@ -187,9 +187,9 @@ Each angle's notes feed sections of the document; the same finding may inform mu
 
 ## Workflow
 
-The workflow runs as numbered phases. Phases run in order; **inside a phase**, subagents run in parallel and the orchestrator waits for them all to return before advancing.
+Run the process as numbered steps. Steps run in order; **inside a step**, subagents run in parallel and the orchestrator waits for them all to return before advancing.
 
-### Phase 1 — Bootstrap
+### Step 1 — Bootstrap
 
 1. **Parse arguments** (any of these may be in the user's prompt; defaults shown):
    - `output_path`: default `<cwd>/APP_SPECIFICATION.md`.
@@ -211,7 +211,7 @@ The workflow runs as numbered phases. Phases run in order; **inside a phase**, s
 
 4. **If a file already exists at `output_path`**, note that it will be overwritten — do not read it for ID continuity. Each run is independent.
 
-### Phase 2 — Survey
+### Step 2 — Survey
 
 The orchestrator dispatches a **survey subagent** — always, regardless of repo size, because the orchestrator never reads the source directly. The subagent performs a quick high-level pass (repo root listing, top-level manifest/config files, project shape, top-level folders) and writes `<run-folder>/00-survey.md` capturing:
 
@@ -223,17 +223,17 @@ After the subagent returns, the orchestrator **verifies `00-survey.md` exists on
 
 The orchestrator then reads `00-survey.md` from disk to extract the planned angles, and appends them to `.metadata.json` under a `planned_angles` field so the run is auditable later.
 
-### Phase 3 — Parallel exploration
+### Step 3 — Parallel exploration
 
 Dispatch one subagent per planned angle in a single tool call. Each subagent writes to `<run-folder>/NN-<angle-slug>/notes.md`.
 
 After every subagent in a batch has returned, the orchestrator **verifies each expected `notes.md` exists on disk** under its angle folder. If any file is missing — for any reason, including a subagent that reported success — re-spawn that subagent with the same brief. Re-spawn as many times as needed until every expected file is on disk. The subagent's reply is never trusted; the file is the only completion signal.
 
-If the number of angles is too large to dispatch in one parallel batch reliably, split into smaller batches — but never collapse Phase 3 into Phase 4. All exploration finishes before any writing starts.
+If the number of angles is too large to dispatch in one parallel batch reliably, split into smaller batches — but never collapse Step 3 into Step 4. All exploration finishes before any writing starts.
 
-Do **not** read the notes files during Phase 3. Reading is deferred to Phase 4 so it can be done sequentially in a single, predictable order.
+Do **not** read the notes files during Step 3. Reading is deferred to Step 4 so it can be done sequentially in a single, predictable order.
 
-### Phase 4 — Writing
+### Step 4 — Writing
 
 The orchestrator (writer is the orchestrator itself; **never delegated to a subagent**, because global ID consistency depends on a single writer) composes the document from the notes:
 
@@ -242,7 +242,7 @@ The orchestrator (writer is the orchestrator itself; **never delegated to a suba
 3. Cross-reference: every Trace pointer should be a real file path or route, ideally with a line number when it sharpens the reference. Every Open Question should cross-reference the FRs/NFRs/rules that depend on it.
 4. Write the final document in one pass to the `output_path`, overwriting any prior file there.
 
-### Phase 5 — Final message
+### Step 5 — Final message
 
 A short message to the user, under 10 lines:
 
@@ -254,9 +254,9 @@ A short message to the user, under 10 lines:
 
 ## Subagent briefs
 
-The orchestrator never inherits a subagent's session and never loads a subagent's notes back into its own context (it reads the notes from disk in Phase 4).
+The orchestrator never inherits a subagent's session and never loads a subagent's notes back into its own context (it reads the notes from disk in Step 4).
 
-### Survey subagent (Phase 2)
+### Survey subagent (Step 2)
 
 Dispatched on every run, regardless of repo size — the orchestrator never reads the source directly, so the survey subagent is the only way the orchestrator gets a view of the repo's shape.
 
@@ -265,17 +265,17 @@ Dispatched on every run, regardless of repo size — the orchestrator never read
 - **Output path** — `<run-folder>/00-survey.md`.
 - **Output shape** — markdown with `## Project shape`, `## Top-level layout`, `## Candidate feature areas`, `## Recommended angles`, `## Notes` (anything surprising — e.g. apparent dead code, multiple apps in one repo, signs of an in-progress feature that's only partially wired up).
 - **Hard constraints** — read-only on the source. Read directories and config files at the top two levels only; do **not** descend deeply. No code edits, no destructive commands.
-- **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the survey. The orchestrator does not parse the reply — it reads the file from disk during Phase 2's verification step.
+- **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the survey. The orchestrator does not parse the reply — it reads the file from disk during Step 2's verification step.
 
-### Exploration subagent (Phase 3, one per angle)
+### Exploration subagent (Step 3, one per angle)
 
 - **Angle** — single angle name and a one-sentence framing of what the angle covers.
-- **Source root** and **scope filter** — same as Phase 2.
+- **Source root** and **scope filter** — same as Step 2.
 - **Output path** — `<run-folder>/NN-<angle-slug>/notes.md`. The subagent `mkdir -p`s the angle folder.
 - **Output shape** — markdown with these sections:
   - `## Findings` — what this angle reveals about the application. Bulleted, concrete, observable.
   - `## Evidence` — file paths (with line numbers when useful) backing each finding.
-  - `## Draft requirements` — proposed FR/NFR items in the format defined above, **without** final IDs (use `ID: TBD` as a placeholder). The writer will assign IDs in Phase 4.
+  - `## Draft requirements` — proposed FR/NFR items in the format defined above, **without** final IDs (use `ID: TBD` as a placeholder). The writer will assign IDs in Step 4.
   - `## Open questions` — anything this angle surfaces that code cannot answer. The writer will consolidate.
   - `## Cross-references` — pointers to other angles whose findings this likely overlaps with, so the writer can merge cleanly.
 - **Discipline** —
@@ -284,7 +284,7 @@ Dispatched on every run, regardless of repo size — the orchestrator never read
   - Never name source-stack or target-stack technologies in the body of draft requirements. Describe behavior, not implementation. ("Persists session across app restarts" — yes. "Uses Redux Persist with localStorage" — no.)
   - Never include code snippets in draft requirements. Evidence can cite snippets; requirements must be stack-neutral prose.
 - **Hard constraints** — read-only on the source codebase. No writes outside the angle folder. No code edits anywhere.
-- **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the notes. The orchestrator does not parse the reply — it reads the file from disk in Phase 4.
+- **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the notes. The orchestrator does not parse the reply — it reads the file from disk in Step 4.
 
 The orchestrator dispatches one of these per planned angle, in parallel.
 

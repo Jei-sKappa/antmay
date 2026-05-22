@@ -1,9 +1,9 @@
 ---
 name: implement-plan-with-subagents-auto
-description: Take a plan artifact path and autonomously execute every plan task in order by orchestrating a dispatch loop — implementer subagent → spec-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer on issues with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop → orchestrator commits per orchestration cycle. No per-commit ASK. REQUIRES subagent capability — does NOT fall back to inline execution. Use when you have a plan artifact and want the heavier dual-reviewer loop applied per task without any ASK interruptions.
+description: Execute every task in a plan artifact through an autonomous implementer and dual-reviewer subagent loop with per-cycle commits when the user wants the heavier review path and the runtime supports subagents.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Implement Plan With Subagents Auto
@@ -14,7 +14,7 @@ Orchestrate the autonomous, plan-driven, multi-subagent implementation of a plan
 
 **This skill REQUIRES subagent capability** (e.g., a runtime primitive that lets the orchestrator spawn an independent subagent with its own context window and have it write files to disk before replying with an acknowledgment). The orchestrator role this skill defines is meaningful only when implementer and reviewer subagents are real, separate-context dispatches.
 
-**This skill does NOT fall back to inline execution.** There is no "if subagents are unavailable, do it yourself" branch. The orchestrator does not write code in-session, does not run reviews in-session, and does not collapse the three subagent roles back into a single agent — that defeats the dual-reviewer separation and the fresh-context-per-fix discipline. Subagent topology is a precondition of this skill, not a feature toggle. If your runtime does not support subagents, use a single-agent plan-driven implementation skill instead.
+**This skill does NOT fall back to inline execution.** There is no "if subagents are unavailable, do it yourself" branch. The orchestrator does not write code in-session, does not run reviews in-session, and does not collapse the three subagent roles back into a single agent — that defeats the dual-reviewer separation and the fresh-context-per-fix discipline. Subagent topology is a precondition of this skill, not a feature toggle. If the runtime does not support subagents, stop and tell the user this run cannot proceed.
 
 ## No Worktree Isolation
 
@@ -146,7 +146,7 @@ Commits use the project's conventional-commit shape where applicable; follow the
 
 **If a commit fails, the orchestrator reports `BLOCKED` and stops. Do not retry the commit without explicit user instruction.** Failed-commit handling is to surface the error in the four-state task report (status: `BLOCKED`, notes describing the failure mode, next: "user instruction needed to resolve commit failure"), then stop the entire run. Subsequent plan tasks are NOT attempted. Do not retry the commit, do not stash and retry, do not bypass git hooks, do not work around the failure by changing strategy mid-run.
 
-A failed commit is typically a project signal — a pre-commit hook failed, a lint check failed, a test failed, a commit-message linter rejected the subject. Each of those is the project telling the orchestrator to stop and let the user diagnose. `BLOCKED` is the correct response, and the orchestrator's job ends at the report; the user re-invokes the skill after resolving the underlying issue.
+A failed commit is typically a project signal — a pre-commit hook failed, a lint check failed, a test failed, a commit-message linter rejected the subject. Each of those is the project telling the orchestrator to stop and let the user diagnose. `BLOCKED` is the correct response, and the orchestrator's job ends at the report; the user starts a fresh run after resolving the underlying issue.
 
 ### No history rewriting
 
@@ -163,15 +163,15 @@ The policy is judgment-based and surfaced-via-task-report — not pre-clearance,
 - **Surface deviations in the task report.** Every deviation goes into the four-state status block (with the subagent audit). Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the plan did not specify) are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations (the implementer made a structural choice the plan did not anticipate, the implementer skipped a sub-step because it was unsafe to apply blindly, the implementer's read of the observed code conflicts with the plan task's input field) are `NEEDS_CONTEXT` with a clear "user clarification on X" next-action.
 - **Reviewer-surfaced deviations.** Either reviewer (spec-compliance first, code-quality second) may surface a deviation in its findings. The orchestrator weighs the finding against the fix-loop convergence: if a fresh implementer can address the finding, do so; if the finding is structural and no fix iteration would close it, report `NEEDS_CONTEXT` for the task.
 
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the orchestrator does NOT edit the plan artifact in place — the plan is immutable. The orchestrator surfaces the finding with `NEEDS_CONTEXT`, stops the run, and the user re-shapes the plan (by producing a new versioned plan artifact) to re-hand to this skill on a fresh invocation.
+If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the orchestrator does NOT edit the plan artifact in place — the plan is immutable. The orchestrator surfaces the finding with `NEEDS_CONTEXT`, stops the run, and the user re-shapes the plan by producing a new versioned plan artifact to hand back on a fresh run.
 
 ## Immutability
 
 Plan artifacts are IMMUTABLE. The orchestrator reads them READ-ONLY; the implementer subagent reads them READ-ONLY; both reviewer subagents read them READ-ONLY. The plan file is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
 
-If during the orchestration cycle the implementer or a reviewer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the four-state task report with `DONE_WITH_CONCERNS` (if the implementer routed around the issue and finished the task and both reviewers passed) or `NEEDS_CONTEXT` (if the issue is structural and the fix loop did not converge). The plan artifact stays as it was. A revised plan is a new plan version — produced by whatever plan-authoring flow the user chooses — and the new plan is re-handed to this skill on a fresh invocation.
+If during the orchestration cycle the implementer or a reviewer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the four-state task report with `DONE_WITH_CONCERNS` (if the implementer routed around the issue and finished the task and both reviewers passed) or `NEEDS_CONTEXT` (if the issue is structural and the fix loop did not converge). The plan artifact stays as it was. A revised plan is a new plan version produced in a separate plan-authoring flow, then handed back on a fresh run.
 
-What the subagents DO modify is source code (the implementer subagent) or `.wip/` review scratch files (the reviewer subagents). The reviewer scratch files live under `docs/threads/<thread>/.wip/` — `.wip/` is recursively gitignored, so the review output does not enter version control. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this skill's run; those are the responsibility of dedicated authoring skills.
+What the subagents DO modify is source code (the implementer subagent) or `.wip/` review scratch files (the reviewer subagents). The reviewer scratch files live under `docs/threads/<thread>/.wip/` — `.wip/` is recursively gitignored, so the review output does not enter version control. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.
 
 The thread folder set uses the following structure (folders are created on-demand, not pre-created):
 

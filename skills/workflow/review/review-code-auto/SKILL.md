@@ -1,16 +1,16 @@
 ---
 name: review-code-auto
-description: Read a CODE REFERENCE (a git ref, diff, file path, or directory path) and write a findings-first code review report to the active thread's inbox — covering quality, safety, idioms, and testability — end-to-end with no clarifying questions. Use when you want a lightweight autonomous code review independent of any source artifact (spec, proposal, plan, or issue).
+description: Read a code reference and write a findings-first code review report covering quality, safety, idioms, and testability when the user wants a lightweight autonomous review independent of any source artifact.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Review Code Auto
 
 Read a CODE REFERENCE READ-ONLY and emit a findings-first review report to the active thread's `inbox/open/` folder. This skill runs end-to-end: it reads the code, drafts the report, and writes one record per review run. It does not ask clarifying questions, does not walk findings with the user one at a time, and does not commit anything.
 
-This is GENERAL-PURPOSE code review — no source artifact (spec, proposal, plan, or issue) is required or expected. The review evaluates code on its own merits: quality, safety, idioms, and testability. It does not check whether the code fulfills an upstream document's intent — that is a separate fidelity check. If the user has a source artifact and wants to verify the code delivers what the source promised, redirect them to the appropriate implementation-review skill instead. If findings trace back to upstream artifact ambiguity, note that in `## Next Actions`.
+This is GENERAL-PURPOSE code review — no source artifact (spec, proposal, plan, or issue) is required or expected. The review evaluates code on its own merits: quality, safety, idioms, and testability. It does not check whether the code fulfills an upstream document's intent — that is a separate fidelity check. If the user has a source artifact and wants to verify the code delivers what the source promised, redirect them to an implementation-fidelity review instead. If findings trace back to upstream artifact ambiguity, note that in `## Next Actions`.
 
 ## Inputs
 
@@ -85,7 +85,7 @@ These additional axes are NOT mandatory. The four primary axes (quality / safety
 
 ### What this skill does NOT review
 
-This skill does NOT check "does the code implement what was intended" — that is a code-vs-original-intent fidelity question. If the user has a source artifact (spec, proposal, plan, issue, or inbox item) AND wants to check whether the code delivers what the source promised, redirect them to the appropriate implementation-review skill. That redirection should also surface in `## Next Actions` when this review surfaces concerns that would benefit from a fidelity check.
+This skill does NOT check "does the code implement what was intended" — that is a code-vs-original-intent fidelity question. If the user has a source artifact (spec, proposal, plan, issue, or inbox item) AND wants to check whether the code delivers what the source promised, redirect them to an implementation-fidelity review. That redirection should also surface in `## Next Actions` when this review surfaces concerns that would benefit from a fidelity check.
 
 This skill also does NOT review the upstream proposal, spec, or plan that may have driven the code. If review findings trace back to upstream artifact ambiguity, surface that in `## Next Actions` with a pointer to the appropriate upstream review.
 
@@ -142,7 +142,7 @@ If NO thread exists, or if the code under review has no natural thread context, 
 
 3. **Capture any user-provided focus areas.** If the user named specific concerns, record them for emphasis. If not, run the default general-purpose pass across all axes. Do NOT block on missing focus.
 
-4. **Read the code reference READ-ONLY.** This skill READS the code but does NOT edit it, does NOT rewrite it, does NOT modify source code, and does NOT mutate any git state — no `git checkout`, no `git reset`, no `git stash`, no `git rebase`. Do NOT check out the branch and run it. Do NOT modify the working tree. Do NOT run tests against the code. Code modifications belong to an implementation skill on a fresh invocation; this skill never crosses into implementation territory.
+4. **Read the code reference READ-ONLY.** This skill READS the code but does NOT edit it, does NOT rewrite it, does NOT modify source code, and does NOT mutate any git state — no `git checkout`, no `git reset`, no `git stash`, no `git rebase`. Do NOT check out the branch and run it. Do NOT modify the working tree. Do NOT run tests against the code. Code modifications belong in a separate implementation pass; this skill never crosses into implementation territory.
 
 5. **Inspect the code: walk it once end-to-end before noting findings.** Read every file (for a directory or commit range) or every hunk (for a diff). Build a picture of what the code does and what the surrounding code expects before tagging findings. A premature finding from a partial read is a worse signal than a slower review that walks the code first.
 
@@ -160,7 +160,7 @@ If NO thread exists, or if the code under review has no natural thread context, 
 
 This skill NEVER auto-commits the review-finding artifact. Writing the file is where the skill stops. Any commit is the surrounding session's decision. Do not stage, do not commit, do not push, do not branch.
 
-This skill also does not modify the code under review. Code modifications are an implementation skill's job. If the review surfaces findings that require code changes, surface them in `## Next Actions` and let the surrounding session invoke the appropriate implementation skill separately on a fresh invocation.
+This skill also does not modify the code under review. Code modifications belong in a separate implementation pass. If the review surfaces findings that require code changes, surface them in `## Next Actions` and let the surrounding session handle implementation separately on a fresh run.
 
 ## Immutability
 

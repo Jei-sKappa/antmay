@@ -1,9 +1,9 @@
 ---
 name: plan-loose-auto
-description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact autonomously — no clarifying questions — writing brief 1–3 sentence task descriptions suited for a human-leaning implementer who fills in details. Use when you already have the upstream input in hand and want a complete plan written down without interactive back-and-forth.
+description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact autonomously when the user has the input in hand and wants brief task descriptions suited for a human-leaning implementer.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Plan Loose Auto

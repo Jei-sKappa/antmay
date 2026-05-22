@@ -1,6 +1,6 @@
 # Socratic Questioning
 
-> Adapted from the [`the-fool`](https://github.com/Jeffallan) skill (MIT). Used here for unattended critique of `afk-exploration` research notes.
+> Method reference for unattended critique of research notes.
 
 Structured question frameworks for exposing assumptions and deepening understanding.
 

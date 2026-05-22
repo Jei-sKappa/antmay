@@ -1,6 +1,6 @@
 # Pre-Mortem Analysis
 
-> Adapted from the [`the-fool`](https://github.com/Jeffallan) skill (MIT). Used here for unattended critique of `afk-exploration` research notes.
+> Method reference for unattended critique of research notes.
 
 Pre-mortem methodology with second-order thinking for identifying how plans fail before they fail.
 

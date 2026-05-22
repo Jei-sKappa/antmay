@@ -1,9 +1,9 @@
 ---
 name: capture-inbox
-description: Capture a thread-local Inbox item from any context. Use when a side-finding, follow-up, or deferred idea surfaces during work and you need it parked under the active thread's `inbox/open/` folder without derailing the current task.
+description: Capture a thread-local Inbox item from any context when a side-finding, follow-up, or deferred idea needs to be parked under the active thread's `inbox/open/` folder without derailing the current task.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Capture Inbox

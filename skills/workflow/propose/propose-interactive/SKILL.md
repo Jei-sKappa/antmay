@@ -1,9 +1,9 @@
 ---
 name: propose-interactive
-description: Walk the user through the four suggested proposal elements — intent, context, rough shape, open questions — one at a time, push back on weak reasoning, then assemble and write a freeform proposal artifact to the active thread's proposals/ folder. Use when the user wants to think the proposal through collaboratively with the agent and surface open questions live.
+description: Walk the user through proposal intent, context, rough shape, and open questions, then assemble a freeform proposal artifact when the user wants to think the proposal through collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Propose Interactive

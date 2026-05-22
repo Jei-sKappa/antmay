@@ -1,9 +1,9 @@
 ---
 name: review-plan-interactive
-description: Walk a plan artifact one finding (or one task) at a time with the user — asking for their view and testing it against the plan — across four axes (source-spec adherence, project conventions, granularity fit, per-task ambiguity), writing a decision log and optionally dumping unresolved findings to an inbox item. Use when you want to think a plan review through collaboratively rather than autonomously.
+description: Walk a plan artifact one finding or task at a time with the user, testing each finding across source adherence, conventions, granularity, and ambiguity when the user wants a plan review kept collaborative.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Review Plan Interactive
@@ -225,10 +225,10 @@ If the user pauses mid-walk after at least one settlement has landed, the partia
 
 ## Scope Drift
 
-When the user introduces a branch that is outside the plan-review walk — a finding about a different plan, a tangent about the workflow itself, a refactor idea unrelated to the plan's intent, a critique of the upstream spec — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
+When the user introduces a branch that is outside the plan-review walk — a finding about a different plan, a tangent about the process being used, a refactor idea unrelated to the plan's intent, a critique of the upstream spec — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
 1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this review's decision log.
-2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it. If the branch is "the upstream spec has the same problem", recommend reviewing the source artifact in a separate session using an appropriate review skill.
+2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it. If the branch is "the upstream spec has the same problem", recommend reviewing the source artifact in a separate session.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
 ASK the user which. Do not pick silently.

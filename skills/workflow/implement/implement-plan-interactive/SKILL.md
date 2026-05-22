@@ -1,9 +1,9 @@
 ---
 name: implement-plan-interactive
-description: Execute a structured plan artifact's tasks in order on the current working tree collaboratively — presenting each task to the user, pushing back on weak reasoning, self-reviewing, and asking the user before committing at each task boundary. Use when you have a plan artifact and want the agent to ask before each commit rather than proceed autonomously.
+description: Execute a structured plan artifact collaboratively on the current working tree, presenting each task, self-reviewing, and asking before each commit when the user wants plan implementation kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Implement Plan Interactive
@@ -31,7 +31,7 @@ If you believe the user is about to ASK you to commit something that is wrong, r
 
 ## Inputs
 
-`implement-plan-interactive` accepts a plan artifact path. Both loose-granularity and strict-granularity plans are valid input — both require every plan task to be **sequential, isolated, independently implementable, and independently reviewable**, and both are executed in plan order by this skill.
+Accept a plan artifact path. Both loose-granularity and strict-granularity plans are valid input — both require every plan task to be **sequential, isolated, independently implementable, and independently reviewable**, and both are executed in plan order by this skill.
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the walk covers only the named task(s); when omitted, the walk covers every numbered task in the plan in order.
 
@@ -78,7 +78,7 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 This skill is SINGLE-AGENT. The current session reads the plan, walks the user through each plan task in order, implements each task, and self-reviews after each task. NO subagents are spawned. There is no `Task` tool invocation, no implementer / reviewer separation, no orchestrator role distinct from the implementer role — the single session IS all of those, and the self-review pass after each task plus the user's per-commit ASK gate are the only review layers in this single-agent topology.
 
-If the user wants subagent-driven execution (orchestrator + implementer subagent + spec-compliance reviewer subagent + code-quality reviewer subagent, with re-spawn of a new implementer subagent on review failure), they should use a multi-subagent implementation skill instead. This skill does not spawn subagents and does not have an orchestrator role separate from the implementer role.
+If the user wants subagent-driven execution (orchestrator + implementer subagent + spec-compliance reviewer subagent + code-quality reviewer subagent, with re-spawn of a new implementer subagent on review failure), stop and tell them that this run is single-agent only. This skill does not spawn subagents and does not have an orchestrator role separate from the implementer role.
 
 ## Workflow
 
@@ -120,7 +120,7 @@ Commits use the project's conventional-commit shape where applicable; follow the
 
 **If a commit fails, report `BLOCKED` and stop. Do not retry the commit without explicit user instruction.** Failed-commit handling is to surface the error in the four-state task report (status: `BLOCKED`, notes describing the failure mode, next: "user instruction needed to resolve commit failure"), then stop the entire run. Subsequent plan tasks are NOT attempted. Do not retry the commit, do not stash and retry, do not bypass git hooks, do not work around the failure by changing strategy mid-run.
 
-A failed commit is typically a project signal — a pre-commit hook failed, a lint check failed, a test failed, a commit-message linter rejected the subject. Each of those is the project telling the implementer to stop and let the user diagnose. `BLOCKED` is the correct response, even in the interactive variant — the user can choose to resolve the underlying issue and re-invoke the skill, but this skill does not iterate on a failed commit autonomously inside the same run.
+A failed commit is typically a project signal — a pre-commit hook failed, a lint check failed, a test failed, a commit-message linter rejected the subject. Each of those is the project telling the implementer to stop and let the user diagnose. `BLOCKED` is the correct response in this interactive run — the user can choose to resolve the underlying issue and start a fresh run, but this skill does not iterate on a failed commit autonomously inside the same run.
 
 ### No history rewriting
 
@@ -135,9 +135,9 @@ The policy is judgment-based and surfaced — both in the task report and, impor
 - **Follow the plan.** The plan is the contract; the implementer executes the tasks in plan order, applying substeps where stated and inferring them where loose. Do not silently invent plan tasks the plan does not call for. Do not silently skip plan tasks the plan does call for. Do not silently re-order plan tasks.
 - **Use judgment when warranted.** If the plan task is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, surface the deviation LIVE to the user before applying it — push back per the `## Anti-Sycophancy Stance`. Get the user's call before writing code that deviates from the literal plan.
 - **Surface deviations in the task report.** Every deviation also goes into the four-state status block at task end. Minor deviations are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations the user signed off on during the walk are also `DONE_WITH_CONCERNS` with a note that the user explicitly agreed. Major deviations the implementer flagged but did not resolve are `NEEDS_CONTEXT`.
-- **The walk is the live push-back channel.** Unlike the auto sibling, this skill has the user in-loop for every plan task. Use the walk to raise deviations early, not just at task end. Pre-commit ASK is the second checkpoint where the user has the chance to reject.
+- **The walk is the live push-back channel.** This skill has the user in-loop for every plan task. Use the walk to raise deviations early, not just at task end. Pre-commit ASK is the second checkpoint where the user has the chance to reject.
 
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT edit the plan artifact in place — the plan is immutable. Surface the finding live during the walk, propose stopping the run, and recommend the user re-shape the plan using a plan-adjustment skill to emit a new versioned plan. The new plan is then re-handed to this skill on a fresh invocation.
+If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT edit the plan artifact in place — the plan is immutable. Surface the finding live during the walk, propose stopping the run, and recommend the user re-shape the plan in a separate plan-adjustment pass that emits a new versioned plan. The new plan is then handed back on a fresh run.
 
 ## Decision Log
 
@@ -161,8 +161,8 @@ ASK the user which. Do not pick silently.
 
 Plan artifacts are IMMUTABLE. The implementer reads them READ-ONLY. The plan file is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
 
-If during the walk the user proposes editing the plan in place (e.g., "fix the typo in task 2 while you're at it", "remove task 5 because we already did it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised plan is a new plan version — the user should use a plan-adjustment skill to produce a new versioned plan, which is then re-handed to this skill on a fresh invocation. The implementer does not perform that revision inside this skill's run.
+If during the walk the user proposes editing the plan in place (e.g., "fix the typo in task 2 while you're at it", "remove task 5 because we already did it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised plan is a new plan version produced in a separate plan-adjustment pass, then handed back on a fresh run. The implementer does not perform that revision inside this run.
 
-What the implementer DOES modify is source code and, optionally, (a) a new Inbox item if a scope-drift branch surfaces and the user picks "park", and (b) a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold. The implementer does NOT create new spec / proposal / plan artifacts inside this skill's run; those are the responsibility of dedicated authoring skills.
+What the implementer DOES modify is source code and, optionally, (a) a new Inbox item if a scope-drift branch surfaces and the user picks "park", and (b) a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold. The implementer does NOT create new spec / proposal / plan artifacts inside this run; those require a separate authoring pass.
 
 The thread folder set's `.wip/` discipline (recursively gitignored, never used for emitted artifacts) and the on-demand folder creation rule are binding on any thread-scoped file this skill touches.

@@ -1,9 +1,9 @@
 ---
 name: review-implementation-auto
-description: Given an implementation reference (git ref, diff, or commit range) and the source artifact it was supposed to deliver (spec, proposal, plan, GitHub issue, or inbox item), autonomously produce a findings-first review report checking code-vs-original-intent fidelity across five axes — acceptance/outcome coverage, constraint adherence, scope adherence, behavior fidelity, and test coverage — with no clarifying questions and no per-finding chat walk.
+description: Autonomously review an implementation reference against its source artifact and produce a findings-first fidelity report when the user wants acceptance, constraint, scope, behavior, and test coverage checked without a per-finding walk.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Review Implementation Auto
@@ -148,7 +148,7 @@ Lineage between a review-finding and the implementation / source it reviews live
 
 3. **Resolve the source artifact.** Detect the source-artifact path from the user's invocation. The five accepted forms are listed under `## Inputs`. If the source artifact is unsupplied, vague, or matches multiple plausible candidates, ASK the user which is intended. Do not pick by recency. The source artifact is MANDATORY — without it, the fidelity axes have nothing to check against, and the user should be directed to a source-independent code review flow instead.
 
-4. **Read the source artifact READ-ONLY.** The source artifact is immutable — this skill reads it but does NOT edit it, does NOT rewrite it, does NOT add frontmatter, and does NOT propose edits to the source body. Findings that trace to source ambiguity (e.g., the implementation could not have resolved an ambiguity without inventing details) are surfaced under `## Next Actions` with the recommendation to re-review and re-emit the upstream artifact via the appropriate authoring flow — never an instruction to edit the existing source in place.
+4. **Read the source artifact READ-ONLY.** The source artifact is immutable — this skill reads it but does NOT edit it, does NOT rewrite it, does NOT add frontmatter, and does NOT propose edits to the source body. Findings that trace to source ambiguity (e.g., the implementation could not have resolved an ambiguity without inventing details) are surfaced under `## Next Actions` with the recommendation to re-review and re-emit the upstream artifact through a separate authoring flow — never an instruction to edit the existing source in place.
 
 5. **Inspect the implementation reference READ-ONLY.** Read the diff (`git diff <range>` or read the saved diff file). DO NOT check out the branch and run it. DO NOT modify the working tree. DO NOT run tests against the implementation. DO NOT mutate any git state — no `git checkout`, no `git reset`, no `git stash`, no `git rebase`. The review is read-only against the diff text.
 
@@ -172,12 +172,12 @@ This skill NEVER auto-commits the review-finding artifact. Writing the file is w
 
 The same prohibition applies to any draft material under `docs/threads/<thread>/.wip/` — drafts are editable during the session but are never committed by this skill.
 
-This skill ALSO does not modify the implementation under review. Code modifications are the implementation skill's job. If the review surfaces findings that require code changes, surface them in `## Next Actions` — let the surrounding session invoke the appropriate implementation skill separately.
+This skill ALSO does not modify the implementation under review. Code modifications belong in a separate implementation pass. If the review surfaces findings that require code changes, surface them in `## Next Actions` — let the surrounding session handle implementation separately.
 
 ## Immutability
 
 Emitted review-finding artifacts are immutable. Once the file is written into `inbox/open/`, it is part of the thread's reviewable history and is NOT edited. A typo discovered in an emitted review-finding means writing a NEW review-finding record (new UTC stamp, new kebab-desc) — not an in-place edit. A revision to a review-finding is a NEW review-finding artifact, not an in-place edit.
 
-The source artifact under review is ALSO IMMUTABLE. The reviewer reads READ-ONLY and does NOT edit the source. Findings that warrant revisions to the source artifact are surfaced under `## Next Actions` with the explicit recommendation to re-review the upstream artifact and emit a new versioned source via the appropriate authoring skill — never an instruction to edit the existing source in place.
+The source artifact under review is ALSO IMMUTABLE. The reviewer reads READ-ONLY and does NOT edit the source. Findings that warrant revisions to the source artifact are surfaced under `## Next Actions` with the explicit recommendation to re-review the upstream artifact and emit a new versioned source through a separate authoring pass — never an instruction to edit the existing source in place.
 
-The implementation reference is ALSO READ-ONLY for this skill. This skill does NOT modify source code, does NOT check out branches, does NOT mutate git state, and does NOT run tests against the implementation. If the review surfaces findings that require code changes, the surrounding session invokes the appropriate implementation skill on a fresh invocation — this skill never crosses into implementation territory.
+The implementation reference is ALSO READ-ONLY for this skill. This skill does NOT modify source code, does NOT check out branches, does NOT mutate git state, and does NOT run tests against the implementation. If the review surfaces findings that require code changes, the surrounding session handles them in a fresh implementation pass — this skill never crosses into implementation territory.

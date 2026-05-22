@@ -1,9 +1,9 @@
 ---
 name: implement-plan-auto
-description: Execute a plan artifact end-to-end on the current working tree — reading tasks in order, self-reviewing after each task, and auto-committing per task without asking for confirmation. Use when you have a structured plan document (loose or strict granularity) and want it fully executed in one go without per-task prompts.
+description: Execute a structured plan artifact end-to-end on the current working tree, reading tasks in order, self-reviewing after each task, and auto-committing per task when the user wants the plan fully implemented without per-task prompts.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Implement Plan Auto
@@ -119,12 +119,12 @@ The policy is judgment-based and surfaced-via-task-report — not pre-clearance,
 - **Surface deviations in the task report.** Every deviation goes into the four-state status block. Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the plan did not specify) are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations (the implementer made a structural choice the plan did not anticipate, the implementer skipped a sub-step because it was unsafe to apply blindly, the implementer's read of the observed code conflicts with the plan task's input field) are `NEEDS_CONTEXT` with a clear "user clarification on X" next-action.
 - **Do not pre-clear minor deviations.** The skill is `*-auto`; the autonomous half does not stop for every judgment call. The four-state report is where the user reads the trail.
 
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT edit the plan artifact in place — the plan is immutable. The implementer surfaces the finding with `NEEDS_CONTEXT`, stops the run, and the user re-shapes the plan using the appropriate plan-editing tool to emit a NEW versioned plan. The new plan is then re-handed to this skill on a fresh invocation.
+If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT edit the plan artifact in place — the plan is immutable. The implementer surfaces the finding with `NEEDS_CONTEXT`, stops the run, and the user re-shapes the plan in a separate plan-editing pass that emits a NEW versioned plan. The new plan is then handed back on a fresh run.
 
 ## Immutability
 
 Plan artifacts are IMMUTABLE. The implementer reads them READ-ONLY. The plan file is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
 
-If during implementation the implementer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the four-state task report with `DONE_WITH_CONCERNS` (if the implementer routed around the issue and finished the task) or `NEEDS_CONTEXT` (if the issue is structural and the implementer cannot pick the right side). The plan artifact stays as it was. A revised plan is a new plan version — the user produces a new versioned plan file (e.g. `<timestamp>-v<N+1>-<descriptor>-plan.md`) and re-hands it to this skill on a fresh invocation.
+If during implementation the implementer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the four-state task report with `DONE_WITH_CONCERNS` (if the implementer routed around the issue and finished the task) or `NEEDS_CONTEXT` (if the issue is structural and the implementer cannot pick the right side). The plan artifact stays as it was. A revised plan is a new plan version — the user produces a new versioned plan file (e.g. `<timestamp>-v<N+1>-<descriptor>-plan.md`) and hands it back on a fresh run.
 
-What the implementer DOES modify is source code and, optionally, captures a side-finding as an inbox note if something emerges that should be parked rather than implemented during this run. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this skill's run; those are the responsibility of dedicated authoring tools or skills.
+What the implementer DOES modify is source code and, optionally, captures a side-finding as an inbox note if something emerges that should be parked rather than implemented during this run. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.

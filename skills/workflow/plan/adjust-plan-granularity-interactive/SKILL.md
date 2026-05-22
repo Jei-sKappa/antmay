@@ -1,9 +1,9 @@
 ---
 name: adjust-plan-granularity-interactive
-description: Walk the user through an existing plan task-by-task — deciding per task whether to SPLIT / MERGE / EXPAND / CONTRACT / LEAVE — pushing back on weak reasoning, then assemble and write a new versioned plan at the requested granularity target. Use when you want to think the granularity shift through together with the agent rather than hand it a fully-shaped instruction.
+description: Walk an existing plan task by task to decide whether to split, merge, expand, contract, or leave each task, then write a new versioned plan when the user wants to think the granularity shift through collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Adjust Plan Granularity Interactive
@@ -58,13 +58,13 @@ Emitted artifacts are immutable once written to their target folder. Drafts unde
 
 ## Per-Task Walk
 
-This is the COLLABORATIVE delta from the autonomous sibling: instead of consuming the target instruction and producing the adjusted body in one shot, the walk traverses the source plan one task at a time and decides per task what action to take. The five actions are:
+Instead of consuming the target instruction and producing the adjusted body in one shot, the walk traverses the source plan one task at a time and decides per task what action to take. The five actions are:
 
-- **SPLIT** — break the source task into two or more smaller tasks. Use when the source task bundles work that should be done as separate independently-implementable units, or when the user's target is `stricter` and the source task's substeps are themselves plan-task-shaped.
-- **MERGE** — combine the source task with an adjacent task (next or previous). Use when two source tasks are trivial enough that combining them yields a single still-independently-implementable task, or when the user's target is `looser` and the granularity has over-split related work.
-- **EXPAND** — keep the source task as a single task but add structure: files-modified, mechanical verification, observable acceptance criteria, or other strict per-task fields. Use when the user's target is `stricter` or `more-implementation-ready` and the source task is well-bounded but under-specified.
-- **CONTRACT** — keep the source task as a single task but strip structure: remove substeps, fold per-task fields into the objective sentence, simplify verification. Use when the user's target is `looser` or `more-high-level` and the source task carries strict per-task fields the downstream implementer does not need.
-- **LEAVE** — keep the source task exactly as-is, including any per-task fields or substeps it already has. Use when the source task is already at the right granularity for the target.
+- **SPLIT** — break the source task into two or more smaller tasks. This action fits a source task that bundles work that should be done as separate independently-implementable units, or a `stricter` target where the source task's substeps are themselves plan-task-shaped.
+- **MERGE** — combine the source task with an adjacent task (next or previous). This action fits two source tasks that are trivial enough to combine into a single still-independently-implementable task, or a `looser` target where the granularity has over-split related work.
+- **EXPAND** — keep the source task as a single task but add structure: files-modified, mechanical verification, observable acceptance criteria, or other strict per-task fields. This action fits a `stricter` or `more-implementation-ready` target where the source task is well-bounded but under-specified.
+- **CONTRACT** — keep the source task as a single task but strip structure: remove substeps, fold per-task fields into the objective sentence, simplify verification. This action fits a `looser` or `more-high-level` target where the source task carries strict per-task fields the downstream implementer does not need.
+- **LEAVE** — keep the source task exactly as-is, including any per-task fields or substeps it already has. This action fits a source task that is already at the right granularity for the target.
 
 For each source task, present the task to the user (objective sentence + a brief read of the current granularity) and propose an action per the working target instruction. The user confirms, overrides, or asks for discussion. If the user picks an action that violates the sequential-isolated-independent contract — for example, a SPLIT that produces a task without observable verification, a MERGE that produces a task too large for one sitting, a CONTRACT that strips a task's verification down to "looks correct" — push back per the `## Anti-Sycophancy Stance` BEFORE applying the action. Refuse to log the action silently; either resolve the disagreement, or apply it with the dissent noted in the adjusted body.
 
@@ -112,7 +112,7 @@ Both files coexist in the same `plans/` folder. The source is unchanged. The adj
 
 The adjusted plan honors the same plan content contract the source did: every task in the emitted plan MUST be **sequential, isolated, independently implementable, and independently reviewable**. The granularity changes; the contract does not.
 
-- **Sequential** — tasks are numbered in execution order. The implementation phase executes tasks in plan order; the order is the only execution graph this workflow supports.
+- **Sequential** — tasks are numbered in execution order. Implementers execute tasks in plan order; the order is the only execution graph this plan format supports.
 - **Isolated** — a task does not read or write state from other in-progress tasks in the same plan beyond what is explicitly captured in its description. If two tasks need to share state, that state must be written into an artifact the second task reads, not left in implicit cross-task memory.
 - **Independently implementable** — a single implementer (human or agent) can complete the task in one sitting given the task's stated input. A walk action — SPLIT, MERGE, EXPAND, CONTRACT, LEAVE — that would produce a task violating independent implementability is a candidate for push-back, not a candidate for silent logging.
 - **Independently reviewable** — a reviewer can verify the task succeeded from observable evidence: a file written, a behavior observable, a test passing, a configuration changed. A CONTRACT action that strips a task's verification down to "looks correct" violates this property; push back.

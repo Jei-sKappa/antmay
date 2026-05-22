@@ -1,9 +1,9 @@
 ---
 name: plan-strict-interactive
-description: Walk the user through a strict-granularity plan collaboratively — collecting each task's objective, input/context, substeps, files modified, verification, and acceptance criteria one at a time, pushing back on weak reasoning — then write the resulting plan artifact to disk. Use when the implementer is agent-leaning, ambiguity is expensive, and the user wants to think the plan through together with the agent.
+description: Walk the user through a strict-granularity plan one task at a time, collecting objective, context, substeps, files modified, verification, and acceptance criteria when the user wants an agent-leaning plan shaped collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Plan Strict Interactive

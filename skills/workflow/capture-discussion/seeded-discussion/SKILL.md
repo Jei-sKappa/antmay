@@ -1,9 +1,9 @@
 ---
 name: seeded-discussion
-description: Walk a predetermined list of discussion points one at a time, presenting options and a recommendation for each by default, and appending each decision to a log. Use when the user already has a concrete list of points to settle — findings, open questions, review comments, design points, or a plan to walk through.
+description: Walk a predetermined list of discussion points one at a time, presenting options and a recommendation for each by default and appending decisions to a log when the user already has concrete points to settle.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Seeded Discussion
@@ -29,7 +29,7 @@ Hold these together:
 
 This skill accepts a predetermined list of points in either form:
 
-- **A markdown file** with a bullet or numbered list of points (e.g., review findings, design questions, plan steps). The user passes the file path when invoking the skill.
+- **A markdown file** with a bullet or numbered list of points (e.g., review findings, design questions, plan steps). The user passes the file path as input.
 - **An inline list** pasted into the prompt — bullets, numbered items, or simply paragraphs that read as a sequence of points to settle.
 
 Detect which form the input takes before starting the walk. If the input is ambiguous (e.g., the file referenced is not a list, or the prompt mixes context with the list and the boundary is unclear), confirm with the user before starting — read back the points you identified, in order, and ask whether the list is complete and correctly ordered. Do not begin the walk on a misread input.

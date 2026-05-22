@@ -2,7 +2,7 @@
 
 ## Thread Root
 
-Every workflow thread lives under a single durable root:
+Every thread lives under a single durable root:
 
 ```text
 docs/threads/<YYMMDDHHMMSSZ-slug>/
@@ -10,7 +10,7 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 
 The leading `YYMMDDHHMMSSZ` is the 12-character UTC stamp captured when the thread was opened; the trailing `<slug>` is a short kebab-case description of the thread's subject.
 
-The thread root is the only path skills are permitted to write workflow artifacts to. Scratch and temporary work tied to the thread belongs in that thread's local `.wip/` folder — never in a repository-level WIP root.
+The thread root is the only path skills are permitted to write emitted artifacts to. Scratch and temporary work tied to the thread belongs in that thread's local `.wip/` folder — never in a repository-level WIP root.
 
 ## Folder Set
 
@@ -40,7 +40,7 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 
 ## On-Demand Creation
 
-Thread folders are NOT pre-created proactively. A folder appears only when a skill writes its first artifact there. An empty thread is just a thread root plus whatever folders the workflow has touched.
+Thread folders are NOT pre-created proactively. A folder appears only when a skill writes its first artifact there. An empty thread is just a thread root plus whatever folders prior skill runs have touched.
 
 ## Excluded Folder Names
 

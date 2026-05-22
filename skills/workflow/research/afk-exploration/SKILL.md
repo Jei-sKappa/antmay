@@ -1,9 +1,9 @@
 ---
 name: afk-exploration
-description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
+description: Start AFK exploration on a topic only when the user explicitly asks for AFK research or exploration.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.2
+  version: 1.4.3
 ---
 
 # AFK Exploration
@@ -57,7 +57,7 @@ Why this shape:
 - **Project-scoped**: research lives next to the code it concerns, so it's discoverable from inside the project later.
 - **Topic-numbered**: `0001`, `0002`, … sort topics by creation order at a glance.
 - **Date + per-day run-index**: multiple runs on the same topic in a day are distinguishable; runs sort chronologically.
-- **Decision journal**: `workflow-notes.md` is an append-only log of the orchestrator's choices — which angles were picked at Phase 2, what each Phase 6 clock check decided (continue or wrap, which moves, picked or invented), and the rationale. The user can audit the run's choices without reading the research notes themselves.
+- **Decision journal**: `workflow-notes.md` is an append-only log of the orchestrator's choices — which angles were picked at Step 2, what each Step 6 clock check decided (continue or wrap, which moves, picked or invented), and the rationale. The user can audit the run's choices without reading the research notes themselves.
 - **One subfolder per angle**: research angles hold `research.md` plus three critique files (pre-mortem, red team adversarial, Socratic) and a per-angle synthesis. Prototype angles swap `research.md` for `findings.md`, add `prototype-pointer.md` (and optionally auxiliary materials preserved outside `/tmp`), and otherwise share the same critique-and-synthesis structure. Grouping by folder keeps `00-brief.md` and `workflow-notes.md` legible at the run root even when a wave or two of follow-ups push the angle count into the double digits.
 - **Per-angle synthesis, no whole-run digest**: each angle ends in a synthesis file so the reader can act on the angle without opening the other four. There is no top-level full exploration summary — the orchestrator never combines angles into a run-wide summary. If a cross-angle digest is wanted later, the user can ask for one in a follow-up.
 
@@ -65,14 +65,14 @@ Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (
 
 ## Workflow
 
-The workflow runs as numbered phases. **Phases run in order**; *inside a phase*, every subagent the phase dispatches runs in parallel and the orchestrator waits for them all to return before advancing to the next phase. If a single tool call would dispatch too many subagents to run reliably in parallel, fall back to smaller batches **inside the same phase** (e.g. split Phase 3's angles into two batches, waiting for the first to return before issuing the second) — never collapse phases into each other or change their order.
+Run the process as numbered steps. **Steps run in order**; *inside a step*, every subagent the step dispatches runs in parallel and the orchestrator waits for them all to return before advancing to the next step. If a single tool call would dispatch too many subagents to run reliably in parallel, fall back to smaller batches **inside the same step** (e.g. split Step 3's angles into two batches, waiting for the first to return before issuing the second) — never collapse steps into each other or change their order.
 
-### Phase 1 — Bootstrap
+### Step 1 — Bootstrap
 
 1. **Resolve the run folder.**
    - `ls <cwd>/docs/afk-exploration/` to find existing topics. If a topic with the same or near-identical slug exists and the request is clearly a continuation, reuse it; otherwise pick the next zero-padded 4-digit prefix (`0001`, `0002`, …).
    - Inside the topic folder, list runs matching `YYYY-MM-DD_NN`. Pick today's date with the next zero-padded 2-digit index (`01` if no runs today, otherwise `02`, `03`, …). Separate the date from the per-day index with `_`, not `-`, so the index is visually distinct from the date components.
-   - `mkdir -p` the run folder. Per-angle subfolders are **not** pre-created here — each initial-angle subagent creates its own (`NN-<angle>/`) when it writes `research.md`, which keeps creation uniform across both Phase 3 and any Phase 6 follow-up waves where new angles are decided on the fly.
+   - `mkdir -p` the run folder. Per-angle subfolders are **not** pre-created here — each initial-angle subagent creates its own (`NN-<angle>/`) when it writes `research.md`, which keeps creation uniform across both Step 3 and any Step 6 follow-up waves where new angles are decided on the fly.
 2. **Write `.metadata.json`.**
    ```json
    {
@@ -90,29 +90,29 @@ The workflow runs as numbered phases. **Phases run in order**; *inside a phase*,
    - `High-risk assumptions` — assumptions that, if wrong, invalidate large parts of the research. Surface for the user on return.
    - `Missing pieces` (only if the request is genuinely thin) — questions that would unblock deeper research.
    - `Planned angles` — the 3–5 angles the orchestrator will dispatch.
-4. **Create `workflow-notes.md`** with a placeholder header (e.g. `# Workflow notes`). This is the append-only decision journal — every orchestrator choice (Phase 2 angle picks, Phase 6 clock-check outcomes, invented moves) gets a new entry with its rationale. Subsequent phases append; never rewrite earlier entries.
+4. **Create `workflow-notes.md`** with a placeholder header (e.g. `# Workflow notes`). This is the append-only decision journal — every orchestrator choice (Step 2 angle picks, Step 6 clock-check outcomes, invented moves) gets a new entry with its rationale. Subsequent steps append; never rewrite earlier entries.
 
-### Phase 2 — Plan
+### Step 2 — Plan
 
-Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request. An angle may be a **prototype angle** if the hypothesis is already sharp from the request and research wouldn't refine it; otherwise defer prototypes to Phase 6 once research has surfaced what's worth testing in code (see *When to spawn a prototype*). Append an entry to `workflow-notes.md` recording the picks, what was considered and skipped, and the rationale — including the prototype/research decision for any prototype angle.
+Pick 3–5 angles from the catalog below — the ones that earn their slot for *this* request. An angle may be a **prototype angle** if the hypothesis is already sharp from the request and research wouldn't refine it; otherwise defer prototypes to Step 6 once research has surfaced what's worth testing in code (see *When to spawn a prototype*). Append an entry to `workflow-notes.md` recording the picks, what was considered and skipped, and the rationale — including the prototype/research decision for any prototype angle.
 
-### Phase 3 — Initial research
+### Step 3 — Initial research
 
-Dispatch one subagent per planned angle, all in a single parallel tool call, and wait for **every** angle to return before moving to Phase 4. Research angles get the initial-angle subagent; prototype angles get the prototyper subagent. See *Subagent briefs* below.
+Dispatch one subagent per planned angle, all in a single parallel tool call, and wait for **every** angle to return before moving to Step 4. Research angles get the initial-angle subagent; prototype angles get the prototyper subagent. See *Subagent briefs* below.
 
-### Phase 4 — Critiques
+### Step 4 — Critiques
 
-Process angles **one at a time** so this phase never has more than three subagents in flight at once. For each returned angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the angle's note from disk (`research.md` for research angles, `findings.md` for prototype angles), applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk. Only advance to Phase 5 once **every** angle in the wave has its three critique files on disk.
+Process angles **one at a time** so this step never has more than three subagents in flight at once. For each returned angle in turn, dispatch its three critique subagents (pre-mortem, red team adversarial, Socratic) in a single parallel tool call, wait for all three to return, then move to the next angle. Each critique subagent reads the angle's note from disk (`research.md` for research angles, `findings.md` for prototype angles), applies the method from the corresponding reference file, and writes its critique file. Three more files per angle land on disk. Only advance to Step 5 once **every** angle in the wave has its three critique files on disk.
 
-### Phase 5 — Synthesis
+### Step 5 — Synthesis
 
-Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Phase 6. Each synthesiser reads its angle's note (`research.md` or `findings.md`) plus the three critiques from disk and writes `NN-<angle>/synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
+Dispatch one synthesiser subagent per angle in a single parallel tool call covering every angle in the wave, and wait for **every** synthesis to return before moving to Step 6. Each synthesiser reads its angle's note (`research.md` or `findings.md`) plus the three critiques from disk and writes `NN-<angle>/synthesis.md` — a single digestible note that captures the load-bearing points and adds the conclusions that fall out of reading all four files together. See *Subagent briefs* below.
 
-### Phase 6 — Clock check
+### Step 6 — Clock check
 
 Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
-- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves and **loop back to Phase 3** with the new angles — they go through Phase 4 (critiques) and Phase 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. The moves below are a starting point, not a checklist — invented moves outside this list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
+- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves and **loop back to Step 3** with the new angles — they go through Step 4 (critiques) and Step 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. The moves below are a starting point, not a checklist — invented moves outside this list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
   - An unpicked angle from the catalog above for the request's trigger shape.
   - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md` or `NN-<angle>/findings.md`.
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
@@ -120,11 +120,11 @@ Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
   - A prototype angle to test a sharp hypothesis the research has surfaced (see *When to spawn a prototype*). Usually the right move when an earlier synthesis flagged a load-bearing question better answered with code than more reading. Budget-aware: a prototype angle costs ~3–5× a research angle.
   If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick a move — not to wrap up.
-- Otherwise: done. Proceed to Phase 7.
+- Otherwise: done. Proceed to Step 7.
 
-**Log every Phase 6 outcome to `workflow-notes.md`** before continuing — what was decided (continue or wrap), which moves were picked or invented, and the rationale. No wave happens silently.
+**Log every Step 6 outcome to `workflow-notes.md`** before continuing — what was decided (continue or wrap), which moves were picked or invented, and the rationale. No wave happens silently.
 
-### Phase 7 — Final message
+### Step 7 — Final message
 
 Send a message to the user (under 10 lines): the run folder path, the list of angles explored (flag prototype angles inline, e.g. `02 oauth-flow [prototype]`), a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>/synthesis.md` as the entry point per angle (the four source files in the same folder remain for drill-down; prototype angles also have `prototype-pointer.md` recording the temp-directory location while it still exists in `/tmp`), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
 
@@ -159,14 +159,14 @@ Skip a prototype when:
 
 **When to fire**:
 
-- **Phase 2** — only when the hypothesis is already sharp from the request itself and research wouldn't refine it. (E.g. "does Auth.js feel right for our session model?" is sharp on day one.)
-- **Phase 6** — the default. Research first, then pick a prototype to test the load-bearing question the research surfaced.
+- **Step 2** — only when the hypothesis is already sharp from the request itself and research wouldn't refine it. (E.g. "does Auth.js feel right for our session model?" is sharp on day one.)
+- **Step 6** — the default. Research first, then pick a prototype to test the load-bearing question the research surfaced.
 
 Log the decision in `workflow-notes.md` either way, including the explicit hypothesis the prototype is testing.
 
 **Cap**: 1 prototype per run by default. Up to 2 when the request is genuinely comparative (A vs B). Beyond that requires explicit rationale in `workflow-notes.md`.
 
-**Cost**: a prototype angle eats roughly 3–5× a research angle's wall-clock and gates whatever wave it's in. Factor this into Phase 2 / Phase 6 planning, especially under a tight `budget_seconds`.
+**Cost**: a prototype angle eats roughly 3–5× a research angle's wall-clock and gates whatever wave it's in. Factor this into Step 2 / Step 6 planning, especially under a tight `budget_seconds`.
 
 ## Subagent briefs
 
@@ -215,7 +215,7 @@ After the three critiques for an angle have all returned, dispatch one synthesis
 
 ### Prototyper subagent
 
-When a prototype angle is dispatched (Phase 3 or Phase 6), use one prototyper subagent. The detailed method — step ordering, `mktemp` invocation, codebase-copy options, `findings.md` template, materials guidance, and the full hard-constraints list — lives in the reference file; the orchestrator does not read it.
+When a prototype angle is dispatched (Step 3 or Step 6), use one prototyper subagent. The detailed method — step ordering, `mktemp` invocation, codebase-copy options, `findings.md` template, materials guidance, and the full hard-constraints list — lives in the reference file; the orchestrator does not read it.
 
 - **Scope** — paste the `Scope` and `Out of scope` sections from `00-brief.md`.
 - **Hypothesis** — the single question the prototype is built to answer, framed as one sentence (e.g. "does Auth.js's OAuth flow integrate cleanly with our session middleware?").
@@ -240,7 +240,7 @@ The optional time budget exists only to prevent under-using the gap the user is 
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
   - A prototype angle to test a sharp hypothesis surfaced by earlier waves (see *When to spawn a prototype*). Budget-aware: a prototype angle costs ~3–5× a research angle.
-- **Never abort a wave to come in under budget.** If `elapsed >= budget_seconds` mid-run with critique or synthesis subagents in flight, let them finish. It is forbidden to leave the workflow half-done — every dispatched initial angle gets all three of its critiques **and** its synthesis.
+- **Never abort a wave to come in under budget.** If `elapsed >= budget_seconds` mid-run with critique or synthesis subagents in flight, let them finish. It is forbidden to leave the exploration half-done — every dispatched initial angle gets all three of its critiques **and** its synthesis.
 - **Never start a new initial angle after the budget is reached.** Once the loop's clock check fails (after letting in-flight subagents finish), the next step is the final user message — not another wave.
 - **No budget given**: do the 3–5 planned angles plus their critiques and syntheses and stop. Cap at ~6 initial angles total to avoid drift even when generously paced.
 - The orchestrator cannot watch a wall clock — every check is an explicit `date +%s` compared to `started_at` from `.metadata.json`.
@@ -252,7 +252,7 @@ If the user returns mid-run, they can interrupt manually. The folder is already 
 The folder must be useful at every point during the run, not only at the end:
 
 - `.metadata.json`, `00-brief.md`, and `workflow-notes.md` are written before any subagent is dispatched. Interruption between bootstrap and the first dispatch still leaves the framing and an empty journal.
-- `workflow-notes.md` is appended to as decisions are made (Phase 2 angle picks, every Phase 6 clock check). Mid-run interruption leaves the entries that were already written, so the user can still see which decisions had been made up to that point.
+- `workflow-notes.md` is appended to as decisions are made (Step 2 angle picks, every Step 6 clock check). Mid-run interruption leaves the entries that were already written, so the user can still see which decisions had been made up to that point.
 - Each subagent writes its file directly to disk. Mid-run interruption leaves whatever notes have been completed so far — initial angles only, initial + partial critiques, or critiques + partial syntheses.
 - Per-angle synthesis is always the last step for that angle. A missing synthesis file just means the reader falls back to the four source files for that angle; it is still actionable.
 - Prototype angles write `prototype-pointer.md` **before** any dependency installation or codebase copy, so an interrupted prototype still leaves a record of the temp-directory location for the user to inspect manually. A missing `findings.md` for a prototype angle is the same signal as a missing `research.md` for a research angle — the angle didn't finish. The temp directory in `/tmp` is volatile; the angle folder is the durable record.

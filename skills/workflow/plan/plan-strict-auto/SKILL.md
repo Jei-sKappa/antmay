@@ -1,9 +1,9 @@
 ---
 name: plan-strict-auto
-description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan markdown file — numbered tasks each carrying explicit substeps, files-modified, verification, and acceptance criteria — end-to-end with no clarifying questions. Use when you already have the upstream input in hand and want a prescriptive, agent-optimized plan written down autonomously.
+description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan with explicit substeps, files modified, verification, and acceptance criteria when the user wants a prescriptive agent-optimized plan generated autonomously.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Plan Strict Auto

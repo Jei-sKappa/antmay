@@ -1,9 +1,9 @@
 ---
 name: review-spec-interactive
-description: Collaboratively walk a spec artifact one element (or finding) at a time with the user — asking for their view and testing it against the spec — checking all eight semantic-contract elements against the handoff-grade bar, logging each settled finding to a decision log, and dumping only unresolved actionable findings to an inbox-open artifact at the end. Use when you want to think through a spec review together rather than have the agent run it end-to-end autonomously.
+description: Walk a spec artifact one element or finding at a time with the user, testing it against all eight semantic-contract elements and capturing the resolved-vs-unresolved split when the user wants a collaborative spec review.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Review Spec Interactive
@@ -129,22 +129,22 @@ The `review-finding` artifact-type suffix is MANDATORY.
 
 This artifact is written ONLY at the END of the walk, and ONLY if at least one `accepted` / `deferred` / `parked` finding remains. **No Inbox file if nothing remains.** If every finding was settled as `resolved` or `rejected`, no inbox-open dump is written — the decision log is the only artifact, and the closing message states explicitly that no unresolved findings remain. The same rule reads as "no Inbox dump if all findings resolved" or "no Inbox file when nothing remains" — capturing nothing produces nothing.
 
-When written, the inbox-open dump carries ONLY the unresolved actionable findings, in the same six-section findings-first shape used by the autonomous sibling:
+When written, the inbox-open dump carries ONLY the unresolved actionable findings in this six-section findings-first shape:
 
 1. **`## Verdict`** — overall judgment on what remains against the handoff-grade bar (typically `partially ready` or `not ready` if findings remain; the dump itself never carries a `ready` verdict because nothing would land in it in that case).
 2. **`## Findings`** — only the `accepted` / `deferred` / `parked` findings, each carrying its severity tag and element (or category).
 3. **`## Evidence`** — spec section heading or short quote for each finding.
 4. **`## References`** — the spec path under review (absolute path), the decision log path emitted by this same walk (absolute path), and any related decision logs or prior review-findings by absolute path.
 5. **`## Open Questions`** — clarifications worth confirming. Frame as questions, not as gaps to autofill.
-6. **`## Next Actions`** — what to do next for each unresolved finding. Typically: emit a `v<N+1>` spec addressing the findings, open a discussion to settle open questions, or run an adversarial review pass for high-stakes specs (see `## The Fool Delegation`).
+6. **`## Next Actions`** — what to do next for each unresolved finding. Typically: emit a `v<N+1>` spec addressing the findings, open a discussion to settle open questions, or run a separate adversarial review pass for high-stakes specs.
 
 Resolved and rejected findings are NOT repeated in the inbox-open dump — they are already settled in the decision log and require no further triage.
 
-## The Fool Delegation
+## Adversarial Review
 
-Adversarial pressure on a spec — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is DELEGATED to a dedicated adversarial-review skill. This skill does NOT perform an adversarial pass during the walk.
+Adversarial pressure on a spec — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is outside this walk. This skill does NOT perform an adversarial pass during the walk.
 
-If during the walk the user wants to surface adversarial findings beyond the handoff-grade-bar pass, the skill MAY suggest running an adversarial review as a separate invocation after the walk closes. Cite any resulting adversarial-review artifact under `## References` in a subsequent review run if the user wants those findings folded into a future review-finding artifact.
+If during the walk the user wants to surface adversarial findings beyond the handoff-grade-bar pass, suggest handling that as a separate review pass after the walk closes. Cite any resulting adversarial-review artifact under `## References` in a subsequent review run if the user wants those findings folded into a future review-finding artifact.
 
 This skill does NOT reimplement adversarial-review logic and does NOT mark a spec as "fully reviewed" just because the walk produced settlements. A spec that has had a review pass but not an adversarial pass is still missing that layer — flag it in `## Next Actions` if the spec is high-stakes enough to warrant it.
 
@@ -180,7 +180,7 @@ If the user pauses mid-walk after at least one settlement has landed, the partia
 
 ## Scope Drift
 
-When the user introduces a branch that is outside the spec-review walk — a finding about a different spec, a tangent about the workflow itself, a refactor idea unrelated to the spec's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
+When the user introduces a branch that is outside the spec-review walk — a finding about a different spec, a tangent about the process being used, a refactor idea unrelated to the spec's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
 1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this review's decision log.
 2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it.

@@ -1,9 +1,9 @@
 ---
 name: adjust-plan-granularity-auto
-description: Adjust an existing plan to a new granularity level (looser, stricter, more-implementation-ready, more-high-level, or a specific free-form shift like "split task 3 into substeps") and emit a new versioned plan file autonomously — without clarifying questions. Use when you already have a plan but the granularity is wrong for the intended implementer and you want the adjusted version written down without walking through it task-by-task.
+description: Adjust an existing plan to a new granularity level and emit a new versioned plan file autonomously when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Adjust Plan Granularity Auto
@@ -19,10 +19,10 @@ This skill requires TWO inputs. Both are mandatory; the skill refuses to draft a
 2. **Target instruction** — what shift to apply to the source plan. One of two forms:
 
    - **Coarse direction.** One of four named directions:
-     - `looser` → fewer tasks, higher-level objective sentences, less prescriptive substeps. Collapses adjacent fine-grained tasks into broader ones; trims per-task fields toward the loose body shape (objective sentence + observable verification sentence, 1–3 sentences per task). Use when the downstream implementer is human-leaning and the existing plan over-specifies what they would infer anyway.
-     - `stricter` → more substeps per task, explicit verification per task, files-modified per task, acceptance criteria per task. Expands the body toward the strict six-field per-task shape (objective / input / steps / files-modified / verification / acceptance). Use when the downstream implementer is agent-leaning and the existing plan leaves too much to inference.
-     - `more-implementation-ready` → fills in concrete files-modified, mechanical verification commands, observable acceptance criteria where the source plan only described the intent. Adjacent to `stricter` but emphasizes the implementer's executable contract rather than substep count. Use when the source plan was authored before the implementation surface was known and you now have the file paths and verification harness in hand.
-     - `more-high-level` → collapses substeps into objectives, removes per-task fields, removes verification detail. Adjacent to `looser` but emphasizes "what" over "how". Use when handing the plan up to a reviewer, a sponsor, or a planning conversation that does not need the substep block.
+     - `looser` → fewer tasks, higher-level objective sentences, less prescriptive substeps. Collapses adjacent fine-grained tasks into broader ones; trims per-task fields toward the loose body shape (objective sentence + observable verification sentence, 1–3 sentences per task). This target fits a human-leaning downstream implementer when the existing plan over-specifies what they would infer anyway.
+     - `stricter` → more substeps per task, explicit verification per task, files-modified per task, acceptance criteria per task. Expands the body toward the strict six-field per-task shape (objective / input / steps / files-modified / verification / acceptance). This target fits an agent-leaning downstream implementer when the existing plan leaves too much to inference.
+     - `more-implementation-ready` → fills in concrete files-modified, mechanical verification commands, observable acceptance criteria where the source plan only described the intent. Adjacent to `stricter` but emphasizes the implementer's executable contract rather than substep count. This target fits a source plan authored before the implementation surface was known, after file paths and verification harness are now available.
+     - `more-high-level` → collapses substeps into objectives, removes per-task fields, removes verification detail. Adjacent to `looser` but emphasizes "what" over "how". This target fits handoff to a reviewer, sponsor, or planning conversation that does not need the substep block.
 
    - **Specific phrase.** Free-form natural-language instruction targeting a specific shift the four named directions do not cover. Examples: `split task 3 into substeps`, `merge task 5 and 6`, `add verification to all tasks`, `remove acceptance criteria detail`, `tighten just task 2`, `surface the implicit prerequisite in task 4`. The agent interprets the degree of the shift naturally — there is no fixed list of transformations. The agent MUST apply the requested shift while still honoring every plan contract (`## Plan Artifact Contract` below); a specific-phrase instruction that would violate the sequential-isolated-independent contract or the no-parallelization prohibition is REFUSED, not silently followed.
 

@@ -1,9 +1,9 @@
 ---
 name: brief-the-implementer
-description: Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Use when the user wants the conclusion of the current discussion packaged as a paste-ready handoff for a separate context — a fresh AI session, a follow-up task, or a teammate catching up.
+description: Draft a self-contained outcome briefing — verdict, rationale, caveats, and pointers — when the user wants the conclusion of the current discussion packaged as a paste-ready handoff for a fresh AI session, follow-up task, or teammate.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.1
+  version: 1.4.2
 ---
 
 # Brief the Implementer
@@ -41,7 +41,7 @@ The output is a markdown document with explicit headings. Use the section names 
 - Keep `Why` proportional to the surprise of the verdict. An obvious answer needs one line of justification; a counterintuitive one needs the full reasoning chain.
 - Be honest about caveats. If the verdict only holds under specific conditions, say so. If a discarded alternative had a real argument going for it, flag it. The recipient should be able to sanity-check the conclusion, not take it on faith.
 - Pointers are leads, not orders. Surface what the implementer should weigh — open questions, options worth considering, gotchas to watch for — but leave the actual "how" decisions to the next session. "Worth checking whether the migration can run online" beats "run the migration on staging first." The implementer needs the inputs to plan, not a plan baked in this session that may be poorly thought out.
-- If the user passed an argument when invoking the skill, treat it as the focus the implementer cares about and weight `Pointers` and `Worth knowing` toward that focus. The other sections stay structured the same way.
+- If the user passed an argument, treat it as the focus the implementer cares about and weight `Pointers` and `Worth knowing` toward that focus. The other sections stay structured the same way.
 
 ## Output format
 
@@ -53,7 +53,7 @@ The output is a markdown document with explicit headings. Use the section names 
 
 ## Workflow
 
-1. Identify the conclusion the current session has reached and the question it was answering. If the user passed an argument when invoking the skill, treat it as the focus the implementer will be acting on, and weight the briefing accordingly.
+1. Identify the conclusion the current session has reached and the question it was answering. If the user passed an argument, treat it as the focus the implementer will be acting on, and weight the briefing accordingly.
 2. Draft the briefing following the structure and guidelines above.
 3. Output the drafted briefing directly in chat. The response IS the deliverable — no preamble, no closing remark.
 

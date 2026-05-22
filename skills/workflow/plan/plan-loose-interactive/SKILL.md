@@ -1,9 +1,9 @@
 ---
 name: plan-loose-interactive
-description: Walk the user through a loose-granularity plan collaboratively — one task at a time, pushing back on weak reasoning — then write the resulting plan artifact to the active thread's plans/ folder. Use when the user wants to think the plan through together with the agent rather than have it generated autonomously, and when the downstream implementer is human-leaning and trusted to fill in implementation details.
+description: Walk the user through a loose-granularity plan one task at a time, then write the resulting plan artifact when the user wants to think through a human-leaning implementation plan collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Plan Loose Interactive
@@ -29,7 +29,7 @@ If you believe the user is about to commit a task into the plan that is wrong, r
 
 ## Inputs
 
-`plan-loose-interactive` accepts ONE of the following four input forms as the starting point of the walk. Detect which form was passed before opening the conversation:
+Accept ONE of the following four input forms as the starting point of the walk. Detect which form was passed before opening the conversation:
 
 1. **A spec artifact path** under `docs/threads/<thread>/specs/<UTC>-v<N>-spec.md`. The spec is the most common upstream input — its semantic-contract elements (intended outcome, expected behavior, constraints, acceptance guidance) drive the plan's task list directly.
 2. **A proposal artifact path** under `docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md`. When the input is a proposal rather than a spec, the walk elaborates the proposal's rough shape into an implementable sequence; the proposal's open questions are items the walk either resolves or surfaces in the plan.

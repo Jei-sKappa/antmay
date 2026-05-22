@@ -1,9 +1,9 @@
 ---
 name: merge-artifacts-auto
-description: Reconcile two or more artifacts (proposals, specs, plans, discussions, or inbox items) into one merged artifact at the next mainline version, folding non-conflicting content automatically and preserving unresolvable subjective conflicts via HTML-comment markers — end-to-end with no clarifying questions and no decision log. Use when you already know which artifacts to reconcile and want the merge done autonomously.
+description: Reconcile two or more artifacts into one merged artifact at the next mainline version, folding non-conflicting content automatically and preserving unresolvable subjective conflicts via HTML-comment markers when the user wants an autonomous merge.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Merge Artifacts Auto
@@ -109,7 +109,7 @@ The marker MUST NOT be silently dropped. Explicit preservation is the contract: 
 
 This skill writes NO decision log. The merged artifact itself is the only output. There is no separate `<UTC>-<kebab-desc>-decision-log.md` companion file, no `discussions/` write, no per-conflict record. The autonomous merge is a pure generator: it reads inputs and writes one output.
 
-An interactive variant of this merge skill DOES write a decision log capturing user resolutions — that is by design, because interactive merge interactions ARE the durable trade-offs the log preserves. Auto merge has no user-resolution events to log; preserving conflicts via the marker is the auto-merge equivalent.
+An interactive merge DOES write a decision log capturing user resolutions — that is by design, because interactive merge interactions ARE the durable trade-offs the log preserves. Auto merge has no user-resolution events to log; preserving conflicts via the marker is the auto-merge equivalent.
 
 ## Workflow
 

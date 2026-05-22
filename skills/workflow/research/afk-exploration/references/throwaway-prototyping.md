@@ -1,6 +1,6 @@
 # Throwaway Prototyping
 
-> Used by `afk-exploration` for unattended construction of disposable prototypes that exercise a hypothesis in actual code. The prototyper subagent reads this file; the orchestrator does not.
+> Method reference for unattended construction of disposable prototypes that exercise a hypothesis in actual code. The prototyper subagent reads this file; the orchestrator does not.
 
 Throwaway prototyping methodology for building an isolated, disposable codebase that teaches something a research note can't.
 

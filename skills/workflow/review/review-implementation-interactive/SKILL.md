@@ -1,9 +1,9 @@
 ---
 name: review-implementation-interactive
-description: Collaboratively walk an implementation (git ref, diff, or commit range) against the source artifact it was supposed to deliver (spec, proposal, plan, GitHub issue, or inbox item), checking fidelity one finding at a time with the user, settling each finding interactively, and producing a decision log plus a conditional inbox dump of unresolved findings. Use when you want to think the implementation review through collaboratively with the agent and have the resolved-vs-unresolved split captured for you.
+description: Walk an implementation reference against its source artifact one finding at a time and capture the resolved-vs-unresolved split when the user wants implementation fidelity reviewed collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Review Implementation Interactive
@@ -29,7 +29,7 @@ If you believe a finding is being dismissed without real reason, refuse to log i
 
 ## Verification Role
 
-**This skill covers verification of implementations — there is no separate `verify-*` skill.** A user looking for a "verify the implementation" skill should land here (or run the autonomous variant of this same review). The verification question — "does the code that was just written do what the source artifact promised it would do?" — is the same question implementation-review answers. Splitting it into a separate verify skill would duplicate logic and confuse users about which skill to invoke.
+**This skill covers verification of implementations.** The verification question — "does the code that was just written do what the source artifact promised it would do?" — is the same question this review answers, so do not split verification into a separate concept during the walk.
 
 This is the distinguishing trait of the implementation target relative to other review targets: the input shape is different — the implementation is a code diff / commit range / git ref rather than a markdown artifact — but the review question is still "does the input deliver what the source artifact promised?". The source-artifact requirement is what keeps the walk tethered to the original intent and what makes the verification claim coherent: a code walk without the source artifact is general-purpose code review territory, not this skill's.
 
@@ -118,7 +118,7 @@ When the source artifact is a plan, the review additionally checks:
 - **Per-plan-task commit cadence** — each plan task should have a corresponding commit. A commit-range lumping multiple plan tasks into one commit is an `issue`. A plan task split across multiple commits is also an `issue`. When the source artifact is a less-structured input (not a formal plan), this check does NOT apply.
 - **Four-state status alignment** — each task report should carry one of `DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`. The walk can read those reports (typically from chat output of the implementation session or from commit message bodies) and check that the status matches the diff state. A task reported `DONE` whose diff is incomplete is an `issue` or `blocker`. A task reported `DONE_WITH_CONCERNS` whose concerns are not surfaced in the commit message body is an `issue`. A task reported `BLOCKED` whose subsequent tasks have commits is a `blocker`.
 
-This skill does NOT promise general-purpose code review independent of source artifacts. If the user wants source-independent code review (style, idioms, safety, testability beyond what the source acceptance named, regression risk), point at a general-purpose code review skill under `## Next Actions` rather than performing the heavier check inline.
+This skill does NOT promise general-purpose code review independent of source artifacts. If the user wants source-independent code review (style, idioms, safety, testability beyond what the source acceptance named, regression risk), point at a separate general-purpose code review under `## Next Actions` rather than performing the heavier check inline.
 
 ## Walk Format
 
@@ -198,7 +198,7 @@ Resolved and rejected findings are NOT repeated in the inbox-open dump — they 
 
 2. **Resolve the implementation reference.** Detect the implementation reference from the user's invocation (git ref / commit range / branch / saved diff path / inline diff body). If the reference is unsupplied, vague, or matches multiple plausible candidates, ASK the user which is intended. Do not pick by recency or by ref order.
 
-3. **Resolve the source artifact.** Detect the source-artifact path from the user's invocation. The five accepted forms are listed under `## Inputs`. If the source artifact is unsupplied, vague, or matches multiple plausible candidates, ASK the user which is intended. Do not pick by recency. The source artifact is MANDATORY — without it, the fidelity axes have nothing to check against, and the user should be directed to a general-purpose code review skill instead.
+3. **Resolve the source artifact.** Detect the source-artifact path from the user's request. The five accepted forms are listed under `## Inputs`. If the source artifact is unsupplied, vague, or matches multiple plausible candidates, ASK the user which is intended. Do not pick by recency. The source artifact is MANDATORY — without it, the fidelity axes have nothing to check against, and the user should be directed to a general-purpose code review instead.
 
 4. **Read the source artifact READ-ONLY.** Emitted source artifacts are immutable — this skill reads the source but does NOT edit it, does NOT rewrite it, does NOT add frontmatter, and does NOT propose edits to the source body during the walk.
 
@@ -231,7 +231,7 @@ If the user pauses mid-walk after at least one settlement has landed, the partia
 When the user introduces a branch that is outside the implementation-review walk — a finding about a different implementation, a critique of the upstream spec, a general code-quality observation that doesn't trace to a source-artifact promise — do not silently follow them. Propose ONE of:
 
 1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this review's decision log.
-2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it. If the branch is "the upstream spec has the same problem", recommend invoking an upstream spec review skill against the source artifact in a separate session. If the branch is "this code has quality issues independent of the source", recommend invoking a general-purpose code review skill instead.
+2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it. If the branch is "the upstream spec has the same problem", recommend reviewing the source artifact in a separate session. If the branch is "this code has quality issues independent of the source", recommend a general-purpose code review instead.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
 ASK the user which. Do not pick silently.
@@ -242,7 +242,7 @@ This skill NEVER auto-commits any emitted artifact — neither the decision log 
 
 The same prohibition applies to any draft material under `docs/threads/<thread>/.wip/` — drafts are editable during the session but are never committed by this skill.
 
-This skill ALSO does not modify the implementation under review. Code modifications are an implement skill's job. If the walk surfaces findings that require code changes, surface them in `## Next Actions` of the inbox-open dump (when written) or note them in the decision log with a pointer to an appropriate implement skill — let the surrounding session invoke the implement skill separately on a fresh invocation.
+This skill ALSO does not modify the implementation under review. Code modifications belong in a separate implementation pass. If the walk surfaces findings that require code changes, surface them in `## Next Actions` of the inbox-open dump (when written) or note them in the decision log with a pointer to the needed implementation work — let the surrounding session handle implementation separately on a fresh run.
 
 ## Immutability
 
@@ -250,8 +250,8 @@ Emitted decision logs are append-only. Once a `## D<N>` record has been written,
 
 Emitted review-finding artifacts (the conditional inbox-open dump) are also immutable. Once written into `inbox/open/`, the review-finding is part of the thread's reviewable history and is NOT edited. A revision to a review-finding is a NEW review-finding record (new UTC stamp, new kebab-desc), not an in-place edit.
 
-The source artifact under review is ALSO IMMUTABLE. The reviewer reads READ-ONLY and does NOT edit the source. Findings that warrant revisions to the source artifact (e.g., source ambiguity that the implementation could not have resolved without inventing details) are surfaced under `## Next Actions` in the inbox-open dump (or noted in the decision log) with the explicit recommendation to re-review the upstream artifact and emit a new versioned source via the appropriate authoring skill — never an instruction to edit the existing source in place.
+The source artifact under review is ALSO IMMUTABLE. The reviewer reads READ-ONLY and does NOT edit the source. Findings that warrant revisions to the source artifact (e.g., source ambiguity that the implementation could not have resolved without inventing details) are surfaced under `## Next Actions` in the inbox-open dump (or noted in the decision log) with the explicit recommendation to re-review the upstream artifact and emit a new versioned source through a separate authoring pass — never an instruction to edit the existing source in place.
 
-The implementation reference (the diff / git ref / commit range) is ALSO READ-ONLY for this skill. This skill does NOT modify source code, does NOT check out branches, does NOT mutate git state, and does NOT run tests. Code modifications are an implement skill's job; this skill's role is review only.
+The implementation reference (the diff / git ref / commit range) is ALSO READ-ONLY for this skill. This skill does NOT modify source code, does NOT check out branches, does NOT mutate git state, and does NOT run tests. Code modifications belong in a separate implementation pass; this skill's role is review only.
 
 No source-relation YAML frontmatter is added to any emitted artifact — lineage between the decision log, the review-finding dump, the implementation reference, and the source artifact lives in the `## References` section (by absolute path for the source artifact, by commit SHA / range / branch name with repo identifier for the implementation), not in metadata on the files. That history is recovered from the body's references, not from the filename.

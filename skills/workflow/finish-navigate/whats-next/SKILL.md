@@ -1,9 +1,9 @@
 ---
 name: whats-next
-description: Inspect the active thread's artifacts and recent commits, then suggest 2–4 coherent next actions in chat. Use when you want to figure out what to do next — you just finished a phase, you have open inbox items you're unsure about, the thread feels stuck, or you simply want a quick map of where you are.
+description: Inspect the active thread's artifacts and recent commits, then suggest 2–4 coherent next actions when the user wants a quick map after completing work, hitting uncertainty, finding open inbox items, or getting stuck.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # What's Next
@@ -37,7 +37,7 @@ This skill accepts an OPTIONAL hint from the user as input. Examples:
 - "I have an open inbox item — should I address it?"
 - "Thread feels stuck — what should I look at?"
 - "Where are we?"
-- (no input — the user invokes the skill without a hint)
+- (no input — the user starts without a hint)
 
 The hint shapes the advisory framing but does NOT replace the thread-context pass. If no hint is provided, run the default thread-context pass and suggest 2–4 next actions tied to the observable thread state.
 
@@ -60,7 +60,7 @@ The skill inspects:
    - `discussions/` — emitted discussion and decision-log artifacts.
    - `inbox/open/` — open inbox items and review-finding records still awaiting triage.
 
-   Enumerate non-empty folders by artifact count. Folder presence and artifact counts are the primary signal — they indicate which phases of the workflow have been completed and which remain.
+   Enumerate non-empty folders by artifact count. Folder presence and artifact counts are the primary signal — they indicate which kinds of durable work have already been completed and which kinds may still be missing.
 
 3. **Recent commits on the current branch.** Suggested invocation: `git log --oneline -5` (or `-10`; the cap is at executor discretion — the purpose is signal, not audit). The commit history is the implementation audit trail; recent commits tell the skill whether implementation work has landed since the last artifact in `plans/` was emitted.
 
@@ -72,13 +72,13 @@ The skill's PRIMARY output is a CHAT reply with 2–4 suggested next actions:
 
 - The chat reply IS the deliverable.
 - The skill NEVER writes an artifact by default. The 2–4 suggestions stay in the chat — no file is written, no decision log appended, no inbox item captured. The default is zero file writes.
-- Each suggestion SHOULD name the workflow action that would execute it (e.g., "draft the plan", "run a spec review", "merge the two competing artifacts", "capture this as an inbox item"). Naming the action gives the user a concrete handle on what to do next.
+- Each suggestion SHOULD name the action that would execute it (e.g., "draft the plan", "run a spec review", "merge the two competing artifacts", "capture this as an inbox item"). Naming the action gives the user a concrete handle on what to do next.
 - The chat answer is FREEFORM markdown — no rigid template, no required sections, no fixed length. The suggestion count cap is 2–4 to keep the advisory pass narrow and decision-shaped; suggesting 10 next actions defeats the purpose.
 
 Each suggestion follows a loose shape (executor discretion on prose; the substance is what matters):
 
 - A one-sentence statement of the suggested action, tied to an observable thread signal (NOT speculative; NOT "you could do X" in the abstract — "you have an emitted spec at <path> and no plan yet — consider drafting the plan").
-- The workflow action that would execute it.
+- The action that would execute it.
 - A one-clause justification — what in the thread context supports this suggestion.
 
 Example chat suggestions (illustrative — the skill produces NEW suggestions tied to the actual thread state inspected, not these examples):

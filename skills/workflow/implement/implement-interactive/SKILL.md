@@ -1,9 +1,9 @@
 ---
 name: implement-interactive
-description: Take a less-structured input (spec, proposal, decision log, GitHub issue, inbox item, code context, or raw prompt) and implement it on the current working tree collaboratively — walking the implicit task list with the user, pushing back per an anti-sycophancy stance, self-reviewing after each implicit task, and asking the user before each commit. Use when you want to think the implementation through with the agent and have it ask before each commit lands, rather than autonomous end-to-end execution.
+description: Implement a less-structured input on the current working tree collaboratively, walking implicit tasks with the user, self-reviewing after each task, and asking before each commit when the user wants implementation decisions kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Implement Interactive
@@ -112,7 +112,7 @@ Commits use the project's conventional-commit shape where applicable; follow the
 
 **If a commit fails, report `BLOCKED` and stop. Do not retry the commit without explicit user instruction.** Failed-commit handling is to surface the error in the four-state task report (status: `BLOCKED`, notes describing the failure mode, next: "user instruction needed to resolve commit failure"), then stop the entire run. Subsequent implicit tasks are NOT attempted. Do not retry the commit, do not stash and retry, do not bypass git hooks, do not work around the failure by changing strategy mid-run.
 
-A failed commit is typically a project signal — a pre-commit hook failed, a lint check failed, a test failed, a commit-message linter rejected the subject. Each of those is the project telling the implementer to stop and let the user diagnose. `BLOCKED` is the correct response, even in the interactive variant — the user can choose to resolve the underlying issue and re-invoke the skill, but this skill does not iterate on a failed commit autonomously inside the same run.
+A failed commit is typically a project signal — a pre-commit hook failed, a lint check failed, a test failed, a commit-message linter rejected the subject. Each of those is the project telling the implementer to stop and let the user diagnose. `BLOCKED` is the correct response in this interactive run — the user can choose to resolve the underlying issue and start a fresh run, but this skill does not iterate on a failed commit autonomously inside the same run.
 
 ### No history rewriting
 
@@ -125,7 +125,7 @@ The rationale ties back to the `## Anti-Sycophancy Stance`: bad commits become e
 - **Follow the input or the implicit task list derived from it.** The input is the contract; the implicit task list is the implementer's interpretation, refined through the walk.
 - **Use judgment when warranted.** If the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, surface the deviation LIVE to the user before applying it — push back per the `## Anti-Sycophancy Stance`. Get the user's call before writing code that deviates from the literal input.
 - **Surface deviations in the task report.** Every deviation also goes into the four-state status block at task end. Minor deviations are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations the user signed off on during the walk are also `DONE_WITH_CONCERNS` with a note that the user explicitly agreed. Major deviations the implementer flagged but did not resolve are `NEEDS_CONTEXT`.
-- **The walk is the live push-back channel.** Unlike a non-interactive variant, this skill has the user in-loop for every implicit task. Use the walk to raise deviations early, not just at task end. Pre-commit ASK is the second checkpoint where the user has the chance to reject.
+- **The walk is the live push-back channel.** This skill has the user in-loop for every implicit task. Use the walk to raise deviations early, not just at task end. Pre-commit ASK is the second checkpoint where the user has the chance to reject.
 
 ## Decision Log
 
@@ -149,7 +149,7 @@ ASK the user which. Do not pick silently.
 
 Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. Specs, proposals, decision logs, inbox items, plan artifacts the user may pass through, and any other workflow artifact under a thread directory is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not for any reason.
 
-If during the walk the user proposes editing the input in place (e.g., "fix the typo in the spec while you're at it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised input is a new version (a new spec `v2`, a new inbox item, a new decision log record). The implementer does not perform that revision inside this skill's run.
+If during the walk the user proposes editing the input in place (e.g., "fix the typo in the spec while you're at it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised input is a new version (a new spec `v2`, a new inbox item, a new decision log record). The implementer does not perform that revision inside this run.
 
 What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also MAY (a) create a new inbox item if a scope-drift branch surfaces and the user picks "park", (b) move an inbox item that was itself the input from its open location to a processed location as part of completion, and (c) write a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold.
 

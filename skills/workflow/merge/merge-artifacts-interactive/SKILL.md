@@ -1,9 +1,9 @@
 ---
 name: merge-artifacts-interactive
-description: Reconcile two or more workflow artifacts into one merged artifact by walking each subjective conflict one at a time with the user, capturing every resolution in a mandatory decision log — use when you want to walk merge conflicts interactively rather than having conflicts preserved inline automatically.
+description: Reconcile two or more artifacts into one merged artifact by walking each subjective conflict with the user and capturing each resolution in a mandatory decision log when the user wants an interactive merge.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Merge Artifacts Interactive

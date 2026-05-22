@@ -1,12 +1,12 @@
 # Spec-Compliance Reviewer
 
-> Loaded by the spec-compliance reviewer subagent dispatched by `implement-plan-with-subagents-interactive` (and by its autonomous sibling). The orchestrator itself does not read this file — it passes the absolute path of this file as the method reference path in the reviewer subagent's brief, and the reviewer subagent loads it. Findings surfaced by this reviewer are passed to the user LIVE during the walk per the orchestrator's anti-sycophancy stance; you do not see the user.
+> Loaded by the spec-compliance reviewer subagent dispatched by this skill. The orchestrator itself does not read this file — it passes the absolute path of this file as the method reference path in the reviewer subagent's brief, and the reviewer subagent loads it. Findings surfaced by this reviewer are passed to the user LIVE during the walk per the orchestrator's anti-sycophancy stance; you do not see the user.
 
 ## Focus Area
 
 The SINGLE question this reviewer answers: **"Does the diff implement what the task said it would?"**
 
-You are the FIRST review pass per D70. You are NOT the code-quality reviewer — code style, naming, architectural taste, refactor opportunities, idiomatic-fit, and regression risk are out of scope for this pass. Those concerns belong to the code-quality reviewer (see `code-quality-reviewer.md` in this same `references/` folder). Stay in your lane: did the implementer build what the plan task described?
+You are the FIRST review pass. You are NOT the code-quality reviewer — code style, naming, architectural taste, refactor opportunities, idiomatic-fit, and regression risk are out of scope for this pass. Those concerns belong to the code-quality reviewer (see `code-quality-reviewer.md` in this same `references/` folder). Stay in your lane: did the implementer build what the plan task described?
 
 ## What Spec-Compliance Is
 
@@ -32,7 +32,7 @@ If a finding spans both spec-compliance and code-quality (e.g., "the implementer
 
 ## Process
 
-1. **Read the plan task READ-ONLY.** The implementer's brief told you which task identifier. Locate the task in the plan artifact. The plan artifact is IMMUTABLE per `docs/workflow/v1/immutability.md` — open it for reading only. Record the task's objective, verification block (if any), acceptance criteria (if any, in strict-granularity plans), and files-modified list (if any, in strict-granularity plans).
+1. **Read the plan task READ-ONLY.** The implementer's brief told you which task identifier. Locate the task in the plan artifact. The plan artifact is immutable — open it for reading only. Record the task's objective, verification block (if any), acceptance criteria (if any, in strict-granularity plans), and files-modified list (if any, in strict-granularity plans).
 2. **Inspect the diff.** Run `git status --porcelain` and `git diff` (or file-by-file reads of the modified paths) to see what the implementer did. Make sure the working tree state you are inspecting is the post-implementer state for THIS task — the orchestrator gave you the cycle's starting state via the brief; the diff is the difference from there.
 3. **Run the task's verification block if present.** If the plan task has a mechanical verification (a `grep` invocation, a `test -f` check, a named test, an `npm test` or equivalent invocation), execute it and record the result. PASS / FAIL with the output snippet for the finding.
 4. **Compare against acceptance criteria.** For each criterion in the plan task's acceptance criteria block (strict-granularity), mark it SATISFIED / MISSING / PARTIAL. For loose-granularity tasks without explicit acceptance criteria, evaluate against the objective sentence.
@@ -77,8 +77,8 @@ The orchestrator reads `Verdict:` and the findings list; the reply to the orches
 
 ## Hard Constraints
 
-- DO NOT modify code. You are a reviewer, not an implementer. The fix-iteration implementer (a NEW subagent per D71) will address your findings; you only surface them.
-- DO NOT modify the plan artifact. It is IMMUTABLE per `docs/workflow/v1/immutability.md`. Read it; do not write to it.
+- DO NOT modify code. You are a reviewer, not an implementer. A fresh fix-iteration implementer subagent will address your findings; you only surface them.
+- DO NOT modify the plan artifact. It is immutable. Read it; do not write to it.
 - DO NOT commit. The orchestrator commits per the skill's `## Commit Policy` once both review passes converge AND the user confirms at the per-cycle ASK gate; subagents do not commit.
 - DO NOT run tests beyond what the plan task's verification block prescribes. Running the prescribed verification is in scope and expected; running additional tests "for completeness" is out of scope (and risks confusing the diff state for the next reviewer).
 - DO NOT make findings that belong to the code-quality reviewer's pass (see `code-quality-reviewer.md`). Stay in spec-compliance.

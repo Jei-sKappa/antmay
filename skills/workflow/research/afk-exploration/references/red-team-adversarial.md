@@ -1,12 +1,12 @@
 # Red Team Adversarial
 
-> Adapted from the [`the-fool`](https://github.com/Jeffallan) skill (MIT). Used here for unattended critique of `afk-exploration` research notes.
+> Method reference for unattended critique of research notes.
 
 Adversarial thinking and red teaming for finding weaknesses before adversaries do.
 
 ## Core Principle
 
-Red teaming asks: **"If someone wanted to break, exploit, or game this, how would they do it?"** The Fool adopts the mindset of an adversary — not to cause harm, but to find vulnerabilities before real adversaries do. This applies beyond security: competitors, disgruntled users, perverse incentives, and regulatory challenges are all adversarial forces.
+Red teaming asks: **"If someone wanted to break, exploit, or game this, how would they do it?"** It adopts the mindset of an adversary — not to cause harm, but to find vulnerabilities before real adversaries do. This applies beyond security: competitors, disgruntled users, perverse incentives, and regulatory challenges are all adversarial forces.
 
 ## Process
 

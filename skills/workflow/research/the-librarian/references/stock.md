@@ -17,7 +17,7 @@ Clone the repo(s) the user mentions, record where they landed, report the paths,
    ```
    # INDEX.md
 
-   Each project is cloned into a sibling folder named `<owner>_<repo>/`.
+   Each project is cloned into a peer folder named `<owner>_<repo>/`.
 
    Library:
    - <owner>/<repo>: <short description>

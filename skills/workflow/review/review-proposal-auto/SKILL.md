@@ -1,9 +1,9 @@
 ---
 name: review-proposal-auto
-description: Read a proposal artifact and write a findings-first review report (gaps, risks, ambiguities) to the active thread's inbox — end-to-end, no clarifying questions, no per-finding walk. Use when you want a lightweight autonomous review of a proposal.
+description: Read a proposal artifact and write a findings-first report covering gaps, risks, and ambiguities when the user wants a lightweight autonomous proposal review.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Review Proposal Auto
@@ -39,7 +39,7 @@ The emitted review artifact is ONE record per review run, organized findings-fir
 3. **`## Evidence`** — for each finding above, cite the proposal section heading or a short quote (≤ one sentence). Reference, do not recite — quoting the proposal back to the author is noise. Cite by section heading where possible.
 4. **`## References`** — list every artifact the review reads or depends on: the proposal path being reviewed (absolute path), any related decision logs by absolute path, and any prior review-findings on the same proposal (also by absolute path). If a referenced decision log carries a settled decision that the proposal contradicts or ignores, that contradiction is one of the findings above and the reference here is what backs it.
 5. **`## Open Questions`** — clarifications worth confirming with the proposal author or downstream reader. Frame as questions, not as gaps to autofill. If a question can only be answered by the author, say so. If a question would normally surface in a subsequent spec or discussion, say that too — and recommend the downstream phase that should pick it up.
-6. **`## Next Actions`** — what to do next given the verdict and findings. Typical actions: re-version the proposal as a new record (an emitted proposal is immutable; revision means a new artifact with a new UTC-stamped filename), open a discussion to settle a specific finding, escalate the proposal to spec once findings are addressed, or invoke an adversarial-reasoning pass for additional pressure on a specific risk surface. One action per finding cluster; do not pad.
+6. **`## Next Actions`** — what to do next given the verdict and findings. Typical actions: re-version the proposal as a new record (an emitted proposal is immutable; revision means a new artifact with a new UTC-stamped filename), open a discussion to settle a specific finding, escalate the proposal to spec once findings are addressed, or run an adversarial-reasoning pass for additional pressure on a specific risk surface. One action per finding cluster; do not pad.
 
 The six section headings are the standard for the findings-first report shape. Skip a section entirely rather than padding it — if `Open Questions` has nothing real to add, drop the heading. Do NOT collapse two sections into one; the explicit separation lets a downstream reader scan each layer independently.
 
@@ -71,7 +71,7 @@ The artifact lives in `inbox/open/` rather than a `reviews/` folder. Review find
 
 ## Adversarial Review Delegation
 
-Adversarial pressure on a proposal — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is NOT performed by this skill. If the user wants an adversarial review of a proposal in addition to (or instead of) the standard gaps/risks/ambiguities pass, invoke an adversarial reasoning pass (e.g. a tool specialized in structured critical reasoning) separately against the proposal. If that adversarial pass produces a deliverable, cite it under `## References` in a subsequent review-finding run if the user wants the adversarial findings folded into the standard report.
+Adversarial pressure on a proposal — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is NOT performed by this skill. If the user wants an adversarial review of a proposal in addition to (or instead of) the standard gaps/risks/ambiguities pass, run a separate adversarial reasoning pass against the proposal. If that adversarial pass produces a deliverable, cite it under `## References` in a subsequent review-finding run if the user wants the adversarial findings folded into the standard report.
 
 This skill does NOT reimplement adversarial logic and does NOT mark a proposal as "fully reviewed" just because the standard pass produced findings. A proposal that has had a review-proposal pass but not an adversarial pass is still missing the adversarial layer — flag that in `## Next Actions` if the proposal is high-stakes enough to warrant it.
 

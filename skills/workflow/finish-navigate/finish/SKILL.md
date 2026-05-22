@@ -1,14 +1,14 @@
 ---
 name: finish
-description: Close a workflow thread by running a lightweight thread check (final artifacts present, open inbox items, recent commits, unresolved concerns) and asking the user one of four closure options — merge into main, merge into other branch, create PR, or leave as is — confirming each git command before execution. Use when implementation is complete or the thread is in a stop-and-decide state.
+description: Close a thread by checking final artifacts, open inbox items, recent commits, and unresolved concerns, then asking the user whether to merge into main, merge into another branch, create a PR, or leave the branch as-is when the work is complete or needs a stop-and-decide closure.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Finish
 
-Close a workflow thread by running a lightweight 4-item thread check, surfacing the inspection results to the user, and ASKING the closure question with four enumerated options — `merge into main` / `merge into other branch` / `create PR` / `leave as is`. On the user's choice, execute the corresponding flow with explicit per-command confirmation. NEVER force-push, NEVER rewrite history.
+Close a thread by running a lightweight 4-item thread check, surfacing the inspection results to the user, and ASKING the closure question with four enumerated options — `merge into main` / `merge into other branch` / `create PR` / `leave as is`. On the user's choice, execute the corresponding flow with explicit per-command confirmation. NEVER force-push, NEVER rewrite history.
 
 Branch disposition is inherently user-directed. The closure question requires a human choice — there is no autonomous default that would be safe across users (some prefer PR-only flows; others merge locally and push), across repos (some have protected `main` branches that reject direct merges; others do not), or across branch contexts (a long-lived feature branch with multiple collaborators is not the same as a single-author sandbox). Picking silently would hide a real decision behind a heuristic, and the cheapest way to surface that decision is to ASK every time.
 
@@ -149,7 +149,7 @@ This skill NEVER force-pushes and NEVER rewrites history. Forbidden constructs �
 
 The history this skill produces is append-only: merges and pushes add commits; the skill does NOT modify, amend, rebase, or delete commits that already exist.
 
-If a merge or push needs revising after the fact (a wrong merge target, a merge that broke a downstream build, a commit subject typo on the merge commit), that is the surrounding session's decision and the user's command — not this skill's responsibility, and not recoverable via any history-rewriting construct from inside this skill's run. If a git command fails (merge conflict, pre-receive hook rejection, lint failure, protected-branch rejection), the skill STOPS and reports — the user resolves the failure explicitly. There is no failure-recovery path that rewrites history inside this skill.
+If a merge or push needs revising after the fact (a wrong merge target, a merge that broke a downstream build, a commit subject typo on the merge commit), that is the surrounding session's decision and the user's command — not this skill's responsibility, and not recoverable via any history-rewriting construct from inside this run. If a git command fails (merge conflict, pre-receive hook rejection, lint failure, protected-branch rejection), the skill STOPS and reports — the user resolves the failure explicitly. There is no failure-recovery path that rewrites history inside this skill.
 
 ## Workflow
 
@@ -186,6 +186,6 @@ This skill reads thread artifacts READ-ONLY. The Thread Check inspection reads a
 
 The skill does NOT add or remove items under `inbox/open/` — items stay in `open/` (they were emitted by a review pass or by an inbox-capture step and are part of the thread's reviewable history). Inbox state transitions (`open/` → `processed/` or `open/` → `dropped/`) are manual file moves performed outside this skill, by design. Inbox state is expressed by which subfolder a file lives in, not by any field inside the file itself.
 
-The skill does NOT modify the spec / plan / proposal / discussion / decision-log artifacts it inspects. If the closure conversation surfaces a finding that warrants a revision to one of those artifacts (e.g., the user realizes the spec is incomplete and needs a follow-up version), the revision is a NEW version of that artifact authored by the appropriate authoring skill — NOT an in-place edit by this skill.
+The skill does NOT modify the spec / plan / proposal / discussion / decision-log artifacts it inspects. If the closure conversation surfaces a finding that warrants a revision to one of those artifacts (e.g., the user realizes the spec is incomplete and needs a follow-up version), the revision is a NEW version of that artifact produced in a separate authoring pass — NOT an in-place edit by this skill.
 
-No closure metadata is added by this skill to any artifact — there is no `Closed:`, no `Finished:`, no `Merged:` field added. Closure is recorded in git history (via the merge commit, the push, or the PR), not in metadata on the workflow artifacts.
+No closure metadata is added by this skill to any artifact — there is no `Closed:`, no `Finished:`, no `Merged:` field added. Closure is recorded in git history (via the merge commit, the push, or the PR), not in metadata on the thread artifacts.

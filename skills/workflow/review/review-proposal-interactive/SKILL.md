@@ -1,9 +1,9 @@
 ---
 name: review-proposal-interactive
-description: Walk a proposal artifact one finding at a time with the user — asking for their view and testing it against the proposal — settling each finding collaboratively and writing a decision log; use when you want to think through the review together rather than receive an autonomous end-to-end report.
+description: Walk a proposal artifact one finding at a time with the user, testing each finding against the proposal and capturing decisions when the user wants the proposal review kept collaborative.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Review Proposal Interactive
@@ -108,7 +108,7 @@ The `review-finding` artifact-type suffix is MANDATORY.
 
 This artifact is written ONLY at the END of the walk, and ONLY if at least one `accepted` / `deferred` / `parked` finding remains. **No Inbox file if nothing remains.** If every finding was settled as `resolved` or `rejected`, no inbox-open dump is written — the decision log is the only artifact, and the closing message states explicitly that no unresolved findings remain. The same rule reads as "no Inbox dump if all findings resolved" or "no Inbox file when nothing remains" — capturing nothing produces nothing.
 
-When written, the inbox-open dump carries ONLY the unresolved actionable findings, in the same six-section findings-first shape used by the autonomous sibling:
+When written, the inbox-open dump carries ONLY the unresolved actionable findings in this six-section findings-first shape:
 
 1. **`## Verdict`** — overall judgment on what remains (typically `partially ready` or `not ready` if findings remain; the dump itself never carries a `ready` verdict because nothing would land in it in that case).
 2. **`## Findings`** — only the `accepted` / `deferred` / `parked` findings, each carrying its severity tag and category.
@@ -121,9 +121,9 @@ Resolved and rejected findings are NOT repeated in the inbox-open dump — they 
 
 ## Adversarial Pass Delegation
 
-Adversarial pressure on a proposal — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is out of scope for this skill and should be delegated to a dedicated adversarial reasoning tool. This skill does NOT perform an adversarial pass during the walk.
+Adversarial pressure on a proposal — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is out of scope for this skill. This skill does NOT perform an adversarial pass during the walk.
 
-If during the walk the user wants to surface adversarial findings beyond the standard gaps/risks/ambiguities pass, suggest running a separate adversarial pass after the walk closes. The walk continues with the standard settlements; any adversarial pass runs as a separate invocation outside this skill. Cite any resulting adversarial artifact under `## References` in a subsequent review run if the user wants those findings folded into a future review-finding artifact.
+If during the walk the user wants to surface adversarial findings beyond the standard gaps/risks/ambiguities pass, suggest running a separate adversarial pass after the walk closes. The walk continues with the standard settlements; any adversarial pass happens outside this walk. Cite any resulting adversarial artifact under `## References` in a subsequent review run if the user wants those findings folded into a future review-finding artifact.
 
 This skill does NOT mark a proposal as "fully reviewed" just because the walk produced settlements. A proposal that has had a collaborative review pass but not an adversarial pass is still missing that layer — flag that in `## Next Actions` if the proposal is high-stakes enough to warrant it.
 
@@ -159,7 +159,7 @@ If the user pauses mid-walk after at least one settlement has landed, the partia
 
 ## Scope Drift
 
-When the user introduces a branch that is outside the proposal-review walk — a finding about a different proposal, a tangent about the workflow itself, a refactor idea unrelated to the proposal's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
+When the user introduces a branch that is outside the proposal-review walk — a finding about a different proposal, a tangent about the process being used, a refactor idea unrelated to the proposal's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
 1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this review's decision log.
 2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it.

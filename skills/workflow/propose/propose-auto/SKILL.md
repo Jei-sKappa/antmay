@@ -1,9 +1,9 @@
 ---
 name: propose-auto
-description: Turn a rough prompt (or a referenced artifact) into a freeform proposal markdown file under the active thread's `proposals/` folder, end-to-end, with no clarifying questions. Use when you already know what you want and just need the proposal written down.
+description: Turn a rough prompt or referenced artifact into a freeform proposal markdown file without clarifying questions when the user already knows what they want and needs the proposal written down.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.1
+  version: 1.0.2
 ---
 
 # Propose Auto

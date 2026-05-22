@@ -1,9 +1,9 @@
 ---
 name: review-spec-auto
-description: Read a spec artifact and write a findings-first review report that checks all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) against the handoff-grade bar — end-to-end, without clarifying questions. Use when you want an autonomous quality review of a spec document.
+description: Read a spec artifact and write a findings-first report checking all eight semantic-contract elements against the handoff-grade bar when the user wants an autonomous spec quality review.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Review Spec Auto
@@ -52,7 +52,7 @@ Beyond the per-element check, the broader pass surfaces:
 
 Tether every finding to **downstream impact**. "This is vague" is not a finding — "this is vague, and a downstream implementer would have to guess whether X means A or B" is. A finding without a downstream tether is noise; cut it or sharpen it.
 
-This skill does NOT promise: source-spec adherence checks for a derived plan, code-vs-original-intent fidelity checks, general-purpose code review, or adversarial pressure on the spec. For adversarial devil's-advocate pressure, invoke a dedicated adversarial skill separately. A finding that escalates beyond the handoff-grade-bar check is out of scope here — flag it as a suggestion to escalate rather than performing the heavier check inline.
+This skill does NOT promise: source-spec adherence checks for a derived plan, code-vs-original-intent fidelity checks, general-purpose code review, or adversarial pressure on the spec. For adversarial devil's-advocate pressure, recommend a separate adversarial review pass. A finding that escalates beyond the handoff-grade-bar check is out of scope here — flag it as a suggestion to escalate rather than performing the heavier check inline.
 
 ## Findings Report Shape
 
@@ -63,7 +63,7 @@ The emitted review artifact is ONE record per review run, organized findings-fir
 3. **`## Evidence`** — for each finding above, cite the spec section heading or a short quote (≤ one sentence). Reference, do not recite — quoting the spec back to the author is noise. Cite by section heading where possible.
 4. **`## References`** — list every artifact the review reads or depends on: the spec path being reviewed (absolute path), any decision logs the spec cites (by absolute path plus decision identifier for specific operative decisions), and any prior review-findings on the same spec (also by absolute path). If a spec cites a decision log and that decision contradicts the spec body, the contradiction is one of the findings above and the reference here is what backs it.
 5. **`## Open Questions`** — clarifications worth confirming with the spec author or downstream reader. Frame as questions, not as gaps to autofill. If a question can only be answered by the author, say so. If a question would normally surface in subsequent planning or implementation, say that too.
-6. **`## Next Actions`** — what to do next given the verdict and findings. Typical actions: emit a new spec version (an emitted spec is immutable; the revision is a new version artifact), open a discussion to settle a specific finding, invoke an adversarial review tool for a specific risk surface, or escalate to planning once findings are addressed. One action per finding cluster; do not pad.
+6. **`## Next Actions`** — what to do next given the verdict and findings. Typical actions: emit a new spec version (an emitted spec is immutable; the revision is a new version artifact), open a discussion to settle a specific finding, run an adversarial review pass for a specific risk surface, or escalate to planning once findings are addressed. One action per finding cluster; do not pad.
 
 Skip a section entirely rather than padding it — if `Open Questions` has nothing real to add, drop the heading. Do NOT collapse two sections into one; the explicit separation lets a downstream reader scan each layer independently.
 
@@ -97,7 +97,7 @@ The review body is plain markdown — no YAML frontmatter on the review artifact
 
 Adversarial pressure on a spec — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is outside the scope of this skill. This skill performs the handoff-grade-bar check only.
 
-If the user wants an adversarial review in addition to (or instead of) the handoff-grade-bar pass, invoke a dedicated adversarial review skill separately against the spec. The resulting adversarial findings may be cited under `## References` in a subsequent review run if the user wants them folded into the standard review-finding artifact.
+If the user wants an adversarial review in addition to (or instead of) the handoff-grade-bar pass, run a separate adversarial review pass against the spec. The resulting adversarial findings may be cited under `## References` in a subsequent review run if the user wants them folded into the standard review-finding artifact.
 
 A spec that has had a handoff-grade-bar pass but not an adversarial pass is still missing the adversarial layer — flag that in `## Next Actions` if the spec is high-stakes enough to warrant it.
 
