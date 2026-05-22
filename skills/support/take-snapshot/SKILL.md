@@ -1,6 +1,6 @@
 ---
 name: take-snapshot
-description: Derive a comprehensive, stack-agnostic specification document from an existing codebase — a frozen snapshot of what the application currently does, suitable as the single source of truth for a 1:1 rebuild. Use when the user wants to extract a hybrid SRS + PRD from a codebase they already have — for a rewrite, a port to a different stack, or to document an undocumented application — and explicitly does not want migration or target-stack guidance baked into it.
+description: Derive a comprehensive, stack-agnostic snapshot document of an existing codebase — a frozen snapshot of what the application currently does, suitable as the single source of truth for a 1:1 rebuild. Use when the user wants to extract a hybrid SRS + PRD from a codebase they already have — for a rewrite, a port to a different stack, or to document an undocumented application — and explicitly does not want migration or target-stack guidance baked into it.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.1.0
@@ -8,27 +8,27 @@ metadata:
 
 # Take Snapshot
 
-Given an existing codebase, produce a single Markdown specification that a separate team could rebuild from — in the same stack or a different one — without consulting the original code. The document is a hybrid **Software Requirements Specification** (loosely IEEE 830 / ISO/IEC/IEEE 29148:2018) and **Product Requirements Document**: product framing on top, functional and non-functional requirements with stable IDs in the middle, technical architecture and business rules at the bottom, open questions consolidated at the end.
+Given an existing codebase, produce a single Markdown snapshot that a separate team could rebuild from — in the same stack or a different one — without consulting the original code. The document is a hybrid **Software Requirements Specification** (loosely IEEE 830 / ISO/IEC/IEEE 29148:2018) and **Product Requirements Document**: product framing on top, functional and non-functional requirements with stable IDs in the middle, technical architecture and business rules at the bottom, open questions consolidated at the end.
 
 The document is a **frozen snapshot** of the application at the moment the skill runs. It describes what currently exists; it does not track what was, what's planned, or what was deprecated. A later run on the same codebase produces a fresh, independent snapshot.
 
-The skill's value is **coverage and traceability**, not stylistic polish. Bugs of omission in the spec become bugs in the rebuild. Bias toward completeness over speed; this skill is expected to be slow.
+The skill's value is **coverage and traceability**, not stylistic polish. Bugs of omission in the snapshot become bugs in the rebuild. Bias toward completeness over speed; this skill is expected to be slow.
 
 ## What this skill is — and isn't
 
-- **Do**: read the source, infer what the app currently does, write the spec, flag what cannot be determined from code as Open Questions.
-- **Don't**: write any code, edit any file outside the spec output path, refactor "while we're here", or run anything destructive. This skill is **read-only with respect to the source codebase**.
+- **Do**: read the source, infer what the app currently does, write the snapshot, flag what cannot be determined from code as Open Questions.
+- **Don't**: write any code, edit any file outside the snapshot output path, refactor "while we're here", or run anything destructive. This skill is **read-only with respect to the source codebase**.
 - **Stack-agnostic on both sides**: never mention or assume the source technology (framework, language, build system) or any target rebuild technology. The document describes *what the app does*, not *how to port it*.
 - **No migration content**: never include sections titled "Migration Notes", "Implementation Hints", "Rebuild Considerations", "Source → Target Mapping", or any equivalent. That ground is explicitly out of scope. A source→target mapping would lock the document to one rebuild target and shorten its useful life — let the rebuild project produce its own mapping doc separately.
-- **No history, no deprecation**: the spec is a snapshot of the present. No "previously did X" notes, no `[DEPRECATED]` markers, no change logs versus a prior run. If a feature isn't in the code right now, it isn't in the spec.
+- **No history, no deprecation**: the snapshot describes only what exists now. No "previously did X" notes, no `[DEPRECATED]` markers, no change logs versus a prior run. If a feature isn't in the code right now, it isn't in the snapshot.
 - **Single file**: always one Markdown file. No master index, no per-area splits, no companion files.
 - **Honest about fidelity**: a "1:1 rebuild" is bounded by what's observable in the code plus what humans answer in the Open Questions section. Say so in the methodology preamble; never paper over it.
 
 ## Orchestrator role
 
-The agent receiving the request becomes the **orchestrator**. The orchestrator plans angles, dispatches exploration subagents in parallel, then writes the spec from their notes.
+The agent receiving the request becomes the **orchestrator**. The orchestrator plans angles, dispatches exploration subagents in parallel, then writes the snapshot from their notes.
 
-The orchestrator does **no** first-hand reading of the source codebase. Every search, listing, file read, or `grep` against the source goes through a subagent — without exception, including trivial repo-root listings and top-level manifest files. The orchestrator's tools touch only its own scratch outputs (the run folder's `.metadata.json` and the notes files written by subagents) and the final spec output path. This is what keeps the orchestrator's context window clean enough to maintain global consistency across the whole document (IDs, cross-references, holistic phrasing).
+The orchestrator does **no** first-hand reading of the source codebase. Every search, listing, file read, or `grep` against the source goes through a subagent — without exception, including trivial repo-root listings and top-level manifest files. The orchestrator's tools touch only its own scratch outputs (the run folder's `.metadata.json` and the notes files written by subagents) and the final snapshot output path. This is what keeps the orchestrator's context window clean enough to maintain global consistency across the whole document (IDs, cross-references, holistic phrasing).
 
 Subagents never feed information back through their reply. They write to disk and acknowledge; the orchestrator reads the file on disk. The reply is treated as a no-op signal — useful only to know the subagent has returned, never as content. If a notes file is missing after a subagent reports success, the orchestrator re-spawns the subagent with the same brief and waits for the file to appear on disk. The reply is never trusted as a source of truth; the file on disk is the only signal that work is complete.
 
@@ -56,11 +56,11 @@ Exploration notes (durable evidence trail; useful for human verification and aud
     └── ...
 ```
 
-If a spec already exists at the output path from a previous run, treat it as historical: the new run **overwrites** it. The notes folder uses a date-stamped subfolder so prior evidence trails are preserved alongside their (now overwritten) document, in case the user wants to compare manually. Mention the overwrite in the final message.
+If a snapshot already exists at the output path from a previous run, treat it as historical: the new run **overwrites** it. The notes folder uses a date-stamped subfolder so prior evidence trails are preserved alongside their (now overwritten) document, in case the user wants to compare manually. Mention the overwrite in the final message.
 
 ## Document template
 
-The spec has these sections in this order. Skip a section if it would be genuinely empty; don't pad.
+The snapshot has these sections in this order. Skip a section if it would be genuinely empty; don't pad.
 
 ### 1. Methodology preamble
 
@@ -179,7 +179,7 @@ Default catalog:
 7. **Platform & manifests** — declared permissions, capabilities, push notifications, background tasks, OS-level integrations.
 8. **Localization & accessibility** — i18n catalogs, locale switching, RTL handling, ARIA semantics, focus management.
 9. **Cross-cutting UX** — theming, design tokens, error boundaries, loading and empty states, toast/notification patterns.
-10. **Build, CI, and deployment surface** — what artifacts are produced, what targets are built, CI pipeline stages (without naming the toolchain in the spec — describe outputs).
+10. **Build, CI, and deployment surface** — what artifacts are produced, what targets are built, CI pipeline stages (without naming the toolchain in the snapshot — describe outputs).
 11. **Non-functional signals** — timeouts, debounces, retry policies, cache TTLs, logging levels, telemetry endpoints, performance hints baked into the code.
 12. **Business rules** — validation, calculation formulas, state machines, eligibility rules, quota and throttling logic.
 
@@ -193,7 +193,7 @@ The workflow runs as numbered phases. Phases run in order; **inside a phase**, s
 
 1. **Parse arguments** (any of these may be in the user's prompt; defaults shown):
    - `output_path`: default `<cwd>/APP_SPECIFICATION.md`.
-   - `source_root`: default `<cwd>`. May be a subdirectory if the user wants a scoped spec.
+   - `source_root`: default `<cwd>`. May be a subdirectory if the user wants a scoped snapshot.
    - `scope_filter`: optional path glob(s) restricting which files exploration may inspect.
 
 2. **Resolve the run folder**: `<cwd>/docs/take-snapshot/YYYY-MM-DD_NN`. List existing same-date runs and pick the next zero-padded 2-digit index (`01` if none, otherwise `02`, …). Separate date and index with `_`. `mkdir -p` the folder.
@@ -247,7 +247,7 @@ The orchestrator (writer is the orchestrator itself; **never delegated to a suba
 A short message to the user, under 10 lines:
 
 - Output path written (and a note if it overwrote an existing file).
-- Run folder path (so the user can audit the notes that fed the spec).
+- Run folder path (so the user can audit the notes that fed the snapshot).
 - Summary: number of FRs, NFRs, business rules, open questions.
 - One sentence reminding the user that Open Questions is the next thing to triage with PMs/backend engineers, and that visual flows / screenshots must be attached by a human (the skill cannot produce them from code).
 - Skill version that produced this run.
@@ -275,7 +275,7 @@ Used only for large repos where a direct survey by the orchestrator would burn t
 - **Output shape** — markdown with these sections:
   - `## Findings` — what this angle reveals about the application. Bulleted, concrete, observable.
   - `## Evidence` — file paths (with line numbers when useful) backing each finding.
-  - `## Draft requirements` — proposed FR/NFR items in the spec format, **without** final IDs (use `ID: TBD` as a placeholder). The writer will assign IDs in Phase 4.
+  - `## Draft requirements` — proposed FR/NFR items in the format defined above, **without** final IDs (use `ID: TBD` as a placeholder). The writer will assign IDs in Phase 4.
   - `## Open questions` — anything this angle surfaces that code cannot answer. The writer will consolidate.
   - `## Cross-references` — pointers to other angles whose findings this likely overlaps with, so the writer can merge cleanly.
 - **Discipline** —
@@ -290,23 +290,23 @@ The orchestrator dispatches one of these per planned angle, in parallel.
 
 ## Discipline (for the orchestrator)
 
-- **No inline reads of the source.** Every read, listing, search, or `grep` of the source codebase goes through a subagent — without exception. The orchestrator's tools touch only its own scratch outputs (the run folder) and the spec output path. Even a single inline `ls` or `cat` of a source file is a discipline violation: it bypasses the file-on-disk handoff that keeps the context clean.
+- **No inline reads of the source.** Every read, listing, search, or `grep` of the source codebase goes through a subagent — without exception. The orchestrator's tools touch only its own scratch outputs (the run folder) and the snapshot output path. Even a single inline `ls` or `cat` of a source file is a discipline violation: it bypasses the file-on-disk handoff that keeps the context clean.
 - **Trust the file, not the reply.** A subagent's reply is acknowledgment only. If the expected file is missing on disk, re-spawn the subagent with the same brief, however many times it takes. Never "stitch" a missing report from memory or from anything the reply said.
-- **Read-only on the source even via subagents.** Subagents never edit, refactor, or "clean up" source files. The spec is the only output.
+- **Read-only on the source even via subagents.** Subagents never edit, refactor, or "clean up" source files. The snapshot is the only output.
 - **Stack-neutral language in the document.** Source-stack and target-stack names belong nowhere in the body. They may appear in the methodology preamble's *what was inspected* list only when the artifact name is itself load-bearing context for understanding the inspection (e.g. "iOS Info.plist parsed for declared capabilities") — and even then, lean toward describing the artifact, not the technology.
 - **No invented requirements.** Every FR/NFR/rule must trace to code or to an explicit Open Question. If you're tempted to add an NFR because "every app needs this", route it to Open Questions instead.
 - **No migration content.** No "Implementation Hints", no "Rebuild Considerations", no source→target mapping under any name. This is non-negotiable.
-- **No history.** The spec describes the present. No "previously did X", no `[DEPRECATED]` markers, no change logs.
-- **Honesty about gaps.** Open Questions is the single place gaps live. Don't sprinkle `TODO`s through the spec.
+- **No history.** The snapshot describes the present. No "previously did X", no `[DEPRECATED]` markers, no change logs.
+- **Honesty about gaps.** Open Questions is the single place gaps live. Don't sprinkle `TODO`s through the snapshot.
 - **No screenshots, no visual flows.** The skill cannot render them. Reference where they belong (e.g. "see attached screen flow for FR-0042 — to be added by author") and mention this in the final message.
 
 ## When the codebase is too thin
 
-If the source is so sparse that meaningful angles can't run (empty repo, scaffolding only, mostly generated code), still produce a spec — but make it honest:
+If the source is so sparse that meaningful angles can't run (empty repo, scaffolding only, mostly generated code), still produce a snapshot — but make it honest:
 
 - A short methodology preamble.
 - A `## Product overview` that says the source does not yet express enough to infer product framing.
-- A populated `## Open Questions` listing what the author/team must answer for the spec to be filled in.
+- A populated `## Open Questions` listing what the author/team must answer for the snapshot to be filled in.
 - Empty FR/NFR sections explicitly marked as such, not omitted, so the reader knows the exploration ran and found nothing rather than that those sections were forgotten.
 
 Better to return a 200-line honest skeleton than a 2000-line fabrication.
