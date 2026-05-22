@@ -1,41 +1,90 @@
 {
   "plugins": [
     {
-      "name": "JeisKappa-skills",
-      "source": "./",
-      "skills": [
-        "./skills/support/afk-exploration",
-        "./skills/support/brief-the-implementer",
-        "./skills/support/consult-the-expert",
-        "./skills/support/take-snapshot",
-        "./skills/support/meta-prompting",
-        "./skills/support/report-to-the-owner",
-        "./skills/support/the-librarian"
-      ]
-    },
-    {
-      "name": "JeisKappa-workflow",
+      "name": "JeisKappa-capture-discussion",
       "source": "./",
       "skills": [
         "./skills/workflow/capture-discussion/capture-inbox",
         "./skills/workflow/capture-discussion/discussion",
-        "./skills/workflow/capture-discussion/seeded-discussion",
-        "./skills/workflow/propose/propose-auto",
-        "./skills/workflow/propose/propose-interactive",
-        "./skills/workflow/spec/spec-auto",
-        "./skills/workflow/spec/spec-interactive",
-        "./skills/workflow/plan/plan-loose-auto",
-        "./skills/workflow/plan/plan-loose-interactive",
-        "./skills/workflow/plan/plan-strict-auto",
-        "./skills/workflow/plan/plan-strict-interactive",
-        "./skills/workflow/plan/adjust-plan-granularity-auto",
-        "./skills/workflow/plan/adjust-plan-granularity-interactive",
+        "./skills/workflow/capture-discussion/seeded-discussion"
+      ]
+    },
+    {
+      "name": "JeisKappa-documentation",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/documentation/take-snapshot"
+      ]
+    },
+    {
+      "name": "JeisKappa-finish-navigate",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/finish-navigate/finish",
+        "./skills/workflow/finish-navigate/whats-next"
+      ]
+    },
+    {
+      "name": "JeisKappa-handoff",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/handoff/brief-the-implementer",
+        "./skills/workflow/handoff/consult-the-expert",
+        "./skills/workflow/handoff/report-to-the-owner"
+      ]
+    },
+    {
+      "name": "JeisKappa-implement",
+      "source": "./",
+      "skills": [
         "./skills/workflow/implement/implement-auto",
         "./skills/workflow/implement/implement-interactive",
         "./skills/workflow/implement/implement-plan-auto",
         "./skills/workflow/implement/implement-plan-interactive",
         "./skills/workflow/implement/implement-plan-with-subagents-auto",
-        "./skills/workflow/implement/implement-plan-with-subagents-interactive",
+        "./skills/workflow/implement/implement-plan-with-subagents-interactive"
+      ]
+    },
+    {
+      "name": "JeisKappa-merge",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/merge/merge-artifacts-auto",
+        "./skills/workflow/merge/merge-artifacts-interactive"
+      ]
+    },
+    {
+      "name": "JeisKappa-plan",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/plan/plan-loose-auto",
+        "./skills/workflow/plan/plan-loose-interactive",
+        "./skills/workflow/plan/plan-strict-auto",
+        "./skills/workflow/plan/plan-strict-interactive",
+        "./skills/workflow/plan/adjust-plan-granularity-auto",
+        "./skills/workflow/plan/adjust-plan-granularity-interactive"
+      ]
+    },
+    {
+      "name": "JeisKappa-propose",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/propose/propose-auto",
+        "./skills/workflow/propose/propose-interactive"
+      ]
+    },
+    {
+      "name": "JeisKappa-research",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/research/afk-exploration",
+        "./skills/workflow/research/the-librarian"
+      ]
+    },
+    {
+      "name": "JeisKappa-review",
+      "source": "./",
+      "skills": [
         "./skills/workflow/review/review-proposal-auto",
         "./skills/workflow/review/review-proposal-interactive",
         "./skills/workflow/review/review-spec-auto",
@@ -45,11 +94,22 @@
         "./skills/workflow/review/review-implementation-auto",
         "./skills/workflow/review/review-implementation-interactive",
         "./skills/workflow/review/review-code-auto",
-        "./skills/workflow/review/review-code-interactive",
-        "./skills/workflow/merge/merge-artifacts-auto",
-        "./skills/workflow/merge/merge-artifacts-interactive",
-        "./skills/workflow/finish-navigate/finish",
-        "./skills/workflow/finish-navigate/whats-next"
+        "./skills/workflow/review/review-code-interactive"
+      ]
+    },
+    {
+      "name": "JeisKappa-spec",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/spec/spec-auto",
+        "./skills/workflow/spec/spec-interactive"
+      ]
+    },
+    {
+      "name": "JeisKappa-support",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/support/meta-prompting"
       ]
     },
     {
