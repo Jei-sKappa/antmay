@@ -3,14 +3,14 @@ name: afk-exploration
 description: Start AFK exploration on a topic. Use only when the user explicitly asks to start an AFK research or exploration on a topic.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.1
+  version: 1.4.2
 ---
 
 # AFK Exploration
 
 The user has a rough idea — a new project, a feature in an existing one, or a bug fix — and is stepping away from the computer. Use that gap to research the idea, build a knowledge base they can return to, and stop short of writing the spec. The artifact must be useful enough that on returning the user can write the spec from it without redoing the upfront thinking.
 
-This is the unattended counterpart to `brainstorming`. There is no human to dialogue with mid-run; recorded assumptions replace clarifying questions.
+This is the unattended counterpart to an interactive ideation session. There is no human to dialogue with mid-run; recorded assumptions replace clarifying questions.
 
 ## Orchestrator role
 
@@ -195,7 +195,7 @@ For each returned initial angle, dispatch three critique subagents in parallel. 
 - **Return contract** — write the critique file directly; reply with **only** a 2–3 sentence summary. Do not paste the critique back.
 - **Hard constraints** — read the input note and the reference; apply the reference's method to the *content* of the note (not to the abstract idea); do not edit code or other files.
 
-The reference files describe each critique method in full (process, templates, output shape). They are adapted from the `the-fool` skill — see those files for the canonical method. The orchestrator itself does not read them; only the critique subagents do.
+The reference files describe each critique method in full (process, templates, output shape). The orchestrator itself does not read them; only the critique subagents do.
 
 ### Synthesiser subagent (one per angle)
 

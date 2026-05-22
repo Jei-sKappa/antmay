@@ -1,26 +1,26 @@
 ---
 name: propose-auto
-description: Turn a rough prompt (or a referenced artifact) into a freeform proposal markdown file under the active V1 thread's `proposals/` folder, end-to-end, with no clarifying questions. Use when you already know what you want and just need the proposal written down — not when you want to think it through together (use `propose-interactive` for that).
+description: Turn a rough prompt (or a referenced artifact) into a freeform proposal markdown file under the active thread's `proposals/` folder, end-to-end, with no clarifying questions. Use when you already know what you want and just need the proposal written down.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.0.1
 ---
 
 # Propose Auto
 
-Turn a rough prompt or referenced input into a freeform proposal artifact under the active V1 thread's `proposals/` folder. This skill is the autonomous generator half of the V1 propose pair — it reads input, writes the proposal end-to-end, and confirms the artifact path. It does not ask clarifying questions, it does not interview the user point-by-point, and it does not commit. For the collaborative walk-through, use the sibling skill `propose-interactive` instead.
+Turn a rough prompt or referenced input into a freeform proposal artifact under the active thread's `proposals/` folder. This skill reads input, writes the proposal end-to-end, and confirms the artifact path. It does not ask clarifying questions, it does not interview the user point-by-point, and it does not commit.
 
 ## Workflow
 
-1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` per `docs/workflow/v1/thread-layout.md`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user per `docs/workflow/v1/immutability.md` ("Ambiguous Reference Resolution") — do not silently pick the most recent UTC stamp. If no thread exists, ASK the user where to create one OR auto-create when the calling context makes the slug obvious (e.g., a clear feature name is already in the prompt).
+1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent UTC stamp. If no thread exists, ASK the user where to create one OR auto-create when the calling context makes the slug obvious (e.g., a clear feature name is already in the prompt).
 
 2. **Derive the slug.** Pull a short kebab-case description from the user's rough prompt — drop articles and filler, keep the first 3–5 meaningful words. The slug is part of the filename and is not user-confirmed in auto mode; the prompt is treated as authoritative.
 
-3. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time per `docs/workflow/v1/filename-grammar.md`. Stamp once and reuse — never re-derive after writing.
+3. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time. Stamp once and reuse — never re-derive after writing.
 
 4. **Draft the body.** Use the SUGGESTED 4-element structure below (see `## Suggested Structure`). The structure is suggested, not enforced — adapt as the prompt warrants. If the prompt clearly carries only two of the four elements, write only those two. If the prompt is shaped differently, follow its shape. A short freeform proposal is preferred over a padded template.
 
-5. **Write the artifact.** Create `docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md`. The `proposal` artifact-type suffix is MANDATORY per `docs/workflow/v1/filename-grammar.md`. The `proposals/` folder is created on-demand per `docs/workflow/v1/thread-layout.md` ("On-Demand Creation") — do not pre-create it.
+5. **Write the artifact.** Create `docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md`. The `proposal` artifact-type suffix is MANDATORY. The `proposals/` folder is created on-demand on the first proposal written for the thread — do not pre-create empty folders.
 
 6. **Confirm.** Tell the user: `Proposal written: <relative-path-to-the-file>`. Nothing else — no preamble, no summary, no closing remark.
 
@@ -39,13 +39,13 @@ Do NOT add YAML frontmatter to the proposal body. The filename is the identifier
 
 ## Filename and Folder
 
-The proposal artifact uses the V1 record-form filename grammar:
+The proposal artifact uses this record-form filename grammar:
 
 ```text
 <YYMMDDHHMMSSZ>-<kebab-desc>-proposal.md
 ```
 
-The 12-character UTC stamp comes first, followed by a kebab-case description, followed by the literal `proposal` artifact-type token, followed by `.md`. See `docs/workflow/v1/filename-grammar.md` for the canonical grammar and the recognized artifact-type list.
+The 12-character UTC stamp (`YYMMDDHHMMSSZ`) comes first, followed by a kebab-case description, followed by the literal `proposal` artifact-type token, followed by `.md`.
 
 Example:
 
@@ -53,14 +53,14 @@ Example:
 260521120000Z-onboarding-friction-proposal.md
 ```
 
-The file lands at `docs/threads/<thread>/proposals/<filename>` per `docs/workflow/v1/thread-layout.md`. The `proposals/` folder is created on-demand on the first proposal written for the thread; do not pre-create empty folders.
+The file lands at `docs/threads/<thread>/proposals/<filename>`. The `proposals/` folder is created on-demand on the first proposal written for the thread; do not pre-create empty folders.
 
 ## Commit Policy
 
-This skill NEVER auto-commits the proposal artifact. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator skill, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch.
+This skill NEVER auto-commits the proposal artifact. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator, or a separate commit flow. Do not stage, do not commit, do not push, do not branch.
 
 ## Immutability
 
-Emitted proposal artifacts are immutable per `docs/workflow/v1/immutability.md`. Once the file is written into `proposals/`, it is part of the thread's reviewable history and is not edited. To revise an emitted proposal, write a new artifact — a new record with a different slug, or a follow-up proposal that supersedes the prior one by content. No source-relation frontmatter is added — lineage lives in filenames and the surrounding thread, not in metadata on the file.
+Once a proposal artifact is written into `proposals/`, it is part of the thread's reviewable history and is not edited. To revise an emitted proposal, write a new artifact — a new record with a different slug, or a follow-up proposal that supersedes the prior one by content. No source-relation frontmatter is added — lineage lives in filenames and the surrounding thread, not in metadata on the file.
 
 Drafts under `docs/threads/<thread>/.wip/` are editable until emission. Once the proposal lands in `proposals/`, the lock applies.

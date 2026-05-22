@@ -3,7 +3,7 @@ name: discussion
 description: Conduct an open-ended interview where questions are discovered live as the conversation unfolds; surface options and a recommendation only when a concrete decision point emerges, then append the decision to a thread-local append-only decision log under the active thread's `discussions/` folder. Use when you want to think a topic through with the agent — not knowing yet what every question is — and have the resulting decisions captured as a referenceable, sequentially-numbered log.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.0.1
 ---
 
 # Discussion
@@ -27,11 +27,11 @@ Hold these together:
 
 ## Workflow
 
-1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` per `docs/workflow/v1/thread-layout.md`. If `cwd` already sits inside a thread root, that is the thread. If no thread exists, ASK the user where to create one OR auto-create a thread when context makes the slug obvious (e.g., the user opens with `Let me think through <topic>`). If multiple thread roots exist and which is "active" is ambiguous, ASK — do not silently pick the most recent UTC stamp (`docs/workflow/v1/immutability.md`, "Ambiguous Reference Resolution").
+1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If no thread exists, ASK the user where to create one OR auto-create a thread when context makes the slug obvious (e.g., the user opens with `Let me think through <topic>`). If multiple thread roots exist and which is "active" is ambiguous, ASK — do not silently pick the most recent UTC stamp.
 
 2. **Do NOT create the decision log proactively.** Keep state in-session until the FIRST decision is reached. An open-ended interview that produces no decisions produces no artifact.
 
-3. **At the first decision, resolve the target log.** Look inside `docs/threads/<thread>/discussions/` for an existing decision log on this topic — identify it by the topic encoded in the filename slug, by the `# <Topic>` document heading, or by the per-decision IDs already present. If one is found, RESUME it: append. If none is found, CREATE a new log at `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md` per `docs/workflow/v1/filename-grammar.md`. The 12-character `YYMMDDHHMMSSZ` UTC stamp is captured once at write time and never re-derived. The `decision-log` artifact-type suffix is MANDATORY. If multiple plausible existing logs exist for the same topic, ASK the user which to resume — do not pick the latest by UTC stamp.
+3. **At the first decision, resolve the target log.** Look inside `docs/threads/<thread>/discussions/` for an existing decision log on this topic — identify it by the topic encoded in the filename slug, by the `# <Topic>` document heading, or by the per-decision IDs already present. If one is found, RESUME it: append. If none is found, CREATE a new log at `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md`. The 12-character `YYMMDDHHMMSSZ` UTC stamp is captured once at write time and never re-derived. The `decision-log` artifact-type suffix is MANDATORY. If multiple plausible existing logs exist for the same topic, ASK the user which to resume — do not pick the latest by UTC stamp.
 
 4. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would help, inspect the relevant files before asking.
 
@@ -68,7 +68,7 @@ Rationale: <why the choice made sense, including the main trade-off; flag any di
 
 Where `N` starts at `1` for the first decision in this log and increments by `1` per decision IN THIS LOG. The `## D<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's path.
 
-Do NOT rewrite earlier records. If a decision changes later, APPEND a new record (`## D<N+k>: <Title>` for the same or revised title) explaining the change — per `docs/workflow/v1/immutability.md`, emitted record artifacts evolve only by appending new records, not by editing prior ones. An interrupted session leaves a usable partial log: every decision recorded up to the interruption is durable.
+Do NOT rewrite earlier records. If a decision changes later, APPEND a new record (`## D<N+k>: <Title>` for the same or revised title) explaining the change — emitted decision-log records are immutable: they evolve only by appending new records, never by editing prior ones. An interrupted session leaves a usable partial log: every decision recorded up to the interruption is durable.
 
 If you believe the decision the user is about to settle on is wrong, refuse to log it silently. Either resolve the disagreement first, or log it with the dissent included in the `Rationale` line.
 
@@ -76,7 +76,7 @@ If you believe the decision the user is about to settle on is wrong, refuse to l
 
 When the user introduces a branch that is outside the topic this log is settling, do not silently follow them. Propose ONE of:
 
-1. **Park as an Inbox item** via the `capture-inbox` skill (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this log.
+1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this log.
 2. **Split into its own decision log.** When the branch is itself worth a dedicated open-ended interview, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
@@ -92,7 +92,7 @@ When the user signals they want to stop:
 
 1. Say so plainly.
 2. Summarize what was decided in this session by `## D<N>` ID: `D1: <Title> → <decision>`, `D2: <Title> → <decision>`, …
-3. Offer to capture any deferred branches as Inbox items via the `capture-inbox` skill.
+3. Offer to capture any deferred branches as Inbox items.
 4. Tell the user where the decision log lives: `Decision log: docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md`.
 
 No closing remark.

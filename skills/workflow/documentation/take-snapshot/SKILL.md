@@ -3,7 +3,7 @@ name: take-snapshot
 description: Derive a comprehensive, stack-agnostic snapshot document of an existing codebase — a frozen snapshot of what the application currently does, suitable as the single source of truth for a 1:1 rebuild. Use when the user wants to extract a hybrid SRS + PRD from a codebase they already have — for a rewrite, a port to a different stack, or to document an undocumented application — and explicitly does not want migration or target-stack guidance baked into it.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Take Snapshot
@@ -256,9 +256,9 @@ A short message to the user, under 10 lines:
 
 The orchestrator never inherits a subagent's session and never loads a subagent's notes back into its own context (it reads the notes from disk in Phase 4).
 
-### Survey subagent (Phase 2, optional)
+### Survey subagent (Phase 2)
 
-Used only for large repos where a direct survey by the orchestrator would burn too much context.
+Dispatched on every run, regardless of repo size — the orchestrator never reads the source directly, so the survey subagent is the only way the orchestrator gets a view of the repo's shape.
 
 - **Source root** — absolute path.
 - **Scope filter** — glob if any, otherwise none.

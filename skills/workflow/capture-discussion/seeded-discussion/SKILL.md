@@ -1,14 +1,14 @@
 ---
 name: seeded-discussion
-description: Walk a predetermined list of discussion points one at a time, presenting the Decision / What you need to know / Options / Recommendation loop for every point by default, and append each decided point to an append-only decision log under the active thread's `discussions/` folder. Use when you already have a concrete list of points to settle — findings, open questions, review comments, design points, a plan to walk — and you want options and a recommendation default-on per point.
+description: Walk a predetermined list of discussion points one at a time, presenting options and a recommendation for each by default, and appending each decision to a log. Use when the user already has a concrete list of points to settle — findings, open questions, review comments, design points, or a plan to walk through.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.0.1
 ---
 
 # Seeded Discussion
 
-Drive a focused walk over a predetermined list of points the user supplies up front. For each point, surface the Decision / What you need to know / Options / Recommendation loop by default, settle it, append the decision to the log, then move to the next point. Unlike open-ended `discussion`, this skill knows the question set in advance and treats the four-element format as the standard shape — not an opt-in.
+Drive a focused walk over a predetermined list of points the user supplies up front. For each point, surface the Decision / What you need to know / Options / Recommendation loop by default, settle it, append the decision to the log, then move to the next point. This skill knows the question set in advance and treats the four-element format as the standard shape for every point — not an opt-in.
 
 ## Anti-Sycophancy Stance
 
@@ -36,7 +36,7 @@ Detect which form the input takes before starting the walk. If the input is ambi
 
 ## Setup
 
-1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` per `docs/workflow/v1/thread-layout.md`. If no thread exists, ASK the user where to create one OR auto-create when context makes the slug obvious. If multiple thread roots exist and which is "active" is ambiguous, ASK per `docs/workflow/v1/immutability.md` ("Ambiguous Reference Resolution") — do not silently pick the most recent UTC stamp.
+1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If no thread exists, ASK the user where to create one OR auto-create when context makes the slug obvious. If multiple thread roots exist and which is "active" is ambiguous, ASK the user to clarify — do not silently pick the most recent UTC stamp.
 
 2. **Check for an existing decision log on this topic.** Look inside `docs/threads/<thread>/discussions/` for an existing decision log whose filename slug or document heading matches this point list. If one is found, RESUME it (see `## Resumption`). Otherwise the log will be created at the first decision per `## Logging` — do NOT create it proactively.
 
@@ -44,7 +44,7 @@ Detect which form the input takes before starting the walk. If the input is ambi
 
 ## Loop
 
-For each point in order, present the four-element format by default — for `seeded-discussion`, options + recommendation are DEFAULT-ON for every point. (Open-ended `discussion` makes this format opt-in; `seeded-discussion` treats it as the standard shape.)
+For each point in order, present the four-element format by default — options and recommendation are DEFAULT-ON for every point. This skill treats the four-element format as the standard shape, not an opt-in.
 
 1. **Decision** — what this point is about.
 2. **What you need to know** — just enough background to answer.
@@ -57,7 +57,7 @@ Continue discussing the current point until the user decides. Do NOT move on whi
 
 ## Logging
 
-The decision log lives at `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md` per `docs/workflow/v1/filename-grammar.md`. The 12-character `YYMMDDHHMMSSZ` UTC stamp is captured once at creation time. The `decision-log` artifact-type suffix is MANDATORY.
+The decision log lives at `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md`. Use a 12-character `YYMMDDHHMMSSZ` UTC stamp captured once at creation time. The `decision-log` artifact-type suffix is MANDATORY.
 
 The log is **append-only**. Create it lazily on the FIRST decision in this walk (no proactive creation in `## Setup`). After the user decides each point, append one record with a sequential per-log local heading:
 
@@ -73,7 +73,7 @@ Where `N` starts at `1` for the first decision logged in this walk and increment
 
 After appending, tell the user: `Decision saved: <short summary>.`
 
-Do NOT rewrite earlier records. If a decision changes later in the walk (or in a future session), APPEND a new record explaining the change — per `docs/workflow/v1/immutability.md`, emitted record artifacts evolve only by appending new records, not by editing prior ones. An interrupted session leaves a usable partial log: every decided point up to the interruption is durable, and `## Resumption` describes how the next session picks up.
+Do NOT rewrite earlier records. If a decision changes later in the walk (or in a future session), APPEND a new record explaining the change — decision logs evolve only by appending new records, never by editing prior ones. An interrupted session leaves a usable partial log: every decided point up to the interruption is durable, and `## Resumption` describes how the next session picks up.
 
 If you believe the decision the user is about to settle on is wrong, refuse to log it silently. Either resolve the disagreement first, or log it with the dissent included in the `Rationale` line.
 
@@ -81,7 +81,7 @@ If you believe the decision the user is about to settle on is wrong, refuse to l
 
 When the user introduces a branch that is NOT in the seeded point list, do not silently follow them or re-order the walk. Propose ONE of:
 
-1. **Park as an Inbox item** via the `capture-inbox` skill (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this log or disrupting the walk.
+1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Capture a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this log or disrupting the walk.
 2. **Split into its own decision log.** When the branch is itself a multi-point discussion, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
@@ -107,7 +107,7 @@ When no seeded points remain (or the user wants to stop):
 
 1. Say so plainly.
 2. Summarize what was decided in this session by `## D<N>` ID: `D1: <Point title> → <decision>`, `D2: <Point title> → <decision>`, …
-3. Offer to capture any unresolved branches or out-of-scope items raised during the walk as Inbox items via the `capture-inbox` skill.
+3. Offer to capture any unresolved branches or out-of-scope items raised during the walk as Inbox items at `docs/threads/<thread>/inbox/open/`.
 4. Tell the user where the decision log lives: `Decision log: docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md`.
 
 No closing remark.

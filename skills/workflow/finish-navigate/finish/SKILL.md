@@ -1,24 +1,22 @@
 ---
 name: finish
-description: Close a V1 workflow thread by running a lightweight 4-item thread check (final artifacts present in `proposals/` / `specs/` / `plans/` / `discussions/`, open Inbox items in `inbox/open/`, recent implementation commits on the current branch, obvious unresolved workflow concerns) and then ASKING the user the closure question with FOUR options — `merge into main` / `merge into other branch` / `create PR` / `leave as is` — confirming each git command BEFORE execution and NEVER force-pushing, NEVER rewriting history (no `--amend`, no `rebase` in any flavor, no `git push --force` / `--force-with-lease`, no `git reset --hard` against pushed history, no `git filter-branch`, no `git filter-repo`). This is the SINGLE V1 skill with NO `-auto` / `-interactive` sibling — an intentional EXCEPTION to the V1 mode-variant convention per D97 because branch disposition is inherently user-directed and there is no autonomous default that would be safe across users / repos / branch contexts. Carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus a closure-stance amplifier — branch operations are hard to undo, push back if the user picks an option that would lose work. Use when implementation is complete (or the thread is otherwise in a stop-and-decide state) and you want the agent to surface the thread's signals and walk the user through the closure choice without picking by default.
+description: Close a workflow thread by running a lightweight thread check (final artifacts present, open inbox items, recent commits, unresolved concerns) and asking the user one of four closure options — merge into main, merge into other branch, create PR, or leave as is — confirming each git command before execution. Use when implementation is complete or the thread is in a stop-and-decide state.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Finish
 
-Close a V1 workflow thread by running a lightweight 4-item thread check, surfacing the inspection results to the user, and ASKING the closure question with four enumerated options — `merge into main` / `merge into other branch` / `create PR` / `leave as is`. On the user's choice, execute the corresponding flow with explicit per-command confirmation. NEVER force-push, NEVER rewrite history.
+Close a workflow thread by running a lightweight 4-item thread check, surfacing the inspection results to the user, and ASKING the closure question with four enumerated options — `merge into main` / `merge into other branch` / `create PR` / `leave as is`. On the user's choice, execute the corresponding flow with explicit per-command confirmation. NEVER force-push, NEVER rewrite history.
 
-This skill is the SINGLE V1 workflow skill WITHOUT `-auto` / `-interactive` siblings — the ONLY V1 skill where the mode-variant convention does NOT apply. This is an intentional EXCEPTION per D97. The reason: branch disposition is inherently user-directed. The closure question requires a human choice — there is no autonomous default that would be safe across users (some prefer PR-only flows; others merge locally and push), across repos (some have protected `main` branches that reject direct merges; others do not), or across branch contexts (a long-lived feature branch with multiple collaborators is not the same as a single-author sandbox). Picking silently would hide a real decision behind a heuristic, and the cheapest way to surface that decision is to ASK every time. The skill body and the description both acknowledge this single-skill V1 exception explicitly.
-
-Citations: V1 thread layout, filename grammar, and immutability rules are owned by Phase 1 and live at `docs/workflow/v1/thread-layout.md`, `docs/workflow/v1/filename-grammar.md`, and `docs/workflow/v1/immutability.md`. The companion overview lives at `docs/workflow/v1/README.md`. This skill cites each of those by absolute path the first time it invokes a rule from them; later citations are by short reference. Anti-sycophancy stance is carried verbatim from `skills/workflow/capture-discussion/discussion/SKILL.md`. The 4-option closure menu and the do-not-force-push / do-not-rewrite-history discipline are inspired by `.library/sources/obra_superpowers/skills/finishing-a-development-branch/SKILL.md` per D97; that skill is design inspiration only and is not loaded or referenced at runtime.
+Branch disposition is inherently user-directed. The closure question requires a human choice — there is no autonomous default that would be safe across users (some prefer PR-only flows; others merge locally and push), across repos (some have protected `main` branches that reject direct merges; others do not), or across branch contexts (a long-lived feature branch with multiple collaborators is not the same as a single-author sandbox). Picking silently would hide a real decision behind a heuristic, and the cheapest way to surface that decision is to ASK every time.
 
 ## Anti-Sycophancy Stance
 
 Your job is to help the user reach the right closure choice for the thread, not to make them feel good about whatever they pick first. Treat the closure decision as a mutual attempt to get closer to the truth: you may be missing context, the user may be missing consequences, and either side may notice something the other overlooked. Sycophancy is a particularly costly failure mode here — **branch operations are hard to undo, push back if the user picks an option that would lose work**. A closure that silently merges a half-finished branch into `main` because the user said "merge it" without addressing the open Inbox findings has produced an outcome the user will regret — the cheap moment to push back is during the closure question, before any git command runs. Once a merge lands on `main` and is pushed, undoing it is expensive (`git revert`, force-push to a protected branch is forbidden, coordinated rollback with collaborators); once a discard happens, work is gone. The cheap moment for the closure decision to do its job is BEFORE the choice is locked in.
 
-This is the V1 review stance, sharpened for closure: push back hard on weak reasoning or hidden assumptions; never soften a recommended pause just because the user wants to move on. A finish flow whose only effect is to execute whatever the user asked for without surfacing the open Inbox items, the uncommitted changes, or the pending review-finding records has stopped finishing and started rubber-stamping. The thread check exists precisely to give the closure conversation evidence to work with.
+Push back hard on weak reasoning or hidden assumptions; never soften a recommended pause just because the user wants to move on. A finish flow whose only effect is to execute whatever the user asked for without surfacing the open Inbox items, the uncommitted changes, or the pending review-finding records has stopped finishing and started rubber-stamping. The thread check exists precisely to give the closure conversation evidence to work with.
 
 Hold these together:
 
@@ -35,9 +33,22 @@ If you believe a closure option would silently lose work — uncommitted changes
 
 ## Thread Check
 
-Before the closure question, this skill runs a LIGHTWEIGHT inspection pass and reports the results to the user. The check is INFORMATIONAL — it does NOT block closure; the user decides whether the signals warrant closing now or pausing. The check surfaces FOUR inspection items per D98, FNSH-02. Empty inspection items are skipped silently in the report (do not enumerate "no inbox items" as a line; just omit). For each non-empty item, report what was found with enough detail that the user can decide whether it changes their closure choice.
+Before the closure question, this skill runs a LIGHTWEIGHT inspection pass and reports the results to the user. The check is INFORMATIONAL — it does NOT block closure; the user decides whether the signals warrant closing now or pausing. Empty inspection items are skipped silently in the report (do not enumerate "no inbox items" as a line; just omit). For each non-empty item, report what was found with enough detail that the user can decide whether it changes their closure choice.
 
-1. **Final artifacts present.** Inspect the active thread root at `docs/threads/<thread>/` per `docs/workflow/v1/thread-layout.md` and report which of the V1 folders have content:
+The thread root is a folder under `docs/threads/` named with a UTC timestamp slug (e.g., `docs/threads/250522143000Z-my-feature/`). If the current working directory already sits inside a thread root, use that. If multiple thread roots exist and the active one is ambiguous, ASK the user — do not silently pick the most recent timestamp.
+
+The thread root contains a standard set of subfolders:
+
+- `proposals/` — emitted proposal artifacts
+- `specs/` — emitted spec artifacts
+- `plans/` — emitted plan artifacts
+- `discussions/` — emitted discussion and decision-log artifacts
+- `inbox/open/` — unaddressed findings and follow-ups (record files with artifact-type suffixes such as `-inbox-item.md` or `-review-finding.md`)
+- `inbox/processed/` and `inbox/dropped/` — items that have been triaged out of open
+
+**Inspection items:**
+
+1. **Final artifacts present.** Inspect the thread root and report which of the four content folders have content:
    - `proposals/` — emitted proposal artifacts (any version count)
    - `specs/` — emitted spec artifacts (any version count)
    - `plans/` — emitted plan artifacts (any version count)
@@ -45,23 +56,23 @@ Before the closure question, this skill runs a LIGHTWEIGHT inspection pass and r
 
    Report each non-empty folder by name and artifact count (e.g., `proposals/: 2 files`, `specs/: 1 file`, `plans/: 1 file`, `discussions/: 4 files`). If none of the four folders have content, say so explicitly (`No final artifacts under proposals/, specs/, plans/, discussions/`) — that itself is a signal worth surfacing before closure.
 
-2. **Open Inbox items.** Inspect `docs/threads/<thread>/inbox/open/` per `docs/workflow/v1/thread-layout.md` and report any items present:
-   - Enumerate by filename (relative to `inbox/open/`) and the artifact-type suffix (`inbox-item` vs `review-finding` — per `docs/workflow/v1/filename-grammar.md` "Recognized V1 Artifact-Type Tokens", both are valid record artifacts in `inbox/open/`).
-   - Open items represent UNADDRESSED findings or follow-ups — they have not yet been moved to `inbox/processed/` or `inbox/dropped/` per the state-by-folder rule in `docs/workflow/v1/thread-layout.md`. Each open item is a signal that some work the thread surfaced has not been triaged. The user may legitimately decide an open item is a parked V2 deferral and not a blocker — but the closure conversation needs to see them.
-   - If `inbox/open/` is empty or does not exist, skip this report line entirely. Empty inspection items are NOT enumerated.
+2. **Open Inbox items.** Inspect `inbox/open/` and report any items present:
+   - Enumerate by filename and artifact-type suffix (`-inbox-item.md` vs `-review-finding.md` — both are valid record artifacts in `inbox/open/`).
+   - Open items represent unaddressed findings or follow-ups — they have not yet been moved to `inbox/processed/` or `inbox/dropped/`. Inbox state is expressed by which subfolder the file lives in, not by any field inside the file. Each open item is a signal that some work the thread surfaced has not been triaged. The user may legitimately decide an open item is a parked deferral and not a blocker — but the closure conversation needs to see them.
+   - If `inbox/open/` is empty or does not exist, skip this report line entirely.
 
 3. **Implementation commits / status.** Inspect recent commits on the current branch and report the branch state. Suggested invocation:
    - `git status --short` (working-tree state — staged, unstaged, untracked)
    - `git log --oneline -20` (or equivalent — last commits on the current branch)
    - `git rev-parse --abbrev-ref HEAD` (current branch name)
 
-   Report the branch name, whether the branch has uncommitted changes (and a short summary of the dirty paths if dirty), and a brief 1–2 line summary of the recent commit subjects so the user can recognize whether the thread's implementation has actually landed in commits or whether changes are still in flight. The audit trail of WHAT happened during the thread is what the user is weighing closure against — surfacing it cheaply here is the point of the check.
+   Report the branch name, whether the branch has uncommitted changes (and a short summary of the dirty paths if dirty), and a brief 1–2 line summary of the recent commit subjects so the user can recognize whether the thread's implementation has actually landed in commits or whether changes are still in flight.
 
 4. **Obvious unresolved workflow concerns.** Inspect for signals that suggest closure may be premature. Includes:
    - **Uncommitted changes** in the worktree (`git status --short` non-empty) — folding mid-flight changes into a merge or discarding them on `leave as is` is a closure trade-off the user should see explicitly.
-   - **Pending review-finding records** under `inbox/open/<UTC>-<kebab-desc>-review-finding.md` — these were emitted by a `review-*` skill and have not yet been addressed in a follow-up version of the artifact they reviewed. Closing the thread while review-findings sit open is legitimate (they may be `deferred` or `parked`), but it is a trade-off worth surfacing.
-   - **Conflict markers in merged artifacts** — if any artifact under `proposals/` / `specs/` / `plans/` contains a literal `<!-- CONFLICT:` marker preserved by `merge-artifacts-auto` per D103, the conflict has not yet been resolved into a successor version. Surface as a concern.
-   - **Other obvious signals** at the executor's discretion — e.g., a thread that has `plans/` but no recent commits suggests the plan has not been implemented; a thread with `specs/` but no `plans/` may be ready for a planning pass before finish; a thread with two competing spec versions at the same mainline integer (`v2-stricter` + `v2-impl-ready` without a promoted `v2`) suggests a merge step was skipped.
+   - **Pending review-finding records** under `inbox/open/` with a `-review-finding.md` suffix — these have not yet been addressed in a follow-up version of the artifact they reviewed. Closing the thread while review-findings sit open is legitimate (they may be deferred or parked), but it is a trade-off worth surfacing.
+   - **Conflict markers in merged artifacts** — if any artifact under `proposals/` / `specs/` / `plans/` contains a literal `<!-- CONFLICT:` marker, the conflict has not yet been resolved into a successor version. Surface as a concern.
+   - **Other obvious signals** at the executor's discretion — e.g., a thread that has `plans/` but no recent commits suggests the plan has not been implemented; a thread with `specs/` but no `plans/` may be ready for a planning pass before finish; a thread with two competing spec versions at the same mainline integer without a promoted successor suggests a merge step was skipped.
 
    Empty concerns are skipped silently. Surface only concerns that were actually detected.
 
@@ -69,7 +80,7 @@ After surfacing the inspection results, ASK the closure question (next section).
 
 ## Closure Question
 
-After the thread check report, ASK the user the closure question. The FOUR options per D98, FNSH-03 are enumerated below by literal option-name label — the EXACT phrasing the user can choose from:
+After the thread check report, ASK the user the closure question. The FOUR options are enumerated below by literal option-name label — the EXACT phrasing the user can choose from:
 
 1. **`merge into main`** — checkout `main` (or the repo's default branch — detect via `git symbolic-ref refs/remotes/origin/HEAD` or equivalent; if unclear, ASK the user which branch is the integration target). Merge the current branch into the target. Push the result.
 2. **`merge into other branch`** — same flow as `merge into main` but the target is a USER-SUPPLIED branch name. ASK the user for the target branch before running any git command.
@@ -136,13 +147,13 @@ This skill NEVER force-pushes and NEVER rewrites history. Forbidden constructs �
 - `git reset --hard` against history that has been pushed — NEVER. Rewinding pushed history is force-push by another name once the user next pushes.
 - `git filter-branch` and `git filter-repo` — NEVER. Both are history-rewriting tools. Out of scope for this skill regardless of intent.
 
-This is the same git-discipline language carried by `skills/workflow/implement/implement-plan-auto/SKILL.md` and `skills/workflow/implement/implement-plan-interactive/SKILL.md` (the Phase 5 plan-driven implementation pair). The history this skill produces is append-only: merges and pushes add commits; the skill does NOT modify, amend, rebase, or delete commits that already exist.
+The history this skill produces is append-only: merges and pushes add commits; the skill does NOT modify, amend, rebase, or delete commits that already exist.
 
-If a merge or push needs revising after the fact (a wrong merge target, a merge that broke a downstream build, a commit subject typo on the merge commit), that is the surrounding session's decision and the user's command — not this skill's responsibility, not within this skill's mandate, and not recoverable via any history-rewriting construct from inside this skill's run. If a git command fails (merge conflict, pre-receive hook rejection, lint failure, protected-branch rejection), the skill STOPS and reports — the user resolves the failure explicitly. There is no failure-recovery path that rewrites history inside this skill.
+If a merge or push needs revising after the fact (a wrong merge target, a merge that broke a downstream build, a commit subject typo on the merge commit), that is the surrounding session's decision and the user's command — not this skill's responsibility, and not recoverable via any history-rewriting construct from inside this skill's run. If a git command fails (merge conflict, pre-receive hook rejection, lint failure, protected-branch rejection), the skill STOPS and reports — the user resolves the failure explicitly. There is no failure-recovery path that rewrites history inside this skill.
 
 ## Workflow
 
-1. **Resolve the active thread.** Identify the thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` per `docs/workflow/v1/thread-layout.md`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user per `docs/workflow/v1/immutability.md` ("Ambiguous Reference Resolution") — do not silently pick the most recent UTC stamp.
+1. **Resolve the active thread.** Identify the thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent UTC stamp.
 
 2. **Run the Thread Check.** Walk the four inspection items from `## Thread Check`. Skip empty items silently. Compose the inspection report.
 
@@ -171,10 +182,10 @@ The skill does NOT rewrite history. See `## Branch Operations` → `### NEVER fo
 
 ## Immutability
 
-This skill reads thread artifacts READ-ONLY per `docs/workflow/v1/immutability.md`. The Thread Check inspection reads artifacts under `proposals/`, `specs/`, `plans/`, `discussions/`, and `inbox/open/` but does NOT edit them, does NOT rewrite them, does NOT add frontmatter to them, and does NOT propose edits to their bodies during the inspection.
+This skill reads thread artifacts READ-ONLY. The Thread Check inspection reads artifacts under `proposals/`, `specs/`, `plans/`, `discussions/`, and `inbox/open/` but does NOT edit them, does NOT rewrite them, does NOT add frontmatter to them, and does NOT propose edits to their bodies during the inspection.
 
-The skill does NOT add or remove items under `inbox/open/` — items stay in `open/` (they were emitted by `review-*-auto` or by `capture-inbox` and are part of the thread's reviewable history). Inbox state transitions (`open/` → `processed/` or `open/` → `dropped/`) are manual file moves performed outside this skill, by design per `docs/workflow/v1/thread-layout.md` and `docs/workflow/v1/immutability.md` ("emitted artifacts are immutable; status is a property of the folder, not of the file").
+The skill does NOT add or remove items under `inbox/open/` — items stay in `open/` (they were emitted by a review pass or by an inbox-capture step and are part of the thread's reviewable history). Inbox state transitions (`open/` → `processed/` or `open/` → `dropped/`) are manual file moves performed outside this skill, by design. Inbox state is expressed by which subfolder a file lives in, not by any field inside the file itself.
 
-The skill does NOT modify the spec / plan / proposal / discussion / decision-log artifacts it inspects. If the closure conversation surfaces a finding that warrants a revision to one of those artifacts (e.g., the user realizes the spec is incomplete and needs a follow-up version), the revision is a NEW version of that artifact authored by the appropriate authoring skill (`spec-auto` / `spec-interactive` / `plan-loose-*` / `plan-strict-*` / `adjust-plan-granularity-*` / `discussion` / `seeded-discussion` / `merge-artifacts-*`) — NOT an in-place edit by this skill.
+The skill does NOT modify the spec / plan / proposal / discussion / decision-log artifacts it inspects. If the closure conversation surfaces a finding that warrants a revision to one of those artifacts (e.g., the user realizes the spec is incomplete and needs a follow-up version), the revision is a NEW version of that artifact authored by the appropriate authoring skill — NOT an in-place edit by this skill.
 
-No source-relation YAML frontmatter is added by this skill to any artifact — there is no `Closed:`, no `Finished:`, no `Merged:` field added to any V1 artifact. Closure is recorded in git history (via the merge commit, the push, or the PR), not in metadata on the workflow artifacts per `docs/workflow/v1/immutability.md` ("No Source-Relation Frontmatter").
+No closure metadata is added by this skill to any artifact — there is no `Closed:`, no `Finished:`, no `Merged:` field added. Closure is recorded in git history (via the merge commit, the push, or the PR), not in metadata on the workflow artifacts.
