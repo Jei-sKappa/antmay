@@ -233,7 +233,7 @@ npx skills add Jei-sKappa/skills --skill review-proposal-interactive
 
 #### [`review-spec-auto`](./skills/workflow/review/review-spec-auto/SKILL.md)
 
-**Autonomous** end-to-end spec review against the handoff-grade bar — reads an emitted V1 spec artifact under the active thread's `specs/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — checking all EIGHT D50 semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) present and coherent. Evolves the legacy `review-decision-document` handoff-grade-bar logic against the locked Phase 3 spec contract. Adversarial pressure on a spec is delegated to the external `the-fool` skill.
+**Autonomous** end-to-end spec review against the handoff-grade bar — reads an emitted V1 spec artifact under the active thread's `specs/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — checking all EIGHT D50 semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) present and coherent. Adversarial pressure on a spec is delegated to the external `the-fool` skill.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-spec-auto
@@ -241,7 +241,7 @@ npx skills add Jei-sKappa/skills --skill review-spec-auto
 
 #### [`review-spec-interactive`](./skills/workflow/review/review-spec-interactive/SKILL.md)
 
-**Interactive** spec review against the handoff-grade bar — walks an emitted V1 spec artifact one D50 element (or one finding) at a time, ASKING the user for their view AND TESTING that view against the spec, settling each finding and appending per-finding records to a decision log under `discussions/`. At end-of-session, ONLY unresolved actionable findings dump to `inbox/open/`. Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier. Evolves the legacy `review-decision-document` against the locked Phase 3 spec contract. Adversarial pressure on a spec is delegated to the external `the-fool` skill.
+**Interactive** spec review against the handoff-grade bar — walks an emitted V1 spec artifact one D50 element (or one finding) at a time, ASKING the user for their view AND TESTING that view against the spec, settling each finding and appending per-finding records to a decision log under `discussions/`. At end-of-session, ONLY unresolved actionable findings dump to `inbox/open/`. Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier. Adversarial pressure on a spec is delegated to the external `the-fool` skill.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-spec-interactive

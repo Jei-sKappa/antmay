@@ -51,6 +51,14 @@
         "./skills/workflow/finish-navigate/finish",
         "./skills/workflow/finish-navigate/whats-next"
       ]
+    },
+    {
+      "name": "JeisKappa-deprecated",
+      "source": "./",
+      "skills": [
+        "./skills/deprecated/discussion-loop",
+        "./skills/deprecated/review-decision-document"
+      ]
     }
   ]
 }

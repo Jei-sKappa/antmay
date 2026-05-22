@@ -1,31 +1,85 @@
 ---
 name: review-decision-document
-description: RETIRED — replaced by `review-spec-auto` (autonomous spec review against all 8 D50 semantic-contract elements) and `review-spec-interactive` (collaborative per-element / per-finding walk with anti-sycophancy push-back). Use when you find this skill in a legacy install and need to know what to install instead.
+description: Reviews a decision document — spec, plan, design proposal, anything that captures an idea before someone acts on it — and stress-tests it against the bar that a recipient could deliver the same work the author had in mind. Use when the user has a document they want stress-tested for clarity, internal consistency, gaps, hidden assumptions, and readiness to be built upon.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 1.1.0
 ---
 
-# Review Decision Document — RETIRED
+# Review Decision Document
 
-This skill is **retired**. It was the V1 source of the handoff-grade-bar review logic — stress-testing a document against the bar that a recipient could deliver the same work the author had in mind. That logic now lives in two newer skills targeted specifically at V1 spec artifacts, checking against the locked Phase 3 spec semantic contract (the eight D50 elements: intended outcome / context / scope-non-scope / expected behavior / constraints / explicit decisions / unresolved questions / acceptance guidance). Install one of the replacements below — `review-decision-document` itself no longer drives a review.
+Stress-test a decision document against this bar: **if the author handed it to someone else, that person should be able to deliver the same work the author had in mind.** Surface where the document falls short of that bar before anyone builds on it.
 
-## Replacements
+## What this skill is — and isn't
 
-Pick `review-spec-auto` when you want an autonomous, end-to-end handoff-grade-bar review of a V1 spec artifact: it reads the spec, checks all eight D50 elements present and coherent, and writes a six-section findings-first report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md`. No clarifying questions, no per-finding walk.
+This is a **review-and-discussion pass**, not an editing pass.
 
-```sh
-npx skills add Jei-sKappa/skills --skill review-spec-auto
-```
+- **Do:** read the document, identify what's missing, ambiguous, implied, or still open, and report it back.
+- **Don't:** rewrite the document, invent requirements, propose wording, or implement anything described in it. If the user later asks for a rewrite or for specific edits, that's a separate task.
 
-Pick `review-spec-interactive` when you want to walk the spec review collaboratively — one D50 element or one finding at a time — with the agent ASKING for your view AND TESTING that view against the spec; carries the 4-marker anti-sycophancy stance from `discussion` verbatim plus the review-stance amplifier (push back hard on weak reasoning; never soften findings just because the user pushes back). Writes a decision log to `discussions/` and dumps only unresolved actionable findings to `inbox/open/` at the end.
+The document is an **artifact to validate**, not work to do. Assume it's intended as foundation for whatever comes next — further documents, planning, implementation, handoff — even if the user doesn't enumerate what. The reviewer's job is to judge the doc as if someone will act on it next, and test whether it's load-bearing enough for that — not to fix it.
 
-```sh
-npx skills add Jei-sKappa/skills --skill review-spec-interactive
-```
+## What to look for
 
-## Pre-existing review outputs
+Across the document, surface:
 
-Review notes and documents previously produced against decision documents by this legacy skill remain **valid as-is**. Do NOT migrate them. The new skills check against the Phase 3 spec contract specifically, but the legacy framing — that a recipient could deliver the same work the author had in mind — is preserved in the new handoff-grade bar.
+- **Gaps** — required information the doc is silent on.
+- **Ambiguities** — statements that admit more than one reasonable reading.
+- **Contradictions** — places where two parts of the doc point in different directions.
+- **Hidden assumptions** — things the doc takes for granted but never articulates. Ask: would a downstream implementer arrive at the same assumption, or would they have to guess?
+- **False precision** — passages that *sound* decided but don't actually pin down enough to act on. Soft words like "robust", "scalable", "modern", "clean", "appropriate", "as needed" are common red flags.
+- **Unjustified absolutes** — every "must / never / only / always" claim deserves a check. Is the boundary precise? What happens at the edge? Is the absolute actually necessary or is it accidental over-commitment?
 
-For V1 thread layout and filename grammar see `docs/workflow/v1/README.md`.
+Pay special attention to:
+
+- **Boundaries** — what's in scope, what's out of scope, what owns what.
+- **Behaviors** — how something is supposed to act, including under failure or edge conditions.
+- **Restrictions, constraints, invariants** — what cannot change, must hold, or is forbidden.
+- **Defaults** — what happens when something isn't specified.
+- **Interfaces** — contracts between components, modules, teams, or layers.
+
+## Separate three layers in your findings
+
+Every issue falls into one of three layers. Make the layer explicit so the author can act on each appropriately:
+
+- **Explicit** — the document *says* something, but the claim is imprecise, contradictory, or worth challenging. Quote or cite the exact passage.
+- **Implied** — the document seems to *assume* something without saying it. The downstream artifacts would need this assumption to be true. Surface it so the author can confirm, deny, or write it down.
+- **Open decision** — the document neither says nor implies an answer; the author still has to choose. Frame these as decisions, not gaps to autofill.
+
+Never collapse the three. Treating an implied assumption as if it were explicit, or an open decision as if it were already implied, lets shaky foundations through.
+
+## Output
+
+Markdown document with explicit `##` headings. Order findings by impact, not by where they appear in the doc.
+
+Use these sections, in this order:
+
+1. **Headline findings** — the highest-impact issues first. For each: a short title, the section/heading of the doc it concerns, which layer (Explicit / Implied / Open decision), what's wrong or missing, and **why it matters for someone trying to act on this doc.** A finding without a "why it matters" tether is noise — cut it or sharpen it.
+2. **Explicit claims worth flagging** — passages the doc commits to that the author should re-examine: must/never/only/always statements, defaults, boundaries, interface contracts. For each, note whether it's genuinely precise or only sounds decided.
+3. **Implied but not stated** — assumptions the doc rests on without articulating. One bullet per assumption, with the section that depends on it.
+4. **Open decisions** — what the author still has to choose. Frame as decisions, not edits.
+5. **Readiness verdict** — one overall verdict (e.g. *Ready / Partially ready / Not ready* to be built upon) plus a one-line "what's blocking it" tied to the findings above.
+
+The review ends at section 5. Do **not** append a numbered list of clarifications, follow-up questions, or "next steps" inside the review itself — those belong to the optional discussion that comes after (see Workflow).
+
+Skip a section entirely rather than padding it. If `Implied but not stated` has nothing real to say, drop the section — don't fill it with weak filler.
+
+## Discipline
+
+- **Reference, don't recite.** Cite section headings or short quotes; don't recap the document back to the user.
+- **Tether every finding to downstream impact.** "This is vague" isn't a finding — "This is vague, and a downstream reader would have to guess whether X means A or B" is.
+- **Don't fix it.** Resist the urge to write the missing paragraph or the corrected sentence. The user can ask for that in a separate pass. Mixing review with rewriting muddies what the author still owes the document.
+- **Don't manufacture findings to seem thorough.** If the doc is genuinely solid for the named downstream artifacts, say so — and still list any clarifications worth confirming. A short, honest review is more useful than a padded one.
+
+## Workflow
+
+1. Check inputs: document path, anchoring context. Ask for whatever's missing before reading.
+2. Read any prerequisite docs the user pointed to (project conventions, related context).
+3. Read the document under review carefully — at least once end-to-end before noting findings.
+4. Draft the review following the structure above. Order by impact, separate the three layers, tether each finding to what would break when someone acts on the doc.
+5. Output the review directly. The response IS the deliverable — no preamble, no chat framing, no "Sure, here is…", no closing remark. The review ends at the `Readiness verdict` section.
+6. After the review, on a new line below it, ask the author once whether they want to start discussing the open clarifications that came out of the review — then stop and wait. Don't pre-list the questions, don't suggest answers, don't continue into a discussion unprompted. If they say yes, the discussion happens in subsequent turns; if they say no or move on, leave it alone.
+
+## When the document is genuinely solid
+
+If, after a careful read, the document holds up as foundation for the work that would follow: say so plainly in `Readiness verdict`, drop the sections that would be empty, and still surface any specific clarifications worth confirming. Don't invent issues to justify the review.
