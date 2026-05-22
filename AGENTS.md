@@ -68,6 +68,17 @@ There is no specific format for the skill body: every skill is different.
 
 Bump `version` in the frontmatter on any meaningful change to a skill's behavior.
 
+## Skill self-containment
+
+Every `SKILL.md` is a standalone instruction set handed to an agent that can only rely on the skill's own folder. When creating or editing a skill:
+
+- Keep `description` to one sentence that says what the skill does and when a routing agent should trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
+- Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections, because routing belongs in the frontmatter description.
+- Do not mention project-internal planning labels, project decision IDs, phase numbers, V1/V2 naming, "the spine", or similar repo-maintenance context. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `D<N>` are allowed when they are part of the skill's emitted artifact format.
+- Do not couple one skill to another by explicit skill name, command, path, or invocation condition. Natural-language awareness is fine, such as saying the document may later be reviewed.
+- Do not link to or require instructional/reference files outside the skill's own directory. If supporting material is genuinely needed, inline the necessary guidance or place a copy under that skill's local `references/` folder and link to it with a path relative to the skill directory. This does not prohibit describing project artifacts the skill reads or writes as part of its actual job, such as `docs/threads/<thread>/...` inputs and outputs.
+- Avoid body content that explains how this repository is organized unless the invoked agent needs that fact to perform the skill's own job.
+
 ## Deliverable skills — no preamble
 
 Skills whose job is to produce a deliverable for the user to copy, paste, or hand off elsewhere (currently: `meta-prompting`, `consult-the-expert`, `report-to-the-owner`, `brief-the-implementer`) must enforce that the chat response IS the deliverable. No "Sure, here is…", no chat-style framing, no closing remark like "Hope this helps." Encode the rule explicitly in the skill's Tone or Output format section so a fresh model session honors it without relying on the harness picking up convention.
