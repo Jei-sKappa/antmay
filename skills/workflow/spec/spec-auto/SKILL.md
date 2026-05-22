@@ -1,6 +1,6 @@
 ---
 name: spec-auto
-description: Turn a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade v1 spec markdown file under the active V1 thread's `specs/` folder, end-to-end, with no clarifying questions. Use when you already have the upstream input in hand and want the spec forward-designed FROM it written down — not when you want to author the spec interactively together (use `spec-interactive`), and not when you want to reverse-engineer a spec FROM an existing codebase (use `derive-spec`).
+description: Turn a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade v1 spec markdown file under the active V1 thread's `specs/` folder, end-to-end, with no clarifying questions. Use when you already have the upstream input in hand and want the spec forward-designed FROM it written down — not when you want to author the spec interactively together (use `spec-interactive`), and not when you want to reverse-engineer a spec FROM an existing codebase (use `take-snapshot`).
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0
@@ -8,7 +8,7 @@ metadata:
 
 # Spec Auto
 
-Forward-design a handoff-grade spec artifact under the active V1 thread's `specs/` folder, end-to-end, from a single upstream input. This skill is the autonomous generator half of the V1 spec pair — it reads input, drafts the spec body covering the eight required semantic-contract elements, writes the artifact, and confirms its path. It does not ask clarifying questions, it does not interview the user element-by-element, and it does not commit. For the collaborative walk-through use the sibling skill `spec-interactive`. For reverse-engineering a spec FROM an existing codebase — the inverse direction — use `derive-spec` instead; that skill is the established reverse-engineering tool and is not what `spec-auto` does.
+Forward-design a handoff-grade spec artifact under the active V1 thread's `specs/` folder, end-to-end, from a single upstream input. This skill is the autonomous generator half of the V1 spec pair — it reads input, drafts the spec body covering the eight required semantic-contract elements, writes the artifact, and confirms its path. It does not ask clarifying questions, it does not interview the user element-by-element, and it does not commit. For the collaborative walk-through use the sibling skill `spec-interactive`. For reverse-engineering a spec FROM an existing codebase — the inverse direction — use `take-snapshot` instead; that skill is the established reverse-engineering tool and is not what `spec-auto` does.
 
 ## Inputs
 

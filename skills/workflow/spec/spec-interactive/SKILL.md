@@ -1,6 +1,6 @@
 ---
 name: spec-interactive
-description: Walk the user through the eight handoff-grade semantic-contract elements of a spec — intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance — one at a time, then assemble and write a v1 spec markdown file under the active V1 thread's `specs/` folder. Use when you want to think the spec through together with the agent, surface gaps and trade-offs live, and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `spec-auto` for that), and not when you want to reverse-engineer a spec FROM an existing codebase (use `derive-spec`).
+description: Walk the user through the eight handoff-grade semantic-contract elements of a spec — intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance — one at a time, then assemble and write a v1 spec markdown file under the active V1 thread's `specs/` folder. Use when you want to think the spec through together with the agent, surface gaps and trade-offs live, and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `spec-auto` for that), and not when you want to reverse-engineer a spec FROM an existing codebase (use `take-snapshot`).
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0
@@ -8,7 +8,7 @@ metadata:
 
 # Spec Interactive
 
-Walk the user through the eight handoff-grade semantic-contract elements of a spec one at a time, accept freeform answers per element, assemble the body, and write the v1 artifact to the active thread's `specs/` folder using the V1 versioned-form filename grammar. This skill is the collaborative half of the V1 spec pair: it interviews, it pushes back on weak reasoning, and it leaves a handoff-grade spec behind. Bad design decisions in the spec become expensive in the implementation phase — the downstream consumers are humans and agents who will not have you to ask follow-ups. For end-to-end generation from upstream input with no clarifying questions, use the sibling skill `spec-auto`. For reverse-engineering a spec FROM an existing codebase — the inverse direction — use `derive-spec` instead; that skill is the established reverse-engineering tool and is not what `spec-interactive` does.
+Walk the user through the eight handoff-grade semantic-contract elements of a spec one at a time, accept freeform answers per element, assemble the body, and write the v1 artifact to the active thread's `specs/` folder using the V1 versioned-form filename grammar. This skill is the collaborative half of the V1 spec pair: it interviews, it pushes back on weak reasoning, and it leaves a handoff-grade spec behind. Bad design decisions in the spec become expensive in the implementation phase — the downstream consumers are humans and agents who will not have you to ask follow-ups. For end-to-end generation from upstream input with no clarifying questions, use the sibling skill `spec-auto`. For reverse-engineering a spec FROM an existing codebase — the inverse direction — use `take-snapshot` instead; that skill is the established reverse-engineering tool and is not what `spec-interactive` does.
 
 ## Anti-Sycophancy Stance
 

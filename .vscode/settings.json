@@ -8,7 +8,6 @@
     "brief-the-implementer",
     "capture-inbox",
     "consult-the-expert",
-    "derive-spec",
     "discussion",
     "discussion-loop",
     "finish",
@@ -42,6 +41,7 @@
     "seeded-discussion",
     "spec-auto",
     "spec-interactive",
+    "take-snapshot",
     "the-librarian",
     "whats-next"
   ]

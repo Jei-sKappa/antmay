@@ -7,7 +7,7 @@
         "./skills/support/afk-exploration",
         "./skills/support/brief-the-implementer",
         "./skills/support/consult-the-expert",
-        "./skills/support/derive-spec",
+        "./skills/support/take-snapshot",
         "./skills/support/meta-prompting",
         "./skills/support/report-to-the-owner",
         "./skills/support/the-librarian"

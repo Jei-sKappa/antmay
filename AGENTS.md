@@ -260,7 +260,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 ## Data Flow
 ### Skill installation
 ### Skill invocation (deliverable skills)
-### Skill invocation (orchestrator skills: afk-exploration, derive-spec)
+### Skill invocation (orchestrator skills: afk-exploration, take-snapshot)
 ### Skill invocation (router skill: the-librarian)
 ### Skill invocation (interactive skill: discussion-loop)
 - No in-process state. Orchestrator skills persist state on disk (run folders, `.metadata.json`, note files). Interactive skills persist state in a log file under `docs/discussions/`. All other skills are stateless.
@@ -272,7 +272,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 - Examples: `skills/support/meta-prompting/SKILL.md`, `skills/support/consult-the-expert/SKILL.md`, `skills/support/report-to-the-owner/SKILL.md`, `skills/support/brief-the-implementer/SKILL.md`
 - Pattern: "Output format" section explicitly states "no preamble, no closing remark. The response IS the deliverable."
 - Purpose: Skills that dispatch parallel subagents, wait for disk artifacts, and synthesize a final document. Never read source code directly.
-- Examples: `skills/support/afk-exploration/SKILL.md`, `skills/support/derive-spec/SKILL.md`
+- Examples: `skills/support/afk-exploration/SKILL.md`, `skills/support/take-snapshot/SKILL.md`
 - Pattern: Numbered workflow phases; subagent briefs defined in-skill; file-on-disk as the only completion signal; reply from subagent is acknowledgment only.
 - Purpose: Methodology document too detailed or reusable to embed inline. Passed to subagents as an absolute path.
 - Examples: `skills/support/afk-exploration/references/pre-mortem-analysis.md`, `skills/support/the-librarian/references/stock.md`
@@ -290,7 +290,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 ## Architectural Constraints
 - **No build pipeline:** There is no compilation, bundling, linting, or test runner. The repo is a content repository; "deployment" is `npx skills add`.
 - **No inter-skill dependencies at runtime:** Skills do not import or call each other. Each `SKILL.md` is completely standalone.
-- **Orchestrator context isolation:** Orchestrator skills (`afk-exploration`, `derive-spec`) must never read source files inline — all reads go through subagents. This is a documented discipline constraint enforced by the skill itself, not tooling.
+- **Orchestrator context isolation:** Orchestrator skills (`afk-exploration`, `take-snapshot`) must never read source files inline — all reads go through subagents. This is a documented discipline constraint enforced by the skill itself, not tooling.
 - **Single-file per skill:** Each skill is exactly one `SKILL.md`. No skill spans multiple files except via the `references/` pattern.
 - **name field must match leaf directory name:** The `name:` YAML field and the LEAF skill directory name (e.g. `<skill-name>` in `skills/<bucket>/[<group>/]<skill-name>/`) must be identical. Mismatch breaks the CLI install.
 - **Marketplace registration is manual:** Adding a skill requires manually updating `.claude-plugin/marketplace.json`, `README.md`, and `.vscode/settings.json`. There is no automation.
@@ -301,7 +301,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 ## Error Handling
 - Mismatched `name` field → CLI install fails silently or routes to wrong skill. Caught by human review.
 - Missing marketplace entry → Skill not visible in `npx skills list`. Caught by following the "When adding a new skill" checklist in `AGENTS.md`.
-- Orchestrator reading source inline → Context pollution and potential hallucination in orchestrator skills. Prevented by the explicit discipline constraint in `afk-exploration` and `derive-spec` skill bodies.
+- Orchestrator reading source inline → Context pollution and potential hallucination in orchestrator skills. Prevented by the explicit discipline constraint in `afk-exploration` and `take-snapshot` skill bodies.
 ## Cross-Cutting Concerns
 <!-- GSD:architecture-end -->
 

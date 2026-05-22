@@ -1,12 +1,12 @@
 ---
-name: derive-spec
+name: take-snapshot
 description: Derive a comprehensive, stack-agnostic specification document from an existing codebase — a frozen snapshot of what the application currently does, suitable as the single source of truth for a 1:1 rebuild. Use when the user wants to extract a hybrid SRS + PRD from a codebase they already have — for a rewrite, a port to a different stack, or to document an undocumented application — and explicitly does not want migration or target-stack guidance baked into it.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
-# Derive Spec
+# Take Snapshot
 
 Given an existing codebase, produce a single Markdown specification that a separate team could rebuild from — in the same stack or a different one — without consulting the original code. The document is a hybrid **Software Requirements Specification** (loosely IEEE 830 / ISO/IEC/IEEE 29148:2018) and **Product Requirements Document**: product framing on top, functional and non-functional requirements with stable IDs in the middle, technical architecture and business rules at the bottom, open questions consolidated at the end.
 
@@ -45,7 +45,7 @@ The primary artifact:
 Exploration notes (durable evidence trail; useful for human verification and audit):
 
 ```
-<cwd>/docs/derive-spec/
+<cwd>/docs/take-snapshot/
 └── YYYY-MM-DD_NN/              # one folder per run; date + per-day index separated by `_`
     ├── .metadata.json          # started_at, source_root, output_path, scope_filter, skill_version
     ├── 00-survey.md            # high-level overview produced in Phase 2
@@ -196,7 +196,7 @@ The workflow runs as numbered phases. Phases run in order; **inside a phase**, s
    - `source_root`: default `<cwd>`. May be a subdirectory if the user wants a scoped spec.
    - `scope_filter`: optional path glob(s) restricting which files exploration may inspect.
 
-2. **Resolve the run folder**: `<cwd>/docs/derive-spec/YYYY-MM-DD_NN`. List existing same-date runs and pick the next zero-padded 2-digit index (`01` if none, otherwise `02`, …). Separate date and index with `_`. `mkdir -p` the folder.
+2. **Resolve the run folder**: `<cwd>/docs/take-snapshot/YYYY-MM-DD_NN`. List existing same-date runs and pick the next zero-padded 2-digit index (`01` if none, otherwise `02`, …). Separate date and index with `_`. `mkdir -p` the folder.
 
 3. **Write `.metadata.json`**:
    ```json

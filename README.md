@@ -95,7 +95,7 @@ npx skills add Jei-sKappa/skills --skill propose-interactive
 
 #### [`spec-auto`](./skills/workflow/spec/spec-auto/SKILL.md)
 
-**Autonomous** end-to-end spec generation — turns a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade v1 spec markdown file under the active V1 thread's `specs/` folder, covering all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) with no clarifying questions. Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`derive-spec`](./skills/support/derive-spec/SKILL.md) instead. Useful when you already have the upstream input in hand and just need the spec written down — not when you want to author it together (use `spec-interactive`).
+**Autonomous** end-to-end spec generation — turns a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade v1 spec markdown file under the active V1 thread's `specs/` folder, covering all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) with no clarifying questions. Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`take-snapshot`](./skills/support/take-snapshot/SKILL.md) instead. Useful when you already have the upstream input in hand and just need the spec written down — not when you want to author it together (use `spec-interactive`).
 
 ```sh
 npx skills add Jei-sKappa/skills --skill spec-auto
@@ -103,7 +103,7 @@ npx skills add Jei-sKappa/skills --skill spec-auto
 
 #### [`spec-interactive`](./skills/workflow/spec/spec-interactive/SKILL.md)
 
-**Interactive** spec authoring — walks the user through the eight handoff-grade semantic-contract elements of a spec one at a time, then assembles and writes a v1 spec markdown file under the active V1 thread's `specs/` folder. Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`derive-spec`](./skills/support/derive-spec/SKILL.md) instead. Useful when you want to think the spec through together with the agent, push back on weak reasoning before it becomes expensive in implementation, and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `spec-auto` for that).
+**Interactive** spec authoring — walks the user through the eight handoff-grade semantic-contract elements of a spec one at a time, then assembles and writes a v1 spec markdown file under the active V1 thread's `specs/` folder. Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`take-snapshot`](./skills/support/take-snapshot/SKILL.md) instead. Useful when you want to think the spec through together with the agent, push back on weak reasoning before it becomes expensive in implementation, and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `spec-auto` for that).
 
 ```sh
 npx skills add Jei-sKappa/skills --skill spec-interactive
@@ -343,12 +343,12 @@ Manages a local library of reference repositories: stocks new repos into `.libra
 npx skills add Jei-sKappa/skills --skill the-librarian
 ```
 
-#### [`derive-spec`](./skills/support/derive-spec/SKILL.md)
+#### [`take-snapshot`](./skills/support/take-snapshot/SKILL.md)
 
 Derives a comprehensive, stack-agnostic specification document from an existing codebase — a hybrid SRS + PRD with append-only requirement IDs, traceability back to source files, and a consolidated open-questions list. Useful when you want to extract a single source of truth for a 1:1 rebuild (same stack or different), or to document an undocumented application, without baking any migration or target-stack guidance into the output. **Reverse direction** — for forward-design spec authoring use `spec-auto` / `spec-interactive` instead.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill derive-spec
+npx skills add Jei-sKappa/skills --skill take-snapshot
 ```
 
 #### [`afk-exploration`](./skills/support/afk-exploration/SKILL.md)
