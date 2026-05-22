@@ -24,13 +24,32 @@ There is no build, test, or lint pipeline — this is a content repository. Vali
 
 ## Layout
 
-- `skills/<skill-name>/SKILL.md` — one directory per skill under the top-level `skills/` folder. The directory name MUST match the `name:` field in the frontmatter.
-- `README.md` — index of available skills; update when adding/removing a skill.
-- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin so installs are grouped under a named heading (e.g. `JeisKappa Skills`) instead of `General` in `npx skills list`. Every skill folder MUST be listed in the appropriate plugin's `skills` array as `./skills/<skill-name>`. To introduce a new group/heading, add another entry to the `plugins` array with its own `name` and `skills` list. Display rule: the CLI splits `name` on `-`, uppercases the first char of each segment, then joins with spaces — so `JeisKappa-skills` renders as `JeisKappa Skills`. Dashes cannot survive into the displayed title.
+Skills live under one of three top-level buckets, and within `skills/workflow/` are further grouped by spine phase / overlay module:
+
+```
+skills/
+├── deprecated/                  retired skills kept on disk so existing installs do not break
+├── support/                     non-V1 skills (predate V1 or sit outside the workflow spine)
+└── workflow/                    Modular Agentic Workflow V1 skills
+    ├── capture-discussion/      capture-inbox, discussion, seeded-discussion
+    ├── propose/                 propose-{auto,interactive}
+    ├── spec/                    spec-{auto,interactive}
+    ├── plan/                    plan-loose-*, plan-strict-*, adjust-plan-granularity-*
+    ├── implement/               implement-*, implement-plan-*, implement-plan-with-subagents-*
+    ├── review/                  review-{proposal,spec,plan,implementation,code}-{auto,interactive}
+    ├── merge/                   merge-artifacts-{auto,interactive}
+    └── finish-navigate/         finish, whats-next
+```
+
+Rules:
+
+- Every skill lives at `skills/<bucket>/[<group>/]<skill-name>/SKILL.md`. The leaf directory name MUST match the `name:` field in the frontmatter.
+- `README.md` — index of available skills; update when adding/removing a skill (use the full nested path in links).
+- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin so installs are grouped under a named heading (e.g. `JeisKappa Skills`) instead of `General` in `npx skills list`. Every skill folder MUST be listed in the appropriate plugin's `skills` array as `./skills/<bucket>/[<group>/]<skill-name>`. To introduce a new group/heading, add another entry to the `plugins` array with its own `name` and `skills` list. Display rule: the CLI splits `name` on `-`, uppercases the first char of each segment, then joins with spaces — so `JeisKappa-skills` renders as `JeisKappa Skills`. Dashes cannot survive into the displayed title.
 
 ## SKILL.md format
 
-Every skill file starts with YAML frontmatter, then the skill body. Mirror the structure of `skills/consult-the-expert/SKILL.md`:
+Every skill file starts with YAML frontmatter, then the skill body. Mirror the structure of `skills/support/consult-the-expert/SKILL.md`:
 
 ```yaml
 ---
@@ -52,10 +71,11 @@ Skills whose job is to produce a deliverable for the user to copy, paste, or han
 
 ## When adding a new skill
 
-1. Create `skills/<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`).
-2. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet.
-3. Register the skill folder in `.claude-plugin/marketplace.json` under the appropriate plugin's `skills` array as `./skills/<skill-name>` (default plugin: `JeisKappa-skills`).
-4. Add the skill's folder name to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
+1. Decide which bucket the skill belongs to — `workflow/` (V1 spine or overlay), `support/` (non-V1 standalone), or `deprecated/` (retired). For `workflow/`, also decide which group: `capture-discussion`, `propose`, `spec`, `plan`, `implement`, `review`, `merge`, or `finish-navigate`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
+2. Create `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`).
+3. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet, linking to the full nested path.
+4. Register the skill folder in `.claude-plugin/marketplace.json` under the appropriate plugin's `skills` array as `./skills/<bucket>/[<group>/]<skill-name>` (default plugin: `JeisKappa-skills`; workflow skills go under `JeisKappa-workflow`).
+5. Add the skill's folder name (the leaf, not the full path) to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
 
 ## Commits
 
@@ -92,7 +112,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 
 - **Tech stack**: Markdown-only skill files; YAML frontmatter (`name`, `description`, `metadata.author`, `metadata.version`); no scripts or runtime required by V1 (D1).
 - **Harness compatibility**: Skill instructions must work across Claude Code, Codex, Gemini CLI, OpenCode (D29) — `*-with-subagents-*` skills are the only V1 skills allowed to assume subagent capability (D69).
-- **Repository shape**: Keep skills flat under `skills/<skill-name>/` — no nested directories, no name prefixes (D3).
+- **Repository shape**: Skills live under one of three buckets — `skills/workflow/<group>/<skill-name>/`, `skills/support/<skill-name>/`, or `skills/deprecated/<skill-name>/`. No name prefixes — grouping is expressed by folder, not by skill name (D3, revised on reorganization).
 - **Naming**: Kebab-case skill names matching directory; `-auto` / `-interactive` suffix discipline (D29, D30); skill name MUST equal `name:` frontmatter and marketplace entry.
 - **Artifact storage**: All workflow artifacts live under `docs/threads/<thread>/` per the V1 folder set; nothing else writes there (D7, D107).
 - **Filename grammar**: All artifacts UTC-prefixed `YYMMDDHHMMSSZ`; artifact type suffix mandatory; versioned artifacts use target-version semantics (D11, D42, D43, D47, D46).
@@ -149,10 +169,10 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 
 ## Repository Nature
 ## File Naming Patterns
-- Each skill lives at `skills/<skill-name>/SKILL.md`
-- Directory name MUST match the `name:` field in the YAML frontmatter
+- Each skill lives at `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` (buckets: `workflow/`, `support/`, `deprecated/`; groups under `workflow/` only)
+- Leaf directory name MUST match the `name:` field in the YAML frontmatter
 - Directory names use kebab-case (e.g., `afk-exploration`, `brief-the-implementer`, `consult-the-expert`)
-- Sub-references live at `skills/<skill-name>/references/*.md` (only for skills with supporting reference material)
+- Sub-references live at `skills/<bucket>/[<group>/]<skill-name>/references/*.md` (only for skills with supporting reference material)
 - `README.md` — index of all skills; updated when skills are added or removed
 - `AGENTS.md` — authoritative agent guidance (symlinked as `CLAUDE.md`)
 - `.claude-plugin/marketplace.json` — plugin registry for `vercel-labs/skills` CLI
@@ -174,7 +194,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 ## Deliverable Skills Rule
 - Forbidden: "Sure, here is…", "Hope this helps.", chat-style framing, closing remarks
 - Required: "The response IS the deliverable — no preamble, no closing remark."
-- Example: `skills/consult-the-expert/SKILL.md` lines 40–41 and 44–46
+- Example: `skills/support/consult-the-expert/SKILL.md` lines 40–41 and 44–46
 ## Multi-agent Skills
 - Orchestrator never reads source directly — all reads go through subagents
 - Subagents write to disk; orchestrator reads from disk (never from subagent reply)
@@ -204,9 +224,9 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 ## Component Responsibilities
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| Skill unit | Self-contained agent instruction set | `skills/<skill-name>/SKILL.md` |
+| Skill unit | Self-contained agent instruction set | `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` |
 | YAML frontmatter | Identity, trigger description, version | first block of each `SKILL.md` |
-| Reference files | Methodology documents read by subagents | `skills/<skill-name>/references/*.md` |
+| Reference files | Methodology documents read by subagents | `skills/<bucket>/[<group>/]<skill-name>/references/*.md` |
 | Marketplace registry | Plugin grouping for `npx skills list` | `.claude-plugin/marketplace.json` |
 | Agent guidance | Session-persistent rules for this repo | `AGENTS.md` (symlinked as `CLAUDE.md`) |
 | Commit scopes | Valid conventional-commit scopes per skill | `.vscode/settings.json` |
@@ -218,24 +238,24 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 - Skills are versioned in their own frontmatter (`metadata.version`), not through the repo's git tags.
 ## Layers
 - Purpose: Machine-readable identity consumed by the `skills` CLI harness.
-- Location: Top of every `skills/<skill-name>/SKILL.md`
+- Location: Top of every `skills/<bucket>/[<group>/]<skill-name>/SKILL.md`
 - Contains: `name` (kebab-case, matches directory), `description` (trigger sentence for harness matching), `metadata.author`, `metadata.version` (semver).
 - Depends on: Nothing — self-contained.
 - Used by: `npx skills` CLI during install and listing.
 - Purpose: Human and agent instructions for how to execute the skill.
-- Location: Body of `skills/<skill-name>/SKILL.md` (after frontmatter).
+- Location: Body of `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` (after frontmatter).
 - Contains: Tone, structure, workflow phases, subagent briefs, constraints.
 - Depends on: Optionally, `references/*.md` files in the same skill directory.
 - Used by: The AI agent session that invokes the skill.
 - Purpose: Reusable methodology documents too long or too specialized to embed in the main skill body. Loaded by dispatched subagents, not by the orchestrator.
-- Location: `skills/afk-exploration/references/` and `skills/the-librarian/references/`
+- Location: `skills/support/afk-exploration/references/` and `skills/support/the-librarian/references/`
 - Contains: `pre-mortem-analysis.md`, `red-team-adversarial.md`, `socratic-questioning.md`, `throwaway-prototyping.md` (afk-exploration); `stock.md`, `consult.md`, `research.md` (the-librarian).
 - Depends on: Nothing.
 - Used by: Critique and prototype subagents dispatched by `afk-exploration`; flow subagents dispatched by `the-librarian`.
 - Purpose: Plugin manifest so the `skills.sh` marketplace groups this repo's skills under a named heading.
 - Location: `.claude-plugin/marketplace.json`
 - Contains: Plugin `name` (display-name encoded in dash-separated segments), `source`, `skills` array of relative paths.
-- Depends on: Each entry must have a matching `skills/<skill-name>/` directory on disk.
+- Depends on: Each entry must have a matching `skills/<bucket>/[<group>/]<skill-name>/` directory on disk.
 - Used by: `npx skills` CLI during install listing.
 ## Data Flow
 ### Skill installation
@@ -246,19 +266,19 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 - No in-process state. Orchestrator skills persist state on disk (run folders, `.metadata.json`, note files). Interactive skills persist state in a log file under `docs/discussions/`. All other skills are stateless.
 ## Key Abstractions
 - Purpose: An atomic, self-contained agent instruction set. Installed independently; invoked by trigger description.
-- Examples: `skills/consult-the-expert/SKILL.md`, `skills/afk-exploration/SKILL.md`
+- Examples: `skills/support/consult-the-expert/SKILL.md`, `skills/support/afk-exploration/SKILL.md`
 - Pattern: YAML frontmatter block followed by a Markdown body. No imports.
 - Purpose: Skills whose chat response IS the output — no file written, no preamble.
-- Examples: `skills/meta-prompting/SKILL.md`, `skills/consult-the-expert/SKILL.md`, `skills/report-to-the-owner/SKILL.md`, `skills/brief-the-implementer/SKILL.md`
+- Examples: `skills/support/meta-prompting/SKILL.md`, `skills/support/consult-the-expert/SKILL.md`, `skills/support/report-to-the-owner/SKILL.md`, `skills/support/brief-the-implementer/SKILL.md`
 - Pattern: "Output format" section explicitly states "no preamble, no closing remark. The response IS the deliverable."
 - Purpose: Skills that dispatch parallel subagents, wait for disk artifacts, and synthesize a final document. Never read source code directly.
-- Examples: `skills/afk-exploration/SKILL.md`, `skills/derive-spec/SKILL.md`
+- Examples: `skills/support/afk-exploration/SKILL.md`, `skills/support/derive-spec/SKILL.md`
 - Pattern: Numbered workflow phases; subagent briefs defined in-skill; file-on-disk as the only completion signal; reply from subagent is acknowledgment only.
 - Purpose: Methodology document too detailed or reusable to embed inline. Passed to subagents as an absolute path.
-- Examples: `skills/afk-exploration/references/pre-mortem-analysis.md`, `skills/the-librarian/references/stock.md`
+- Examples: `skills/support/afk-exploration/references/pre-mortem-analysis.md`, `skills/support/the-librarian/references/stock.md`
 - Pattern: Plain Markdown; loaded by subagents, never by the orchestrator itself.
 ## Entry Points
-- Location: `description` field in each `skills/<skill-name>/SKILL.md`
+- Location: `description` field in each `skills/<bucket>/[<group>/]<skill-name>/SKILL.md`
 - Triggers: Pattern-matched by the `skills` CLI / agent harness against user intent.
 - Responsibilities: Route the user's session to the correct skill.
 - Location: `.claude-plugin/marketplace.json`
@@ -272,7 +292,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 - **No inter-skill dependencies at runtime:** Skills do not import or call each other. Each `SKILL.md` is completely standalone.
 - **Orchestrator context isolation:** Orchestrator skills (`afk-exploration`, `derive-spec`) must never read source files inline — all reads go through subagents. This is a documented discipline constraint enforced by the skill itself, not tooling.
 - **Single-file per skill:** Each skill is exactly one `SKILL.md`. No skill spans multiple files except via the `references/` pattern.
-- **name field must match directory name:** The `name:` YAML field and the `skills/<name>/` directory name must be identical. Mismatch breaks the CLI install.
+- **name field must match leaf directory name:** The `name:` YAML field and the LEAF skill directory name (e.g. `<skill-name>` in `skills/<bucket>/[<group>/]<skill-name>/`) must be identical. Mismatch breaks the CLI install.
 - **Marketplace registration is manual:** Adding a skill requires manually updating `.claude-plugin/marketplace.json`, `README.md`, and `.vscode/settings.json`. There is no automation.
 ## Anti-Patterns
 ### Embedding method docs in the skill body when they belong in references
