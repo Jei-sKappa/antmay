@@ -417,3 +417,31 @@ npx skills add Jei-sKappa/skills --skill spec-auto
 Skills are grouped under one marketplace plugin per `skills/workflow/` folder — for example `JeisKappa-plan` (rendered as **`JeisKappa Plan`**), `JeisKappa-handoff` (**`JeisKappa Handoff`**), `JeisKappa-research` (**`JeisKappa Research`**), and so on. Retired skills live under `JeisKappa-deprecated`. Dashes in the plugin name are split into spaces and each segment capitalized in `npx skills list`.
 
 For the V1 reference docs (thread layout, filename grammar, immutability rules), see [`docs/workflow/v1/README.md`](./docs/workflow/v1/README.md).
+
+## Raycast extension
+
+The Raycast extension under [`raycast-extension/`](./raycast-extension) turns each skill into a paste-ready prompt. Pick a skill from the search list, type your prompt, and the wrapped output lands on your clipboard:
+
+```
+<instruction>
+…skill body…
+</instruction>
+
+…your prompt…
+```
+
+It is useful in three distinct cases — not just the first one:
+
+- **No bulk install.** The catalog is large and still growing. Instead of running `npx skills add …` for every skill you might one day need, keep the source of truth here and pull only the skill you actually need, when you need it.
+- **Maximum control over which skill runs.** A harness that auto-routes on skill descriptions can pick one you did not intend. Wrapping a skill into a copied prompt makes skills strictly opt-in — nothing fires until you paste it.
+- **Cross-harness portability.** Works with any chat-style agent, including ones that have no notion of skills at all, because the output is just a wrapped instruction plus your prompt.
+
+The extension is purely derived: `raycast-extension/assets/skills.json` is regenerated from `skills/**/SKILL.md` by [`raycast-extension/scripts/sync-skills-to-raycast.mjs`](./raycast-extension/scripts/sync-skills-to-raycast.mjs) and the sync runs automatically as part of `npm run dev` / `npm run build` inside the extension folder.
+
+```sh
+cd raycast-extension
+npm install
+npm run dev    # syncs skills, then starts Raycast dev mode
+```
+
+See [`raycast-extension/README.md`](./raycast-extension/README.md) for details.
