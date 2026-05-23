@@ -5,7 +5,7 @@
 // title and group label, and writes a single manifest JSON consumed by the
 // extension at runtime via `environment.assetsPath`.
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,6 +75,25 @@ const groupForPath = (relPath) => {
   return segments[0];
 };
 
+const collectReferences = async (skillDir) => {
+  const refsDir = join(skillDir, "references");
+  if (!existsSync(refsDir)) return [];
+  const entries = [];
+  for await (const file of glob("**/*", { cwd: refsDir })) {
+    const absPath = join(refsDir, file);
+    const stats = await stat(absPath);
+    if (!stats.isFile()) continue;
+    const body = await readFile(absPath, "utf8");
+    entries.push({
+      path: `references/${file}`,
+      bytes: stats.size,
+      body: body.trimEnd() + "\n",
+    });
+  }
+  entries.sort((a, b) => a.path.localeCompare(b.path));
+  return entries;
+};
+
 const collectSkills = async () => {
   const files = [];
   for await (const file of glob("**/SKILL.md", { cwd: SKILLS_DIR })) {
@@ -95,6 +114,7 @@ const collectSkills = async () => {
       );
     }
     const group = groupForPath(file);
+    const references = await collectReferences(dirname(absPath));
     skills.push({
       name,
       title: titleCase(name),
@@ -104,6 +124,7 @@ const collectSkills = async () => {
       version: frontmatter?.metadata?.version || "",
       sourcePath: relative(REPO_ROOT, absPath),
       body: body.trimEnd() + "\n",
+      references,
     });
   }
   return skills;
@@ -145,6 +166,15 @@ const main = async () => {
     .join("\n");
   console.log(`Wrote ${skills.length} skills to ${relative(REPO_ROOT, OUTPUT_PATH)}`);
   console.log(counts);
+
+  const withRefs = skills.filter((s) => s.references.length > 0);
+  if (withRefs.length > 0) {
+    console.log(`\nInlined references for ${withRefs.length} skill${withRefs.length === 1 ? "" : "s"}:`);
+    for (const skill of withRefs) {
+      const totalBytes = skill.references.reduce((sum, r) => sum + r.bytes, 0);
+      console.log(`  ${skill.name}: ${skill.references.length} files, ${totalBytes} bytes`);
+    }
+  }
 };
 
 main().catch((err) => {

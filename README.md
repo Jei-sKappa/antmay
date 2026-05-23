@@ -424,11 +424,17 @@ The Raycast extension under [`raycast-extension/`](./raycast-extension) turns ea
 
 ```
 <instruction>
+<references>
+<reference path="references/foo.md">…</reference>
+</references>
+
 …skill body…
 </instruction>
 
 …your prompt…
 ```
+
+Skills that have a `references/` folder get their reference files inlined automatically at the top of `<instruction>` (long static documents first, instructions next, the user's prompt last — the layout LLMs handle best). For those skills, the picker shows a paperclip accessory with the file count, and an opt-out "Copy Without References" action is available for cases where you want a slimmer instruction.
 
 It is useful in three distinct cases — not just the first one:
 
