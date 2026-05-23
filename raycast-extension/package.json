@@ -1,10 +1,10 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "jeiskappa-skills",
-  "title": "Jei-sKappa Skills",
+  "title": "Jeiskappa Skills",
   "description": "Use any Jei-sKappa skill with any agent. Pick one, wrap it as an <instruction>, attach your prompt, and copy — skills stay opt-in instead of being auto-selected or bulk-installed.",
   "icon": "icon.png",
-  "author": "jeiskappa",
+  "author": "Jei-sKappa",
   "license": "MIT",
   "platforms": ["macOS"],
   "categories": ["Productivity", "Developer Tools"],
@@ -12,7 +12,7 @@
     {
       "name": "select-skill",
       "title": "Select Skill",
-      "subtitle": "Jei-sKappa Skills",
+      "subtitle": "Jeiskappa Skills",
       "description": "Browse bundled skills, attach your prompt, and copy the wrapped output.",
       "mode": "view"
     }
@@ -35,6 +35,6 @@
     "dev": "npm run sync && ray develop",
     "fix-lint": "ray lint --fix",
     "lint": "ray lint",
-    "publish": "npx @raycast/api@latest publish"
+    "publish": "npm run sync && npx @raycast/api@latest publish"
   }
 }

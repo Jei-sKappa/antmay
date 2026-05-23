@@ -53,15 +53,23 @@ const loadManifest = (): Manifest => {
 const buildReferencesBlock = (refs: SkillReference[]): string => {
   if (refs.length === 0) return "";
   const inner = refs
-    .map((r) => `<reference path="${r.path}">\n${r.body.trimEnd()}\n</reference>`)
+    .map(
+      (r) => `<reference path="${r.path}">\n${r.body.trimEnd()}\n</reference>`,
+    )
     .join("\n");
   return `<references>\n${inner}\n</references>\n\n`;
 };
 
-const wrapPayload = (skill: Skill, prompt: string, options: WrapOptions = {}): string => {
+const wrapPayload = (
+  skill: Skill,
+  prompt: string,
+  options: WrapOptions = {},
+): string => {
   const { includeReferences = true } = options;
   const refsBlock =
-    includeReferences && skill.references.length > 0 ? buildReferencesBlock(skill.references) : "";
+    includeReferences && skill.references.length > 0
+      ? buildReferencesBlock(skill.references)
+      : "";
   const wrapped = `<instruction>\n${refsBlock}${skill.body.trimEnd()}\n</instruction>`;
   const userPrompt = prompt.trim();
   return userPrompt ? `${wrapped}\n\n${userPrompt}\n` : `${wrapped}\n`;
@@ -113,7 +121,9 @@ const PromptForm = ({ skill }: { skill: Skill }) => {
     mode: "copy" | "paste",
     includeReferences: boolean,
   ) => {
-    const payload = wrapPayload(skill, values.prompt ?? "", { includeReferences });
+    const payload = wrapPayload(skill, values.prompt ?? "", {
+      includeReferences,
+    });
     const label = `${skill.title}${hasRefs && !includeReferences ? " (no refs)" : ""}`;
     try {
       if (mode === "copy") {
@@ -134,7 +144,9 @@ const PromptForm = ({ skill }: { skill: Skill }) => {
 
   const descriptionLine =
     `${skill.title}${skill.version ? `  ·  v${skill.version}` : ""}` +
-    (hasRefs ? `  ·  ${skill.references.length} reference${skill.references.length === 1 ? "" : "s"} inlined` : "");
+    (hasRefs
+      ? `  ·  ${skill.references.length} reference${skill.references.length === 1 ? "" : "s"} inlined`
+      : "");
 
   return (
     <Form
@@ -144,13 +156,17 @@ const PromptForm = ({ skill }: { skill: Skill }) => {
           <Action.SubmitForm
             icon={Icon.Clipboard}
             title="Copy"
-            onSubmit={(values) => submit(values as { prompt: string }, "copy", true)}
+            onSubmit={(values) =>
+              submit(values as { prompt: string }, "copy", true)
+            }
           />
           <Action.SubmitForm
             icon={Icon.AppWindow}
             title="Paste"
             shortcut={{ modifiers: ["cmd", "shift"], key: "return" }}
-            onSubmit={(values) => submit(values as { prompt: string }, "paste", true)}
+            onSubmit={(values) =>
+              submit(values as { prompt: string }, "paste", true)
+            }
           />
           {hasRefs ? (
             <ActionPanel.Section title="Without inlined references">
@@ -158,13 +174,17 @@ const PromptForm = ({ skill }: { skill: Skill }) => {
                 icon={Icon.Clipboard}
                 title="Copy Without References"
                 shortcut={{ modifiers: ["cmd", "opt"], key: "return" }}
-                onSubmit={(values) => submit(values as { prompt: string }, "copy", false)}
+                onSubmit={(values) =>
+                  submit(values as { prompt: string }, "copy", false)
+                }
               />
               <Action.SubmitForm
                 icon={Icon.AppWindow}
                 title="Paste Without References"
                 shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "return" }}
-                onSubmit={(values) => submit(values as { prompt: string }, "paste", false)}
+                onSubmit={(values) =>
+                  submit(values as { prompt: string }, "paste", false)
+                }
               />
             </ActionPanel.Section>
           ) : null}
@@ -177,7 +197,10 @@ const PromptForm = ({ skill }: { skill: Skill }) => {
         </ActionPanel>
       }
     >
-      <Form.Description title={skill.groupTitle} text={`${descriptionLine}\n${skill.description}`} />
+      <Form.Description
+        title={skill.groupTitle}
+        text={`${descriptionLine}\n${skill.description}`}
+      />
       <Form.TextArea
         id="prompt"
         title="Your prompt"
@@ -190,7 +213,12 @@ const PromptForm = ({ skill }: { skill: Skill }) => {
 };
 
 const buildAccessories = (skill: Skill) => {
-  const accessories: { icon?: Icon; text?: string; tooltip?: string; tag?: string }[] = [];
+  const accessories: {
+    icon?: Icon;
+    text?: string;
+    tooltip?: string;
+    tag?: string;
+  }[] = [];
   if (skill.references.length > 0) {
     accessories.push({
       icon: Icon.Paperclip,
@@ -249,7 +277,12 @@ export default function Command() {
                 key={`${skill.group}/${skill.name}`}
                 title={skill.title}
                 subtitle={showDetail ? undefined : skill.description}
-                keywords={[skill.name, skill.group, skill.groupTitle, ...skill.description.split(/\s+/)]}
+                keywords={[
+                  skill.name,
+                  skill.group,
+                  skill.groupTitle,
+                  ...skill.description.split(/\s+/),
+                ]}
                 accessories={buildAccessories(skill)}
                 icon={skill.group === "deprecated" ? Icon.Hourglass : Icon.Book}
                 detail={
@@ -257,17 +290,29 @@ export default function Command() {
                     markdown={buildPreviewMarkdown(skill)}
                     metadata={
                       <List.Item.Detail.Metadata>
-                        <List.Item.Detail.Metadata.Label title="Skill" text={skill.name} />
-                        <List.Item.Detail.Metadata.Label title="Group" text={skill.groupTitle} />
+                        <List.Item.Detail.Metadata.Label
+                          title="Skill"
+                          text={skill.name}
+                        />
+                        <List.Item.Detail.Metadata.Label
+                          title="Group"
+                          text={skill.groupTitle}
+                        />
                         {skill.version ? (
-                          <List.Item.Detail.Metadata.Label title="Version" text={skill.version} />
+                          <List.Item.Detail.Metadata.Label
+                            title="Version"
+                            text={skill.version}
+                          />
                         ) : null}
                         <List.Item.Detail.Metadata.Separator />
                         <List.Item.Detail.Metadata.Label
                           title="Description"
                           text={skill.description || "—"}
                         />
-                        <List.Item.Detail.Metadata.Label title="Source" text={skill.sourcePath} />
+                        <List.Item.Detail.Metadata.Label
+                          title="Source"
+                          text={skill.sourcePath}
+                        />
                         {hasRefs ? (
                           <>
                             <List.Item.Detail.Metadata.Separator />
@@ -297,13 +342,20 @@ export default function Command() {
                         icon={Icon.Clipboard}
                         title="Copy Skill Without Prompt"
                         shortcut={{ modifiers: ["cmd"], key: "return" }}
-                        onAction={() => copyToClipboard(wrapPayload(skill, ""), skill.title)}
+                        onAction={() =>
+                          copyToClipboard(wrapPayload(skill, ""), skill.title)
+                        }
                       />
                       <Action
                         icon={Icon.AppWindow}
                         title="Paste Skill in Frontmost App"
-                        shortcut={{ modifiers: ["cmd", "shift"], key: "return" }}
-                        onAction={() => pasteToFrontmost(wrapPayload(skill, ""))}
+                        shortcut={{
+                          modifiers: ["cmd", "shift"],
+                          key: "return",
+                        }}
+                        onAction={() =>
+                          pasteToFrontmost(wrapPayload(skill, ""))
+                        }
                       />
                     </ActionPanel.Section>
                     {hasRefs ? (
@@ -311,10 +363,15 @@ export default function Command() {
                         <Action
                           icon={Icon.Clipboard}
                           title="Copy Skill Without References"
-                          shortcut={{ modifiers: ["cmd", "opt"], key: "return" }}
+                          shortcut={{
+                            modifiers: ["cmd", "opt"],
+                            key: "return",
+                          }}
                           onAction={() =>
                             copyToClipboard(
-                              wrapPayload(skill, "", { includeReferences: false }),
+                              wrapPayload(skill, "", {
+                                includeReferences: false,
+                              }),
                               `${skill.title} (no refs)`,
                             )
                           }
@@ -322,9 +379,16 @@ export default function Command() {
                         <Action
                           icon={Icon.AppWindow}
                           title="Paste Skill Without References"
-                          shortcut={{ modifiers: ["cmd", "opt", "shift"], key: "return" }}
+                          shortcut={{
+                            modifiers: ["cmd", "opt", "shift"],
+                            key: "return",
+                          }}
                           onAction={() =>
-                            pasteToFrontmost(wrapPayload(skill, "", { includeReferences: false }))
+                            pasteToFrontmost(
+                              wrapPayload(skill, "", {
+                                includeReferences: false,
+                              }),
+                            )
                           }
                         />
                       </ActionPanel.Section>
