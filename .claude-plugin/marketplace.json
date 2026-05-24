@@ -28,7 +28,7 @@
       "name": "JeisKappa-handoff",
       "source": "./",
       "skills": [
-        "./skills/workflow/handoff/brief-the-implementer",
+        "./skills/workflow/handoff/brief-the-recipient",
         "./skills/workflow/handoff/consult-the-expert",
         "./skills/workflow/handoff/report-to-the-owner"
       ]

@@ -361,12 +361,12 @@ npx skills add Jei-sKappa/skills --skill take-snapshot
 
 ### Handoff
 
-#### [`brief-the-implementer`](./skills/workflow/handoff/brief-the-implementer/SKILL.md)
+#### [`brief-the-recipient`](./skills/workflow/handoff/brief-the-recipient/SKILL.md)
 
-Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Useful when you want to hand off the conclusion of a discussion (a decision, answer, diagnosis, or recommendation) to a separate context: a fresh AI session, a follow-up task, or a teammate catching up.
+Drafts a self-contained outcome briefing — the verdict, why, caveats, and pointers — that someone who wasn't part of the discussion can pick up and act on. Useful when you want to hand off the conclusion of a discussion (a decision, answer, diagnosis, or recommendation) to a separate context: a fresh AI session, a follow-up task, or a teammate catching up — whether they'll implement, review, escalate, prioritize, or just keep the thread moving.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill brief-the-implementer
+npx skills add Jei-sKappa/skills --skill brief-the-recipient
 ```
 
 #### [`consult-the-expert`](./skills/workflow/handoff/consult-the-expert/SKILL.md)

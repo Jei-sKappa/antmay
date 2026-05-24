@@ -40,7 +40,7 @@ skills/
     ├── finish-navigate/         finish, whats-next
     ├── research/                afk-exploration, the-librarian
     ├── documentation/           take-snapshot
-    ├── handoff/                 brief-the-implementer, consult-the-expert, report-to-the-owner
+    ├── handoff/                 brief-the-recipient, consult-the-expert, report-to-the-owner
     └── support/                 meta-prompting
 ```
 
@@ -90,7 +90,7 @@ Every `SKILL.md` is a standalone instruction set handed to an agent that can onl
 
 ## Deliverable skills — no preamble
 
-Skills whose job is to produce a deliverable for the user to copy, paste, or hand off elsewhere (currently: `meta-prompting`, `consult-the-expert`, `report-to-the-owner`, `brief-the-implementer`) must enforce that the chat response IS the deliverable. No "Sure, here is…", no chat-style framing, no closing remark like "Hope this helps." Encode the rule explicitly in the skill's Tone or Output format section so a fresh model session honors it without relying on the harness picking up convention.
+Skills whose job is to produce a deliverable for the user to copy, paste, or hand off elsewhere (currently: `meta-prompting`, `consult-the-expert`, `report-to-the-owner`, `brief-the-recipient`) must enforce that the chat response IS the deliverable. No "Sure, here is…", no chat-style framing, no closing remark like "Hope this helps." Encode the rule explicitly in the skill's Tone or Output format section so a fresh model session honors it without relying on the harness picking up convention.
 
 ## When adding a new skill
 
@@ -116,7 +116,7 @@ Rules when working on it:
 
 Never commit unless explicitly asked to do so.
 
-This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(brief-the-implementer): …`, `fix(report-to-the-owner): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" above).
+This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(brief-the-recipient): …`, `fix(report-to-the-owner): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" above).
 
 Repo-wide changes (touching multiple skills, `README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
 
@@ -206,7 +206,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 ## File Naming Patterns
 - Each skill lives at `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` (buckets: `workflow/`, `deprecated/`; groups under `workflow/` only)
 - Leaf directory name MUST match the `name:` field in the YAML frontmatter
-- Directory names use kebab-case (e.g., `afk-exploration`, `brief-the-implementer`, `consult-the-expert`)
+- Directory names use kebab-case (e.g., `afk-exploration`, `brief-the-recipient`, `consult-the-expert`)
 - Sub-references live at `skills/<bucket>/[<group>/]<skill-name>/references/*.md` (only for skills with supporting reference material)
 - `README.md` — index of all skills; updated when skills are added or removed
 - `AGENTS.md` — authoritative agent guidance (symlinked as `CLAUDE.md`)
@@ -304,7 +304,7 @@ A lightweight, modular, harness-agnostic, spec-driven agentic workflow distribut
 - Examples: `skills/workflow/handoff/consult-the-expert/SKILL.md`, `skills/workflow/research/afk-exploration/SKILL.md`
 - Pattern: YAML frontmatter block followed by a Markdown body. No imports.
 - Purpose: Skills whose chat response IS the output — no file written, no preamble.
-- Examples: `skills/workflow/support/meta-prompting/SKILL.md`, `skills/workflow/handoff/consult-the-expert/SKILL.md`, `skills/workflow/handoff/report-to-the-owner/SKILL.md`, `skills/workflow/handoff/brief-the-implementer/SKILL.md`
+- Examples: `skills/workflow/support/meta-prompting/SKILL.md`, `skills/workflow/handoff/consult-the-expert/SKILL.md`, `skills/workflow/handoff/report-to-the-owner/SKILL.md`, `skills/workflow/handoff/brief-the-recipient/SKILL.md`
 - Pattern: "Output format" section explicitly states "no preamble, no closing remark. The response IS the deliverable."
 - Purpose: Skills that dispatch parallel subagents, wait for disk artifacts, and synthesize a final document. Never read source code directly.
 - Examples: `skills/workflow/research/afk-exploration/SKILL.md`, `skills/workflow/documentation/take-snapshot/SKILL.md`
