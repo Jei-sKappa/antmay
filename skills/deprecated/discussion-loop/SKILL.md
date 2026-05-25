@@ -3,7 +3,7 @@ name: discussion-loop
 description: Walk through existing discussion points one at a time, always presenting options and a recommendation, then append each user decision to a simple log. Use when the user has findings, open questions, review comments, design points, or a concrete plan they want to discuss and decide interactively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Discussion Loop
@@ -39,9 +39,9 @@ Start the file with a `#` heading and one sentence describing what is being disc
 
 ## Loop
 
-For each point, ask one question at a time and always include:
+For each point, open with a level-2 heading containing a concise title for the point — this title is reused verbatim in the log. Then ask one question at a time and always include:
 
-1. **Decision** — what this point is about.
+1. **Point** — what this point is about.
 2. **What you need to know** — just enough background to answer.
 3. **Options** — concrete choices, each with real pros and cons.
 4. **Recommendation** — your recommended choice and why.
@@ -52,20 +52,26 @@ Continue discussing the current point until the user decides. Do not move on whi
 
 ## Logging
 
-After the user decides, append one record:
+After the user decides, append one record that mirrors what the user saw during the interview, so the log carries enough context to reconstruct what was discussed later without re-reading the chat:
 
 ```markdown
-## <Point title>
+## <the concise title for the point, verbatim>
 
-Decision: <what the user chose>
+Point: <the Point line you presented, verbatim>
 
-Rationale: <why the choice made sense, including the main trade-off>
+What you need to know: <the background block you presented, verbatim — keep multi-paragraph context as paragraphs, keep file paths and line numbers, do not summarize or compress>
+
+Choice: <what the user chose>
+
+Rationale: <why the choice made sense, including the main trade-off; if you logged a choice you disagreed with, note your dissent and the option you recommended here>
 ```
+
+Note: Options and Recommendation are intentionally not part of the log record; the goal is to recover what was discussed and chosen, not the full menu the user navigated. If your recommendation matters to the rationale (for example, because the user chose against it), capture that in the Rationale line instead.
 
 Then tell the user: `Decision saved: <short summary>.`
 
 The log is append-only, during the discussion avoid re-reading it.
-Do not rewrite earlier records. If a decision changes later, append a new record explaining the change.
+Do not rewrite earlier records. If a choice changes later, append a new record explaining the change.
 
 ## Finish
 
