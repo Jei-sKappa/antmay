@@ -3,7 +3,7 @@ name: discussion-loop
 description: Walk through existing discussion points one at a time, always presenting options and a recommendation, then append each user decision to a simple log. Use when the user has findings, open questions, review comments, design points, or a concrete plan they want to discuss and decide interactively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.3.0
 ---
 
 # Discussion Loop
@@ -70,8 +70,9 @@ Note: Options and Recommendation are intentionally not part of the log record; t
 
 Then tell the user: `Decision saved: <short summary>.`
 
-The log is append-only, during the discussion avoid re-reading it.
-Do not rewrite earlier records. If a choice changes later, append a new record explaining the change.
+The log is append-only:
+- during the discussion avoid re-reading it.
+- do not rewrite earlier records. If a choice changes later, append a new record explaining the change. Note: **Explicity** user instruction overrides this behaviour, if unsure ask for confirmation to avoid breaking the log.
 
 ## Finish
 
