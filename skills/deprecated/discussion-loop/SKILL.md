@@ -1,14 +1,16 @@
 ---
 name: discussion-loop
-description: Walk through existing discussion points one at a time, always presenting options and a recommendation, then append each user decision to a simple log. Use when the user has findings, open questions, review comments, design points, or a concrete plan they want to discuss and decide interactively.
+description: Walk through existing discussion points one at a time, always presenting options and a recommendation, then append each user decision to a per-thread decision log. Use when the user has findings, open questions, review comments, design points, or a concrete plan they want to discuss and decide interactively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.0
+  version: 1.5.0
 ---
 
 # Discussion Loop
 
 Drive a focused discussion over points that already exist in the user's prompt, recent context, a review, a plan, or a document. For each point: surface it, discuss until the user decides, append the decision to a log, then move to the next point.
+
+## Anti-Sycophancy Stance
 
 Your job is to help the user reach the best decision, not to make them feel good about whatever they say. Treat the discussion as a mutual attempt to get closer to the truth: you may be missing context, the user may be missing consequences, and either side may notice something the other overlooked. Sycophancy is a failure mode here — it corrupts the log with decisions the user will regret.
 
@@ -25,17 +27,18 @@ Hold these together:
 
 ## Setup
 
-Before the first point, create:
+1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If no thread exists, ASK the user where to create one OR auto-create a thread when context makes the slug obvious. If multiple thread roots exist and which is "active" is ambiguous, ASK — do not silently pick the most recent UTC stamp.
 
-```text
-docs/discussions/YYYY-MM-DD-<topic>-<purpose>-discussion.md
-```
+2. **Create the decision log.** Before the first point, create:
 
-Use:
-- <topic>: short kebab-case topic from the discussion.
-- <purpose>: why the discussion is happening: `review`, `brainstorming`, `plan`, `design`, `implementation`, `testing`, `deployment`, `maintenance`, `support`, `documentation`, or another label that fits the surrounding context.
+   ```text
+   docs/threads/<thread>/discussions/<YYMMDDHHMMSSZ>-<kebab-desc>-decision-log.md
+   ```
 
-Start the file with a `#` heading and one sentence describing what is being discussed.
+   - Use a 12-character `YYMMDDHHMMSSZ` UTC stamp captured once at creation time and never re-derived. The `decision-log` artifact-type suffix is MANDATORY.
+   - `<kebab-desc>`: a short kebab-case description of the topic. Optionally fold in why the discussion is happening — `review`, `brainstorming`, `plan`, `design`, `implementation`, `testing`, `deployment`, `maintenance`, `support`, `documentation`, or another label that fits the surrounding context.
+
+   Start the file with a `#` heading and one sentence describing what is being discussed.
 
 ## Loop
 
@@ -73,7 +76,7 @@ Then tell the user: `Decision saved: <short summary>.`
 
 The log is append-only:
 - during the discussion avoid re-reading it.
-- do not rewrite earlier records. If a choice changes later, append a new record explaining the change. Note: **Explicity** user instruction overrides this behaviour, if unsure ask for confirmation to avoid breaking the log.
+- do not rewrite earlier records. If a choice changes later, append a new record explaining the change. Note: **Explicit** user instruction overrides this behaviour, if unsure ask for confirmation to avoid breaking the log.
 
 ## Finish
 
