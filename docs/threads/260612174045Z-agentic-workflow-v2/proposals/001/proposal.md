@@ -1,5 +1,6 @@
 ---
 version: 2
+approved: 260620152152Z
 ---
 
 # Modular Agentic Workflow V2 — Proposal
@@ -13,8 +14,8 @@ consultation sessions of 2026-06-12, the maintainer's `TODO.md`, or the
 `appaltiav2` pilot thread — the traceability map is §17.
 
 This document dogfoods its own rules. Its lifecycle status lives as latches in the
-YAML frontmatter above (§4): none are set yet, so its condition derives to
-**Draft**. It lives in a lineage folder (§3), declares its degrees of freedom
+YAML frontmatter above (§4): the `approved` latch is set (`260620152152Z`), so its condition derives to
+**Approved** (and the document is now frozen, §4). It lives in a lineage folder (§3), declares its degrees of freedom
 (§15), and stays alive — edited in place — until its approval latch is set, at
 which point it freezes (§4). The frontmatter `version` counts completed
 review→revise cycles (§4): `version: 2` is this document after its first review and
