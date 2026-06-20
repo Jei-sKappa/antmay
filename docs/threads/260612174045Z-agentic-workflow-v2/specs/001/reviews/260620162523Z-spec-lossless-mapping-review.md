@@ -1,3 +1,10 @@
+---
+status:
+  disposed: 260620214136Z
+  disposition: accepted
+  rationale: specs/001/discussions/260620171014Z-spec-review-and-flags-decision-log.md
+---
+
 # Review: Workflow V2 spec lossless mapping (v1, Draft)
 
 ## References

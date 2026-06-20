@@ -1,5 +1,5 @@
 ---
-version: 1
+version: 2
 ---
 
 # Spec: Modular Agentic Workflow V2 — in-repo build contract
@@ -8,21 +8,26 @@ This spec is the buildable contract for the two in-repo deliverables of Workflow
 V2 (proposal §16 items 2–3): **(A)** the `docs/workflow/v2/` reference-doc set and
 **(B)** the skill changes implied by proposal §14, with the repo upkeep they
 require. It derives entirely from the approved, frozen proposal
-(`proposals/001/proposal.md`, version 2, `approved`) and this thread's decision
-log (`proposals/001/discussions/260612201354Z-proposal-v1-review-findings-decision-log.md`,
-P1–P21). It re-decides nothing: every requirement traces to a proposal section or
-a decision-log entry (§Traceability); anything not so traceable is marked a Degree
-of Freedom (§Degrees of freedom) or surfaced for the owner (§Flagged for owner
-review).
+(`proposals/001/proposal.md`, version 2, `approved`), this thread's proposal
+decision log (`proposals/001/discussions/260612201354Z-proposal-v1-review-findings-decision-log.md`,
+P1–P21), and — for `version: 2` — the spec-review-and-flags decision log
+(`specs/001/discussions/260620171014Z-spec-review-and-flags-decision-log.md`,
+SR-P1–P9) that disposed the lossless-mapping review and settled the owner flags.
+It re-decides nothing: every requirement traces to a proposal section or a
+decision-log entry (§Traceability); anything not so traceable is marked a Degree of
+Freedom (§Degrees of freedom) or recorded — now resolved — in §Owner flags.
 
 It dogfoods V2: it lives in a lineage folder (`specs/001/`); its frontmatter
-carries `version` only, so its derived condition is **Draft** (no `approved`
-latch); within-thread references are thread-relative; cross-location references
-(skills, `docs/workflow/`) are repo-relative; all timestamps use the
-`YYMMDDHHMMSSZ` UTC grammar.
+carries `version` only with no `status:` map yet, so its derived condition is
+**Draft** (no `status.approved` latch); within-thread references are
+thread-relative; cross-location references (skills, `docs/workflow/`) are
+repo-relative; all timestamps use the `YYMMDDHHMMSSZ` UTC grammar. (`version: 2`
+records that this spec has completed one review→revise cycle: the
+lossless-mapping review and the discussion loop that disposed it.)
 
 **Scope boundary.** "Build" here = author the nine reference docs and edit/author
-the skills + three upkeep files listed below. It does **not** include: building
+the skills + the four upkeep files listed below (README, marketplace, scopes, and
+the required AGENTS.md V2 pointer). It does **not** include: building
 the freeze-guard tooling, the future status CLI, the PR-enforcement CI gate,
 postmortem/decision-index templates, the skillrouter unification, or any
 external-workspace action (`EXAMPLE-WORKFLOW/` retirement). Each exclusion is
@@ -45,8 +50,8 @@ Conventions used by the ACs:
   unambiguously establishes rule R / instructs behavior Z (confirmable by reading
   that file; no inference from other files needed).
 - "**version bumped**" = `metadata.version` in the skill's frontmatter is strictly
-  greater than the baseline recorded in §3 (the bump floor and semver-level policy
-  are in §FR-S0 and §Degrees of freedom).
+  greater than the baseline recorded in §3 (the honest-per-skill semver policy —
+  MAJOR for a contract change, MINOR additive — is in FR-S0, AC-S0.2).
 - Within-thread paths in emitted artifacts are thread-relative; cross-location
   paths are repo-relative; never absolute (FR-D2, FR-D10).
 
@@ -95,8 +100,8 @@ The set's entry doc, mirroring the V1 README's job. (Realizes: §16 item 2.)
   inline** the V2 rules they depend on (per the repo's skill self-containment
   convention) rather than linking to these docs at runtime; these docs are the
   authoring/maintenance source of truth. (Realizes: AGENTS.md self-containment;
-  handoff record "V2 rules must be restated plainly inside each skill body". See
-  §Flagged item F-10.)
+  handoff record "V2 rules must be restated plainly inside each skill body";
+  §Owner flags F-10.)
 
 #### FR-D2 — `thread-layout.md` (folder set, lineage folders, ledger location, paths)
 
@@ -155,9 +160,10 @@ item 2; P11, P18.)
 - **AC-D3.3** States the **record** form is unchanged from V1:
   `<YYMMDDHHMMSSZ>-<kebab-desc>-<artifact-type>.md`, UTC stamp + mandatory type
   token preserved. (Realizes: §3; P11.)
-- **AC-D3.4** States the lifecycle ledger is a fixed-name append-only file at the
-  thread root and points to `lifecycle.md` (FR-D4) for its name and line grammar.
-  (Realizes: §3; §4.)
+- **AC-D3.4** States the lifecycle ledger is a fixed-name append-only file named
+  `ledger.md` at the thread root, and points to the lifecycle doc (FR-D4, the
+  reference doc `docs/workflow/v2/lifecycle.md`) for its line grammar. (Realizes:
+  §3; §4.)
 - **AC-D3.5** States the V2 token vocabulary: **keep** `proposal`, `spec`, `plan`
   (now the whole short filename `<token>.md`), `discussion`, `decision-log`;
   **add** `seed`, `review` (replacing `review-finding`), `implementation-report`,
@@ -189,13 +195,16 @@ Core lifecycle/immutability:
   the owner may authorize an in-place correction, which MUST be visibly marked
   (erratum/edit note), never silent. (Realizes: §4; P5 Decision A.)
 - **AC-D4.3** States the stored-latch / derived-condition split and the per-type
-  table: Proposal latches `approved | rejected`; Spec latches `approved` then
-  `implemented`; Plan has **no** latches and **no** `version`. (Realizes: §4; P3.)
+  table, with every latch stored **under the frontmatter `status:` map** (FR-D4.9,
+  FR-D4.11): Proposal latches `status.approved | status.rejected`; Spec latches
+  `status.approved` then `status.implemented`; Plan has **no** latches and **no**
+  `version`. (Realizes: §4; P3.)
 - **AC-D4.4** States the **authoritative condition-derivation function** verbatim
-  in intent: `implemented` present → Implemented; else `approved` present →
-  Approved (+ "has open findings" if an undisposed review exists); else an
-  undisposed review exists → In Review; else → Draft. The condition is never
-  stored. (Realizes: §4; P3.)
+  in intent, derived from the `status:` map by precedence: `status.implemented`
+  present → Implemented; else `status.approved` present → Approved (+ "has open
+  findings" if an undisposed review exists); else an undisposed review exists → In
+  Review; else → Draft. The condition is always derived from the `status` map,
+  never stored. (Realizes: §4; P3; status-map model — §Owner flags F-8.)
 - **AC-D4.5** States latches are sticky (`approved` does not revert to In Review
   when a later review opens — that is the derived "Approved + has open findings").
   (Realizes: §4; P3.)
@@ -208,35 +217,41 @@ Core lifecycle/immutability:
   downstream; the proposal has no such loop); and that `rejected` is an
   artifact-level latch independent of thread disposition. (Realizes: §4; P3.)
 - **AC-D4.8** States the body-vs-frontmatter rule: a record's body obeys
-  immutability while its frontmatter status is a live surface until terminal (a
-  review until `disposed`), then frozen; versioned artifacts keep body+frontmatter
-  alive together until their latch, then freeze; disposition is set-once.
-  (Realizes: §4; P7.)
+  immutability while its frontmatter `status:` map is a live surface until terminal
+  (a review until `status.disposed`), then frozen; versioned artifacts keep
+  body+frontmatter alive together until their latch, then freeze; disposition is
+  set-once. (Realizes: §4; P7.)
 - **AC-D4.9** States the frontmatter status contract and the D44 carve-out:
-  frontmatter stores **only** non-derivable lifecycle latches/events plus
-  `version`; a record with no lifecycle status carries **no frontmatter at all**;
-  everything else (references, targets, cross-links, agendas) lives in prose;
-  anything derivable from the artifact's own location is never stored;
-  lifecycle-status frontmatter is **allowed**, source-relation/lineage frontmatter
-  (`Supersedes:`, `Forked from:`, …) stays **banned**. (Realizes: §3 frontmatter
-  rule; §4; §5; P7, P19, P20.)
+  frontmatter carries at most **two keys** — `version` (identity) and a `status:`
+  **map** whose entries are lifecycle event → stamp (plus the review's
+  `disposition`/`rationale`); lifecycle latches live **inside** the `status:` map,
+  never as loose top-level keys and never collapsed to a single status value; a
+  record with no lifecycle status carries **no frontmatter at all**; everything
+  else (references, targets, cross-links, agendas) lives in prose; anything
+  derivable from the artifact's own location — including the derived condition — is
+  never stored; lifecycle-status frontmatter is **allowed**, source-relation/lineage
+  frontmatter (`Supersedes:`, `Forked from:`, …) stays **banned**. (Realizes: §3
+  frontmatter rule; §4; §5; P7, P19, P20; status-map model — §Owner flags F-8.)
 - **AC-D4.10** States the when-an-edit-needs-a-backing-record table: Draft/In
   Review (pre-`approved`) → no per-edit record (git + feeding discussions);
   Approved→not-yet-Implemented → record-backed + owner-approved amendment for
   substantive change (editorial = git, marked); Implemented → frozen. (Realizes:
   §4 "When an edit needs a backing record"; P8.)
-- **AC-D4.11** States the pinned frontmatter field spelling defaults: `version: <int>`;
-  proposal/spec `approved: <stamp>`, proposal `rejected: <stamp>`, spec
-  `implemented: <stamp>`; review `disposed: <stamp>`, `disposition: accepted | rejected`,
-  optional `rationale: <thread-relative path>`. Exact spelling is a DoF (the
-  proposal tables show intent); the build pins these so skills agree. (Realizes:
-  §4, §10 tables; §15 DoF — pinned; see §Flagged item F-8.)
+- **AC-D4.11** States the pinned frontmatter field defaults, with every lifecycle
+  latch/event nested **under the `status:` map**: `version: <int>` at top level;
+  proposal/spec `status.approved: <stamp>`, proposal `status.rejected: <stamp>`,
+  spec `status.implemented: <stamp>`; review `status: { disposed: <stamp>,
+  disposition: accepted | rejected, rationale?: <thread-relative path> }`. The
+  build pins the **map model** (latches under `status:`, not loose top-level keys,
+  not a single collapsed value) so skills agree; the exact YAML shape/spelling
+  stays a §15 DoF (the proposal tables show intent). (Realizes: §4, §10 tables;
+  §15 DoF — shape pinned, spelling free; §Owner flags F-8.)
 
 Event sourcing + the freeze model:
 
 - **AC-D4.12** States "status is derived, never stored — the workflow is
-  event-sourced": truth is append-only events (frontmatter latches, ledger events,
-  records), current state is a projection folded on demand; never store a derivable
+  event-sourced": truth is append-only events (frontmatter `status:`-map latches,
+  ledger events, records), current state is a projection folded on demand; never store a derivable
   mutable current-state; `STATE.md`, a separate `events.jsonl`, and a materialized
   `state.json` are all rejected (with the §12 reasons), `state.json` merely
   deferred. (Realizes: §5; P7.)
@@ -254,10 +269,10 @@ Event sourcing + the freeze model:
   content-hash idea is rejected (git is tamper-evident), and that the guard's
   concrete mechanism (pre-commit hook / CI / both) is **not part of this build** —
   these docs specify the rules the guard must enforce; the tooling is deferred
-  (§Out of scope; §Flagged item F-2). (Realizes: §4; §13; §15 DoF.)
+  (§Out of scope; §Owner flags F-2). (Realizes: §4; §13; §15 DoF.)
 
-The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
-§Flagged item F-1):
+The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — §Owner
+flags F-1):
 
 - **AC-D4.16** States the ledger holds ONLY the two non-derivable facts **tier**
   and **disposition**, and reproduces the litmus test verbatim in intent (derivable
@@ -266,16 +281,18 @@ The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
 - **AC-D4.17** States the ledger is append-only with a strict line grammar; the
   current value of each key is its last line; only transitions are written, never
   the resting default. (Realizes: §4; P2.)
-- **AC-D4.18** States the **pinned filename**: the ledger is `lifecycle.md` at the
-  thread root (ratifying the file this thread already dogfoods). (Realizes: §15
-  ledger-filename DoF — pinned; P21; see §Flagged item F-1.)
+- **AC-D4.18** States the **pinned filename**: the ledger is `ledger.md` at the
+  thread root — renamed from the provisional `lifecycle.md` this thread first
+  dogfooded, to free the basename `lifecycle.md` for the rules doc
+  (`docs/workflow/v2/lifecycle.md`, FR-D4) and remove the data-file-vs-rules-doc
+  collision. (Realizes: §15 ledger-filename DoF — pinned; P21; §Owner flags F-1.)
 - **AC-D4.19** States the **pinned line grammar**: every event line is
   `<event> @ <YYMMDDHHMMSSZ> — <justification>`, where `<event>` is one of
   `tier: <0–3>`, `deferred`, `resumed`, `closed: done`, `closed: dropped`; tier
   lines update the `tier` key, the other four update the `disposition` key; a free
   Markdown header above the event lines is permitted (parsers read only
   grammar-matching lines); the `— <justification>` is mandatory on every line.
-  (Realizes: §15 ledger-line-grammar DoF — pinned; §4, §7; P2; see §Flagged item F-1.)
+  (Realizes: §15 ledger-line-grammar DoF — pinned; proposal §4, §7; P2; §Owner flags F-1.)
 - **AC-D4.20** States the disposition vocabulary and derivation: `(none)/resumed →
   active` (the resting default, never written), `deferred → paused` (reversible),
   `closed: done`/`closed: dropped → terminal` (sealed); no `open` event, no
@@ -284,11 +301,11 @@ The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
 - **AC-D4.21** States that a re-`deferred` (reason update) **is permitted** — the
   guard's deferred branch already admits a ledger-only `deferred` append (AC-D4.14).
   (Resolves the §15 "whether re-deferred is permitted" DoF, pinned to the §4 guard
-  text — see §Flagged item F-3.)
+  text — §Owner flags F-3.)
 
-#### FR-D5 — `tiers.md` (the tier system + Definition of Done + PR discipline)
+#### FR-D5 — `tiers.md` (the tier system + Definition of Done + PR discipline + prerequisite preflight)
 
-(Realizes: §7, §13; P10, P15.)
+(Realizes: §7, §13; P10, P15; LM-G1.)
 
 - **AC-D5.1** States the four tiers with entry criteria and required artifacts:
   0 chore (no behavior change, reversible in one commit; none — the commit is the
@@ -315,10 +332,16 @@ The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
 - **AC-D5.6** States PR discipline scaled by tier as a strong recommendation (not a
   forced rule): none@0, recommended@1, strongly-recommended@≥2; CI enforcement is a
   deferred option that would read the ledger tier. (Realizes: §13; P10.)
+- **AC-D5.7** States the **prerequisite-preflight practice** (the §13 "Now" item): a
+  skill whose instructions require a binary or a sibling skill checks the
+  prerequisite's availability **first** and fails the whole instruction with a clear
+  warning when it is missing — never running until something breaks mid-flight; cites
+  `open-ticket` (FR-S16, which needs the tracker CLI/API) as its first concrete
+  application. (Realizes: §13 "Now"; restores lossless gap LM-G1.)
 
 #### FR-D6 — `tracker-integration.md` (the three-layer status model)
 
-(Realizes: §8; P2 Decision 3.)
+(Realizes: §8; P2 Decision 3; LM-G2.)
 
 - **AC-D6.1** States the three layers — work-item/PM status (owned by the external
   tracker; exists only if a ticket exists), thread lifecycle (owned by the repo's
@@ -333,6 +356,15 @@ The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
   ticket closed, ledger `closed: done`); they never continuously mirror;
   `External: none` is allowed for tier 0–1 personal work, tier ≥2 team work should
   have a ticket. (Realizes: §8.)
+- **AC-D6.4** States the **ticket-backlink convention**: when a thread links a
+  ticket, the ticket gets **one** comment carrying a permalink back to the thread
+  folder (a one-time backlink, not continuous mirroring); the comment is posted by
+  `open-thread` when it links the ticket and/or by `finish`. (Realizes: §8;
+  restores lossless gap LM-G2.)
+- **AC-D6.5** States the **commit/PR reference convention**: commits and PRs
+  reference the ticket (so the tracker's native auto-linking surfaces the work),
+  completing the seed↔ticket bridge alongside the `External:` line and the backlink
+  comment. (Realizes: §8; restores lossless gap LM-G2.)
 
 #### FR-D7 — `spine.md` (the stages, the seed format, the spec obligations)
 
@@ -381,9 +413,10 @@ The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
   spec's acceptance criteria, not against the plan; the human may review the
   implementation but never needs to review the plan. (Realizes: §9.)
 - **AC-D7.12** States the **finish** stage: living docs updated; the human's
-  approval already set the spec's `approved` latch; the finish action sets the
-  spec's `implemented` latch and appends `closed: done` to the ledger in one
-  action; the ticket is closed; the freeze guard is active from that commit and
+  approval already set the spec's `status.approved` latch; the finish action sets
+  the spec's `status.implemented` latch and appends `closed: done` to the ledger
+  (`ledger.md`) in one action; the ticket is closed (with its backlink ensured per
+  FR-D6.4); the freeze guard is active from that commit and
   never *sets* status. (Realizes: §9; §18 Q1; P16.)
 
 #### FR-D8 — `discussions.md` (the discussion conventions)
@@ -421,10 +454,12 @@ The thread lifecycle ledger (pinned resolution of the §15 ledger DoF — see
 - **AC-D9.1** States review placement: in the target's `reviews/` folder; there is
   no open/processed lifecycle. (Realizes: §10; §3.)
 - **AC-D9.2** States disposition is recorded in the review's own YAML frontmatter
-  (`disposed`, `disposition: accepted | rejected`, optional `rationale`), set once;
-  a review with no `disposed` field is open by parse; accept-and-revise sets the
-  frontmatter directly (the revision is the record) and reject sets it with no
-  document at all — no separate disposing record required. (Realizes: §10; P7.)
+  **under the `status:` map** (`status: { disposed: <stamp>, disposition: accepted |
+  rejected, rationale?: <thread-relative path> }`), set once; a review with no
+  `status.disposed` field is open by parse; accept-and-revise sets the frontmatter
+  directly (the revision is the record) and reject sets it with no document at all —
+  no separate disposing record required. (Realizes: §10; P7; status-map model —
+  §Owner flags F-8.)
 - **AC-D9.3** States the report format: a **References-first** section
   (`- <description>: <path>`, within-thread thread-relative, cross-thread
   repo-relative, never absolute, never a bare path list) naming the artifact under
@@ -460,22 +495,38 @@ repo's SKILL.md frontmatter + body conventions (AGENTS.md). Each changed skill
 **restates inline** the V2 rules it depends on (self-containment, AGENTS.md), not
 by linking to `docs/workflow/v2/`.
 
-#### FR-S0 — cross-cutting "all" row + version-bump policy
+#### FR-S0 — cross-cutting "all" row + version-bump policy + preflight + variant guardrail
 
-(Realizes: §14 "all" row; AGENTS.md version-bump + self-containment conventions.)
+(Realizes: §14 "all" row; §13 preflight; AGENTS.md version-bump + self-containment
+conventions; the variant-rationalization guardrail and the prerequisite-preflight
+rule restored from §6 and LM-G1.)
 
 - **AC-S0.1** Every skill that writes or reads thread paths adopts the V2
   thread-layout paths (FR-D2); every skill that opens a thread reads the ledger
   (tier + disposition) and proposes the tier when opening; every status-bearing
   skill obeys the frontmatter status contract (FR-D4). (Realizes: §14 "all".)
-- **AC-S0.2** Every skill whose body changes under this spec has its
-  `metadata.version` bumped above its §3 baseline; a skill whose body does not
-  change is not bumped. The bump floor is a MINOR increment; whether the most-
-  changed skills take a MAJOR (cutover) bump is at the maintainer's discretion
-  (§DoF; §Flagged item F-9).
+- **AC-S0.2** Every skill bumps `metadata.version` by **honest per-skill semver**:
+  **MAJOR** where the skill's output/behavior contract changes (new lineage-folder
+  output paths, frontmatter `status:`-map latches, derived status, the inbox
+  removal, plan-output changes — the cutover breaks most spine skills); **MINOR**
+  for additive-only changes; **no bump** if the body does not change. New skills
+  start at `1.0.0`. The level is applied per-skill from the actual change, not
+  hand-assigned. (Realizes: §14; AGENTS.md version-bump; §Owner flags F-9.)
 - **AC-S0.3** Each changed/new skill restates inline the V2 rules it relies on and
   does not link to files outside its own skill directory (AGENTS.md
   self-containment). (Realizes: AGENTS.md; handoff record.)
+- **AC-S0.4** New skills **default to auto-only** (a single skill, no
+  `-auto`/`-interactive` pair) unless an interactive mode is genuinely distinct from
+  a discussion loop followed by the auto variant; existing variant pairs are
+  retained unchanged for this release. (Realizes: the variant-rationalization
+  guardrail recorded in §Out of scope; all three new skills here —
+  `review-lossless-mapping` (FR-S10), `open-thread`, and `open-ticket` (FR-S15/S16)
+  — already satisfy it.)
+- **AC-S0.5** A skill whose instructions require a binary or a sibling skill applies
+  the **prerequisite-preflight rule** (FR-D5.7): it checks availability **first** and
+  fails the whole instruction with a clear warning when the prerequisite is missing;
+  `open-ticket` (FR-S16) is the first concrete application (it needs the tracker
+  CLI/API). (Realizes: §13 "Now"; restores lossless gap LM-G1.)
 
 The per-skill FRs below are the concrete instantiations; FR-S0 is the umbrella.
 
@@ -498,15 +549,16 @@ The per-skill FRs below are the concrete instantiations; FR-S0 is the umbrella.
   referenced in decision-log P5 lives in the **deprecated** `discussion-loop`
   (`skills/deprecated/`), not in the active `discussion`/`seeded-discussion`; the
   AC-S1.4 rule is the active-skill encoding of that behavior. The deprecated skill
-  is out of scope. (See §Flagged item F-7.)
+  is out of scope. (§Owner flags F-7.)
 
 #### FR-S2 — `propose-auto`, `propose-interactive`
 
 (Realizes: §14 row 2; §4; P3; tier awareness.)
 
 - **AC-S2.1** Both bodies instruct lineage-folder output `proposals/NNN[-<desc>]/proposal.md`.
-- **AC-S2.2** Both bodies instruct the `approved` / `rejected` frontmatter latch
-  contract (set-once, stamped; condition derived).
+- **AC-S2.2** Both bodies instruct the `status.approved` / `status.rejected`
+  frontmatter latch contract — latches nested under the `status:` map (FR-D4.11),
+  set-once, stamped; condition derived.
 - **AC-S2.3** Both bodies instruct tier awareness (read the ledger; the proposal
   stage is tier-3).
 - **AC-S2.4** Both `metadata.version` bumped.
@@ -516,7 +568,8 @@ The per-skill FRs below are the concrete instantiations; FR-S0 is the umbrella.
 (Realizes: §14 row "spec-*"; §9; §4; P3, P9, P14.)
 
 - **AC-S3.1** Both bodies instruct lineage-folder output `specs/NNN[-<desc>]/spec.md`.
-- **AC-S3.2** Both bodies instruct the `approved` then `implemented` latch contract.
+- **AC-S3.2** Both bodies instruct the `status.approved` then `status.implemented`
+  latch contract (latches nested under the `status:` map, FR-D4.11).
 - **AC-S3.3** Both bodies require a "Degrees of freedom" section in the emitted spec.
 - **AC-S3.4** Both bodies require machine-checkable acceptance criteria (FR/AC +
   coverage + traceability) at tier ≥2.
@@ -590,22 +643,25 @@ All four **retained** (none removed). (Realizes: §14 plan row; §4; P6.)
 - **AC-S9.3** All four bodies instruct disposition via frontmatter.
 - **AC-S9.4** All four `metadata.version` bumped.
 
-#### FR-S10 — NEW: `review-lossless-mapping-auto`, `review-lossless-mapping-interactive`
+#### FR-S10 — NEW: `review-lossless-mapping` (single auto-mode skill)
 
-The highest-value new skill, created as a review-family pair to honor the
-`-auto`/`-interactive` discipline. (Realizes: §14 "new: lossless-mapping review";
-§10; P9. Names + the need for an interactive variant are flagged — §Flagged item F-4.)
+The highest-value new skill, created as a **single auto-mode skill** (no
+`-interactive` variant). The check is a one-shot produce-the-report verification;
+its human-judgment step lands in the follow-on discussion loop, so an interactive
+variant would only re-implement that loop. The name follows the `review-<dimension>`
+family; a single-mode skill takes **no suffix** (the `-auto`/`-interactive` suffixes
+are reserved for genuine pairs). (Realizes: §14 "new: lossless-mapping review"; §10;
+P9; the auto-only guardrail AC-S0.4 — §Owner flags F-4.)
 
-- **AC-S10.1** `skills/workflow/review/review-lossless-mapping-auto/SKILL.md` and
-  `…/review-lossless-mapping-interactive/SKILL.md` exist, each with `name:` equal to
-  its leaf directory and `metadata.version: 1.0.0`.
-- **AC-S10.2** Both bodies implement the lossless-mapping review per FR-D9.4: the
+- **AC-S10.1** `skills/workflow/review/review-lossless-mapping/SKILL.md` exists,
+  with `name: review-lossless-mapping` and `metadata.version: 1.0.0`.
+- **AC-S10.2** Its body implements the lossless-mapping review per FR-D9.4: the
   decisions/assumptions bar, the DoF pressure valve, the two-section output (empty =
   pass).
-- **AC-S10.3** Both bodies state the cadence (tier ≥2 recommendation, run before
-  the spec is `approved`; on demand otherwise) and record disposition via
-  frontmatter.
-- **AC-S10.4** Both bodies follow the references-first report format and the
+- **AC-S10.3** Its body states the cadence (tier ≥2 recommendation, run before the
+  spec is `approved`; on demand otherwise) and records disposition via the review's
+  frontmatter `status:` map.
+- **AC-S10.4** Its body follows the references-first report format and the
   thread-relative path rule.
 
 #### FR-S11 — implement family: `implement-auto`, `implement-interactive`, `implement-plan-auto`, `implement-plan-interactive`, `implement-plan-with-subagents-auto`, `implement-plan-with-subagents-interactive`
@@ -634,19 +690,23 @@ The highest-value new skill, created as a review-family pair to honor the
 
 #### FR-S13 — `finish` (substantive new behavior)
 
-(Realizes: §14 `finish`; §9; §4; §5; P16.)
+(Realizes: §14 `finish`; §9; §8; §4; §5; P16; LM-G2.)
 
-- **AC-S13.1** Body instructs setting the spec's `implemented` latch.
-- **AC-S13.2** Body instructs appending `closed: done` to the ledger (in the pinned
-  line grammar, FR-D4.19) in the same finish action.
+- **AC-S13.1** Body instructs setting the spec's `status.implemented` latch (under
+  the frontmatter `status:` map, FR-D4.11).
+- **AC-S13.2** Body instructs appending `closed: done` to the ledger (`ledger.md`,
+  in the pinned line grammar, FR-D4.19) in the same finish action.
 - **AC-S13.3** Body instructs updating the living docs (§5 two-document model).
 - **AC-S13.4** Body instructs closing the ticket (the single terminal handshake).
-- **AC-S13.5** `metadata.version` bumped.
+- **AC-S13.5** Body instructs ensuring the linked ticket carries the one permalink
+  backlink comment to the thread (posting it at finish if `open-thread` did not
+  already do so), per FR-D6.4. (Restores lossless gap LM-G2.)
+- **AC-S13.6** `metadata.version` bumped.
 
 #### FR-S14 — `whats-next` (derived-status reader)
 
 (Realizes: §14 `whats-next`; §4, §5; P2, P3. The future CLI itself is deferred —
-§Flagged item F-6.)
+§Owner flags F-6.)
 
 - **AC-S14.1** Body instructs reading the ledger (tier + disposition) and folding
   spine position + open findings to answer "what now / what next / is it closed".
@@ -654,29 +714,73 @@ The highest-value new skill, created as a review-family pair to honor the
   CLI/materialized projection is not built here.
 - **AC-S14.3** `metadata.version` bumped.
 
-#### FR-S15 — `capture-inbox` → replaced by NEW `seed-capture`
+#### FR-S15 — `capture-inbox` → replaced by NEW `open-thread` (local)
 
-(Realizes: §14 `capture-inbox`; §5, §6; P2. New-skill name + the deprecation move
-are flagged — §Flagged item F-5.)
+`open-thread` opens a **local** thread: it writes the thread folder, the seed, and
+the lifecycle ledger. (Realizes: §14 `capture-inbox`; §5, §6, §8; P2, P6 — a
+conscious expansion of proposal §14, see the note after FR-S16. §Owner flags F-5.)
 
-- **AC-S15.1** `skills/workflow/capture-discussion/seed-capture/SKILL.md` exists,
-  `name: seed-capture`, `metadata.version: 1.0.0`, following the SKILL.md
-  conventions.
-- **AC-S15.2** Its body instructs writing a seed for a new/future thread (per the
-  seed format, FR-D7.2) or a tracker ticket — not an inbox item.
-- **AC-S15.3** `capture-inbox` is moved to `skills/deprecated/capture-inbox/`
-  (kept on disk so existing installs do not break), and no V2 spine path references
-  the inbox.
+- **AC-S15.1** `skills/workflow/capture-discussion/open-thread/SKILL.md` exists,
+  `name: open-thread`, `metadata.version: 1.0.0`, following the SKILL.md
+  conventions; it is a single auto-style skill (no `-interactive` variant) per
+  AC-S0.4.
+- **AC-S15.2** Its body instructs opening a local thread — writing the thread
+  folder, the one seed (per the seed format, FR-D7.2), and the `ledger.md` lifecycle
+  ledger (with an initial `tier:` line, FR-D4.16–21) — not an inbox item.
+- **AC-S15.3** Its body instructs the two input modes **within the one skill**: a
+  brand-new idea (`External: none` or a user-supplied tracker URL) OR an existing
+  tracker ticket (the ticket's title/body seed the trigger narrative and its URL
+  becomes the seed's `External:` line). Splitting by input form is rejected — the
+  suite's `plan-*`/`spec-*` skills already take "raw idea OR issue URL" within one
+  skill. (Operationalizes §8's ticket↔thread bridge.)
+- **AC-S15.4** When `open-thread` links an existing or just-created ticket, its body
+  instructs posting the one permalink backlink comment on that ticket (FR-D6.4).
+  (Restores lossless gap LM-G2.)
+- **AC-S15.5** `capture-inbox` is moved to `skills/deprecated/capture-inbox/` (kept
+  on disk so existing installs do not break), and no V2 spine path references the
+  inbox.
 
-#### FR-S16 — `take-snapshot`, `brief-the-recipient`, `consult-the-expert`, `report-to-the-owner`, `afk-exploration`, `the-librarian`, `meta-prompting`
+#### FR-S16 — NEW: `open-ticket` (remote tracker ticket)
+
+`open-ticket` creates a **remote** tracker ticket from a brand-new idea — the one
+genuinely-separate operation (remote output, tracker dependency, the only
+tracker-touching skill). (Realizes: §14 `capture-inbox` (expanded); §8; §13
+preflight; P6; LM-G1, LM-G2.)
+
+- **AC-S16.1** `skills/workflow/capture-discussion/open-ticket/SKILL.md` exists,
+  `name: open-ticket`, `metadata.version: 1.0.0`, following the SKILL.md
+  conventions; it is a single auto-style skill (no `-interactive` variant) per
+  AC-S0.4.
+- **AC-S16.2** Its body instructs creating a remote tracker ticket from a brand-new
+  idea — a one-time creation, never the ongoing sync §8 forbids; it is the only
+  skill that writes to the tracker.
+- **AC-S16.3** Its body applies the **prerequisite-preflight rule** (AC-S0.5,
+  FR-D5.7): it checks the tracker CLI/API is available **first** and fails cleanly
+  with a clear warning if the prerequisite is missing. (Restores lossless gap LM-G1.)
+
+> **Note — conscious expansion of proposal §14.** Proposal §14 expressed the
+> `capture-inbox` replacement as a single skill ("seed-capture") that "writes a seed
+> for a new/future thread, or a tracker ticket." This spec realizes that capability
+> as **two** skills — `open-thread` (local) and `open-ticket` (remote) — plus the
+> thread-from-ticket input mode on `open-thread`. It is a deliberate spec-level
+> structural decision of the same kind as the nine-doc scope (§Owner flags F-10a):
+> it separates a filesystem write from a tracker-API write (different dependencies,
+> the §8 boundary, the preflight requirement on only the ticket path), and the
+> thread-from-ticket input mode operationalizes §8's ticket↔thread bridge. It
+> extends §14's capability without contradicting the frozen proposal. The clean
+> ordering is ticket-first (or pre-existing) so the seed's `External:` link is baked
+> in at creation; a future skillrouter `open` skill with `--local`/`--remote`/
+> `--from-ticket` flags is the natural later collapse (§Out of scope).
+
+#### FR-S17 — `take-snapshot`, `brief-the-recipient`, `consult-the-expert`, `report-to-the-owner`, `afk-exploration`, `the-librarian`, `meta-prompting`
 
 The §14 "all"-row skills — tier awareness + thread-V2 paths where they touch
 threads; likely no deeper change. (Realizes: §14 "all" + last two rows.)
 
-- **AC-S16.1** Each body that currently references V1 thread paths, the inbox, or
+- **AC-S17.1** Each body that currently references V1 thread paths, the inbox, or
   stored status is updated to the V2 thread-layout paths + frontmatter contract;
   each that opens a thread gains tier awareness.
-- **AC-S16.2** A skill in this set whose body genuinely needs no change is left
+- **AC-S17.2** A skill in this set whose body genuinely needs no change is left
   unchanged and not bumped; one that changes is bumped. (The per-skill
   determination is a bounded DoF — apply where the body touches threads/status;
   §DoF.)
@@ -689,10 +793,10 @@ threads; likely no deeper change. (Realizes: §14 "all" + last two rows.)
 
 #### FR-R1 — `README.md`
 
-- **AC-R1.1** A `seed-capture` entry is added under "Capture & Discussion" with its
-  description and install snippet, linking the full nested path.
-- **AC-R1.2** `review-lossless-mapping-auto` and `review-lossless-mapping-interactive`
-  entries are added under "Review".
+- **AC-R1.1** `open-thread` and `open-ticket` entries are added under "Capture &
+  Discussion", each with its description and install snippet, linking the full
+  nested path.
+- **AC-R1.2** A `review-lossless-mapping` entry is added under "Review".
 - **AC-R1.3** `capture-inbox` is moved from "Capture & Discussion" to the "Retired
   skills" section (path updated to `skills/deprecated/capture-inbox`).
 - **AC-R1.4** Any skill whose `description` frontmatter changed has its README
@@ -700,11 +804,11 @@ threads; likely no deeper change. (Realizes: §14 "all" + last two rows.)
 
 #### FR-R2 — `.claude-plugin/marketplace.json`
 
-- **AC-R2.1** `./skills/workflow/capture-discussion/seed-capture` is added to the
+- **AC-R2.1** `./skills/workflow/capture-discussion/open-thread` and
+  `./skills/workflow/capture-discussion/open-ticket` are added to the
   `JeisKappa-capture-discussion` plugin's `skills` array.
-- **AC-R2.2** `./skills/workflow/review/review-lossless-mapping-auto` and
-  `…/review-lossless-mapping-interactive` are added to the `JeisKappa-review`
-  plugin's `skills` array.
+- **AC-R2.2** `./skills/workflow/review/review-lossless-mapping` is added to the
+  `JeisKappa-review` plugin's `skills` array.
 - **AC-R2.3** `./skills/workflow/capture-discussion/capture-inbox` is removed from
   `JeisKappa-capture-discussion` and added to `JeisKappa-deprecated`.
 - **AC-R2.4** The `plugins` array stays sorted alphabetically by `name` with
@@ -712,19 +816,20 @@ threads; likely no deeper change. (Realizes: §14 "all" + last two rows.)
 
 #### FR-R3 — `.vscode/settings.json`
 
-- **AC-R3.1** `seed-capture`, `review-lossless-mapping-auto`, and
-  `review-lossless-mapping-interactive` are added to `conventionalCommits.scopes`,
-  preserving alphabetical order.
+- **AC-R3.1** `open-thread`, `open-ticket`, and `review-lossless-mapping` are added
+  to `conventionalCommits.scopes`, preserving alphabetical order.
 - **AC-R3.2** `capture-inbox` **remains** in the scopes array (the folder still
   exists, under `deprecated/`), consistent with `discussion-loop` /
   `review-decision-document` already being present.
 
-#### FR-R4 — `AGENTS.md` (optional, flagged)
+#### FR-R4 — `AGENTS.md` (required)
 
-- **AC-R4.1** *(Optional — see §Flagged item F-10.)* If adopted, AGENTS.md gains a
-  "V2 Workflow Conventions" pointer section to `docs/workflow/v2/` mirroring the
-  existing "V1 Workflow Conventions" pointer; the proposal does not mandate this,
-  so it is left as an owner decision rather than a hard AC.
+- **AC-R4.1** AGENTS.md gains a "V2 Workflow Conventions" pointer section to
+  `docs/workflow/v2/` — a pointer, not a duplication of the rules, mirroring the
+  existing "V1 Workflow Conventions" pointer — that marks **V2 the active ruleset
+  for new threads**, with one line noting **V1 remains the grandfathered reference
+  for pre-V2 threads** (never migrated). This is an implementation-phase action,
+  added once `docs/workflow/v2/` exists. (Realizes: §16; P21; §Owner flags F-10b.)
 
 ---
 
@@ -744,16 +849,16 @@ deliverable A is complete).
 | `review-spec-*` | FR-S7 | changed |
 | `review-plan-*` | FR-S8 | changed |
 | `review-implementation-*` / `review-code-*` | FR-S9 | changed |
-| **new:** lossless-mapping review | FR-S10 | new |
+| **new:** lossless-mapping review | FR-S10 | new (single auto-mode skill) |
 | `plan-loose-*`, `plan-strict-*` | FR-S4 | all retained, changed |
 | `adjust-plan-granularity-*` | FR-S5 | retained, output-mechanics change |
 | `implement-*` | FR-S11 | changed |
 | `merge-artifacts-*` | FR-S12 | changed |
 | `finish` | FR-S13 | substantive new behavior |
 | `whats-next` | FR-S14 | changed (derived-status reader) |
-| `capture-inbox` | FR-S15 | replaced by `seed-capture` + deprecated |
+| `capture-inbox` | FR-S15, FR-S16 | replaced by `open-thread` + `open-ticket`; `capture-inbox` deprecated |
 | `spec-*` | FR-S3 | changed |
-| `take-snapshot`, handoff, research | FR-S16 | "all"-row only |
+| `take-snapshot`, handoff, research | FR-S17 | "all"-row only |
 | all | FR-S0 | cross-cutting umbrella |
 
 No §14 row is unmapped. Every changed skill on disk (§3) is covered.
@@ -771,7 +876,8 @@ No §14 row is unmapped. Every changed skill on disk (§3) is covered.
 | Event sourcing ("derive, don't store") | `lifecycle.md` / FR-D4.12 | §5 |
 | Tiers | `tiers.md` / FR-D5 | §7 |
 | Definition of Done + PR discipline | `tiers.md` / FR-D5 | §13 |
-| Tracker integration | `tracker-integration.md` / FR-D6 | §8 |
+| Prerequisite preflight (CLI-backed skills) | `tiers.md` / FR-D5.7 + FR-S0.5 | §13 |
+| Tracker integration incl. backlink + commit/PR reference | `tracker-integration.md` / FR-D6 (incl. AC-D6.4–.5) | §8 |
 | The spine (stages) + seed format + spec obligations | `spine.md` / FR-D7 | §9, §6 |
 | Discussions | `discussions.md` / FR-D8 | §11 |
 | Reviews incl. the lossless-mapping check | `reviews.md` / FR-D9 | §10 |
@@ -788,14 +894,15 @@ are cross-referenced from the others.
 | `README.md` index | FR-R1 |
 | `.claude-plugin/marketplace.json` | FR-R2 |
 | `.vscode/settings.json` scopes | FR-R3 |
-| `AGENTS.md` V2 pointer (optional) | FR-R4 |
+| `AGENTS.md` V2 pointer (required) | FR-R4 |
 
 ---
 
 ## 3. Skill baseline versions (AC anchor for "version bumped")
 
 Baselines as of this spec, for the FR-S "version bumped above baseline" ACs. New
-skills (FR-S10, FR-S15) have no baseline and start at `1.0.0`.
+skills (FR-S10 `review-lossless-mapping`, FR-S15 `open-thread`, FR-S16
+`open-ticket`) have no baseline and start at `1.0.0`.
 
 | Skill | Path | Baseline |
 |---|---|---|
@@ -846,8 +953,8 @@ skills (FR-S10, FR-S15) have no baseline and start at `1.0.0`.
 
 Every FR traces to a proposal section and/or decision-log entry, or to a named
 repo convention (AGENTS.md). No FR is sourced from anywhere else; where the build
-needs a fact the proposal left open, it is a pinned §15 DoF (flagged) or a DoF, not
-an invention.
+needs a fact the proposal left open, it is a pinned §15 DoF (now resolved in §Owner
+flags) or a DoF, not an invention.
 
 | FR | Proposal § | Decision log | Other source |
 |---|---|---|---|
@@ -855,14 +962,14 @@ an invention.
 | FR-D1 | §16 | P21 | V1 README; AGENTS.md (self-containment); handoff |
 | FR-D2 | §3, §4, §5, §6 | P1, P4, P12, P17, P21 | — |
 | FR-D3 | §3, §16 | P11, P18 | — |
-| FR-D4 (core) | §4, §5 | P2, P3, P5, P7, P8, P19, P20 | — |
-| FR-D4.16–21 (ledger) | §4, §7, §15 | P2, P21 | dogfooded `lifecycle.md` |
-| FR-D5 | §7, §13 | P10, P15 | — |
-| FR-D6 | §8 | P2 | — |
+| FR-D4 (core) | §4, §5 | P2, P3, P5, P7, P8, P19, P20; SR-P9 (status-map) | — |
+| FR-D4.16–21 (ledger) | §4, §7, §15 | P2, P21; SR-P2 (→ `ledger.md`) | dogfooded `ledger.md` |
+| FR-D5 | §7, §13 | P10, P15; SR-P8 | LM-G1 (preflight) |
+| FR-D6 | §8 | P2; SR-P8 | LM-G2 (backlink, commit/PR ref) |
 | FR-D7 | §9, §6, §5 | P6, P14, P16 | — |
 | FR-D8 | §11 | P7 | — |
 | FR-D9 | §10, §13 | P7, P9 | — |
-| FR-S0 | §14 | — | AGENTS.md (version bump, self-containment) |
+| FR-S0 | §14, §13 | SR-P3 (semver), SR-P5 (guardrail) | AGENTS.md (version bump, self-containment); LM-G1 (preflight) |
 | FR-S1 | §14, §11, §10, §4 | P5, P7 | — |
 | FR-S2 | §14, §4 | P3 | — |
 | FR-S3 | §14, §9, §4 | P3, P9, P14 | — |
@@ -872,15 +979,23 @@ an invention.
 | FR-S7 | §14, §10 | P7 | — |
 | FR-S8 | §14, §9 | P6 | — |
 | FR-S9 | §14, §9, §10 | — | — |
-| FR-S10 | §14, §10 | P9 | `-auto`/`-interactive` discipline (D30) |
+| FR-S10 | §14, §10 | P9; SR-P4 (auto-only) | single-mode suffix convention |
 | FR-S11 | §14, §9 | — | — |
 | FR-S12 | §14, §3 | P4 | — |
-| FR-S13 | §14, §9, §4, §5 | P16 | — |
+| FR-S13 | §14, §9, §8, §4, §5 | P16 | LM-G2 (backlink) |
 | FR-S14 | §14, §4, §5 | P2, P3 | — |
-| FR-S15 | §14, §5, §6 | P2 | repo deprecation pattern |
-| FR-S16 | §14 | — | — |
+| FR-S15 (open-thread) | §14, §5, §6, §8 | P2; SR-P6 | repo deprecation pattern; LM-G2 (backlink) |
+| FR-S16 (open-ticket) | §14 (expanded), §8, §13 | SR-P6 | LM-G1 (preflight) |
+| FR-S17 | §14 | — | — |
 | FR-R1–R3 | §16 | — | AGENTS.md "When adding a new skill" |
-| FR-R4 | §5 | — | AGENTS.md (optional; flagged) |
+| FR-R4 | §16 | P21; SR-P7 | AGENTS.md V1 pointer pattern |
+
+In this table, bare `P<n>` references the **proposal** decision log
+(`proposals/001/discussions/260612201354Z-proposal-v1-review-findings-decision-log.md`,
+P1–P21); `SR-P<n>` references the **spec-review-and-flags** decision log
+(`specs/001/discussions/260620171014Z-spec-review-and-flags-decision-log.md`, P1–P9)
+that produced `version: 2`; `LM-G<n>` references the disposed lossless-mapping review
+(`specs/001/reviews/260620162523Z-spec-lossless-mapping-review.md`).
 
 ---
 
@@ -896,35 +1011,39 @@ pin; choosing any of them does not violate the contract.
    the implementer may merge or split docs (e.g. fold the ledger spec out of
    `lifecycle.md` into its own file, or merge `discussions.md` into `spine.md`)
    **provided every rule in FR-D has a home and every cross-reference resolves**.
-3. **Semver level of each bump.** AC-S0.2 requires a bump above baseline (MINOR
-   floor); whether the most-changed skills (`finish`, `spec-*`, the layout
-   adopters) take a MAJOR cutover bump is the maintainer's call. (Flagged F-9.)
-4. **The provenance-line format** in V2 docs (AC-D0.2) — analogous to V1's
+3. **The provenance-line format** in V2 docs (AC-D0.2) — analogous to V1's
    `**Codifies:** D…` line; presence required, format free.
-5. **Whether `review-lossless-mapping` needs an interactive variant.** FR-S10
-   specifies the pair for family consistency; the maintainer may collapse it to
-   auto-only. (Flagged F-4.)
-6. **Exact seed format** beyond its two mandatory lines (`External:` + 1–5 line
+4. **Exact seed format** beyond its two mandatory lines (`External:` + 1–5 line
    trigger). (Proposal §15.)
-7. **Tier label names** (numbers are normative; chore/patch/feature/initiative are
+5. **Tier label names** (numbers are normative; chore/patch/feature/initiative are
    suggestions). (Proposal §15.)
-8. **Whether plan-review outcomes 3 and 4 merge** into one (the spec needs only
+6. **Whether plan-review outcomes 3 and 4 merge** into one (the spec needs only
    "spec-fault routes to the human and fixes the spec"). (Proposal §15.)
-9. **Whether the supersession forward-link uses a soft-keyword breadcrumb.**
+7. **Whether the supersession forward-link uses a soft-keyword breadcrumb.**
    (Proposal §15.)
-10. **Whether V2 docs/headers render a non-authoritative derived-condition word**
-    for human legibility (latches-only is the default). (Proposal §15.)
-11. **Exact frontmatter field spelling/syntax** for latches and disposition. The
-    build pins working defaults (AC-D4.11) so the skills agree; renaming them
-    consistently across docs + skills is permitted. (Proposal §15; Flagged F-8.)
-12. **Per-skill applicability of the "all" row** to thread-agnostic deliverable
-    skills (FR-S16): apply where the body actually touches thread paths/status;
+8. **Whether V2 docs/headers render a non-authoritative derived-condition word**
+   for human legibility (latches-only is the default). (Proposal §15.)
+9. **Exact frontmatter field spelling/syntax** for latches and disposition. The
+   **shape is now pinned** — every latch/event nests under a `status:` map
+   (AC-D4.9, AC-D4.11) — but the exact YAML spelling/syntax remains free, provided
+   it is applied consistently across docs + skills. (Proposal §15; the map shape
+   resolves §Owner flags F-8.)
+10. **Per-skill applicability of the "all" row** to thread-agnostic deliverable
+    skills (FR-S17): apply where the body actually touches thread paths/status;
     leave genuinely thread-agnostic skills unchanged.
-13. **`implementation/` flat vs lineage folders.** Flat is pinned (AC-D2.10) per
+11. **`implementation/` flat vs lineage folders.** Flat is pinned (AC-D2.10) per
     the proposal's stated default; revisiting if implementations multiply per
     thread is left open. (Proposal §15.)
-14. **Implementation sequencing and commit batching** (which docs/skills first,
+12. **Implementation sequencing and commit batching** (which docs/skills first,
     one commit vs several) — left to the implementer / the plan phase.
+
+Two items that earlier drafts listed here are now **decided** and no longer
+degrees of freedom: the **semver bump level** (now honest per-skill semver,
+AC-S0.2 — §Owner flags F-9) and **whether the lossless-mapping review needs an
+interactive variant** (now auto-only, FR-S10 — §Owner flags F-4). The
+**ledger-filename** and the **frontmatter-status shape** are likewise pinned (to
+`ledger.md` and the `status:` map), so neither is a DoF; only their exact spelling
+remains free (item 9).
 
 ---
 
@@ -936,7 +1055,11 @@ external action or a deliberately deferred mechanism.
 - **Freeze-guard tooling** (pre-commit hook / CI job). The docs specify the rules
   the guard enforces (FR-D4.13–15); building the tooling is deferred. The proposal
   commits to the guard as V2's one mechanical guard but leaves its mechanism a §15
-  DoF; it is neither a doc nor a skill, so it is outside §16 items 2–3. (Flagged F-2.)
+  DoF; it is neither a doc nor a skill, so it is outside §16 items 2–3.
+  **Consequence (eyes-open):** until the guard is built, V2's immutability/freeze is
+  **convention-enforced only** — nothing mechanically stops a confused agent from
+  editing a frozen artifact; the rules are fully specified, so the guard is buildable
+  whenever the pain is real. (Resolved — §Owner flags F-2.)
 - **The future status CLI / materialized `state.json` projection.** `whats-next`
   gains the derived-status reader behavior (FR-S14); the CLI itself and any
   materialized projection are deferred per §5 ("buys nothing today").
@@ -944,111 +1067,130 @@ external action or a deliberately deferred mechanism.
   tier-reading CI gate is a deferred option.
 - **Postmortem and decision-index templates.** §13 builds them on first trigger;
   not now.
+- **Spec-creation UX orchestration** (the guided discuss → spec → review → discuss →
+  update flow as one orchestration layer over the stages). A real need, but the
+  proposal defers it until V2 stabilizes so today's seams don't get baked into it
+  (§13 "On trigger"). (Restores lossless gap LM-G3.)
 - **`EXAMPLE-WORKFLOW/` retirement.** An external-workspace action, not a step in
   this repo's rollout (§16 item 4; P13).
-- **skillrouter unification** (collapsing `plan-loose-*`/`plan-strict-*` behind a
-  flag, etc.). Deferred to the skillrouter project (P6).
+- **skillrouter unification and variant rationalization.** Deferred to the
+  skillrouter project as a postponed future-release direction, covering two related
+  collapses: (1) **flag-unification** of mode/variant pairs behind a single
+  flag-differentiated skill (e.g. `plan-loose-*`/`plan-strict-*`, and the
+  `open-thread`/`open-ticket` pair → an `open` skill with `--local`/`--remote`/
+  `--from-ticket` flags); and (2) the deeper **"interactive ≈ discussion-loop + auto"
+  redundancy** — that an `-interactive` variant is largely a discussion loop followed
+  by the `-auto` variant, motivated by the maintainer's actual discussion-loop-first
+  workflow (a discussion loop to clarify, then `*-auto` from the proposal + decision
+  log, rather than `*-interactive`). No variant changes ship now; existing pairs are
+  retained as independent skills with minimal investment, and the AC-S0.4 guardrail
+  keeps **new** skills auto-only, so nothing built now blocks the later collapse.
+  (P6; SR-P5.)
 - **V1 thread migration.** V1 threads are grandfathered — never migrated (§16; P21).
 
 ---
 
-## 7. Flagged for owner review
+## 7. Owner flags (resolved)
 
-Items where this spec **pins a resolution the build needs** to a degree of freedom
-the proposal left open, or makes a build call the proposal does not settle. Each is
-a proposal-and-flag (per the build brief), not a silent decision — please confirm
-or redirect. None re-opens a frozen proposal decision; each fills a declared gap.
+The flags this spec originally raised for owner review are all **resolved**. Each
+resolution was settled in the spec-review-and-flags discussion loop and recorded in
+`specs/001/discussions/260620171014Z-spec-review-and-flags-decision-log.md`
+(decisions P1–P9 of that log; cited below as `SR-P<n>`). The Draft spec was revised
+in place to reflect them — this is `version: 2`. No resolution re-opens a frozen
+proposal decision; each fills a declared gap.
 
-- **F-1 — Lifecycle ledger filename + line grammar (pins §15 ledger DoF).**
-  *Pinned:* filename `lifecycle.md` at the thread root (ratifying the file this
-  thread already dogfoods, P21); line grammar
-  `<event> @ <YYMMDDHHMMSSZ> — <justification>` with `<event>` ∈
-  {`tier: <0–3>`, `deferred`, `resumed`, `closed: done`, `closed: dropped`},
-  `tier` and `disposition` as the two keys, last line wins, mandatory
-  justification, optional free Markdown header (AC-D4.18–19). *Flag:* the basename
-  echoes the rules doc `docs/workflow/v2/lifecycle.md`; they live in different
-  trees and one is a rules doc, one a data file, so this is acceptable, but if you
-  prefer zero overlap the ledger file could be `ledger.md` instead. Your call.
+- **F-1 — Lifecycle ledger filename. Resolved (SR-P2).** The per-thread ledger is
+  renamed `lifecycle.md` → **`ledger.md`** at the thread root, freeing the basename
+  `lifecycle.md` for the rules doc (`docs/workflow/v2/lifecycle.md`) and removing the
+  data-file-vs-rules-doc collision; the line grammar is unchanged (AC-D3.4, AC-D4.18,
+  AC-D4.19). The thread's own ledger file is renamed to match.
 
-- **F-2 — Freeze-guard mechanism (pins §15 guard DoF as deferred).** *Pinned:* the
-  docs fully specify the guard's rules; **building** the guard is deferred (out of
-  §16 items 2–3). *Proposed-for-when-built:* both a pre-commit hook (local
-  prevention, matching "prevention beats detection") and a CI check (the
-  non-bypassable backstop). Confirm deferral, or ask me to fold the guard build
-  into this spec's scope.
+- **F-2 — Freeze-guard tooling. Resolved (SR-P9), deferred eyes-open.** The docs
+  fully specify the guard's rules (FR-D4.13–15); **building** the tooling stays out
+  of scope (§Out of scope). *Consequence:* until the guard is built, immutability/
+  freeze is **convention-enforced only** — nothing mechanically blocks a confused
+  agent from editing a frozen artifact; the rules are specified, so the guard is
+  buildable anytime.
 
-- **F-3 — Re-`deferred` permitted (resolves a §15 DoF via the §4 guard text).**
-  *Pinned:* a re-`deferred` reason-update is allowed, because §4's guard already
-  admits a ledger-only `deferred` append on a deferred thread (AC-D4.14, AC-D4.21).
-  This resolves the §15 "whether re-deferred is permitted, or one must resume
-  first" DoF in favor of what §4 already states. Flagging since §15 listed it open.
+- **F-3 — Re-`deferred` permitted. Resolved (SR-P9).** A re-`deferred` reason-update
+  is allowed, per the §4 guard's deferred branch (AC-D4.14, AC-D4.21).
 
-- **F-4 — New review skill name + interactive variant.** *Pinned:*
-  `review-lossless-mapping-{auto,interactive}` (review-family naming + the
-  `-auto`/`-interactive` discipline). *Flag:* the proposal says "the
-  lossless-mapping review" (singular); if you want it auto-only, drop the
-  interactive half (DoF #5). Confirm the name and whether both variants are wanted.
+- **F-4 — Lossless-mapping review name + variant. Resolved (SR-P4).** A **single
+  auto-mode skill `review-lossless-mapping`** (no `-interactive` variant; single-mode
+  skills take no suffix). The human-judgment step lands in the follow-on discussion
+  loop, so an interactive variant would only re-implement it (FR-S10, AC-S0.4).
 
-- **F-5 — `capture-inbox` → `seed-capture` + deprecation.** *Pinned:* new skill
-  `seed-capture` in the `capture-discussion` group; `capture-inbox` moved to
-  `skills/deprecated/` (repo pattern for retired skills; "replaced" in §14). *Flag:*
-  the proposal's literal word is "seed-capture", but the sibling is `capture-inbox`
-  (verb-first) — `capture-seed` would be more consistent. Confirm the name and the
-  deprecation move.
+- **F-5 — `capture-inbox` replacement. Resolved (SR-P6).** Replaced by **two** skills
+  — `open-thread` (local) and `open-ticket` (remote) — superseding the single-skill
+  "seed-capture" naming question; `capture-inbox` moves to `skills/deprecated/`
+  (FR-S15, FR-S16). A conscious expansion of proposal §14 (see the note after FR-S16).
 
-- **F-6 — `whats-next` skill change vs the CLI.** *Pinned:* the skill gains the
-  derived-status reader behavior now (FR-S14); the actual CLI is deferred (§Out of
-  scope). Flagging the split so the deferral is explicit.
+- **F-6 — `whats-next` vs the CLI. Resolved (SR-P9).** The skill gains the
+  derived-status reader behavior now (FR-S14); the standalone CLI / materialized
+  projection is deferred (§Out of scope).
 
-- **F-7 — `discussion` skill version reference.** The decision-log P5 "update past
-  logs on explicit user request (v1.3.0)" behavior actually lived in the
-  **deprecated** `discussion-loop` (v1.5.0), not the active `discussion` (v1.0.2)
-  that §14 targets. This spec encodes the rule (records immutable-by-default +
-  marked owner correction) in the active `discussion`/`seeded-discussion`
-  (AC-S1.4); the deprecated skill stays out of scope. Not a blocker — flagged so
-  the version mismatch in the log doesn't read as a gap.
+- **F-7 — `discussion` skill version reference. Resolved (SR-P9), clarification.** The
+  decision-log "update past logs on explicit request" behavior lived in the
+  **deprecated** `discussion-loop` (v1.5.0), not the active `discussion` (v1.0.2);
+  this spec encodes the rule (records immutable-by-default + marked owner correction)
+  in the active `discussion`/`seeded-discussion` (AC-S1.4); the deprecated skill stays
+  out of scope. No action.
 
-- **F-8 — Frontmatter field spelling.** *Pinned working defaults:* `version`,
-  `approved`, `rejected`, `implemented`, `disposed`, `disposition`, `rationale`
-  (AC-D4.11). The proposal calls exact spelling a §15 DoF; pinned only so docs +
-  skills agree. Rename consistently if you prefer different spellings.
+- **F-8 — Frontmatter status model. Resolved (SR-P9), refined.** Lifecycle latches
+  live under a **`status:` map** (event → stamp), never as loose top-level keys and
+  never collapsed to a single value; the frontmatter contract is the two keys
+  `version` + `status:`, and the condition is always derived from `status` by
+  precedence (AC-D4.4, AC-D4.9, AC-D4.11; per-artifact mentions updated — e.g. review
+  `status: { disposed, disposition, rationale }`, AC-D9.2; proposal/spec latches under
+  `status.`, AC-S2.2/AC-S3.2). Exact YAML spelling stays a §15 DoF (§DoF item 9).
 
-- **F-9 — Version-bump semver level.** *Pinned floor:* MINOR per changed skill
-  (AC-S0.2). The V2 cutover changes output contracts, so a MAJOR (e.g. `2.0.0`)
-  cutover for the most-changed skills is defensible — your discretion (DoF #3).
+- **F-9 — Version-bump semver level. Resolved (SR-P3).** **Honest per-skill semver** —
+  MAJOR where a skill's output/behavior contract changes, MINOR for additive-only, no
+  bump if unchanged (AC-S0.2). Most spine skills land at a MAJOR cutover where their
+  contracts genuinely break.
 
-- **F-10 — Doc-set scope + AGENTS.md pointer.** *(a)* Proposal §16 explicitly names
-  only a filename-grammar doc and an immutability/lifecycle doc; this spec
-  interprets "codify the V2 ruleset" to also cover tiers, tracker, spine,
-  discussions, and reviews as reference docs (per the build brief and the V1
-  precedent of a central ruleset). Confirm that broader scope. *(b)* AGENTS.md
-  currently points to `docs/workflow/v1/`; FR-R4 offers an optional V2 pointer
-  section. The proposal doesn't mandate it, so it's left as your decision.
+- **F-10 — Doc-set scope + AGENTS.md pointer. Resolved.** *(a, SR-P1)* the **nine-doc**
+  `docs/workflow/v2/` set is confirmed ("includes" in §16 is non-exhaustive; the V1
+  set is already multi-doc; decomposition stays a DoF). *(b, SR-P7)* the AGENTS.md "V2
+  Workflow Conventions" pointer is now a **required** edit (FR-R4), marking V2 the
+  active ruleset for new threads and V1 the grandfathered reference for pre-V2 threads.
 
 ---
 
-## 8. Self-review (authoring check before emission)
+## 8. Self-review (authoring check, version 2)
 
 - **Coverage of §14:** every §14 row maps to an FR-S (§2.1) — confirmed complete,
-  including the "all" row (FR-S0/FR-S16), the new skill (FR-S10), the replacement
-  (FR-S15), and the substantive `finish` change (FR-S13).
+  including the "all" row (FR-S0/FR-S17), the new skill (FR-S10), the two-skill
+  replacement (FR-S15 `open-thread` + FR-S16 `open-ticket`), and the substantive
+  `finish` change (FR-S13).
 - **Coverage of the doc set:** every V2 rule-area in the build brief maps to an
-  FR-D (§2.2) — confirmed; the ledger's pinned filename/grammar and the freeze
-  model both have homes in `lifecycle.md`.
+  FR-D (§2.2) — confirmed; the ledger's pinned filename (`ledger.md`)/grammar and the
+  freeze model both have homes in the `lifecycle.md` rules doc; the restored
+  preflight rule (FR-D5.7/FR-S0.5) and the tracker backlink + commit/PR conventions
+  (FR-D6.4–.5) each have rule-area rows.
 - **Lossless authoring:** every FR carries a traceability tag (§4); no requirement
-  originates outside the proposal + decision log + named repo conventions; each
-  build-needed gap is a pinned §15 DoF surfaced in §7 or a DoF in §5 — nothing
-  smuggled.
+  originates outside the proposal + the two decision logs + named repo conventions;
+  each build-needed gap is a pinned §15 DoF (item 9), a DoF in §5, or a resolution
+  recorded in §Owner flags — nothing smuggled. The three lossless-mapping gaps
+  (LM-G1/G2/G3) are restored (preflight, tracker backlink + commit/PR ref, deferred
+  spec-creation UX).
 - **No frozen-decision re-opening:** the spec realizes P1–P21 and the proposal as
-  written; it does not contradict them. The one place the proposal's §15 listed an
-  item still open that §4 already answers (re-`deferred`) is resolved toward §4 and
-  flagged (F-3).
+  written, and the spec-review-and-flags decisions SR-P1–P9; it does not contradict
+  the frozen proposal. The two-skill `capture-inbox` replacement and the nine-doc
+  scope are recorded as conscious *expansions* of §14/§16, not contradictions.
+- **Internal consistency:** no AC contradicts another; the status-map model is
+  applied uniformly (AC-D4.3/.4/.8/.9/.11, AC-D9.2, AC-S2.2/AC-S3.2, AC-S13.1); the
+  ledger filename is `ledger.md` everywhere it is named (AC-D3.4, AC-D4.18, AC-S13.2,
+  AC-S15.2); the FR-S renumber (old FR-S16 → FR-S17) is reflected in §2.1, §4, §5,
+  and here. No owner flag remains open — all of F-1…F-10 are resolved (§Owner flags).
 - **Machine-checkability:** every AC is a single read/grep/parse check against one
   file (file exists / doc states R / skill instructs Z / version > baseline / array
   contains entry).
-- **Dogfooding:** frontmatter is `version: 1` only (Draft derived, no `approved`
-  latch); lineage folder `specs/001/`; thread-relative within-thread paths;
-  `YYMMDDHHMMSSZ` timestamps; status-only frontmatter.
+- **Dogfooding:** frontmatter is `version: 2` only, with no `status:` map yet (Draft
+  derived, no `status.approved` latch); lineage folder `specs/001/`; thread-relative
+  within-thread paths; `YYMMDDHHMMSSZ` timestamps; status-map frontmatter model.
 
-The next step for this artifact is a lossless-mapping review against the proposal +
-decision log, then the owner's `approved` latch.
+The lossless-mapping review against the proposal + decision log has been run and
+disposed (`accepted`); `version: 2` completes that review→revise cycle. The next
+step for this artifact is the **owner's `status.approved` latch**, then
+implementation.
