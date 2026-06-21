@@ -10,7 +10,7 @@ metadata:
 
 Finish performs the workflow's single terminal handshake, then disposes of the branch. In ONE finish action it: (1) updates the living docs so the canonical project documentation reflects how the system now works; (2) sets the spec's `status.implemented` latch in the spec's frontmatter `status:` map; (3) appends `closed: done` to the thread's `ledger.md`; and (4) closes the linked ticket, ensuring the ticket carries the one permalink backlink to the thread. After the handshake, it runs a lightweight thread check, surfaces the results, and ASKS the closure question with four enumerated options — `merge into main` / `merge into other branch` / `create PR` / `leave as is` — executing the chosen flow with explicit per-command confirmation. NEVER force-push, NEVER rewrite history.
 
-This skill restates the V2 rules it relies on inline; it does not depend on any document outside its own folder.
+This skill restates the rules it relies on inline; it does not depend on any document outside its own folder.
 
 Branch disposition is inherently user-directed. The closure question requires a human choice — there is no autonomous default that would be safe across users (some prefer PR-only flows; others merge locally and push), across repos (some have protected `main` branches that reject direct merges; others do not), or across branch contexts (a long-lived feature branch with multiple collaborators is not the same as a single-author sandbox). Picking silently would hide a real decision behind a heuristic, and the cheapest way to surface that decision is to ASK every time.
 
@@ -109,7 +109,7 @@ The thread root holds `ledger.md` (the append-only tier + disposition ledger) pl
 - `proposals/`, `specs/`, `plans/` — each holds **lineage folders** named `NNN[-<desc>]/` (e.g. `specs/001/`, `specs/002-cli/`); the artifact inside is `proposal.md` / `spec.md` / `plan.md`, with its own `discussions/` and `reviews/`
 - `implementation/` — flat, records-only: implementation reports, plus `discussions/` and `reviews/`
 
-There is no inbox in V2 — status is derived from the artifacts and the ledger, not from folder moves.
+There is no inbox — status is derived from the artifacts and the ledger, not from folder moves.
 
 **Inspection items:**
 

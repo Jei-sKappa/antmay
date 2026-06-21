@@ -20,7 +20,7 @@ Distinguish this from multiple LINEAGES. Different subjects you intend to KEEP (
 
 ## No Version Files — There Are None
 
-V2 has **no version files** and no `v<N>` filename machinery. Proposals, specs, and plans are single canonical artifacts living at a fixed short filename inside their lineage folder:
+There are **no version files** and no `v<N>` filename machinery. Proposals, specs, and plans are single canonical artifacts living at a fixed short filename inside their lineage folder:
 
 ```text
 proposals/NNN[-<desc>]/proposal.md
@@ -163,7 +163,7 @@ The same prohibition applies to candidate drafts under `docs/threads/<thread>/.w
 
 Candidate drafts in `.wip/` are READ-ONLY to this skill. It does NOT edit, rewrite, or add frontmatter to any candidate. They remain untouched in `.wip/`, which is never emitted as a reviewable artifact.
 
-The canonical artifact obeys V2 lifecycle physics. While the target is alive (Draft / In Review), it is edited in place — that is exactly what a record-backed in-place merge revision is, and git holds the evolution. Once the artifact latches (a proposal at `approved` / `rejected`, a spec at `implemented`) it is FROZEN: it is not edited; reconciling further candidate work against it means a new thread (or new lineage), not an in-place rewrite. A substantive change to an Approved-but-not-Implemented spec is editable ONLY via an owner-approved, record-backed amendment.
+The canonical artifact obeys the lifecycle physics. While the target is alive (Draft / In Review), it is edited in place — that is exactly what a record-backed in-place merge revision is, and git holds the evolution. Once the artifact latches (a proposal at `approved` / `rejected`, a spec at `implemented`) it is FROZEN: it is not edited; reconciling further candidate work against it means a new thread (or new lineage), not an in-place rewrite. A substantive change to an Approved-but-not-Implemented spec is editable ONLY via an owner-approved, record-backed amendment.
 
 The decision log is a record — its body is frozen at emission and carries no frontmatter. A later correction is a NEW decision-log record, never an in-place rewrite.
 

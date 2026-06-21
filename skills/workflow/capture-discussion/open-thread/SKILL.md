@@ -10,7 +10,7 @@ metadata:
 
 Open a local workflow thread: create the thread folder, write the **one seed** (the thread's frozen genesis narrative), and write the **`ledger.md`** lifecycle ledger with its initial `tier:` line. Two input modes flow through this one skill — a **brand-new idea** or an **existing tracker ticket** — and either way the result is a real thread on disk, never an inbox item. When the thread links a ticket, post the one permalink backlink comment on that ticket.
 
-This skill restates the V2 rules it relies on inline; it does not depend on any document outside its own folder.
+This skill restates the rules it relies on inline; it does not depend on any document outside its own folder.
 
 ## What a Thread Is
 
@@ -23,7 +23,7 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 - `YYMMDDHHMMSSZ` is the **12-character UTC stamp** captured at the moment the thread is opened — two-digit year, month, day, hour (24h), minute, second, then a literal trailing `Z`. No separators. Example: `260518200115Z` parses to `2026-05-18 20:01:15 UTC`. Capture it **once** at open time and reuse it; never re-derive it.
 - `<slug>` is a short **kebab-case** description of the subject (`auth-cutover`, `rate-limit-fix`).
 
-Opening a thread writes exactly two things, both **on demand** (V2 never pre-creates empty placeholder folders):
+Opening a thread writes exactly two things, both **on demand** (empty placeholder folders are never pre-created):
 
 1. **The seed** — `seed/<YYMMDDHHMMSSZ>-<kebab-desc>-seed.md`, the frozen genesis narrative, inside the `seed/` genesis bucket.
 2. **The ledger** — `ledger.md` at the **thread root** (NOT in `seed/`), with its initial `tier:` line.
@@ -32,7 +32,7 @@ Nothing else is created. A freshly opened thread contains `ledger.md` and `seed/
 
 ## Why This Is a Thread, Not an Inbox Item
 
-There is no inbox in V2 — status-by-folder broke links, so V2 derives status from the artifacts and the ledger instead. This skill writes a **real thread** (a seed plus a ledger), never an `inbox/` item and never an `open/` / `processed/` / `dropped/` folder. Capturing a tangential idea mid-work is served by opening a fresh thread (or a ticket in the tracker), not by an inbox.
+There is no inbox — status-by-folder broke links, so status is derived from the artifacts and the ledger instead. This skill writes a **real thread** (a seed plus a ledger), never an `inbox/` item and never an `open/` / `processed/` / `dropped/` folder. Capturing a tangential idea mid-work is served by opening a fresh thread (or a ticket in the tracker), not by an inbox.
 
 ## The Two Input Modes
 

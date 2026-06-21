@@ -10,7 +10,7 @@ metadata:
 
 Create **one remote tracker ticket** from a brand-new idea. Take the user's idea, turn it into a ticket title and a body that captures the idea, create the ticket in the single owning tracker, and surface the created ticket's URL/identifier back to the user. That URL is what a local thread later links from its seed's `External:` line.
 
-This skill restates the V2 rules it relies on inline; it does not depend on any document outside its own folder.
+This skill restates the rules it relies on inline; it does not depend on any document outside its own folder.
 
 ## This Is the Only Skill That Writes to the Tracker
 

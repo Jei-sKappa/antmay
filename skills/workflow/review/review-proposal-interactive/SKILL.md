@@ -167,7 +167,7 @@ This skill does NOT mark a proposal as "fully reviewed" just because the walk pr
 
 When the user introduces a branch that is outside the proposal-review walk — a finding about a different proposal lineage, a tangent about the process being used, a refactor idea unrelated to the proposal's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
-1. **Capture as a seed for a future thread** (PREFERRED for non-blocking side-findings unrelated to this proposal). A tangential item that deserves its own work later becomes the genesis of a separate thread, not clutter in this review. (V2 has no inbox; tangential items are served by a future thread's seed or by a tracker ticket.)
+1. **Capture as a seed for a future thread** (PREFERRED for non-blocking side-findings unrelated to this proposal). A tangential item that deserves its own work later becomes the genesis of a separate thread, not clutter in this review. (There is no inbox; tangential items are served by a future thread's seed or by a tracker ticket.)
 2. **Split into its own discussion.** When the branch is itself a multi-point discussion that deserves its own walk, start a new `decision-log` discussion in the proposal lineage's `discussions/` folder for it.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 

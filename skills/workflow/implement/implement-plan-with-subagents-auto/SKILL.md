@@ -34,7 +34,7 @@ The plan file is simply `plan.md` inside its lineage folder `NNN[-<desc>]/` (`NN
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the orchestrator runs the dispatch loop only for the named task(s); when omitted, it runs every numbered task in the plan in order.
 
-If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (V2 structurally removes the "which version/variant is current" question: there is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
+If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (There is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
 
 ## Four-State Status Protocol
 
@@ -220,4 +220,4 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 └── .wip/                                  # recursively gitignored scratch
 ```
 
-There is no `inbox/` — V1's inbox is removed in V2; the orchestrator never writes one. Within-thread references are written thread-relative; cross-thread references repo-relative; never absolute. The `.wip/` folder is recursively gitignored and is never used for emitted artifacts — only for in-progress scratch material such as the reviewer review files.
+There is no `inbox/`; the orchestrator never writes one. Within-thread references are written thread-relative; cross-thread references repo-relative; never absolute. The `.wip/` folder is recursively gitignored and is never used for emitted artifacts — only for in-progress scratch material such as the reviewer review files.

@@ -22,7 +22,7 @@ Distinguish this from multiple LINEAGES. Different subjects you intend to KEEP (
 
 ## No Version Files — There Are None
 
-V2 has **no version files** and no `v<N>` filename machinery. Proposals, specs, and plans are single canonical artifacts living at a fixed short filename inside their lineage folder:
+There are **no version files** and no `v<N>` filename machinery. Proposals, specs, and plans are single canonical artifacts living at a fixed short filename inside their lineage folder:
 
 ```text
 proposals/NNN[-<desc>]/proposal.md
@@ -160,7 +160,7 @@ If the walk settles zero conflicts (the candidate-list confirmation produced no 
 
 When the user introduces a branch that is OUTSIDE the merge walk — a new design idea unrelated to either candidate, a tangent about a different artifact in the thread, a refactor proposal that does not address either candidate's content — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
-1. **Capture it for a future thread.** When the side-finding is non-blocking and unrelated, name it so it can become the seed of a future thread (or a tracker ticket) rather than polluting this merge's decision log. The V2 thread layout has no inbox — tangential items route to future-thread seeds or the tracker.
+1. **Capture it for a future thread.** When the side-finding is non-blocking and unrelated, name it so it can become the seed of a future thread (or a tracker ticket) rather than polluting this merge's decision log. The thread layout has no inbox — tangential items route to future-thread seeds or the tracker.
 2. **Split into its own decision log.** When the branch is itself a multi-conflict discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` under the appropriate lineage's `discussions/` for it.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
@@ -202,7 +202,7 @@ The same prohibition applies to candidate drafts under `docs/threads/<thread>/.w
 
 Candidate drafts in `.wip/` are READ-ONLY to this skill. It does NOT edit, rewrite, or add frontmatter to any candidate. They remain untouched in `.wip/`, which is never emitted as a reviewable artifact.
 
-The canonical artifact obeys V2 lifecycle physics. While the target is alive (Draft / In Review), it is edited in place — that is exactly what a record-backed in-place merge revision is, and git holds the evolution. Once the artifact latches (a proposal at `approved` / `rejected`, a spec at `implemented`) it is FROZEN: it is not edited; reconciling further candidate work against it means a new thread (or new lineage), not an in-place rewrite. A substantive change to an Approved-but-not-Implemented spec is editable ONLY via an owner-approved, record-backed amendment.
+The canonical artifact obeys the lifecycle physics. While the target is alive (Draft / In Review), it is edited in place — that is exactly what a record-backed in-place merge revision is, and git holds the evolution. Once the artifact latches (a proposal at `approved` / `rejected`, a spec at `implemented`) it is FROZEN: it is not edited; reconciling further candidate work against it means a new thread (or new lineage), not an in-place rewrite. A substantive change to an Approved-but-not-Implemented spec is editable ONLY via an owner-approved, record-backed amendment.
 
 The decision log is APPEND-ONLY and is a record — its body is frozen at emission and carries no frontmatter. Once a `## D<N>` record has been written, it is part of the decision log's reviewable history and is NOT edited. A revision to a resolution settles as a NEW `## D<N+k>` record explaining the change — never an in-place edit of an earlier record. The log itself IS the state — there is no separate state file, no progress tracker.
 

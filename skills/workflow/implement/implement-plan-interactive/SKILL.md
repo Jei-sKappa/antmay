@@ -35,7 +35,7 @@ Accept a plan artifact path. The plan lives in a lineage folder under the thread
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the walk covers only the named task(s); when omitted, the walk covers every numbered task in the plan in order.
 
-If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (V2 structurally removes the "which version/variant is current" question: there is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
+If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (There is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
 
 The plan artifact's task fields drive the walk. Loose-granularity plans give one or two task sentences per task — the walk surfaces the obvious substeps live with the user. Strict-granularity plans give a six-field block per task (objective / input-context / steps-substeps / files-modified / verification / acceptance criteria) — the walk presents each field, asks the user to confirm or adjust, then implements.
 
