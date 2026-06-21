@@ -3,26 +3,41 @@ name: propose-auto
 description: Turn a rough prompt or referenced artifact into a freeform proposal markdown file without clarifying questions when the user already knows what they want and needs the proposal written down.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Propose Auto
 
 Turn a rough prompt or referenced input into a freeform proposal artifact under the active thread's `proposals/` folder. This skill reads input, writes the proposal end-to-end, and confirms the artifact path. It does not ask clarifying questions, it does not interview the user point-by-point, and it does not commit.
 
+The proposal stage answers "should we do this, and in which direction?" It is an optional, high-ceremony stage that belongs to **tier 3 (initiative)** work — multi-week, architectural, or hard-to-reverse changes. Most work skips the proposal entirely. Before writing, confirm the thread is (or should be) tier 3; see `## Tier Awareness`.
+
 ## Workflow
 
 1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent UTC stamp. If no thread exists, ASK the user where to create one OR auto-create when the calling context makes the slug obvious (e.g., a clear feature name is already in the prompt).
 
-2. **Derive the slug.** Pull a short kebab-case description from the user's rough prompt — drop articles and filler, keep the first 3–5 meaningful words. The slug is part of the filename and is not user-confirmed in auto mode; the prompt is treated as authoritative.
+2. **Read the ledger and confirm the tier.** Open the thread's `ledger.md` at the thread root and read the current `tier` (the last `tier:` line wins) and `disposition` (the last of `deferred` / `resumed` / `closed: done` / `closed: dropped`; absence means active). The proposal stage is a tier-3 stage. If the ledger already records tier 3, proceed. If it records a lower tier, the proposal is an escalation: state that proposing implies tier-3 work and append a dated, justified `tier: 3 @ <UTC> — <why>` line to the ledger before writing the proposal. If the thread is `deferred` or `closed`, STOP — a paused or sealed thread is frozen; do not write. See `## Tier Awareness`.
 
-3. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time. Stamp once and reuse — never re-derive after writing.
+3. **Choose the lineage folder.** Proposals live in a numbered lineage folder `proposals/NNN[-<desc>]/`. `NNN` is a zero-padded 3-digit sequence starting at `001`. If no proposal lineage exists yet, use `001`. If proposals already exist and this is a NEW, distinct proposal subject, use the next free `NNN` and add a short kebab `-<desc>` only when needed to tell the lineages apart (`proposals/001-api/`, `proposals/002-cli/`); adding a slug to a later lineage never renames an earlier one. The full path is the unit of reference. If which existing lineage the work belongs to is ambiguous, ASK — there is no "highest number" fallback.
 
-4. **Draft the body.** Use the SUGGESTED 4-element structure below (see `## Suggested Structure`). The structure is suggested, not enforced — adapt as the prompt warrants. If the prompt clearly carries only two of the four elements, write only those two. If the prompt is shaped differently, follow its shape. A short freeform proposal is preferred over a padded template.
+4. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time (two-digit year, month, day, hour, minute, second, trailing `Z` for UTC). It is needed to stamp the frontmatter latch when the proposal is later disposed; do not bake any stamp into the folder or filename.
 
-5. **Write the artifact.** Create `docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md`. The `proposal` artifact-type suffix is MANDATORY. The `proposals/` folder is created on-demand on the first proposal written for the thread — do not pre-create empty folders.
+5. **Draft the body.** Use the SUGGESTED 4-element structure below (see `## Suggested Structure`). The structure is suggested, not enforced — adapt as the prompt warrants. If the prompt clearly carries only two of the four elements, write only those two. If the prompt is shaped differently, follow its shape. A short freeform proposal is preferred over a padded template.
 
-6. **Confirm.** Tell the user: `Proposal written: <relative-path-to-the-file>`. Nothing else — no preamble, no summary, no closing remark.
+6. **Write the artifact.** Create `docs/threads/<thread>/proposals/NNN[-<desc>]/proposal.md`. The file is named exactly `proposal.md` — no UTC stamp, no `v<N>`, no descriptor in the filename. The lineage folder is the stable link target. Initialize the frontmatter status contract per `## Frontmatter Status Contract` (a fresh proposal carries `version: 1` and an empty/absent `status:` map — it is a Draft). Create the `proposals/` parent and the `NNN[-<desc>]/` lineage folder on-demand; do not pre-create empty folders.
+
+7. **Confirm.** Tell the user: `Proposal written: <thread-relative-path-to-the-file>` (e.g. `proposals/001/proposal.md`). Nothing else — no preamble, no summary, no closing remark.
+
+## Tier Awareness
+
+The proposal stage is a **tier-3 (initiative)** stage. The four tiers, by escalating ceremony:
+
+- **Tier 0 — chore:** no behavior change, reversible in one commit. No thread, no ledger.
+- **Tier 1 — patch:** small fix/feature, low blast radius, no open design question.
+- **Tier 2 — feature:** anything with a design decision (the default). Seed → discussion → spec → plan → implement.
+- **Tier 3 — initiative:** multi-week, architectural, or hard to reverse. Tier 2 plus a proposal stage and adversarial reviews.
+
+The tier is stored in the thread's `ledger.md` (append-only, last `tier:` line wins) with a one-line justification — never derived from which artifacts are present. Read it to learn the tier; if the thread is not yet tier 3 and a proposal is genuinely warranted, escalate by appending a dated, justified `tier: 3 @ <UTC> — <why>` line. Escalation is cheap and explicit by design — the visible ledger entry is the point. Do not write a proposal into a thread the ledger marks `deferred` or `closed`.
 
 ## Suggested Structure
 
@@ -35,32 +50,70 @@ The proposal body is freeform markdown. There is no required template and no req
 
 A proposal that captures only intent and rough shape is fine. A proposal that adds a fifth element (constraints, prior art, alternatives weighed) is fine. The skill's job is to write what is useful, not to fill out a form.
 
-Do NOT add YAML frontmatter to the proposal body. The filename is the identifier; the body is plain markdown.
+## Lineage Folder and Filename
 
-## Filename and Folder
-
-The proposal artifact uses this record-form filename grammar:
+The proposal is a **versioned artifact**: the file carries no UTC stamp and no `v<N>` in its name, and lives inside a numbered lineage folder.
 
 ```text
-<YYMMDDHHMMSSZ>-<kebab-desc>-proposal.md
+docs/threads/<thread>/proposals/NNN[-<desc>]/proposal.md
 ```
 
-The 12-character UTC stamp (`YYMMDDHHMMSSZ`) comes first, followed by a kebab-case description, followed by the literal `proposal` artifact-type token, followed by `.md`.
+- `NNN` — a mandatory zero-padded 3-digit sequence starting at `001`. It is the stable identifier; numbered folders sort in creation order.
+- `-<desc>` — an optional kebab slug, added ONLY to distinguish one proposal lineage from another. It never renames an earlier lineage, so links stay stable.
+- The file is always literally `proposal.md` — the path carries the type (parent folder) and the subject (thread slug), so the bare filename needs neither a stamp nor a version. The **version lives in frontmatter**, not the filename.
+- No `v1/` / `v2/` folder names. A second lineage is a different proposal subject, not a revision of an earlier one.
 
-Example:
+Examples:
 
 ```text
-260521120000Z-onboarding-friction-proposal.md
+proposals/001/proposal.md
+proposals/001-onboarding-overhaul/proposal.md
+proposals/002-billing-rewrite/proposal.md
 ```
 
-The file lands at `docs/threads/<thread>/proposals/<filename>`. The `proposals/` folder is created on-demand on the first proposal written for the thread; do not pre-create empty folders.
+Within-thread references in the body are thread-relative (`proposals/001/proposal.md`), never repo-rooted and never absolute. The `proposals/` folder and its lineage subfolder are created on-demand on the first proposal written; do not pre-create empty folders.
+
+## Frontmatter Status Contract
+
+A proposal is a versioned artifact that is **alive while in flight** — edited in place through any review→revise cycles — and freezes at its lifecycle latch, not at emission. Its lifecycle status lives in YAML frontmatter and obeys this contract:
+
+- Frontmatter carries **at most two keys**: `version` (a review-cycle counter, an integer; a fresh proposal is `version: 1`) and `status:` (a **map** of lifecycle event → stamp).
+- The proposal's two latches are `status.approved` and `status.rejected`, each nested **inside** the `status:` map — never as a loose top-level key, never collapsed into a single status value. Each latch is **set-once** and stamped with a 12-character `YYMMDDHHMMSSZ` recorded at the moment the event happens.
+- A fresh proposal carries no latch — it is a Draft. The latch is set later, by whoever disposes the proposal (the human's approval, or a rejection). This skill writes the proposal in Draft; it does not set a latch itself.
+- The in-flight **condition (Draft / In Review / Approved / Rejected) is always DERIVED** from the `status:` map by precedence — never stored. Precedence: a `rejected` or `approved` latch present means the proposal is disposed (Approved/Rejected); otherwise an undisposed review open against it means In Review; otherwise Draft. The condition itself is never written down.
+- **Latches are sticky** — a recorded latch is an event that happened and does not revert. New findings do not un-happen an approval.
+- The proposal **freezes at `approved` (or `rejected`)**. Once latched it is part of the thread's frozen history and is not edited; `rejected` is a real artifact-level latch independent of the thread's own disposition (in a multi-lineage thread one proposal may be `rejected` while another is `approved` and the thread stays alive).
+- Nothing else goes in frontmatter: no source-relation or lineage keys (`Supersedes:`, `Forked from:`, …), and nothing derivable from the file's own location (its thread, its lineage folder, its condition). Supersession, if any, is a forward-link written in prose, not metadata.
+
+The intended frontmatter shape on a fresh Draft proposal:
+
+```yaml
+---
+version: 1
+status: {}
+---
+```
+
+After disposition the `status:` map carries exactly one of:
+
+```yaml
+status:
+  approved: <YYMMDDHHMMSSZ>
+```
+
+```yaml
+status:
+  rejected: <YYMMDDHHMMSSZ>
+```
+
+The exact YAML spelling is free as long as the map model holds: latches nest under `status:`, set-once, stamped.
 
 ## Commit Policy
 
-This skill NEVER auto-commits the proposal artifact. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator, or a separate commit flow. Do not stage, do not commit, do not push, do not branch.
+This skill NEVER auto-commits the proposal artifact or the ledger line. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator, or a separate commit flow. Do not stage, do not commit, do not push, do not branch.
 
 ## Immutability
 
-Once a proposal artifact is written into `proposals/`, it is part of the thread's reviewable history and is not edited. To revise an emitted proposal, write a new artifact — a new record with a different slug, or a follow-up proposal that supersedes the prior one by content. No source-relation frontmatter is added — lineage lives in filenames and the surrounding thread, not in metadata on the file.
+A proposal is alive while in flight and is edited in place while it is a Draft (or In Review) — git holds the evolution, and no per-edit record is required during authoring. Once the proposal latches at `approved` or `rejected`, it freezes: its body and frontmatter are part of the thread's reviewable history and are not edited. To change direction after a freeze, open a new proposal lineage (the next `NNN`) — never edit a frozen one.
 
-Drafts under `docs/threads/<thread>/.wip/` are editable until emission. Once the proposal lands in `proposals/`, the lock applies.
+Drafts under `docs/threads/<thread>/.wip/` are editable scratch and never emitted as reviewable artifacts; competing candidate proposals for the same subject live there and only the chosen one is emitted once as `proposals/NNN[-<desc>]/proposal.md`.
