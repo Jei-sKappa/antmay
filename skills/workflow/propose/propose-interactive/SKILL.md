@@ -125,7 +125,7 @@ The exact YAML spelling is free as long as the map model holds: latches nest und
 
 This skill does NOT auto-write a separate decision log. The default behavior is to capture the proposal artifact only. A decision log is written ONLY if durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in the proposal body itself — for example, a major design alternative the user considered and rejected with rationale that downstream readers will need to understand.
 
-When such a log IS warranted, write it as a **record** in the proposal lineage's `discussions/` folder: `docs/threads/<thread>/proposals/NNN[-<desc>]/discussions/<UTC>-<kebab-desc>-decision-log.md`. The record-form filename keeps its UTC stamp and the MANDATORY `-decision-log` artifact-type suffix. A record carries no frontmatter unless it has a lifecycle status of its own; a decision log does not, so it carries none. Use an append-only single-record shape: sequential `## D<N>: <Title>` headings with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim.
+When such a log IS warranted, write it as a **record** in the proposal lineage's `discussions/` folder: `docs/threads/<thread>/proposals/NNN[-<desc>]/discussions/<UTC>-<kebab-desc>-decision-log.md`. The record-form filename keeps its UTC stamp and the MANDATORY `-decision-log` artifact-type suffix. A record carries no frontmatter unless it has a lifecycle status of its own; a decision log does not, so it carries none. Use an append-only single-record shape: sequential `## P<N>: <Title>` headings with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log — most proposal authoring is captured fully in the proposal body's `## Open questions` and `## Rough shape` sections.
 
@@ -147,6 +147,6 @@ This skill NEVER auto-commits the proposal artifact, the optional decision log, 
 
 A proposal is alive while in flight and is edited in place while it is a Draft (or In Review) — git holds the evolution, and the feeding discussions justify what goes in; no per-edit record is required during authoring. Once the proposal latches at `approved` or `rejected`, it freezes: its body and frontmatter are part of the thread's reviewable history and are not edited. To change direction after a freeze, open a new proposal lineage (the next `NNN`) — never edit a frozen one.
 
-Records are immutable from emission. The optional decision log is append-only — new `## D<N>` entries may be appended, but emitted entries are never rewritten in place.
+Records are immutable from emission. The optional decision log is append-only — new `## P<N>` entries may be appended, but emitted entries are never rewritten in place.
 
 Drafts under `docs/threads/<thread>/.wip/` are editable scratch and never emitted as reviewable artifacts; competing candidate proposals for the same subject live there and only the chosen one is emitted once as `proposals/NNN[-<desc>]/proposal.md`.

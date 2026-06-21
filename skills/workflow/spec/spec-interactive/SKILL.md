@@ -34,7 +34,7 @@ If you believe the user is about to commit a framing into the spec that is wrong
 Accept ONE of the following four input forms as the starting point of the walk. Detect which form was passed before opening the conversation:
 
 1. **A proposal artifact path** — typically `docs/threads/<thread>/proposals/NNN[-<desc>]/proposal.md`. The proposal carries intent, context, and a rough shape that the walk elaborates into expected behavior, constraints, and acceptance guidance.
-2. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## D<N>: <Title>` headings. Each settled decision becomes a citation in the spec body, NOT a copy-paste into a separate spec section — see `## Semantic Contract` below.
+2. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## P<N>: <Title>` headings. Each settled decision becomes a citation in the spec body, NOT a copy-paste into a separate spec section — see `## Semantic Contract` below.
 3. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the starting context; treat the issue title and labels as additional framing.
 4. **A raw user prompt**. When no artifact is referenced, the user's prompt is itself the input — the spec is forward-designed directly from the conversation, with no upstream artifact backing it.
 
@@ -49,13 +49,13 @@ The emitted spec MUST cover all EIGHT of the following elements in its body, reg
 3. **Scope / non-scope** — the boundary statement, INCLUDING what is explicitly out.
 4. **Expected behavior** — the observable behaviors a future executor needs.
 5. **Constraints** — tech, repo, harness, and safety constraints that bind the implementation.
-6. **Explicit decisions** — settled trade-offs INLINED into the body where operative (in scope, in constraints, in expected behavior, in acceptance). When a settled decision comes from a referenced decision log, cite the SOURCE by path + `D<N>` ID — e.g., `(per discussions/<UTC>-<slug>-decision-log.md D3)` for a same-thread log, or the repo-relative `docs/threads/<other>/…` path for a cross-thread one — rather than copying the decision text.
+6. **Explicit decisions** — settled trade-offs INLINED into the body where operative (in scope, in constraints, in expected behavior, in acceptance). When a settled decision comes from a referenced decision log, cite the SOURCE by path + `P<N>` ID — e.g., `(per discussions/<UTC>-<slug>-decision-log.md P3)` for a same-thread log, or the repo-relative `docs/threads/<other>/…` path for a cross-thread one — rather than copying the decision text.
 7. **Unresolved questions** — open issues that do NOT block emission. The spec is shipped with these flagged. Push-back items from the `## Anti-Sycophancy Stance` that the user proceeded past despite your reservation belong here.
 8. **Acceptance guidance** — how a reviewer will know the implementation is right. At tier ≥2 this is the machine-checkable acceptance-criteria model required below, not loose prose.
 
 This skill's walk PRESENTS the eight elements (plus the two spec obligations below) as a copy-paste skeleton at the start of the conversation, so the user knows the destination shape from the outset, and then proceeds element-by-element through them in order. The order may be adjusted mid-walk if the conversation surfaces a more natural flow — the requirement is coverage, not sequence — but every one of the eight, plus both obligations, must end up in the final body.
 
-There is NO mandatory `## Decisions` section heading. Forcing a separate decisions section produces dead weight in the spec body — settled decisions belong INLINED into the elements they govern (scope notes, constraint statements, expected-behavior caveats, acceptance preconditions), with a citation back to the source decision log by path + `D<N>`. Do not introduce a `## Decisions` section — inline decisions are the correct form.
+There is NO mandatory `## Decisions` section heading. Forcing a separate decisions section produces dead weight in the spec body — settled decisions belong INLINED into the elements they govern (scope notes, constraint statements, expected-behavior caveats, acceptance preconditions), with a citation back to the source decision log by path + `P<N>`. Do not introduce a `## Decisions` section — inline decisions are the correct form.
 
 ## The Two Spec Obligations
 
@@ -99,7 +99,7 @@ Choosing silently — pinning an undiscussed decision into expected behavior or 
    3. **Scope / non-scope** — the boundary statement, INCLUDING what is explicitly out.
    4. **Expected behavior** — the observable behaviors a future executor needs.
    5. **Constraints** — tech, repo, harness, and safety constraints.
-   6. **Explicit decisions** — settled trade-offs inlined where operative, with citations to source decision logs by path + `D<N>`.
+   6. **Explicit decisions** — settled trade-offs inlined where operative, with citations to source decision logs by path + `P<N>`.
    7. **Unresolved questions** — open issues that don't block emission; push-back items the user proceeded past belong here.
    8. **Acceptance guidance** — how a reviewer will know the implementation is right; at tier ≥2 this is the machine-checkable acceptance-criteria model.
 
@@ -107,11 +107,11 @@ Choosing silently — pinning an undiscussed decision into expected behavior or 
 
 7. **Honor the lossless authoring constraint throughout.** Commit no decision or assumption the user did not see and accept. For any specific the walk surfaces but does not settle, take it back to discussion (settle it or capture it as an `## Unresolved question`) OR mark it a Degree of Freedom — never bake it in silently. Elaborating a discussed decision into prose, structure, and derived ACs is fine; introducing a new undiscussed decision is not.
 
-8. **Reference, do not copy, settled decisions from upstream input.** When the user references a decision in the input (or one already settled in a referenced decision log), do not paste the decision text into a separate spec section. Cite the source by path + `D<N>` at the inline location where the decision becomes operative — in the constraint statement, in the expected-behavior bullet, or in the acceptance criterion that depends on it. Same-thread references are thread-relative; cross-thread references are repo-relative.
+8. **Reference, do not copy, settled decisions from upstream input.** When the user references a decision in the input (or one already settled in a referenced decision log), do not paste the decision text into a separate spec section. Cite the source by path + `P<N>` at the inline location where the decision becomes operative — in the constraint statement, in the expected-behavior bullet, or in the acceptance criterion that depends on it. Same-thread references are thread-relative; cross-thread references are repo-relative.
 
 9. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time (two-digit year, month, day, hour, minute, second, trailing `Z` for UTC). It is needed to stamp the frontmatter latch when the spec is later approved and implemented; do not bake any stamp into the folder or filename.
 
-10. **Assemble and write the artifact.** Compose the spec body from the user's answers — eight elements covered, the two obligations present, settled decisions inlined with source decision logs cited by path + `D<N>`, and the lossless constraint honored. Write to `docs/threads/<thread>/specs/NNN[-<desc>]/spec.md`. The file is named exactly `spec.md` — no UTC stamp, no `v<N>`, no descriptor in the filename. The lineage folder is the stable link target. Initialize the frontmatter status contract per `## Frontmatter Status Contract` (a fresh spec carries `version: 1` and an empty/absent `status:` map — it is a Draft). Create the `specs/` parent and the `NNN[-<desc>]/` lineage folder on-demand.
+10. **Assemble and write the artifact.** Compose the spec body from the user's answers — eight elements covered, the two obligations present, settled decisions inlined with source decision logs cited by path + `P<N>`, and the lossless constraint honored. Write to `docs/threads/<thread>/specs/NNN[-<desc>]/spec.md`. The file is named exactly `spec.md` — no UTC stamp, no `v<N>`, no descriptor in the filename. The lineage folder is the stable link target. Initialize the frontmatter status contract per `## Frontmatter Status Contract` (a fresh spec carries `version: 1` and an empty/absent `status:` map — it is a Draft). Create the `specs/` parent and the `NNN[-<desc>]/` lineage folder on-demand.
 
 11. **Confirm.** Tell the user: `Spec written: <thread-relative-path-to-the-file>` (e.g. `specs/001/spec.md`). No closing remark, no summary.
 
@@ -130,7 +130,7 @@ Read the ledger to learn the tier. If no tier is recorded, propose one to the us
 
 This skill does NOT auto-write a separate decision log. The default behavior is to capture the spec artifact only — most authoring is captured fully inside the spec body, with settled decisions inlined and `## Unresolved questions` carrying any push-back items the user proceeded past. A decision log is written ONLY if durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in the spec body itself — for example, a major design alternative the user considered and rejected with rationale that downstream readers will need to understand independently of the spec.
 
-When such a log IS warranted, write it as a **record** in the spec lineage's `discussions/` folder: `docs/threads/<thread>/specs/NNN[-<desc>]/discussions/<UTC>-<kebab-desc>-decision-log.md`. The record-form filename keeps its UTC stamp and the MANDATORY `-decision-log` artifact-type suffix. A record carries no frontmatter unless it has a lifecycle status of its own; a decision log does not, so it carries none. Use an append-only single-record shape with sequential `## D<N>: <Title>` headings and `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The spec body cites the new log by path + `D<N>` at the inline locations where its decisions are operative — do not copy decision text from the log into the spec.
+When such a log IS warranted, write it as a **record** in the spec lineage's `discussions/` folder: `docs/threads/<thread>/specs/NNN[-<desc>]/discussions/<UTC>-<kebab-desc>-decision-log.md`. The record-form filename keeps its UTC stamp and the MANDATORY `-decision-log` artifact-type suffix. A record carries no frontmatter unless it has a lifecycle status of its own; a decision log does not, so it carries none. Use an append-only single-record shape with sequential `## P<N>: <Title>` headings and `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The spec body cites the new log by path + `P<N>` at the inline locations where its decisions are operative — do not copy decision text from the log into the spec.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
 
@@ -203,7 +203,7 @@ The exact YAML spelling is free as long as the map model holds: latches nest und
 
 A spec is alive while in flight and is edited in place while it is a Draft or In Review — git holds the evolution, and the feeding discussions justify what goes in; no per-edit record is required during authoring. Once approved, the spec stays alive but a *substantive* change requires an owner-approved, record-backed amendment (the only legal post-approval edit); an editorial fix is allowed but must be marked. Once `status.implemented` latches, the spec freezes: its body and frontmatter are part of the thread's frozen history and are not edited. To change how the system works after that, update the living docs — never an implemented spec.
 
-Records are immutable from emission. The optional decision log is append-only — new `## D<N>` entries may be appended, but emitted entries are never rewritten in place.
+Records are immutable from emission. The optional decision log is append-only — new `## P<N>` entries may be appended, but emitted entries are never rewritten in place.
 
 Drafts under `docs/threads/<thread>/.wip/` are editable scratch and never emitted as reviewable artifacts; competing candidate specs for the same subject (e.g. parallel multi-model drafts) live there, and only the chosen-or-merged result is emitted once as `specs/NNN[-<desc>]/spec.md`.
 

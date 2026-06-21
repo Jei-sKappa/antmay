@@ -1,6 +1,6 @@
 ---
 name: seeded-discussion
-description: Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending decisions worth keeping to a target-scoped log when the user already has concrete points to settle.
+description: Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending each on-target decision to a target-scoped log when the user already has concrete points to settle.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 2.0.0
@@ -8,7 +8,7 @@ metadata:
 
 # Seeded Discussion
 
-Drive a focused walk over a predetermined list of points the user supplies up front. For each point, present it per `## Loop`, settle it, append the decision to the log when it is worth keeping, then move to the next point. This skill knows the question set in advance and treats the structured decision-point format as the standard shape for every point — not an opt-in.
+Drive a focused walk over a predetermined list of points the user supplies up front. For each point, present it per `## Loop`, settle it, append each on-target decision to the log, then move to the next point. This skill knows the question set in advance and treats the structured decision-point format as the standard shape for every point — not an opt-in.
 
 ## Peer Framing
 
@@ -52,7 +52,7 @@ Detect which form the input takes before starting the walk. If the input is ambi
    - A walk over a proposal, spec, plan, or implementation targets that artifact and lands in its `discussions/` folder (`proposals/NNN/discussions/`, `specs/NNN/discussions/`, `implementation/discussions/`). A walk over **a review's findings** still targets the artifact that review serves and lands in **that artifact's** `discussions/` — its relationship to the review lives in the log body and header, not in a deeper folder. Nesting is capped at this one level: records never nest inside other records.
    - If the target is ambiguous (e.g., multiple lineages of one type exist), ASK the user which artifact this walk serves. Do not silently pick.
 
-3. **Check for an existing decision log on this topic.** Look inside the target's `discussions/` folder for an existing decision log whose filename slug or document heading matches this point list. If one is found, RESUME it (see `## Resumption`). Otherwise the log will be created at the first decision worth recording per `## Logging` — do NOT create it proactively.
+3. **Check for an existing decision log on this topic.** Look inside the target's `discussions/` folder for an existing decision log whose filename slug or document heading matches this point list. If one is found, RESUME it (see `## Resumption`). Otherwise the log will be created at the first on-target decision per `## Logging` — do NOT create it proactively.
 
 4. **Confirm the point list with the user before walking.** When you intend to walk N points, list them by title back to the user and confirm the order. Re-ordering before the loop starts is cheaper than re-doing decisions later.
 
@@ -60,7 +60,7 @@ Detect which form the input takes before starting the walk. If the input is ambi
 
 For each point in order, present the structured decision-point format by default — this skill treats it as the standard shape, not an opt-in:
 
-1. **Decision** — what this point is about.
+1. **Point** — what this point is about.
 2. **What you need to know** — just enough background to answer.
 3. **(Optional pause)** — after presenting "What you need to know", STOP and let the user respond before generating the options/recommendation. The user may answer directly, add context you were missing, or skip ahead. This pause lets the user redirect early rather than react to a fully-formed proposal. If the user skips or says "go on", proceed.
 4. **Options or Proposed solution** — driven by the mode:
@@ -74,7 +74,7 @@ Continue discussing the current point until the user decides. Do NOT move on whi
 
 ## Target-Scoped P-Numbering
 
-Decision points are P-numbered and **scoped to this walk's target** — the records logged here are about that one artifact. **Off-target points** — for example a tangent raised mid-walk that is not about the target, or an end-of-walk "what next?" exchange — are either **left unlogged** or, if worth keeping, logged **under a distinct prefix** so they never blend into the target's on-target sequence. Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
+Decision points are P-numbered and **scoped to this walk's target** — the records logged here are about that one artifact. **Off-target exchanges** — for example an end-of-walk "what next?" exchange that is workflow navigation, not a decision about the target — are **never logged** (see `## Log What Serves the Target`). A mid-walk tangent that is itself a real decision for a *different* target is handled by `## Scope Drift`, not folded in here. Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
 
 ## Context-Rich Headers
 
@@ -100,17 +100,21 @@ Within-thread references (the target path, cross-links to other artifacts in thi
 
 The decision log lives in the target's `discussions/` folder at `<target-discussions-folder>/<UTC>-<kebab-desc>-decision-log.md` — e.g. `seed/discussions/<UTC>-<kebab-desc>-decision-log.md` for a genesis walk, or `specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` for a spec walk. Use a 12-character `YYMMDDHHMMSSZ` UTC stamp captured once at creation time (no separators, trailing `Z` for UTC, e.g. `260518200115Z`). The `decision-log` artifact-type suffix is MANDATORY.
 
-The log is **append-only**. Create it lazily on the FIRST decision worth recording in this walk (no proactive creation in `## Setup`; see `## Write Only If Useful`). After the user decides each point worth keeping, append one record with a sequential per-log local heading:
+The log is **append-only**. Create it lazily on the FIRST on-target decision in this walk (no proactive creation in `## Setup`; see `## Log What Serves the Target`). After the user settles each on-target point, append one record with a sequential per-log local heading. The record mirrors what the user saw at the point, so the log carries enough context to reconstruct what was discussed later without re-reading the chat:
 
 ```markdown
-## D<N>: <Point title>
+## P<N>: <Point title>
+
+Point: <the Point line you presented, verbatim — what this decision point is about>
+
+What you need to know: <the background block you presented, verbatim — keep multi-paragraph context as paragraphs, keep file paths and line numbers; do NOT summarize or compress>
 
 Decision: <what the user chose>
 
 Rationale: <why the choice made sense, including the main trade-off; flag any dissent per the Peer Framing stance>
 ```
 
-Where `N` starts at `1` for the first decision logged in this walk and increments by `1` per recorded point. The `## D<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
+Where `N` starts at `1` for the first decision logged in this walk and increments by `1` per recorded point. The `## P<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
 
 After appending, tell the user: `Decision saved: <short summary>.`
 
@@ -124,9 +128,13 @@ If you believe the decision the user is about to settle on is wrong, refuse to l
 
 A discussion does NOT own review disposition. When this walk disposes a review's findings, the review's disposition (accepted / rejected, when, and why) is recorded in **the review's own YAML frontmatter `status:` map** — not in this log. This log is, **when one is written**, only the **optional `rationale` cross-link** that the review's frontmatter may point to (a thread-relative path) — it is never the authoritative status, and a review does not require a discussion to be disposed. So: write a disposition log only if the reasoning is worth preserving for a future reader; otherwise let the review's frontmatter carry the disposition alone.
 
-## Write Only If Useful
+## Log What Serves the Target
 
-A decision log is written **only when it carries information useful to a future reader about its target.** No ceremony logs. If a point's resolution surfaces nothing worth preserving — the decision is trivial, self-evident, or already captured elsewhere (e.g. a review finding accepted as-is with the revision itself being the record) — record nothing for it. Do not create a log, or add a record, just because a point was walked. When in doubt, ask whether a future reader picking up this target would be helped by the record; if not, do not write it. A walk where nothing was worth recording leaves no artifact.
+Log every decision that is **about this walk's target** — every on-target point the user settles is recorded. The filter is **target-relevance, not importance**: never skip an on-target decision because it seems small or self-evident.
+
+Do NOT log anything **off-target** — an exchange that is not about the target artifact. The canonical example is the end-of-walk "what should I do next?" exchange — write a spec, discard the work, push, commit. That is workflow navigation, not a decision about the target; handle it in conversation (see `## Finish`) and leave no record for it.
+
+The log is still created **lazily**: a walk that settles no on-target decision writes nothing. But once the first on-target decision lands, the log is created and **every** on-target point settled thereafter is recorded — there is no "too trivial to log" discretion for on-target decisions.
 
 ## Scope Drift
 
@@ -143,10 +151,10 @@ There is NO fixed limit on questions or sub-questions within a point. The walk i
 
 ## Resumption
 
-If the user pauses mid-walk, the skill resumes on next invocation by READING the existing decision log in the target's `discussions/` folder and identifying which seeded points have been logged versus remain. The log itself IS the state — there is no separate state file, no progress tracker, no `processed:` field. (Note: a walk uses Write Only If Useful, so a seeded point that was settled but not worth recording will have no log entry; reconcile against the seeded list and the conversation, not the log alone.)
+If the user pauses mid-walk, the skill resumes on next invocation by READING the existing decision log in the target's `discussions/` folder and identifying which seeded points have been logged versus remain. The log itself IS the state — there is no separate state file, no progress tracker, no `processed:` field. (Every on-target seeded point that was settled has a log entry, so the log maps cleanly back to the seeded list; reconcile against the seeded list and the conversation when a point was raised but left unsettled.)
 
-1. Map each `## D<N>: <Point title>` heading in the log to its point in the seeded list.
-2. Compute the remaining points: those in the seeded list with no matching log entry yet (and not settled-without-recording in a prior session — confirm with the user if unsure).
+1. Map each `## P<N>: <Point title>` heading in the log to its point in the seeded list.
+2. Compute the remaining points: those in the seeded list with no matching log entry yet — an on-target settled point always has a log entry, so a point with no entry is one not yet settled (confirm with the user if unsure).
 3. Ask the user which remaining point to take next (default: the next one in seeded order; the user may pick differently).
 
 If the seeded list itself has changed since the previous session, confirm the new order with the user before continuing the walk.
@@ -156,8 +164,8 @@ If the seeded list itself has changed since the previous session, confirm the ne
 When no seeded points remain (or the user wants to stop):
 
 1. Say so plainly.
-2. Summarize what was decided in this session by `## D<N>` ID: `D1: <Point title> → <decision>`, `D2: <Point title> → <decision>`, …
+2. Summarize what was decided in this session by `## P<N>` ID: `P1: <Point title> → <decision>`, `P2: <Point title> → <decision>`, …
 3. Name any unresolved branches or out-of-scope items raised during the walk in conversation so they are not lost.
-4. Tell the user where the decision log lives (its thread-relative path), e.g. `Decision log: specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` — or note that no log was written if nothing was worth recording.
+4. Tell the user where the decision log lives (its thread-relative path), e.g. `Decision log: specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` — or note that no log was written if no on-target decision was reached.
 
 No closing remark.

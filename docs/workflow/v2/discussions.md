@@ -31,15 +31,32 @@ them tersely ("go with B").
 ## Target-Scoped P-Numbering
 
 Decision points are **P-numbered, scoped to the discussion's target.** **Off-target
-points** — e.g. an end-of-loop "what should I do next?" exchange — are either **left
-unlogged by rule** or **logged under a distinct prefix.** Polluting a target's log with
-non-target decisions is a known failure mode.
+exchanges** — e.g. an end-of-discussion "what should I do next?" navigation exchange — are
+**never logged.** Polluting a target's log with non-target decisions is a known failure
+mode.
 
 ## Context-Rich Headers
 
 A log header carries **full context** — the **target artifact path, the thread, and what
 is being discussed** — **never just a vague title.** A future reader must be able to tell
 what the discussion was about and what it served from the header alone.
+
+## The Discussion Record
+
+Each on-target decided point is appended as one **append-only**, P-numbered record that
+**mirrors what the user saw**, so a future reader can reconstruct the decision without the
+chat. A discussion record carries **four fields**:
+
+- **Point** — the framing line presented, verbatim (what the decision point is about).
+- **What you need to know** — the background block presented, verbatim, kept whole (file
+  paths, line numbers, and multi-paragraph context preserved, not summarized or compressed).
+- **Decision** — what the user chose.
+- **Rationale** — why it made sense, including the main trade-off; any dissent is flagged
+  per peer framing.
+
+This four-field shape is specific to the discussion logs. Decision logs emitted by other
+phases (proposal, spec, plan, review, merge, implementation) keep their lighter
+`Decision` / `Rationale` records under the same `## P<N>:` heading.
 
 ## The Optional Pause
 
@@ -54,11 +71,20 @@ The loop's contract is **peer framing**: neither side defers to the other, and n
 blindly accepts the other's proposals; both are trying to reach the **best decision
 together.** This joins the existing anti-sycophancy rules.
 
-## Write Only If Useful
+## Log What Serves the Target
 
-A discussion log is written **only when it carries information useful to a future reader
-about its target** — **no ceremony logs.** A loop that surfaced nothing worth preserving
-leaves no artifact.
+Log **every on-target decision** — every point the user settles that is **about the
+discussion's target** is recorded. The filter is **target-relevance, not importance**: an
+on-target decision is never skipped for being small or self-evident.
+
+**Off-target exchanges are never logged.** The canonical example is the end-of-discussion
+**"what should I do next?"** exchange — write a spec, discard the work, push, commit. That
+is workflow navigation, not a decision about the target; it is handled in conversation and
+leaves no record.
+
+The log is still created **lazily**: a discussion that settles no on-target decision
+leaves no artifact. But from the first on-target decision onward, every on-target decision
+is recorded — there is no "too trivial to log" discretion.
 
 ## A Discussion No Longer Owns Review Disposition
 

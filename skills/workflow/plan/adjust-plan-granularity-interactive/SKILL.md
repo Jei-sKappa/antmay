@@ -77,7 +77,7 @@ The granularity shift must be backed by a lightweight record so the change is au
 
 - **What to record.** The target instruction (the coarse direction or specific phrase), the per-task actions that materially restructured the plan (which tasks were SPLIT / MERGED / EXPANDED / CONTRACTED, in one or two lines), and the reason the new granularity fits better (the downstream implementer, the now-known implementation surface, etc.). If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, carry that dissent verbatim into the record's rationale.
 - **Where to write it.** A record under the thread's `discussions/` folder that serves this plan lineage — for example `plans/NNN[-<desc>]/discussions/` if the plan lineage has one, or the thread-level discussions that serve the plan. Use the record filename grammar `<YYMMDDHHMMSSZ>-<kebab-desc>-decision-log.md`. The `decision-log` artifact-type token is MANDATORY.
-- **Decision-log shape.** Append-only with sequential `## D<N>: <Title>` headings, each carrying `Decision:` and `Rationale:` lines. The record is a frozen record once written — a later granularity change is a NEW record, never an edit of the old one. The plan body cites the record by thread-relative path + `D<N>` at the inline locations where its decisions are operative; do not copy decision text from the record into the plan.
+- **Decision-log shape.** Append-only with sequential `## P<N>: <Title>` headings, each carrying `Decision:` and `Rationale:` lines. The record is a frozen record once written — a later granularity change is a NEW record, never an edit of the old one. The plan body cites the record by thread-relative path + `P<N>` at the inline locations where its decisions are operative; do not copy decision text from the record into the plan.
 - **Keep it lightweight.** This is a justification record, not a second plan. Do not duplicate the plan body into it; capture only why the granularity changed.
 
 When in doubt about whether the walk's restructuring rises to needing a recorded rationale, ASK the user. A non-trivial granularity shift should leave a record; a tiny one-task tweak may not.
@@ -131,7 +131,7 @@ Run the four checks against the drafted adjusted body. If any check fails, revis
 
 7. **Edit `plan.md` in place.** Copy the finished body into `plans/NNN[-<desc>]/plan.md`, overwriting the prior body. Do not create a new file, do not add a version segment or stamp, do not back up the old body — git holds the prior state. The plan stays a single living `plan.md` in its lineage folder.
 
-8. **Record the shift.** Write the lightweight justification record per `## Record the Shift` — a `decision-log` record under the thread's `discussions/` that serves this plan lineage, using the record filename grammar, carrying any walk dissent verbatim in its rationale. The plan body cites it by thread-relative path + `D<N>` where operative; the body itself stays clean.
+8. **Record the shift.** Write the lightweight justification record per `## Record the Shift` — a `decision-log` record under the thread's `discussions/` that serves this plan lineage, using the record filename grammar, carrying any walk dissent verbatim in its rationale. The plan body cites it by thread-relative path + `P<N>` where operative; the body itself stays clean.
 
 9. **Confirm the output paths.** Tell the user, using thread-relative paths: `Plan updated in place: <plan path>` and `Shift recorded: <record path>`. No closing remark, no summary.
 

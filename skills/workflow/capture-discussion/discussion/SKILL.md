@@ -8,7 +8,7 @@ metadata:
 
 # Discussion
 
-Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. When a concrete decision point emerges, present it per `## Decision Point Format`; otherwise stay conversational. Each decided point is appended to a per-target decision log — but the log is written ONLY when it carries information useful to a future reader (see `## Write Only If Useful`). The log is the durable artifact.
+Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. When a concrete decision point emerges, present it per `## Decision Point Format`; otherwise stay conversational. Each on-target decided point is appended to a per-target decision log; off-target exchanges are never logged (see `## Log What Serves the Target`). The log is created lazily at the first on-target decision — a discussion that settles no on-target decision writes nothing. The log is the durable artifact.
 
 ## Peer Framing
 
@@ -43,15 +43,15 @@ Do not force an options list when one clearly reasoned recommendation serves the
    - A discussion of a proposal, spec, plan, or implementation targets that artifact and lands in its `discussions/` folder (`proposals/NNN/discussions/`, `specs/NNN/discussions/`, `implementation/discussions/`). A discussion **of a review** still targets the artifact that review serves and lands in **that artifact's** `discussions/` — its relationship to the review lives in the log body and header, not in a deeper folder. Nesting is capped at this one level: records never nest inside other records.
    - If the target is ambiguous (e.g., multiple lineages of one type exist), ASK the user which artifact this discussion serves. Do not silently pick.
 
-3. **Do NOT create the decision log proactively.** Keep state in-session until the FIRST decision is reached AND that decision is worth preserving (see `## Write Only If Useful`). An open-ended interview that produces no decision worth recording produces no artifact.
+3. **Do NOT create the decision log proactively.** Keep state in-session until the FIRST on-target decision is reached (see `## Log What Serves the Target`). An open-ended interview that settles no on-target decision produces no artifact.
 
-4. **At the first worth-recording decision, resolve the target log.** Look inside the target's `discussions/` folder for an existing decision log on this topic — identify it by the topic encoded in the filename slug, by the document heading, or by the per-decision IDs already present. If one is found, RESUME it: append. If none is found, CREATE a new log at `<target-discussions-folder>/<UTC>-<kebab-desc>-decision-log.md` — e.g. `seed/discussions/<UTC>-<kebab-desc>-decision-log.md` for a genesis discussion, or `specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` for a spec discussion. The 12-character `YYMMDDHHMMSSZ` UTC stamp is captured once at write time and never re-derived (it has no separators and a trailing `Z` for UTC, e.g. `260518200115Z`). The `decision-log` artifact-type suffix is MANDATORY. If multiple plausible existing logs exist for the same topic, ASK the user which to resume — do not pick the latest by UTC stamp.
+4. **At the first on-target decision, resolve the target log.** Look inside the target's `discussions/` folder for an existing decision log on this topic — identify it by the topic encoded in the filename slug, by the document heading, or by the per-decision IDs already present. If one is found, RESUME it: append. If none is found, CREATE a new log at `<target-discussions-folder>/<UTC>-<kebab-desc>-decision-log.md` — e.g. `seed/discussions/<UTC>-<kebab-desc>-decision-log.md` for a genesis discussion, or `specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` for a spec discussion. The 12-character `YYMMDDHHMMSSZ` UTC stamp is captured once at write time and never re-derived (it has no separators and a trailing `Z` for UTC, e.g. `260518200115Z`). The `decision-log` artifact-type suffix is MANDATORY. If multiple plausible existing logs exist for the same topic, ASK the user which to resume — do not pick the latest by UTC stamp.
 
 5. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would help, inspect the relevant files before asking.
 
 6. **Recognize when a concrete decision point emerges.** Signals: the user asks "what should I do?", you notice concrete alternatives are being weighed, the conversation has narrowed to a fork. When the signal lands, present it per `## Decision Point Format`. Otherwise stay conversational — do NOT force the decision-point format on every exchange.
 
-7. **After the user decides, append to the log** (if the decision is worth recording — see `## Write Only If Useful`). Use the shape in `## Logging Format`. Then tell the user: `Decision saved: <short summary>.`
+7. **After the user decides, append to the log** (if the decision is on-target — see `## Log What Serves the Target`). Use the shape in `## Logging Format`. Then tell the user: `Decision saved: <short summary>.`
 
 8. **Continue until the user signals closure or a natural pause appears.** See `## Question Budget` and `## Finish`.
 
@@ -59,7 +59,7 @@ Do not force an options list when one clearly reasoned recommendation serves the
 
 When a concrete decision point emerges (and ONLY then — this format is opt-in, not the default for every exchange), present it as:
 
-1. **Decision** — what this point is about.
+1. **Point** — what this point is about.
 2. **What you need to know** — just enough background to answer.
 3. **(Optional pause)** — after presenting "What you need to know", STOP and let the user respond before generating the options/recommendation. The user may answer directly, add context you were missing, or skip ahead. This pause lets the user redirect early rather than react to a fully-formed proposal. If the user skips or says "go on", proceed.
 4. **Options or Proposed solution** — driven by the mode:
@@ -73,7 +73,7 @@ Continue discussing the current decision point until the user decides. Do not lo
 
 ## Target-Scoped P-Numbering
 
-Decision points are P-numbered and **scoped to this discussion's target** — the records logged here are about that one artifact. **Off-target points** — for example an end-of-loop "what should I do next?" exchange that is not about the target — are either **left unlogged** or, if worth keeping, logged **under a distinct prefix** so they never blend into the target's on-target sequence. Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
+Decision points are P-numbered and **scoped to this discussion's target** — the records logged here are about that one artifact. **Off-target exchanges** — for example an end-of-discussion "what should I do next?" exchange that is workflow navigation, not a decision about the target — are **never logged** (see `## Log What Serves the Target`). Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
 
 ## Context-Rich Headers
 
@@ -97,19 +97,23 @@ Within-thread references (the target path, cross-links to other artifacts in thi
 
 ## Logging Format
 
-The decision log is **append-only**. Each decided point worth recording is appended as one record with a sequential per-log local heading:
+The decision log is **append-only**. Each on-target decided point is appended as one record with a sequential per-log local heading. The record mirrors what the user saw at the decision point, so the log carries enough context to reconstruct what was discussed later without re-reading the chat:
 
 ```markdown
-## D<N>: <Title>
+## P<N>: <Title>
+
+Point: <the Point line you presented, verbatim — what this decision point is about>
+
+What you need to know: <the background block you presented, verbatim — keep multi-paragraph context as paragraphs, keep file paths and line numbers; do NOT summarize or compress>
 
 Decision: <what the user chose>
 
 Rationale: <why the choice made sense, including the main trade-off; flag any dissent per the Peer Framing stance>
 ```
 
-Where `N` starts at `1` for the first decision in this log and increments by `1` per decision IN THIS LOG. The `## D<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
+Where `N` starts at `1` for the first decision in this log and increments by `1` per decision IN THIS LOG. The `## P<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
 
-A log is a record. **Records are immutable by default**: do NOT rewrite earlier records. If a decision changes later, APPEND a new record (`## D<N+k>: <Title>` for the same or revised title) explaining the change — an append-only log evolves only by appending new records, never by editing prior ones. An interrupted session leaves a usable partial log: every decision recorded up to the interruption is durable.
+A log is a record. **Records are immutable by default**: do NOT rewrite earlier records. If a decision changes later, APPEND a new record (`## P<N+k>: <Title>` for the same or revised title) explaining the change — an append-only log evolves only by appending new records, never by editing prior ones. An interrupted session leaves a usable partial log: every decision recorded up to the interruption is durable.
 
 The one exception to immutability is an **owner-authorized in-place correction**. If the human owner explicitly authorizes fixing an emitted record, the change MUST be **visibly marked** — an erratum or edit note alongside the original text — so the change is auditable. Never silently edit an emitted record.
 
@@ -119,9 +123,13 @@ If you believe the decision the user is about to settle on is wrong, refuse to l
 
 A discussion does NOT own review disposition. When a review exists, its disposition (accepted / rejected, when, and why) is recorded in **the review's own YAML frontmatter `status:` map** — not in this log. A practical-mode discussion that disposes a review's findings is, **when one is written**, only the **optional `rationale` cross-link** that the review's frontmatter may point to (a thread-relative path) — it is never the authoritative status, and a review does not require a discussion to be disposed. So: write a disposition discussion only if the reasoning is worth preserving for a future reader; otherwise let the review's frontmatter carry the disposition alone.
 
-## Write Only If Useful
+## Log What Serves the Target
 
-A decision log is written **only when it carries information useful to a future reader about its target.** No ceremony logs. If a loop surfaced nothing worth preserving — the "decision" is trivial, self-evident, or already captured elsewhere — leave **no artifact**. Do not create a log just because a discussion happened. When in doubt, ask whether a future reader picking up this target would be helped by the record; if not, do not write it.
+Log every decision that is **about this discussion's target** — every on-target point the user settles is recorded. The filter is **target-relevance, not importance**: never skip an on-target decision because it seems small or self-evident.
+
+Do NOT log anything **off-target** — an exchange that is not about the target artifact. The canonical example is the end-of-discussion "what should I do next?" exchange — write a spec, discard the work, push, commit. That is workflow navigation, not a decision about the target; handle it in conversation (see `## Finish`) and leave no record for it.
+
+The log is still created **lazily**: a discussion that settles no on-target decision writes nothing. But once the first on-target decision lands, the log is created and **every** on-target decision thereafter is recorded — there is no "too trivial to log" discretion for on-target decisions.
 
 ## Scope Drift
 
@@ -141,8 +149,8 @@ There is NO fixed limit on questions or decisions. Ask "shall we keep going or f
 When the user signals they want to stop:
 
 1. Say so plainly.
-2. Summarize what was decided in this session by `## D<N>` ID: `D1: <Title> → <decision>`, `D2: <Title> → <decision>`, …
+2. Summarize what was decided in this session by `## P<N>` ID: `P1: <Title> → <decision>`, `P2: <Title> → <decision>`, …
 3. Name any deferred branches in conversation so they are not lost.
-4. Tell the user where the decision log lives (its thread-relative path), e.g. `Decision log: specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` — or note that no log was written if nothing was worth recording.
+4. Tell the user where the decision log lives (its thread-relative path), e.g. `Decision log: specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` — or note that no log was written if no on-target decision was reached.
 
 No closing remark.

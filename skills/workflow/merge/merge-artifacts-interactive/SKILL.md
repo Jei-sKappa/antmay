@@ -100,14 +100,14 @@ The per-conflict loop is adapted for merge resolutions:
 For each conflict IN ORDER:
 
 1. **Surface the conflict.** Name the candidates that disagree (by thread-relative path and section heading). Quote the divergent passages (≤ one sentence each — reference, do not recite). State why the disagreement matters for whoever picks up the canonical artifact next.
-2. **Cite evidence from the candidates.** Reference each candidate by thread-relative path and the specific section heading where the disagreement lives. If a candidate cites a decision log by `D<N>` ID, follow the reference and confirm the cited decision is actually settled there before assessing it.
+2. **Cite evidence from the candidates.** Reference each candidate by thread-relative path and the specific section heading where the disagreement lives. If a candidate cites a decision log by `P<N>` ID, follow the reference and confirm the cited decision is actually settled there before assessing it.
 3. **ASK the user for the resolution.** Open the loop with a question that gives the user room to answer: "How do you want to resolve this?" / "Which candidate wins, or is there a synthesis?" / "What's the right call here?". Accept the user's freeform answer.
 4. **TEST the user's resolution against the candidate drafts (do not just accept).** Does the user's resolution actually fit the surrounding context in the candidates, or does it merely close down candidate B's argument? Look for: (a) a passage in candidate B the user's resolution does not account for, (b) a downstream consequence candidate B's position guards against that candidate A's position does not, (c) context the user has but no candidate records — which is itself worth capturing in the rationale. ASK the user for their view when useful AND TEST the user's resolution against the candidates — do not just accept. The user disagreeing with you is not itself evidence; the user pointing at a passage that genuinely settles the conflict IS evidence. Push back per the `## Anti-Sycophancy Stance` when the test fails — especially when the user's resolution looks weak (picking candidate A "because it's newer" without addressing the substance of candidate B). The merge-stance amplifier applies here.
 5. **Apply the resolution to the canonical artifact draft.** Fold the chosen text (or the user's synthesis) into the canonical body at the appropriate section.
-6. **Append a record to the decision log.** Use the `## D<N>: <Conflict title>` shape. `Decision: <which candidate wins, or synthesis description>` and `Rationale: <one or two sentences explaining why; flag any dissent per the Anti-Sycophancy stance>`. Include the conflict's category (subjective disagreement / contradictory statement / divergent design choice) in the title or rationale so the decision log carries the per-conflict outcome legibly.
+6. **Append a record to the decision log.** Use the `## P<N>: <Conflict title>` shape. `Decision: <which candidate wins, or synthesis description>` and `Rationale: <one or two sentences explaining why; flag any dissent per the Anti-Sycophancy stance>`. Include the conflict's category (subjective disagreement / contradictory statement / divergent design choice) in the title or rationale so the decision log carries the per-conflict outcome legibly.
 7. **Move to the next conflict.** Do not move on while the current conflict is still ambiguous — settle it cleanly first. Silence is not a resolution.
 
-If a conflict splits into sub-conflicts during the walk (e.g. a "scope conflict" turns out to be one scope-boundary sub-conflict plus one in-scope contradiction sub-conflict), settle each sub-conflict as its own `## D<N>` record rather than collapsing them.
+If a conflict splits into sub-conflicts during the walk (e.g. a "scope conflict" turns out to be one scope-boundary sub-conflict plus one in-scope contradiction sub-conflict), settle each sub-conflict as its own `## P<N>` record rather than collapsing them.
 
 ## Decision Log
 
@@ -131,16 +131,16 @@ The decision log is created LAZILY at the FIRST settled conflict, NOT proactivel
 The decision log is **append-only**. Each settled conflict is appended as one record with a sequential per-log local heading:
 
 ```markdown
-## D<N>: <Conflict title>
+## P<N>: <Conflict title>
 
 Decision: <which candidate wins, or synthesis description>
 
 Rationale: <one or two sentences explaining why; flag any dissent per the Anti-Sycophancy stance>
 ```
 
-Where `N` starts at `1` for the first settlement in this log and increments by `1` per settlement IN THIS LOG. The `## D<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's thread-relative path.
+Where `N` starts at `1` for the first settlement in this log and increments by `1` per settlement IN THIS LOG. The `## P<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's thread-relative path.
 
-If the user pauses mid-walk after at least one resolution has landed, the partial decision log is durable: every resolution up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## D<N+k>` record).
+If the user pauses mid-walk after at least one resolution has landed, the partial decision log is durable: every resolution up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## P<N+k>` record).
 
 ## Output Artifacts
 
@@ -204,6 +204,6 @@ Candidate drafts in `.wip/` are READ-ONLY to this skill. It does NOT edit, rewri
 
 The canonical artifact obeys the lifecycle physics. While the target is alive (Draft / In Review), it is edited in place — that is exactly what a record-backed in-place merge revision is, and git holds the evolution. Once the artifact latches (a proposal at `approved` / `rejected`, a spec at `implemented`) it is FROZEN: it is not edited; reconciling further candidate work against it means a new thread (or new lineage), not an in-place rewrite. A substantive change to an Approved-but-not-Implemented spec is editable ONLY via an owner-approved, record-backed amendment.
 
-The decision log is APPEND-ONLY and is a record — its body is frozen at emission and carries no frontmatter. Once a `## D<N>` record has been written, it is part of the decision log's reviewable history and is NOT edited. A revision to a resolution settles as a NEW `## D<N+k>` record explaining the change — never an in-place edit of an earlier record. The log itself IS the state — there is no separate state file, no progress tracker.
+The decision log is APPEND-ONLY and is a record — its body is frozen at emission and carries no frontmatter. Once a `## P<N>` record has been written, it is part of the decision log's reviewable history and is NOT edited. A revision to a resolution settles as a NEW `## P<N+k>` record explaining the change — never an in-place edit of an earlier record. The log itself IS the state — there is no separate state file, no progress tracker.
 
 No source-relation YAML frontmatter is added to any emitted artifact — no `Supersedes:`, no `Alternative to:`, no `Forked from:`, no `Merged from:`. Which candidates the merge consumed, why each resolution won, and where the decision log lives all live in prose — the decision log's records and the artifact body's references (thread-relative paths) — not in metadata on the file.

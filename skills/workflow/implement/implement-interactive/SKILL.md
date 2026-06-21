@@ -35,7 +35,7 @@ This skill accepts ONE of the following SEVEN input forms. Detect which form was
 
 1. **A spec artifact path** — a Markdown file capturing a semantic contract with acceptance guidance. The spec's semantic-contract elements drive the implicit task list directly. If the spec has acceptance guidance, every implicit task should trace to a piece of it; if a piece of acceptance has no implicit task covering it, that is a coverage gap to surface during the walk.
 2. **A proposal artifact path** — a Markdown file capturing a rough proposal. The proposal's shape becomes the starting implicit task list; the proposal's open questions become items the walk either resolves or surfaces in the four-state task report.
-3. **A decision-log artifact path** — a Markdown file carrying one or more settled decisions with sequential `## D<N>: <Title>` headings. Each settled decision may map to an implicit task (or constrain one); cite the source log by path + `D<N>` in the task report where the decision is operative.
+3. **A decision-log artifact path** — a Markdown file carrying one or more settled decisions with sequential `## P<N>: <Title>` headings. Each settled decision may map to an implicit task (or constrain one); cite the source log by path + `P<N>` in the task report where the decision is operative.
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL or the short `owner/repo#NNN` form. The issue body becomes the starting context; treat the issue title and labels as additional framing.
 5. **A seed artifact path** — the thread's genesis record at `seed/<UTC>-<desc>-seed.md`. Its trigger narrative names the intended outcome and sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before opening the walk.
 6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and walks the implicit task list with the user from the observed state.
@@ -60,7 +60,7 @@ Suggested format (exact wording is at the implementer's discretion, but the four
 
 ```
 Task <N> status: <DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT>
-Notes: <1–3 sentences explaining the rationale or surfaced concerns. Cite settled decisions by thread-relative path + D<N> when relevant. Note any live dissents from the walk per the Anti-Sycophancy Stance.>
+Notes: <1–3 sentences explaining the rationale or surfaced concerns. Cite settled decisions by thread-relative path + P<N> when relevant. Note any live dissents from the walk per the Anti-Sycophancy Stance.>
 Next: <suggested action — "ready for next task", "user clarification on X", "stop and surface this finding", "ready for review", etc.>
 ```
 
@@ -161,7 +161,7 @@ The rationale ties back to the `## Anti-Sycophancy Stance`: bad commits become e
 
 The default behavior of this skill is to NOT auto-write a separate decision log. Most implementation-time decisions are captured fully in commit messages and in the four-state task report — settled decisions cited inline, dissents flagged where they emerged, scope deviations surfaced and signed off live during the walk. A standalone decision log is written ONLY when durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in commit messages or the task report — for example, a structural choice the user weighed multiple alternatives for and explicitly rejected the others, with rationale that downstream readers will need to understand independently of any specific commit.
 
-When such a decision log IS warranted, write it to the implementation node's discussions folder — `implementation/discussions/<UTC>-<kebab-desc>-decision-log.md` (a record: UTC stamp, kebab description, the mandatory `decision-log` artifact-type token, no frontmatter). Discussions attach to the spine node they serve, and a decision that emerged while implementing serves the implementation node. Use an append-only single-record shape with sequential `## D<N>: <Title>` headings, each containing `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The four-state task report and the implementation report cite the new log by thread-relative path + `D<N>` at the location where its decisions are operative.
+When such a decision log IS warranted, write it to the implementation node's discussions folder — `implementation/discussions/<UTC>-<kebab-desc>-decision-log.md` (a record: UTC stamp, kebab description, the mandatory `decision-log` artifact-type token, no frontmatter). Discussions attach to the spine node they serve, and a decision that emerged while implementing serves the implementation node. Use an append-only single-record shape with sequential `## P<N>: <Title>` headings, each containing `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The four-state task report and the implementation report cite the new log by thread-relative path + `P<N>` at the location where its decisions are operative.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
 

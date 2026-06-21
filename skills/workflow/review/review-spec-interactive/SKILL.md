@@ -94,10 +94,10 @@ For each iteration (finding, or element):
    - `rejected` — the finding is not actually a finding (false positive from the candidate-list draft; e.g., the reviewer misread the element as missing when it was present under an unconventional section name). Settlement stays in the decision log only.
    - `accepted` — the finding is genuine and actionable; it will need to be addressed (typically by revising the spec in place, opening a discussion to settle the open question, or running an adversarial review pass). Lands in the review record emitted at end-of-session.
    - `deferred` — the finding is genuine but the user wants to park it for later (out of scope for this review run; address in a future revision or a future review). Lands in the review record emitted at end-of-session.
-6. **Append a record to the decision log.** Use the `## D<N>: <Finding title>` shape. `Decision: <settlement>` and `Rationale: <one or two sentences>`. Include the severity tag and the element (or category) in the title or rationale so the decision log carries the per-finding outcome legibly. If the settlement included a dissent per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim.
+6. **Append a record to the decision log.** Use the `## P<N>: <Finding title>` shape. `Decision: <settlement>` and `Rationale: <one or two sentences>`. Include the severity tag and the element (or category) in the title or rationale so the decision log carries the per-finding outcome legibly. If the settlement included a dissent per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim.
 7. **Move to the next finding (or element).** Do not move on while the current finding is still ambiguous — settle it cleanly first. Silence is not a settlement.
 
-If a finding splits into sub-findings during the walk (e.g., the "scope/non-scope" element finding turns out to be one missing-non-scope sub-finding plus one false-precision-in-scope sub-finding), settle each sub-finding as its own `## D<N>` record rather than collapsing them.
+If a finding splits into sub-findings during the walk (e.g., the "scope/non-scope" element finding turns out to be one missing-non-scope sub-finding plus one false-precision-in-scope sub-finding), settle each sub-finding as its own `## P<N>` record rather than collapsing them.
 
 ## Output Artifacts
 
@@ -120,14 +120,14 @@ The `decision-log` artifact-type suffix is MANDATORY — no other suffix is perm
 The decision log is **append-only**. Each settled finding is appended as one record with a sequential per-log local heading:
 
 ```markdown
-## D<N>: <Finding title> (<severity> · <element or category>)
+## P<N>: <Finding title> (<severity> · <element or category>)
 
 Decision: <settlement: resolved / rejected / accepted / deferred>
 
 Rationale: <one or two sentences explaining why; flag any dissent per the Anti-Sycophancy stance>
 ```
 
-Where `N` starts at `1` for the first settlement in this log and increments by `1` per settlement IN THIS LOG. The `## D<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's path.
+Where `N` starts at `1` for the first settlement in this log and increments by `1` per settlement IN THIS LOG. The `## P<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's path.
 
 Resolved AND rejected findings remain in the decision log only. They are NOT carried into the review record — they are already settled and need no further action.
 
@@ -200,7 +200,7 @@ This skill does NOT reimplement adversarial-review logic and does NOT mark a spe
 
 8. **Capture the UTC stamp for the decision log.** When the FIRST settlement lands and the decision log needs to be created, compute the 12-character `YYMMDDHHMMSSZ` stamp at write time. Stamp once and reuse — never re-derive after writing. The decision log is created LAZILY on the first settlement (per `## Decision Log Lazy Creation`).
 
-9. **Append per-settlement records to the decision log.** After each settlement, append a `## D<N>: <Finding title>` record per `## Walk Format` step 6. Tell the user: `Decision saved: <short summary>.`
+9. **Append per-settlement records to the decision log.** After each settlement, append a `## P<N>: <Finding title>` record per `## Walk Format` step 6. Tell the user: `Decision saved: <short summary>.`
 
 10. **At the END of the walk: write the review record IF unresolved findings remain.** If at least one `accepted` / `deferred` finding remains, capture the UTC stamp for the review (separate from the decision log's stamp), draft the references-first report covering only the unresolved findings, and write the artifact to `specs/NNN[-<desc>]/reviews/<UTC>-<kebab-desc>-review.md` under the target spec's lineage folder, with NO `status.disposed` field (open by parse). If ALL findings were settled as `resolved` or `rejected`, do NOT write a review record — capturing nothing produces nothing.
 
@@ -210,9 +210,9 @@ This skill does NOT reimplement adversarial-review logic and does NOT mark a spe
 
 The decision log is created LAZILY at the FIRST settled finding — not proactively in step 5 or 6. If the candidate-list confirmation produces no walk (user decides the candidates are all false positives and aborts) and no findings are settled, NO decision log is written. An interrupted walk with no settled findings leaves no artifact.
 
-A walk that produces no decisions produces no log. The skill keeps state in-session until the first settlement, then creates the log at write time of the first `## D<N>` record.
+A walk that produces no decisions produces no log. The skill keeps state in-session until the first settlement, then creates the log at write time of the first `## P<N>` record.
 
-If the user pauses mid-walk after at least one settlement has landed, the partial decision log is durable: every settlement up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## D<N+k>` record).
+If the user pauses mid-walk after at least one settlement has landed, the partial decision log is durable: every settlement up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## P<N+k>` record).
 
 ## Scope Drift
 
@@ -232,7 +232,7 @@ The same prohibition applies to any draft material under the thread's `.wip/` fo
 
 ## Immutability
 
-A decision log is a record; it is **append-only**. Once a `## D<N>` record has been written, it is part of the decision log's reviewable history and is NOT edited. A revision to a decision settles as a NEW `## D<N+k>` record explaining the change — never an in-place edit of an earlier record. The log itself is the state — there is no separate state file, no progress tracker.
+A decision log is a record; it is **append-only**. Once a `## P<N>` record has been written, it is part of the decision log's reviewable history and is NOT edited. A revision to a decision settles as a NEW `## P<N+k>` record explaining the change — never an in-place edit of an earlier record. The log itself is the state — there is no separate state file, no progress tracker.
 
 A review is a record. Its **body is frozen at emission** — once written into the spec's `reviews/` folder, the body is part of the thread's reviewable history and is NOT rewritten. A revision to a review's body is a NEW review record (new UTC stamp, new kebab-desc), not an in-place body edit. The review's **frontmatter `status:` map is a live surface** until the review is disposed: the `status.disposed` / `status.disposition` / optional `status.rationale` entries may be set once when the review is acted on (this skill does not set them — it emits the review open). Once `status.disposed` is set, the frontmatter freezes too.
 
