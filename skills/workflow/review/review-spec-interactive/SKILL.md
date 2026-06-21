@@ -3,7 +3,7 @@ name: review-spec-interactive
 description: Walk a spec artifact one element or finding at a time with the user, testing it against all eight semantic-contract elements and consistency with the thread's decision logs, and capturing the resolved-vs-unresolved split when the user wants a collaborative spec review.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Review Spec Interactive
@@ -208,11 +208,11 @@ This skill does NOT reimplement adversarial-review logic and does NOT mark a spe
 
 ## Decision Log Lazy Creation
 
-The decision log is created LAZILY at the FIRST settled finding — not proactively in step 5 or 6. If the candidate-list confirmation produces no walk (user decides the candidates are all false positives and aborts) and no findings are settled, NO decision log is written. An interrupted walk with no settled findings leaves no artifact.
+The decision log is created LAZILY at the FIRST settled finding — not proactively in steps 5 or 6. If the candidate-list confirmation produces no walk (the user decides the candidates are all false positives and aborts) and no findings are settled, NO decision log is written. An interrupted walk with no settled findings leaves no artifact.
 
 A walk that produces no decisions produces no log. The skill keeps state in-session until the first settlement, then creates the log at write time of the first `## P<N>` record.
 
-If the user pauses mid-walk after at least one settlement has landed, the partial decision log is durable: every settlement up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## P<N+k>` record).
+If the user pauses mid-walk after at least one settlement has landed, the partial decision log is durable: every settlement up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## P<N+k>` record) — the log itself is the state.
 
 ## Scope Drift
 

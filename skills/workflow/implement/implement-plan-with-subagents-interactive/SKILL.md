@@ -3,7 +3,7 @@ name: implement-plan-with-subagents-interactive
 description: Execute every task in a plan artifact through an implementer and dual-reviewer subagent loop, asking before each commit when the user wants the heavier review path kept in-loop and the runtime supports subagents.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Implement Plan With Subagents Interactive

@@ -3,7 +3,7 @@ name: plan-strict-auto
 description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan with explicit substeps, files modified, verification, and acceptance criteria when the user wants a prescriptive agent-optimized plan generated autonomously.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Plan Strict Auto
@@ -55,7 +55,7 @@ A strict plan body is **numbered tasks with explicit substeps, verification note
 Each task MUST contain at minimum the following six fields:
 
 1. **Objective** — one sentence stating what this task accomplishes. The objective is the "why" of the task, before any "how".
-2. **Input / context** — the artifacts, files, or upstream state the task depends on. Cite settled decisions by absolute path + `P<N>` here when they constrain the task. If the task starts from the previous numbered task's output (the implicit sequential dependency), say so explicitly.
+2. **Input / context** — the artifacts, files, or upstream state the task depends on. Cite settled decisions by absolute path + `P<N>` here when they constrain the task. If the task starts from the previous numbered task's output (the implicit dependency), say so explicitly.
 3. **Steps / substeps** — a numbered list of the explicit sub-actions the implementer takes. The substeps are prescriptive; an agent-leaning implementer can follow them literally. Each substep is one concrete action ("create file X", "add function Y to module Z", "run command Q"), not a sub-objective.
 4. **Files modified** — the exact files this task touches. List every file by relative path. If a file is created, note `(NEW)` next to it; if removed, note `(DELETED)`. The list is the source of truth for the task's filesystem footprint.
 5. **Verification** — how the implementer (or a reviewer) confirms the task succeeded. Prefer a concrete command, `grep`, `jq`, `test -f` check, or named test over "looks correct". Verification is mechanical, not interpretive — a reviewer running the verification block should reach the same conclusion as the implementer.
