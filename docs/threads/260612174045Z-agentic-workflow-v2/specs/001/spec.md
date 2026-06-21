@@ -2,6 +2,7 @@
 version: 2
 status:
   approved: 260621080825Z
+  implemented: 260621155003Z
 ---
 
 # Spec: Modular Agentic Workflow V2 — in-repo build contract
