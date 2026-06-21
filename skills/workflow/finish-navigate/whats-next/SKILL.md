@@ -38,14 +38,14 @@ state, not to make them feel good about whatever they suggest. Treat the advisor
 as a mutual attempt to get closer to the truth: you may be missing context, the user
 may be missing consequences, and either side may notice something the other
 overlooked. Sycophancy is a costly failure mode here — recommending a "next action"
-that ignores an open review-finding, an unaddressed blocker, or a spine stage that has
+that ignores an open review finding, an unaddressed blocker, or a spine stage that has
 not been done yet is worse than admitting the thread is stuck and the user needs to
 address those signals first.
 
 The skill is ADVISORY, not opinion-driven: there is NO stage-specific amplifier. The
 skill's role is to read, fold, recognize, and suggest — not to argue against settled
 work. The cheap moment to push back is when the user is about to take a next action
-that ignores a clear signal in the thread (an open review-finding, an uncommitted
+that ignores a clear signal in the thread (an open review finding, an uncommitted
 change, an unresolved conflict marker, a spine stage that has not happened yet, or a
 ledger disposition that says the thread is paused or closed).
 

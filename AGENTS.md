@@ -120,6 +120,14 @@ This repo follows [Conventional Commits](https://www.conventionalcommits.org/). 
 
 Repo-wide changes (touching multiple skills, `README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
 
+## V2 Workflow Conventions
+
+This repo is the home of the Modular Agentic Workflow V2 — the **active ruleset for all new threads**. The canonical reference for V2 workflow rules — thread layout, filename grammar, lifecycle and immutability, tiers, the spine, discussions, reviews, and tracker integration — lives at `docs/workflow/v2/README.md`, which links the eight companion rule docs under `docs/workflow/v2/`. Read it before opening a thread or writing/editing any workflow artifact under `docs/threads/<thread>/`.
+
+V1 (`docs/workflow/v1/`) remains the grandfathered reference for pre-V2 threads only — never edited, never migrated, never mixed with V2 (see "V1 Workflow Conventions" below).
+
+This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/workflow/v2/` for any rule change; this section only changes if the V2 reference doc set itself moves or splits.
+
 ## V1 Workflow Conventions
 
 This repo is the home of the Modular Agentic Workflow V1. The canonical reference for V1 workflow rules — thread layout, filename grammars, immutability — lives at `docs/workflow/v1/README.md`. Read it before writing or editing any workflow artifact under `docs/threads/<thread>/`.

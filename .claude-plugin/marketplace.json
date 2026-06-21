@@ -4,8 +4,9 @@
       "name": "JeisKappa-capture-discussion",
       "source": "./",
       "skills": [
-        "./skills/workflow/capture-discussion/capture-inbox",
         "./skills/workflow/capture-discussion/discussion",
+        "./skills/workflow/capture-discussion/open-thread",
+        "./skills/workflow/capture-discussion/open-ticket",
         "./skills/workflow/capture-discussion/seeded-discussion"
       ]
     },
@@ -94,7 +95,8 @@
         "./skills/workflow/review/review-implementation-auto",
         "./skills/workflow/review/review-implementation-interactive",
         "./skills/workflow/review/review-code-auto",
-        "./skills/workflow/review/review-code-interactive"
+        "./skills/workflow/review/review-code-interactive",
+        "./skills/workflow/review/review-lossless-mapping"
       ]
     },
     {
@@ -116,6 +118,7 @@
       "name": "JeisKappa-deprecated",
       "source": "./",
       "skills": [
+        "./skills/deprecated/capture-inbox",
         "./skills/deprecated/discussion-loop",
         "./skills/deprecated/review-decision-document"
       ]

@@ -47,17 +47,25 @@ Each path is one valid composition — not the only valid composition. Pick the 
 
 ### Capture & Discussion
 
-#### [`capture-inbox`](./skills/workflow/capture-discussion/capture-inbox/SKILL.md)
+#### [`open-thread`](./skills/workflow/capture-discussion/open-thread/SKILL.md)
 
-Captures a short markdown note into the active V1 thread's `inbox/open/` folder, with a mandatory `**Why:**` first line and free-form body after it. Useful when a side-finding, follow-up, or deferred idea surfaces while working on something else and you want it parked under the current thread — without derailing the task at hand — knowing the agent will ask first in interactive sessions and auto-capture in AFK / autonomous runs. **Single skill** (cross-cutting capture protocol — no auto/interactive split; trigger encoded in the body).
+Open a local workflow thread from either a brand-new idea or an existing tracker ticket — writing the thread folder, the one frozen seed, and the lifecycle ledger with its initial tier line — use when a unit of work needs a durable home on disk before any proposal, spec, or plan exists.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill capture-inbox
+npx skills add Jei-sKappa/skills --skill open-thread
+```
+
+#### [`open-ticket`](./skills/workflow/capture-discussion/open-ticket/SKILL.md)
+
+Create a remote tracker ticket (GitHub Issues, Jira, Linear, ClickUp, …) from a brand-new idea — the only skill in the workflow that writes to the tracker — use when an idea needs a work-item home in the team's tracker before (or instead of) a local thread, so a later thread can link it from its seed.
+
+```sh
+npx skills add Jei-sKappa/skills --skill open-ticket
 ```
 
 #### [`discussion`](./skills/workflow/capture-discussion/discussion/SKILL.md)
 
-Conducts an open-ended **interactive** interview where questions are discovered live as the conversation unfolds, surfaces options and a recommendation only when a concrete decision point emerges, and appends each decided point to a sequentially-numbered, append-only decision log under the active thread's `discussions/` folder. Useful when you want to think a topic through with the agent — not knowing yet what every question is — and have the resulting decisions captured as a referenceable, thread-local artifact you can point downstream skills at.
+Conduct an open-ended interview where questions are discovered live, surfacing options or a recommendation only at concrete decision points and appending decisions to a target-scoped log when the user wants to think a topic through without knowing every question up front.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill discussion
@@ -65,7 +73,7 @@ npx skills add Jei-sKappa/skills --skill discussion
 
 #### [`seeded-discussion`](./skills/workflow/capture-discussion/seeded-discussion/SKILL.md)
 
-Walks a predetermined list of points one at a time **interactively** — passed as a markdown file or pasted inline — using the Decision / What you need to know / Options / Recommendation loop default-on for every point, then appends each decided point to an append-only decision log under the active thread's `discussions/` folder. Useful when you already have a concrete list to settle (findings, open questions, review comments, design points, a plan to walk) and want options plus a recommendation surfaced for every point by default.
+Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending decisions worth keeping to a target-scoped log when the user already has concrete points to settle.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill seeded-discussion
@@ -145,7 +153,7 @@ npx skills add Jei-sKappa/skills --skill plan-strict-interactive
 
 #### [`adjust-plan-granularity-auto`](./skills/workflow/plan/adjust-plan-granularity-auto/SKILL.md)
 
-**Autonomous** plan-granularity shift — reads an existing v1+ plan markdown file under the active V1 thread's `plans/` folder and emits a NEW versioned plan whose body matches a requested granularity target (looser / stricter / more-implementation-ready / more-high-level OR a specific phrase like "split task 3 into substeps"), end-to-end, with no clarifying questions. The source plan is NEVER modified — the original stays immutable per D39 and the new artifact lands alongside it as `<UTC>-v<N+1>-<descriptor>-plan.md` in the same `plans/` folder. Useful when you already started with the wrong granularity, or when you need to adapt an existing plan for a different implementer.
+Adjust an existing living plan to a new granularity level autonomously by editing it in place when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-auto
@@ -153,7 +161,7 @@ npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-auto
 
 #### [`adjust-plan-granularity-interactive`](./skills/workflow/plan/adjust-plan-granularity-interactive/SKILL.md)
 
-**Interactive** plan-granularity shift — walks the user through an existing v1+ plan task-by-task — deciding per task whether to SPLIT / MERGE / EXPAND / CONTRACT / LEAVE — pushing back on weak reasoning, then assembles and writes a NEW versioned plan whose body matches the requested granularity target. The source plan is NEVER modified — the original stays immutable per D39 and the new artifact lands alongside it as `<UTC>-v<N+1>-<descriptor>-plan.md`. Useful when you want to think the granularity shift through together with the agent and have the resulting adjusted artifact written for you.
+Walk an existing living plan task by task to decide whether to split, merge, expand, contract, or leave each task, then edit the plan in place when the user wants to think the granularity shift through collaboratively.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-interactive
@@ -217,7 +225,7 @@ npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-interacti
 
 #### [`review-proposal-auto`](./skills/workflow/review/review-proposal-auto/SKILL.md)
 
-**Autonomous** end-to-end proposal review — reads an emitted V1 proposal artifact under the active thread's `proposals/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — surfacing gaps, risks, and ambiguities (lightweight proposal review only; the stricter bar for handing a spec downstream lives in `review-spec-*`). The six-section report covers Verdict / Findings (severity-tagged) / Evidence / References / Open Questions / Next Actions. Adversarial pressure on a proposal is delegated to the external `the-fool` skill — no native V1 adversarial-review skill.
+Read a proposal artifact and write a references-first review report into the proposal's reviews/ folder, covering gaps, risks, ambiguities, and consistency with the thread's decision logs, when the user wants a lightweight autonomous proposal review.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-proposal-auto
@@ -225,7 +233,7 @@ npx skills add Jei-sKappa/skills --skill review-proposal-auto
 
 #### [`review-proposal-interactive`](./skills/workflow/review/review-proposal-interactive/SKILL.md)
 
-**Interactive** proposal review — walks an emitted V1 proposal artifact one finding at a time, ASKING the user for their view AND TESTING that view against the proposal, settling each finding as resolved / rejected / accepted / deferred / parked and appending per-finding records to a decision log under `discussions/`. At the end of the session, ONLY unresolved actionable findings dump to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` (no Inbox file when nothing remains). Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier. Adversarial pressure on a proposal is delegated to the external `the-fool` skill.
+Walk a proposal artifact one finding at a time with the user, testing each finding and consistency with the thread's decision logs, then emit a references-first review record into the proposal's reviews/ folder when the user wants the proposal review kept collaborative.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-proposal-interactive
@@ -233,7 +241,7 @@ npx skills add Jei-sKappa/skills --skill review-proposal-interactive
 
 #### [`review-spec-auto`](./skills/workflow/review/review-spec-auto/SKILL.md)
 
-**Autonomous** end-to-end spec review against the handoff-grade bar — reads an emitted V1 spec artifact under the active thread's `specs/` folder and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — checking all EIGHT D50 semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) present and coherent. Adversarial pressure on a spec is delegated to the external `the-fool` skill.
+Read a spec artifact and write a references-first review report checking all eight semantic-contract elements against the handoff-grade bar and consistency with the thread's decision logs when the user wants an autonomous spec quality review.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-spec-auto
@@ -241,7 +249,7 @@ npx skills add Jei-sKappa/skills --skill review-spec-auto
 
 #### [`review-spec-interactive`](./skills/workflow/review/review-spec-interactive/SKILL.md)
 
-**Interactive** spec review against the handoff-grade bar — walks an emitted V1 spec artifact one D50 element (or one finding) at a time, ASKING the user for their view AND TESTING that view against the spec, settling each finding and appending per-finding records to a decision log under `discussions/`. At end-of-session, ONLY unresolved actionable findings dump to `inbox/open/`. Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier. Adversarial pressure on a spec is delegated to the external `the-fool` skill.
+Walk a spec artifact one element or finding at a time with the user, testing it against all eight semantic-contract elements and consistency with the thread's decision logs, and capturing the resolved-vs-unresolved split when the user wants a collaborative spec review.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-spec-interactive
@@ -249,7 +257,7 @@ npx skills add Jei-sKappa/skills --skill review-spec-interactive
 
 #### [`review-plan-auto`](./skills/workflow/review/review-plan-auto/SKILL.md)
 
-**Autonomous** end-to-end plan review — reads an emitted V1 plan artifact under the active thread's `plans/` folder (loose OR strict granularity) and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — checking four review axes per D83: source-spec adherence (when an optional source artifact is supplied), project conventions, granularity fit, and per-task ambiguity (mandatory for strict plans; granularity-fit signal for loose plans). Detects loose-vs-strict granularity from the plan body. Honors the D59 sequential-isolated-independent contract and the D60 no-parallelization rule as review criteria.
+Read a plan artifact and write a references-first adherence review that checks the plan against its spec, sorts the result into one of four outcomes, auto-fixes plan-fault deviations and routes spec-fault findings to the human when the user wants an autonomous plan adherence review.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-plan-auto
@@ -257,7 +265,7 @@ npx skills add Jei-sKappa/skills --skill review-plan-auto
 
 #### [`review-plan-interactive`](./skills/workflow/review/review-plan-interactive/SKILL.md)
 
-**Interactive** plan review — walks an emitted V1 plan artifact one finding (or one task) at a time, ASKING the user for their view AND TESTING that view against the plan, checking four review axes per D83 (source-spec adherence, project conventions, granularity fit, per-task ambiguity). Settles each finding and appends per-finding records to a decision log under `discussions/`. At end-of-session, ONLY unresolved actionable findings dump to `inbox/open/`. Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier. Honors the D59 sequential-isolated-independent contract and the D60 no-parallelization rule.
+Walk a plan artifact one finding or task at a time with the user, checking the plan against its spec, classifying each deviation into one of four outcomes, and capturing the resolved-vs-unresolved split with spec faults routed to the human when the user wants a collaborative plan adherence review.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-plan-interactive
@@ -265,7 +273,7 @@ npx skills add Jei-sKappa/skills --skill review-plan-interactive
 
 #### [`review-implementation-auto`](./skills/workflow/review/review-implementation-auto/SKILL.md)
 
-**Autonomous** end-to-end implementation review against original intent (V1 verification coverage) — reads a V1 implementation reference (a git ref / diff / commit range — typically the output of one of the Phase 5 `implement-*` skills) ALONGSIDE the source artifact it was supposed to deliver (spec / proposal / plan / GitHub issue / Inbox item) and writes a findings-first review report to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — checking five code-vs-original-intent fidelity axes per D85: acceptance/outcome coverage, constraint adherence, scope adherence, behavior fidelity, and test coverage. **This skill covers V1 verification of implementations — there is no separate `verify-*` skill in V1** (per D85, REVW-09).
+Autonomously verify an implementation against its spec's acceptance criteria and write a references-first review record capturing acceptance, constraint, scope, behavior, and test-coverage findings when the user wants the implementation checked without a per-finding walk.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-implementation-auto
@@ -273,7 +281,7 @@ npx skills add Jei-sKappa/skills --skill review-implementation-auto
 
 #### [`review-implementation-interactive`](./skills/workflow/review/review-implementation-interactive/SKILL.md)
 
-**Interactive** implementation review against original intent (V1 verification coverage) — walks a V1 implementation reference ALONGSIDE its source artifact one finding (or one diff hunk / one source acceptance item / one plan task) at a time, ASKING the user for their view AND TESTING that view against BOTH the diff AND the source artifact, checking the same five D85 fidelity axes. Settles each finding and appends per-finding records to a decision log under `discussions/`. At end-of-session, ONLY unresolved actionable findings dump to `inbox/open/`. Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier and an implementation-stage stakes amplifier. **This skill covers V1 verification of implementations — there is no separate `verify-*` skill in V1** (per D85, REVW-09).
+Walk an implementation against its spec's acceptance criteria one finding at a time and capture the resolved-vs-unresolved split when the user wants implementation fidelity verified collaboratively.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-implementation-interactive
@@ -281,7 +289,7 @@ npx skills add Jei-sKappa/skills --skill review-implementation-interactive
 
 #### [`review-code-auto`](./skills/workflow/review/review-code-auto/SKILL.md)
 
-**Autonomous** end-to-end general-purpose code review — reads a CODE REFERENCE (a git ref / diff / file path / directory path) and writes a general-purpose findings-first code review to `inbox/open/<UTC>-<kebab-desc>-review-finding.md` with no clarifying questions — covering quality / safety / idioms / testability per D86 (plus optional axes: performance / dependency hygiene / API design / accessibility / documentation drift when warranted). **NO source artifact required** — that is what distinguishes this skill from `review-implementation-*`. If you have a source artifact AND want code-vs-original-intent fidelity, use `review-implementation-auto` / `review-implementation-interactive` instead.
+Read a code reference and write a references-first code-quality review report covering quality, safety, idioms, and testability, anchored to the spec's acceptance criteria as the definition of right, when the user wants a lightweight autonomous code review.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-code-auto
@@ -289,17 +297,25 @@ npx skills add Jei-sKappa/skills --skill review-code-auto
 
 #### [`review-code-interactive`](./skills/workflow/review/review-code-interactive/SKILL.md)
 
-**Interactive** general-purpose code review — walks a CODE REFERENCE one finding (or one file / one hunk) at a time, ASKING the user for their view AND TESTING that view against the code, covering quality / safety / idioms / testability per D86. Settles each finding and appends per-finding records to a decision log under `discussions/`. At end-of-session, ONLY unresolved actionable findings dump to `inbox/open/`. Carries the 4-marker anti-sycophancy stance plus a review-stance amplifier. **NO source artifact required** — that is what distinguishes this skill from `review-implementation-*`. If you have a source artifact AND want code-vs-original-intent fidelity, use `review-implementation-auto` / `review-implementation-interactive` instead.
+Walk a code reference collaboratively one finding at a time, testing each finding against the code and anchoring right to the spec's acceptance criteria, and capturing the resolved-vs-unresolved split when the user wants a code-quality review kept in-loop.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill review-code-interactive
+```
+
+#### [`review-lossless-mapping`](./skills/workflow/review/review-lossless-mapping/SKILL.md)
+
+Read a set of discussions and the document produced from them, then write a references-first review report verifying the mapping is lossless and additive-free — flagging only smuggled-in decisions/assumptions and dropped user decisions — when the user wants to confirm a document (typically a spec) committed to nothing the user did not see and accept and left nothing out.
+
+```sh
+npx skills add Jei-sKappa/skills --skill review-lossless-mapping
 ```
 
 ### Merge
 
 #### [`merge-artifacts-auto`](./skills/workflow/merge/merge-artifacts-auto/SKILL.md)
 
-**Autonomous** artifact merge — reconciles two or more V1 artifacts (same-type default; cross-type allowed only when the user EXPLICITLY states the target type) into ONE merged artifact at the next mainline integer of the TARGET TYPE's normal folder (`proposals/` / `specs/` / `plans/` / `discussions/` / `inbox/open/` — NEVER a separate `merges/` folder per D101) with no clarifying questions. Preserves unresolvable subjective conflicts EXPLICITLY in the merged body via a `<!-- CONFLICT: <description> -->` HTML-comment marker per D103 so a downstream reader can grep them out, and writes NO decision log per D102 (the autonomous merge is a pure generator).
+Reconcile two or more competing candidate drafts of one artifact into the single canonical artifact, folding non-conflicting content automatically and preserving unresolvable subjective conflicts via HTML-comment markers, when the user wants an autonomous merge.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill merge-artifacts-auto
@@ -307,7 +323,7 @@ npx skills add Jei-sKappa/skills --skill merge-artifacts-auto
 
 #### [`merge-artifacts-interactive`](./skills/workflow/merge/merge-artifacts-interactive/SKILL.md)
 
-**Interactive** artifact merge — reconciles two or more V1 artifacts (same-type default; cross-type when the user EXPLICITLY states the target type) into ONE merged artifact at the next mainline integer of the TARGET TYPE's normal folder (NEVER `merges/` per D101) by walking each subjective conflict ONE AT A TIME — ASKING the user for the resolution AND TESTING that resolution against BOTH input artifacts. Writes a MANDATORY decision log per D102 (explicit exception to D93's "interactive may or may not log" default — merge interactions ARE the durable trade-offs). Carries the 4-marker anti-sycophancy stance plus a merge-stance amplifier.
+Reconcile two or more competing candidate drafts of one artifact into the single canonical artifact by walking each subjective conflict with the user and capturing each resolution in a mandatory decision log, when the user wants an interactive merge.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill merge-artifacts-interactive
@@ -317,7 +333,7 @@ npx skills add Jei-sKappa/skills --skill merge-artifacts-interactive
 
 #### [`finish`](./skills/workflow/finish-navigate/finish/SKILL.md)
 
-Closes a V1 workflow thread by running a lightweight 4-item thread check (final artifacts, open Inbox items, recent implementation commits, obvious unresolved concerns) and then ASKING the user the closure question with FOUR options — `merge into main` / `merge into other branch` / `create PR` / `leave as is` — confirming each git command BEFORE execution and NEVER force-pushing, NEVER rewriting history. **Single skill** — this is the SINGLE V1 skill with NO `-auto` / `-interactive` sibling, an intentional V1 EXCEPTION to the mode-variant convention per D97, because branch disposition is inherently user-directed and there is no autonomous default that would be safe across users / repos / branch contexts. Carries the 4-marker anti-sycophancy stance plus a closure-stance amplifier.
+Perform a thread's terminal handshake — set the spec's implemented latch, append closed:done to the ledger, update the living docs, close the linked ticket with its backlink — then run a lightweight thread check and ask the user how to dispose of the branch (merge into main, merge into another branch, create a PR, or leave as-is) when the work is complete.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill finish
@@ -325,7 +341,7 @@ npx skills add Jei-sKappa/skills --skill finish
 
 #### [`whats-next`](./skills/workflow/finish-navigate/whats-next/SKILL.md)
 
-**Advisory** chat-first V1 navigation — inspects the current thread context (artifacts present under `proposals/` / `specs/` / `plans/` / `discussions/` / `inbox/open/` and recent commits on the current branch, all READ-ONLY) and suggests 2–4 coherent next actions in chat, each citing the V1 skill that would execute the action. The primary output is the chat reply; the skill NEVER writes an artifact by default. AFTER the suggestions land, the skill MAY ask whether to save any suggestion as an Inbox item — ONLY on EXPLICIT user opt-in does the skill route to `capture-inbox`. The V1 body MAY be thin per D33 and point the agent at this README hybrid for the full workflow map. Carries the 4-marker anti-sycophancy stance — NO stage-specific amplifier (the skill is advisory, not opinion-driven).
+Read a thread's state — ledger, lineage folders, and frontmatter status latches — and fold it on demand to answer "what now / what next / is it closed", then suggest coherent next actions when the user wants a quick map after completing work, hitting uncertainty, or getting stuck.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill whats-next
@@ -397,6 +413,7 @@ npx skills add Jei-sKappa/skills --skill meta-prompting
 
 ## Retired skills
 
+- **`capture-inbox`** — retired 2026-06-21. The V2 workflow removes the inbox concept: a unit of work now gets a durable home by opening a thread directly with `open-thread` (local) or a tracker work-item with `open-ticket` (remote), and no V2 spine path writes to an inbox. The legacy folder remains on disk at `skills/deprecated/capture-inbox` so existing installs do not break; new installs should pick `open-thread` / `open-ticket`. Pre-existing `inbox/` captures under older threads remain valid as-is and require no migration.
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
 - **`review-decision-document`** — retired 2026-05-21. Evolved into `review-spec-auto` (autonomous) and `review-spec-interactive` (collaborative) to check against the locked Phase 3 spec semantic contract (the 8 D50 handoff-grade-bar elements). The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing review outputs produced by the legacy skill remain valid as-is and require no migration.
 
