@@ -835,6 +835,15 @@ threads; likely no deeper change. (Realizes: §14 "all" + last two rows.)
   for pre-V2 threads** (never migrated). This is an implementation-phase action,
   added once `docs/workflow/v2/` exists. (Realizes: §16; P21; §Owner flags F-10b.)
 
+#### FR-R5 — `README.md` overview prose, `AGENTS.md` Layout block, and cross-skill V1 references
+
+*(Added 2026-06-21 by owner-approved post-approval amendment (§4); recorded in the decision log as SR-P10. Closes a gap surfaced during Phase-3 implementation: FR-R1–R4 covered the skill-index mechanics but not the repo docs' workflow-overview prose, which still presented the workflow as V1 and described the removed inbox. Realizes: §16 — a V2-consistent repo.)*
+
+- **AC-R5.1** `README.md`'s overview prose describes V2, not V1: the opening line, the "Toolbox Model", and the "Layered Workflow Map" no longer frame the workflow as "V1" and no longer list an inbox module / `capture-inbox` / `inbox/{open,processed,dropped}/` as a live part of the workflow (V2 removes the inbox; status is derived). The map reflects the V2 layout (the lifecycle ledger, lineage folders, `open-thread`/`open-ticket`).
+- **AC-R5.2** No active-skill README entry describes its skill as producing "V1"/"v1" artifacts or writing to "the active V1 thread's" folder: the propose/spec/plan/implement entries (and any others) read as V2 (lineage-folder outputs, the V2 status model), matching the skills' actual V2 behavior. A grep of `README.md` for "V1"/"v1" returns only legitimate historical/grandfathered mentions (e.g. the `capture-inbox` retired entry, "grandfathered V1 threads"), never a description of the *active* workflow.
+- **AC-R5.3** The `AGENTS.md` "Layout" block reflects the V2 skill set: `capture-discussion/` lists `open-thread`, `open-ticket`, `discussion`, `seeded-discussion` (no `capture-inbox`); `review/` includes `review-lossless-mapping`; `capture-inbox` is shown under the `deprecated/` bucket. No other hand-maintained AGENTS section is altered by this AC.
+- **AC-R5.4** No active `README.md` note cites a retired V1 decision ID as current guidance: the `the-fool` / `verify-*` notes that referenced V1 `D…` IDs are reworded, or their stale `D…` citations removed.
+
 ---
 
 ## 2. Coverage
@@ -899,6 +908,7 @@ are cross-referenced from the others.
 | `.claude-plugin/marketplace.json` | FR-R2 |
 | `.vscode/settings.json` scopes | FR-R3 |
 | `AGENTS.md` V2 pointer (required) | FR-R4 |
+| README overview prose / AGENTS Layout block / cross-skill V1 refs (amendment) | FR-R5 |
 
 ---
 

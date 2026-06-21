@@ -190,3 +190,19 @@ P1–P9 settle every spec owner-flag and the three lossless-mapping gaps:
 Next, to reach an approved spec: revise the Draft spec in place per this log → bump to `version: 2` → rename this thread's `lifecycle.md` → `ledger.md` (P2) → dispose this thread's lossless review (`status: { disposed: <stamp>, disposition: accepted, rationale: <this log> }`, dogfooding the F-8 map form) → the owner sets the spec's `approved` latch → implementation.
 
 Pending: the external expert opinion (consult-the-expert, sent during P6) had not arrived; the spec is Draft, so anything material it surfaces can be reconciled in place before approval.
+
+---
+
+## SR-P10 — Post-approval amendment: FR-R5 (README/AGENTS V2-ification) + the GSD-removal chore
+
+Recorded after the loop closed and the spec was Approved (and Phases 1–2 + Phase-3's FR-R landed). This is the **first real use of the post-approval amendment mechanism** (§9 outcome-3 + §4) — dogfooded.
+
+**The gap (surfaced at Phase-3 verification).** FR-R1–R4 covered the skill-index *mechanics* (README entries, marketplace, scopes, the V2 pointer) but **under-scoped the repo docs' workflow-overview prose**. After Phase 3, the repo was still V1-stale in four places: the `README.md` opener ("anchored by the Modular Agentic Workflow **V1**"), the "Toolbox Model" + "Layered Workflow Map" (still listing an **inbox** module / `capture-inbox` / `inbox/{open,processed,dropped}/`), the ~11 propose/spec/plan/implement README entries (still "the active **V1** thread's `proposals/`", "**v1** spec/plan"), the `AGENTS.md` **Layout block** (still `capture-inbox` under `capture-discussion`, missing the three new skills), and the `the-fool`/`verify` README notes (citing retired V1 `D…` IDs). A V2 release cannot ship a README whose first line says "Workflow V1" and which describes the deleted inbox.
+
+**Decision (owner-approved).** This is the §9 outcome-3 case — the build surfaced spec incompleteness, which fixes the **spec**. Per §4, the Approved-not-Implemented spec is amended via an owner-approved, record-backed amendment (this entry is the record):
+
+- Added **FR-R5** (AC-R5.1–R5.4) covering the README overview prose, the per-entry V1/v1 references, the AGENTS Layout block, and the `the-fool`/`verify` notes; added the §2.3 coverage row.
+- The spec **stays Approved** (an amendment does not un-approve it). **Version stays 2** — an amendment is not a new review→revise cycle; it is recorded here and in FR-R5's parenthetical.
+- FR-R5 is implemented in a follow-on cleanup handoff, verified against its ACs (then `version` is unaffected; finish later sets `implemented`).
+
+**Separate chore — NOT a V2 deliverable, recorded for traceability.** The maintainer also directed removal of the retired GSD apparatus (no longer used): the GSD-generated `AGENTS.md` sections (`## Project` → EOF — Project, Constraints, Technology Stack, Conventions, Architecture, Project Skills, GSD Workflow Enforcement, Developer Profile) and `git rm -r .planning/` (74 tracked files). This is repo cleanup, **not** part of the V2 spec — it has no FR/AC. It is done alongside the FR-R5 cleanup in the same handoff (both touch `AGENTS.md`) but committed separately as a `chore:`.
