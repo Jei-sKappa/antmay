@@ -3,12 +3,12 @@ name: implement-interactive
 description: Implement a less-structured input on the current working tree collaboratively, walking implicit tasks with the user, self-reviewing after each task, and asking before each commit when the user wants implementation decisions kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Implement Interactive
 
-Walk the user through a less-structured-input implementation on the current working tree, accept freeform answers per implicit task, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass after each implicit task, ASK before each commit, and report a four-state status per implicit task on the way out. This skill is the collaborative variant: it interviews, it disagrees when warranted, it surfaces what the user did not ask about, and it never lets a commit land without the user's explicit go-ahead. Bad commits become expensive to rewind — the cheap moment to push back is BEFORE the commit lands, because commit history is sacred (no `--amend`, no rebase, no force-push). Once a commit lands, this skill will not revise it; the recovery path is a follow-up commit.
+Walk the user through a less-structured-input implementation on the current working tree, accept freeform answers per implicit task, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass after each implicit task, ASK before each commit, report a four-state status per implicit task, and emit a single immutable **implementation report** record on the way out. This skill is the collaborative variant: it interviews, it disagrees when warranted, it surfaces what the user did not ask about, and it never lets a commit land without the user's explicit go-ahead. Bad commits become expensive to rewind — the cheap moment to push back is BEFORE the commit lands, because commit history is sacred (no `--amend`, no rebase, no force-push). Once a commit lands, this skill will not revise it; the recovery path is a follow-up commit.
 
 This skill is SINGLE-AGENT. The current session is the implementer; the same session runs the self-review pass after each implicit task and conducts the walk with the user. No subagent dispatch.
 
@@ -35,13 +35,13 @@ This skill accepts ONE of the following SEVEN input forms. Detect which form was
 
 1. **A spec artifact path** — a Markdown file capturing a semantic contract with acceptance guidance. The spec's semantic-contract elements drive the implicit task list directly. If the spec has acceptance guidance, every implicit task should trace to a piece of it; if a piece of acceptance has no implicit task covering it, that is a coverage gap to surface during the walk.
 2. **A proposal artifact path** — a Markdown file capturing a rough proposal. The proposal's shape becomes the starting implicit task list; the proposal's open questions become items the walk either resolves or surfaces in the four-state task report.
-3. **A decision-log artifact path** — a Markdown file carrying one or more settled decisions with sequential `## D<N>: <Title>` headings. Each settled decision may map to an implicit task (or constrain one); cite the source log by absolute path + `D<N>` in the task report where the decision is operative.
+3. **A decision-log artifact path** — a Markdown file carrying one or more settled decisions with sequential `## D<N>: <Title>` headings. Each settled decision may map to an implicit task (or constrain one); cite the source log by path + `D<N>` in the task report where the decision is operative.
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL or the short `owner/repo#NNN` form. The issue body becomes the starting context; treat the issue title and labels as additional framing.
-5. **An inbox item path** — a Markdown file with a `**Why:**` line naming the intended outcome and a body sketching the work. As part of completion, plan to move the item from its open location to a processed location.
+5. **A seed artifact path** — the thread's genesis record at `seed/<UTC>-<desc>-seed.md`. Its trigger narrative names the intended outcome and sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before opening the walk.
 6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and walks the implicit task list with the user from the observed state.
 7. **A raw user prompt**. When no artifact or code reference is passed, the user's prompt is itself the input; the walk derives the implicit task list directly from the conversation.
 
-If the input is ambiguous — for example, multiple files match the reference or it is unclear which artifact was intended — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency.
+If the input is ambiguous — for example, the thread holds multiple lineages of one type (`specs/001-api/` vs `specs/002-cli/`) and "the spec" has no clear referent, or it is unclear which artifact was intended — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency or by highest `NNN`.
 
 ## Four-State Status Protocol
 
@@ -60,7 +60,7 @@ Suggested format (exact wording is at the implementer's discretion, but the four
 
 ```
 Task <N> status: <DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT>
-Notes: <1–3 sentences explaining the rationale or surfaced concerns. Cite settled decisions by absolute path + D<N> when relevant. Note any live dissents from the walk per the Anti-Sycophancy Stance.>
+Notes: <1–3 sentences explaining the rationale or surfaced concerns. Cite settled decisions by thread-relative path + D<N> when relevant. Note any live dissents from the walk per the Anti-Sycophancy Stance.>
 Next: <suggested action — "ready for next task", "user clarification on X", "stop and surface this finding", "ready for review", etc.>
 ```
 
@@ -82,9 +82,9 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. If clean, proceed. If dirty, ASK; on abort, stop.
 
-2. **Resolve the thread (if relevant).** If the input is a path under a thread root, the thread root is implicit. If the input is a raw prompt or a code context reference and the run might produce thread-scoped artifacts (e.g., an inbox item for a deferred finding, a decision log per `## Decision Log`), identify the active thread root. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent one.
+2. **Resolve the thread and read the ledger.** If the input is a path under a thread root (`docs/threads/<YYMMDDHHMMSSZ-slug>/`), the thread root is implicit. If the input is a raw prompt or a code context reference, identify the active thread root — the run will produce thread-scoped artifacts (the implementation report, and optionally a decision log per `## Decision Log`). If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent one. Once the thread root is known, read its `ledger.md` (append-only; the current value of each key is its last matching line) for the **tier** and **disposition**. If the disposition is `closed: …`, the thread is sealed — stop and tell the user; do not write into a closed thread.
 
-3. **Resolve and read the input.** Detect which of the seven `## Inputs` forms was passed. For a path input, read the file (path inputs are IMMUTABLE per `## Immutability` — the implementer reads them READ-ONLY). For a GitHub issue, fetch the body and title. For an inbox item, plan to move the item to a processed location upon completion. For a code context reference, read the referenced files. For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ASK which is intended.
+3. **Resolve and read the input.** Detect which of the seven `## Inputs` forms was passed. For a path input, read the file (path inputs are IMMUTABLE per `## Immutability` — the implementer reads them READ-ONLY). For a GitHub issue, fetch the body and title. For a seed, read its trigger narrative. For a code context reference, read the referenced files. For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ASK which is intended.
 
 4. **Walk the implicit task list with the user.** This is the COLLABORATIVE element of this skill. Open the conversation with the input's intended outcome restated in one or two sentences. Propose the first implicit task — its objective and observable verification — and ask the user to confirm or adjust. Push back per the `## Anti-Sycophancy Stance` when the user's framing has gaps, hidden assumptions, or weak reasoning. Adjust scope in conversation (split if the task is too large, fold if it's trivial, defer if it belongs outside this run per `## Scope Drift`). Move to the next implicit task. The task list emerges through the walk, not from a pre-built checklist.
 
@@ -96,7 +96,37 @@ This skill does not use `git worktree` isolation — every implementation runs o
    e. **Commit or skip.** If the user confirmed, commit. If the commit succeeds, capture the SHA + subject. If commit fails, jump to the failed-commit branch in `## Commit Policy` — report `BLOCKED` for this implicit task and stop the entire run.
    f. **Write the task report.** Use the four-state status block from `## Four-State Status Protocol`. The state goes in chat output and/or (if a commit was made) the commit message body.
 
-6. **Final out-message.** Once all implicit tasks have run (or the run was halted at a `BLOCKED` task or by user decision), emit a final summary listing every implicit task by its four-state status plus the commit SHA + subject for each commit made. If an inbox item was the input, note that the item should be moved to its processed location.
+6. **Emit the implementation report.** Once all implicit tasks have run (or the run was halted at a `BLOCKED` task or by user decision), write the implementation report per `## Implementation Report`. This is the run's durable record and is part of the Definition of Done.
+
+7. **Final out-message.** Emit a final summary listing every implicit task by its four-state status, the commit SHA + subject for each commit made, and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation Report`.
+
+## Implementation Report
+
+Every run emits exactly one **implementation report** — a record, immutable from the moment it is written (the industry analog is a PR description). It is the durable artifact this run produces; the four-state task blocks and the git history are the in-flight trail, the report is the summary that survives.
+
+**Where it lands.** Write it to the active thread's flat `implementation/` folder:
+
+```text
+implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
+```
+
+`implementation/` is FLAT — records sit directly inside it, with no lineage (`NNN/`) subfolders and no `v<N>` folders. The filename uses the 12-character UTC stamp (no separators, trailing `Z`), a short kebab description, and the mandatory `implementation-report` artifact-type token. Reference the report path thread-relative (relative to the thread root), never absolute; reference anything in another thread repo-relative (`docs/threads/<other>/…`).
+
+**It carries no frontmatter.** The report is a record with no lifecycle status of its own — so no YAML frontmatter at all. Its body is frozen at emission: never edit it after writing. If something needs correcting later, that is a NEW record, not an edit to this one.
+
+**What it captures** — four content categories, all four present (write "none" where a category is empty):
+
+1. **Deviations from the input, with justification.** Every place the implementation diverged from what the input called for, each with a one-or-two-sentence reason — including the live deviations the user signed off on during the walk and any dissents flagged per the `## Anti-Sycophancy Stance`. Pull these from the `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` task blocks.
+2. **Surprises.** Things the codebase or the task turned out to be that the input did not anticipate.
+3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
+4. **Follow-ups.** Work this run discovered but intentionally did not do — including scope-drift branches the user chose to defer during the walk.
+
+**Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
+
+- **Default — seeds of future threads.** Capture each follow-up as a seed for a new thread (its own genesis record), or surface it in the report as a clearly-labelled candidate seed for the user to open later. This is the default for any standalone follow-up.
+- **Tier-3 phased work — the next phase's discussion.** If the active thread is tier-3 phased work with a living roadmap, a follow-up that belongs to a later phase routes to that next phase's `discussions/` folder (the roadmap is a living list, not a frozen contract — a phase may welcome or defer the follow-ups appended to it). Confirm the thread is tier-3 phased work (per the ledger) before routing this way.
+
+Name the routing decision for each follow-up in the report so the trail is explicit.
 
 ## Commit Policy
 
@@ -131,7 +161,7 @@ The rationale ties back to the `## Anti-Sycophancy Stance`: bad commits become e
 
 The default behavior of this skill is to NOT auto-write a separate decision log. Most implementation-time decisions are captured fully in commit messages and in the four-state task report — settled decisions cited inline, dissents flagged where they emerged, scope deviations surfaced and signed off live during the walk. A standalone decision log is written ONLY when durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in commit messages or the task report — for example, a structural choice the user weighed multiple alternatives for and explicitly rejected the others, with rationale that downstream readers will need to understand independently of any specific commit.
 
-When such a decision log IS warranted, write it to the thread's `discussions/` folder using a UTC-prefixed filename and a `decision-log` artifact-type suffix. Use an append-only single-record shape with sequential `## D<N>: <Title>` headings, each containing `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The four-state task report cites the new log by absolute path + `D<N>` at the location where its decisions are operative.
+When such a decision log IS warranted, write it to the implementation node's discussions folder — `implementation/discussions/<UTC>-<kebab-desc>-decision-log.md` (a record: UTC stamp, kebab description, the mandatory `decision-log` artifact-type token, no frontmatter). Discussions attach to the spine node they serve, and a decision that emerged while implementing serves the implementation node. Use an append-only single-record shape with sequential `## D<N>: <Title>` headings, each containing `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The four-state task report and the implementation report cite the new log by thread-relative path + `D<N>` at the location where its decisions are operative.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
 
@@ -139,18 +169,18 @@ When in doubt about whether a side-conversation rises to "durable trade-off" sta
 
 When the user introduces a branch that is outside the implementation being walked, do not silently follow them and do not let the run grow into a different shape than the one being implemented. Propose ONE of:
 
-1. **Park as an inbox item** (PREFERRED for non-blocking side-findings). Capture a short markdown record in the thread's inbox so the side-finding survives without polluting this run.
-2. **Split into its own task / plan / discussion thread.** When the branch is itself worth a dedicated plan or a separate discussion, hand it off rather than expanding the current run beyond its intent.
+1. **Capture as a follow-up for the implementation report** (PREFERRED for non-blocking side-findings). Note the side-finding so it lands in the report's follow-ups section and routes per `## Implementation Report` — to a seed of a future thread (the default), or, in tier-3 phased work, to the next phase's `discussions/`. There is no inbox in this workflow.
+2. **Split into its own thread.** When the branch is itself worth a dedicated spec or a separate discussion, hand it off — capture it as a seed for a new thread rather than expanding the current run beyond its intent.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in the walk and let it pass.
 
 ASK the user which. Do not pick silently.
 
 ## Immutability
 
-Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. Specs, proposals, decision logs, inbox items, plan artifacts the user may pass through, and any other workflow artifact under a thread directory is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not for any reason.
+Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. A spec, a proposal, a decision log, a seed, a plan artifact the user may pass through, and any other emitted record or latched versioned artifact under a thread directory is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not for any reason. (A spec that is `approved` but not yet `implemented` may be amended only through a separate owner-approved, record-backed amendment pass — never as a side effect of this run.)
 
-If during the walk the user proposes editing the input in place (e.g., "fix the typo in the spec while you're at it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised input is a new version (a new spec `v2`, a new inbox item, a new decision log record). The implementer does not perform that revision inside this run.
+If during the walk the user proposes editing the input in place (e.g., "fix the typo in the spec while you're at it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised spec is a fresh review→revise cycle on that spec; a revised decision is a NEW decision-log record. The implementer does not perform that revision inside this run.
 
-What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also MAY (a) create a new inbox item if a scope-drift branch surfaces and the user picks "park", (b) move an inbox item that was itself the input from its open location to a processed location as part of completion, and (c) write a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold.
+What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also writes exactly one implementation report per `## Implementation Report` (the run's durable thread artifact), MAY write a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold, and MAY capture a discovered follow-up or a scope-drift branch as a seed for a future thread (or, in tier-3 phased work, append it to the next phase's `discussions/`) per the follow-up-routing rule. There is no inbox in this workflow.
 
-Thread artifacts produced by this skill follow the thread's folder conventions — a `YYMMDDHHMMSSZ`-prefixed filename with the appropriate artifact-type suffix. The `.wip/` folder is gitignored and for in-progress drafts only; never emit artifacts into `.wip/` as final output.
+Thread artifacts produced by this skill follow the thread's folder conventions — flat `implementation/` for the report, the appropriate spine-node folder for any decision log, a `YYMMDDHHMMSSZ`-prefixed record filename with the mandatory artifact-type token, within-thread paths written thread-relative. Thread folders are created on demand (a folder appears only when its first artifact lands). The `.wip/` folder is recursively gitignored and for in-progress drafts only; never emit artifacts into `.wip/` as final output.

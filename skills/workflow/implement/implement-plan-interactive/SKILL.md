@@ -3,12 +3,12 @@ name: implement-plan-interactive
 description: Execute a structured plan artifact collaboratively on the current working tree, presenting each task, self-reviewing, and asking before each commit when the user wants plan implementation kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Implement Plan Interactive
 
-Walk the user through a plan artifact's task list on the current working tree, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass after each task, ASK before each commit at every plan-task boundary, and report a four-state status per plan task on the way out. This skill is the collaborative single-agent implementation path for plan artifacts: it presents each task to the user, disagrees when warranted, surfaces what the plan did not anticipate, and never lets a commit land without the user's explicit go-ahead. Bad commits become expensive to rewind — the cheap moment to push back is BEFORE the commit lands, because commit history is sacred (no `--amend`, no rebase, no force-push).
+Walk the user through a plan artifact's task list on the current working tree, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass after each task, ASK before each commit at every plan-task boundary, report a four-state status per plan task, and emit a single immutable **implementation report** record on the way out. This skill is the collaborative single-agent implementation path for plan artifacts: it presents each task to the user, disagrees when warranted, surfaces what the plan did not anticipate, and never lets a commit land without the user's explicit go-ahead. Bad commits become expensive to rewind — the cheap moment to push back is BEFORE the commit lands, because commit history is sacred (no `--amend`, no rebase, no force-push).
 
 This skill is SINGLE-AGENT. The current session is the implementer; the same session runs the self-review pass after each plan task and conducts the walk with the user. No subagents are spawned, no orchestrator role exists separate from the implementer role.
 
@@ -31,11 +31,11 @@ If you believe the user is about to ASK you to commit something that is wrong, r
 
 ## Inputs
 
-Accept a plan artifact path. Both loose-granularity and strict-granularity plans are valid input — both require every plan task to be **sequential, isolated, independently implementable, and independently reviewable**, and both are executed in plan order by this skill.
+Accept a plan artifact path. The plan lives in a lineage folder under the thread root — `docs/threads/<YYMMDDHHMMSSZ-slug>/plans/NNN[-<desc>]/plan.md`. The plan file is simply `plan.md` inside its lineage folder `NNN[-<desc>]/`; it carries no UTC stamp and no `v<N>` in its name — the lineage folder is the stable identifier and the unit of reference. Both loose-granularity and strict-granularity plans are valid input — both require every plan task to be **sequential, isolated, independently implementable, and independently reviewable**, and both are executed in plan order by this skill.
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the walk covers only the named task(s); when omitted, the walk covers every numbered task in the plan in order.
 
-If the input is ambiguous — multiple plan artifacts exist and the user named "the plan" without a specific path, a folder contains two competing versions for the same target, or the user passed a descriptor that matches multiple files — ASK the user which plan artifact is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest version number, or by sort order.
+If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (V2 structurally removes the "which version/variant is current" question: there is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
 
 The plan artifact's task fields drive the walk. Loose-granularity plans give one or two task sentences per task — the walk surfaces the obvious substeps live with the user. Strict-granularity plans give a six-field block per task (objective / input-context / steps-substeps / files-modified / verification / acceptance criteria) — the walk presents each field, asks the user to confirm or adjust, then implements.
 
@@ -84,9 +84,9 @@ If the user wants subagent-driven execution (orchestrator + implementer subagent
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. If clean, proceed. If dirty, ASK; on abort, stop.
 
-2. **Resolve the active thread.** Identify the active thread root. If the plan path is already absolute or thread-rooted, the thread is implicit. If multiple thread roots exist and the plan path is ambiguous about which thread it belongs to, ASK — do not silently pick the most recent timestamp.
+2. **Resolve the active thread and read the ledger.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If the plan path is already thread-rooted, the thread is implicit. If multiple thread roots exist and the plan path is ambiguous about which thread it belongs to, ASK — do not silently pick the most recent timestamp. Once the thread root is known, read its `ledger.md` (append-only; the current value of each key is its last matching line) for the **tier** and **disposition**. A plan input means tier ≥2 work, so the implementation report is part of this thread's Definition of Done. If the disposition is `closed: …`, the thread is sealed — stop and tell the user; do not write into a closed thread.
 
-3. **Resolve the plan artifact path.** Detect the plan path from the user's invocation. If multiple plan artifacts could plausibly match the user's reference (multiple versions, candidate variants with descriptors, "the plan" with no clear referent), ASK the user which plan is intended. Do not pick by recency, by highest version number, or by descriptor match.
+3. **Resolve the plan artifact path.** Detect the plan path from the user's invocation. If multiple plan lineages could plausibly match the user's reference (`plans/001/`, `plans/002-cli/`, "the plan" with no clear referent), ASK the user which plan lineage is intended. Do not pick by recency, by highest `NNN`, or by descriptor match.
 
 4. **Read the plan READ-ONLY.** The plan artifact is IMMUTABLE — open it for reading only. Parse the numbered task list. For each task, record its objective, its verification block (if present), its acceptance criteria (if present in strict-granularity plans), and its files-modified list (if present in strict-granularity plans). If the user passed a specific task identifier, narrow the task list to that subset; otherwise walk every numbered task in plan order.
 
@@ -104,7 +104,37 @@ If the user wants subagent-driven execution (orchestrator + implementer subagent
 
    f. **Write the task report.** Use the four-state status block from `## Four-State Status Protocol`. The state goes in chat output and / or (if a commit was made) the commit message body.
 
-6. **Final out-message.** Once every plan task has run (or the run was halted at a `BLOCKED` task or by user decision), emit a final summary listing every plan task by its four-state status plus the commit SHA + subject for each commit made. Include the plan artifact path (relative to repository root) so the user has the audit trail anchored to the source plan.
+6. **Emit the implementation report.** Once every plan task has run (or the run was halted at a `BLOCKED` task or by user decision), write the implementation report per `## Implementation Report`. This is the run's durable record and part of the Definition of Done.
+
+7. **Final out-message.** Emit a final summary listing every plan task by its four-state status, the commit SHA + subject for each commit made, the plan lineage path the run executed (so the user has the audit trail anchored to the source plan), and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation Report`.
+
+## Implementation Report
+
+Every run emits exactly one **implementation report** — a record, immutable from the moment it is written (the industry analog is a PR description). It is the durable artifact this run produces; the four-state task blocks and the git history are the in-flight trail, the report is the summary that survives. The verify stage that may follow checks the implementation against the spec's acceptance criteria — not against the plan — so the report's account of where the implementation diverged from the plan matters.
+
+**Where it lands.** Write it to the active thread's flat `implementation/` folder:
+
+```text
+implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
+```
+
+`implementation/` is FLAT — records sit directly inside it, with no lineage (`NNN/`) subfolders and no `v<N>` folders (unlike `plans/`, which uses lineage folders). The filename uses the 12-character UTC stamp (no separators, trailing `Z`), a short kebab description, and the mandatory `implementation-report` artifact-type token. Reference the report path thread-relative (relative to the thread root), never absolute; reference anything in another thread repo-relative (`docs/threads/<other>/…`).
+
+**It carries no frontmatter.** The report is a record with no lifecycle status of its own — so no YAML frontmatter at all. Its body is frozen at emission: never edit it after writing. If something needs correcting later, that is a NEW record, not an edit to this one.
+
+**What it captures** — four content categories, all four present (write "none" where a category is empty):
+
+1. **Deviations from the plan, with justification.** Every place the implementation diverged from what the plan task called for, each with a one-or-two-sentence reason — including the live deviations the user signed off on during the walk and any dissents flagged per the `## Anti-Sycophancy Stance`. Pull these from the `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` task blocks.
+2. **Surprises.** Things the codebase or the task turned out to be that the plan did not anticipate.
+3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
+4. **Follow-ups.** Work this run discovered but intentionally did not do — including scope-drift branches the user chose to defer during the walk.
+
+**Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
+
+- **Default — seeds of future threads.** Capture each follow-up as a seed for a new thread (its own genesis record), or surface it in the report as a clearly-labelled candidate seed for the user to open later. This is the default for any standalone follow-up.
+- **Tier-3 phased work — the next phase's discussion.** If the active thread is tier-3 phased work with a living roadmap, a follow-up that belongs to a later phase routes to that next phase's `discussions/` folder (the roadmap is a living list, not a frozen contract — a phase may welcome or defer the follow-ups appended to it). Confirm the thread is tier-3 phased work (per the ledger) before routing this way.
+
+Name the routing decision for each follow-up in the report so the trail is explicit.
 
 ## Commit Policy
 
@@ -137,13 +167,13 @@ The policy is judgment-based and surfaced — both in the task report and, impor
 - **Surface deviations in the task report.** Every deviation also goes into the four-state status block at task end. Minor deviations are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations the user signed off on during the walk are also `DONE_WITH_CONCERNS` with a note that the user explicitly agreed. Major deviations the implementer flagged but did not resolve are `NEEDS_CONTEXT`.
 - **The walk is the live push-back channel.** This skill has the user in-loop for every plan task. Use the walk to raise deviations early, not just at task end. Pre-commit ASK is the second checkpoint where the user has the chance to reject.
 
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT edit the plan artifact in place — the plan is immutable. Surface the finding live during the walk, propose stopping the run, and recommend the user re-shape the plan in a separate plan-adjustment pass that emits a new versioned plan. The new plan is then handed back on a fresh run.
+If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT re-shape the plan as a side effect of this run. Surface the finding live during the walk, capture it in the implementation report, propose stopping the run, and recommend the user re-shape the plan in a separate plan-adjustment pass (a plan is a disposable compiler-IR edited in place by its own authoring/adherence loop). The re-shaped plan is then handed back on a fresh run. If the plan deviates because the SPEC is ambiguous or incomplete, that is a spec fault — it routes to the human to fix the spec, never to a silent plan patch — but resolving it is outside this run's mandate; surface it and stop.
 
 ## Decision Log
 
 The default behavior of this skill is to NOT auto-write a separate decision log. Most implementation-time decisions are captured fully in commit messages and in the four-state task report — settled decisions from the plan's input/context fields cited inline, dissents flagged where they emerged, deviations surfaced and signed off live during the walk. A standalone decision log is written ONLY when durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in commit messages or the task report — for example, a structural choice the user weighed multiple alternatives for and explicitly rejected the others, with rationale that downstream readers will need to understand independently of any specific commit.
 
-When such a decision log IS warranted, write it under the active thread's discussions folder as a markdown file. Use sequential `## D<N>: <Title>` headings with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The four-state task report cites the new log by absolute path at the location where its decisions are operative.
+When such a decision log IS warranted, write it to the implementation node's discussions folder — `implementation/discussions/<UTC>-<kebab-desc>-decision-log.md` (a record: UTC stamp, kebab description, the mandatory `decision-log` artifact-type token, no frontmatter). Discussions attach to the spine node they serve, and a decision that emerged while implementing serves the implementation node. Use sequential `## D<N>: <Title>` headings with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The four-state task report and the implementation report cite the new log by thread-relative path at the location where its decisions are operative.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
 
@@ -151,8 +181,8 @@ When in doubt about whether a side-conversation rises to "durable trade-off" sta
 
 When the user introduces a branch that is outside the plan being walked, do not silently follow them and do not let the run grow into a different shape than the one the plan defines. Propose ONE of:
 
-1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Capture a short markdown record so the side-finding survives without polluting this run.
-2. **Split into its own task / plan / discussion thread.** When the branch is itself worth a dedicated plan or a separate discussion, hand it off rather than expanding the current run beyond the plan's intent.
+1. **Capture as a follow-up for the implementation report** (PREFERRED for non-blocking side-findings). Note the side-finding so it lands in the report's follow-ups section and routes per `## Implementation Report` — to a seed of a future thread (the default), or, in tier-3 phased work, to the next phase's `discussions/`. There is no inbox in this workflow.
+2. **Split into its own thread.** When the branch is itself worth a dedicated spec or a separate discussion, hand it off — capture it as a seed for a new thread rather than expanding the current run beyond the plan's intent.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in the walk and let it pass.
 
 ASK the user which. Do not pick silently.
@@ -161,8 +191,8 @@ ASK the user which. Do not pick silently.
 
 Plan artifacts are IMMUTABLE. The implementer reads them READ-ONLY. The plan file is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
 
-If during the walk the user proposes editing the plan in place (e.g., "fix the typo in task 2 while you're at it", "remove task 5 because we already did it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised plan is a new plan version produced in a separate plan-adjustment pass, then handed back on a fresh run. The implementer does not perform that revision inside this run.
+If during the walk the user proposes editing the plan as a side effect of this run (e.g., "fix the typo in task 2 while you're at it", "remove task 5 because we already did it"), refuse — re-shaping the plan is a separate plan-adjustment pass, then handed back on a fresh run. The implementer does not perform that revision inside this run.
 
-What the implementer DOES modify is source code and, optionally, (a) a new Inbox item if a scope-drift branch surfaces and the user picks "park", and (b) a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold. The implementer does NOT create new spec / proposal / plan artifacts inside this run; those require a separate authoring pass.
+What the implementer DOES modify is source code, plus exactly one implementation report per `## Implementation Report` (the run's durable thread artifact). The implementer MAY also (a) capture a discovered follow-up or a scope-drift branch as a seed for a future thread (or, in tier-3 phased work, append it to the next phase's `discussions/`) per the follow-up-routing rule, and (b) write a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold. There is no inbox in this workflow. The implementer does NOT create new spec / proposal / plan artifacts inside this run; those require a separate authoring pass.
 
-The thread folder set's `.wip/` discipline (recursively gitignored, never used for emitted artifacts) and the on-demand folder creation rule are binding on any thread-scoped file this skill touches.
+The thread folder set's `.wip/` discipline (recursively gitignored, never used for emitted artifacts) and the on-demand folder creation rule (a folder appears only when its first artifact lands) are binding on any thread-scoped file this skill touches. Within-thread paths are written thread-relative; cross-thread paths repo-relative; never absolute.

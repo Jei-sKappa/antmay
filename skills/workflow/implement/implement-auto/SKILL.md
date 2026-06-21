@@ -3,12 +3,12 @@ name: implement-auto
 description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task when the user wants autonomous implementation without per-step confirmation.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 2.0.0
 ---
 
 # Implement Auto
 
-Execute a less-structured input end-to-end on the current working tree. Read the input, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, and report a four-state status per implicit task on the way out. Do not ask clarifying questions at each step, do not ask before committing, and do not rewrite history.
+Execute a less-structured input end-to-end on the current working tree. Read the input, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, report a four-state status per implicit task, and emit a single immutable **implementation report** record on the way out. Do not ask clarifying questions at each step, do not ask before committing, and do not rewrite history.
 
 This skill is single-agent: the current session is the implementer and runs the self-review pass after each implicit task. No subagents are spawned.
 
@@ -18,13 +18,13 @@ This skill accepts ONE of the following SEVEN input forms. Detect which form was
 
 1. **A spec artifact path** under a thread's `specs/` folder. The spec's semantic-contract elements (intended outcome, expected behavior, constraints, acceptance guidance) drive the implicit task list directly. If the spec has acceptance guidance, every implicit task should trace to a piece of it; if a piece of acceptance has no implicit task covering it, that is a coverage gap to surface.
 2. **A proposal artifact path** under a thread's `proposals/` folder. The proposal's rough shape becomes the implicit task list; the proposal's open questions become either tasks the implementation resolves or `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` flags in the four-state report.
-3. **A decision-log artifact path** under a thread's `discussions/` folder. The log carries one or more settled decisions. Each settled decision may map to an implicit task (or constrain one); cite the source log by absolute path and decision identifier in the task report where the decision is operative.
+3. **A decision-log artifact path** under a spine node's `discussions/` folder. The log carries one or more settled decisions. Each settled decision may map to an implicit task (or constrain one); cite the source log by path and decision identifier in the task report where the decision is operative.
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the input; treat the issue title and labels as additional framing.
-5. **An Inbox item path** under a thread's `inbox/open/` folder. The Inbox item's `**Why:**` line names the intended outcome and the body sketches the work. The implementer is implicitly moving the item from `inbox/open/` to `inbox/processed/` as part of completion — note this in the final task report so the inbox status reflects the work done.
+5. **A seed artifact path** under a thread's `seed/` folder (`seed/<UTC>-<desc>-seed.md`). The seed is the thread's genesis record; its trigger narrative names the intended outcome and the body sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before deriving tasks.
 6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and derives implicit tasks from the observed state (e.g., "remove dead code in `src/legacy/`", "fix the import order in `src/foo.ts`"). This input form fits requests where the user's intent is "look at this and do the obvious thing" rather than a written input.
 7. **A raw user prompt**. When no artifact or code reference is passed, the user's prompt is itself the input. Derive implicit tasks directly from the prompt's stated intent.
 
-If the input is ambiguous — multiple plausible specs share the same version number, multiple inbox items match the same slug, the issue identifier is incomplete, the prompt references "the spec" with no clear referent, the code context reference points at a directory containing multiple in-progress changes — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency.
+If the input is ambiguous — a thread contains multiple lineages of the named type (e.g. `specs/001-api/` and `specs/002-cli/`) and "the spec" has no clear referent, the issue identifier is incomplete, the prompt references an artifact with no clear referent, the code context reference points at a directory containing multiple in-progress changes — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency, and do not pick "highest `NNN`".
 
 ## Four-State Status Protocol
 
@@ -65,9 +65,9 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. If the worktree is clean, proceed. If dirty, ASK; on abort, stop.
 
-2. **Resolve the thread (if relevant).** If the input is a path under a thread folder, the thread root is implicit. If the input is a raw prompt or a code context reference and the run might produce thread-scoped artifacts (e.g., an inbox item for a deferred finding), identify the active thread root. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent.
+2. **Resolve the thread and read the ledger.** If the input is a path under a thread folder, the thread root (`docs/threads/<YYMMDDHHMMSSZ-slug>/`) is implicit. If the input is a raw prompt or a code context reference and the run will produce thread-scoped artifacts (it will — the implementation report lands in the thread), identify the active thread root. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent. Once the thread root is known, read its `ledger.md` (append-only; the current value of each key is its last matching line) to learn the **tier** and **disposition**. The implementation report is part of the tier-1-and-up Definition of Done, so it is emitted regardless of tier here. If the ledger's disposition is `closed: …`, the thread is sealed — stop and tell the user; do not write into a closed thread.
 
-3. **Resolve and read the input.** Detect which of the seven `## Inputs` forms was passed. For a path input, read the file READ-ONLY (input artifacts are immutable — see `## Immutability`). For a GitHub issue, fetch the body and title. For an inbox item, plan to move the item to `inbox/processed/` upon completion. For a code context reference, read the referenced files. For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ASK which is intended. Do not pick by recency.
+3. **Resolve and read the input.** Detect which of the seven `## Inputs` forms was passed. For a path input, read the file READ-ONLY (input artifacts are immutable — see `## Immutability`). For a GitHub issue, fetch the body and title. For a seed, read its trigger narrative. For a code context reference, read the referenced files. For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ASK which is intended. Do not pick by recency.
 
 4. **Derive implicit tasks from the input.** Translate the input into an ordered list of implicit tasks. Each implicit task should be implementable in one sitting, observable on completion (a file written, a test passing, a behavior visible), and small enough that the self-review pass after it is meaningful. If the input is fully resolved (e.g., "do X to file Y, then add a test"), the implicit task list may be one or two tasks. If the input is broader (e.g., a spec with multiple acceptance items), the implicit task list will have one entry per acceptance item or per cohesive implementation unit. Avoid both under-splitting (a single "do the spec" task) and over-splitting (a separate task for every line touched).
 
@@ -77,7 +77,37 @@ This skill does not use `git worktree` isolation — every implementation runs o
    c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, report `BLOCKED` for this implicit task and stop the entire run.
    d. **Write the task report.** Use the four-state status block from `## Four-State Status Protocol`. The state goes in chat output and/or the commit message body.
 
-6. **Final out-message.** Once all implicit tasks have run (or the run was halted at a `BLOCKED` task), emit a final summary listing every implicit task by its four-state status plus the commit SHA + subject for each commit made. If an inbox item was the input, note that the item should be moved from `inbox/open/` to `inbox/processed/` to reflect the work done (the implementer may do the move as part of the final task, or surface it as a "Next" suggestion in the final out-message).
+6. **Emit the implementation report.** Once all implicit tasks have run (or the run was halted at a `BLOCKED` task), write the implementation report per `## Implementation Report`. This is the run's durable record and is part of the Definition of Done.
+
+7. **Final out-message.** Emit a final summary listing every implicit task by its four-state status, the commit SHA + subject for each commit made, and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation Report`.
+
+## Implementation Report
+
+Every run emits exactly one **implementation report** — a record, immutable from the moment it is written (the industry analog is a PR description). It is the durable artifact this run produces; the four-state task blocks and the git history are the in-flight trail, the report is the summary that survives.
+
+**Where it lands.** Write it to the active thread's flat `implementation/` folder:
+
+```text
+implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
+```
+
+`implementation/` is FLAT — records sit directly inside it, with no lineage (`NNN/`) subfolders and no `v<N>` folders. The filename uses the 12-character UTC stamp (no separators, trailing `Z`), a short kebab description, and the mandatory `implementation-report` artifact-type token. Reference the report path thread-relative (relative to the thread root), never absolute; reference anything in another thread repo-relative (`docs/threads/<other>/…`).
+
+**It carries no frontmatter.** The report is a record with no lifecycle status of its own — so no YAML frontmatter at all. Its body is frozen at emission: never edit it after writing. If something needs correcting later, that is a NEW record, not an edit to this one.
+
+**What it captures** — four content categories, all four present (write "none" where a category is empty):
+
+1. **Deviations from the plan/input, with justification.** Every place the implementation diverged from what the input called for, each with a one-or-two-sentence reason. Pull these from the `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` task blocks where deviations were surfaced.
+2. **Surprises.** Things the codebase or the task turned out to be that the input did not anticipate.
+3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
+4. **Follow-ups.** Work this run discovered but intentionally did not do.
+
+**Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
+
+- **Default — seeds of future threads.** Capture each follow-up as a seed for a new thread (its own genesis record), or surface it in the report as a clearly-labelled candidate seed for the user to open later. This is the default for any standalone follow-up.
+- **Tier-3 phased work — the next phase's discussion.** If the active thread is tier-3 phased work with a living roadmap, a follow-up that belongs to a later phase routes to that next phase's `discussions/` folder (the roadmap is a living list, not a frozen contract — a phase may welcome or defer the follow-ups appended to it). Confirm the thread is tier-3 phased work (per the ledger) before routing this way.
+
+Name the routing decision for each follow-up in the report so the trail is explicit.
 
 ## Commit Policy
 
@@ -112,8 +142,8 @@ The policy is judgment-based and surfaced via task report — not pre-clearance,
 
 ## Immutability
 
-Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. Specs, proposals, decision logs, inbox items, plan artifacts, and any other artifact under a thread's folders are not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not for any reason.
+Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. An approved spec, a proposal, a decision log, a seed, a plan artifact, and any other emitted record or latched versioned artifact under a thread's folders are not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not for any reason. (A spec that is still `approved` but not yet `implemented` may be amended only through a separate owner-approved, record-backed amendment pass — never as a side effect of this run.)
 
-If during implementation the implementer discovers that the input is wrong (a spec acceptance criterion contradicts the observed code state, an inbox item names a fix that has already been applied), the correct move is to surface the finding in the four-state task report with a `DONE_WITH_CONCERNS` or `NEEDS_CONTEXT` status and let the surrounding session decide what to do. The input artifact stays as it was. A revised spec is a new spec version; a revised inbox item is a new inbox item or a status-folder move. The implementer does not perform that revision as part of this run.
+If during implementation the implementer discovers that the input is wrong (a spec acceptance criterion contradicts the observed code state, a seed names a fix that has already been applied), the correct move is to surface the finding in the four-state task report with a `DONE_WITH_CONCERNS` or `NEEDS_CONTEXT` status, capture it in the implementation report, and let the surrounding session decide what to do. The input artifact stays as it was. The implementer does not perform that revision as part of this run.
 
-What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also MAY (a) create a new inbox item using an available inbox-capture capability if a side-finding emerges that should be parked rather than implemented, and (b) move an inbox item that was itself the input from `inbox/open/` to `inbox/processed/` as part of completion. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.
+What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also writes exactly one implementation report per `## Implementation Report` (the only thread artifact this run emits) and MAY capture a discovered follow-up as a seed for a future thread (or, in tier-3 phased work, append it to the next phase's `discussions/`) per the follow-up-routing rule. There is no inbox in this workflow — its residual job is served by the implementation report and by seeds of future threads. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.

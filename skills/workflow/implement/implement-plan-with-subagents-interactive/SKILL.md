@@ -3,12 +3,12 @@ name: implement-plan-with-subagents-interactive
 description: Execute every task in a plan artifact through an implementer and dual-reviewer subagent loop, asking before each commit when the user wants the heavier review path kept in-loop and the runtime supports subagents.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Implement Plan With Subagents Interactive
 
-Orchestrate the collaborative, plan-driven, multi-subagent implementation of a plan artifact. This skill is the orchestrator role: it does not write code itself — it reads the plan artifact READ-ONLY, walks the numbered task list in plan order, dispatches an **implementer subagent** for each task, dispatches a **spec-compliance reviewer subagent** (first pass), dispatches a **code-quality reviewer subagent** (second pass), respawns a NEW implementer subagent on review failure, re-reviews every fix before advancing, pushes back per the `## Anti-Sycophancy Stance` LIVE during the walk, ASKS the user before committing each orchestration cycle, commits on confirm, and reports a four-state status per plan task on the way out. Bad commits become expensive to rewind — the cheap moment to push back is BEFORE the commit lands, because commit history is sacred (no `--amend`, no rebase, no force-push).
+Orchestrate the collaborative, plan-driven, multi-subagent implementation of a plan artifact. This skill is the orchestrator role: it does not write code itself — it reads the plan artifact READ-ONLY, walks the numbered task list in plan order, dispatches an **implementer subagent** for each task, dispatches a **spec-compliance reviewer subagent** (first pass), dispatches a **code-quality reviewer subagent** (second pass), respawns a NEW implementer subagent on review failure, re-reviews every fix before advancing, pushes back per the `## Anti-Sycophancy Stance` LIVE during the walk, ASKS the user before committing each orchestration cycle, commits on confirm, reports a four-state status per plan task, and emits a single immutable **implementation report** record on the way out. Bad commits become expensive to rewind — the cheap moment to push back is BEFORE the commit lands, because commit history is sacred (no `--amend`, no rebase, no force-push).
 
 ## Subagent Capability Precondition
 
@@ -43,11 +43,11 @@ No parallel implementer dispatch. No per-task worktree branch. The orchestration
 
 ## Inputs
 
-This skill accepts a plan artifact path. The plan artifact is a numbered-task Markdown document produced by a prior plan-authoring pass — both loose-granularity and strict-granularity formats are valid input. Both honor the contract that every plan task is **sequential, isolated, independently implementable, and independently reviewable**, and both are executed in plan order by this skill. Strict-granularity plans give the implementer subagent and the spec-compliance reviewer subagent more to match against (a six-field per-task block: objective, files modified, substeps, verification, acceptance criteria, rollback notes). Loose-granularity plans require the implementer to infer the obvious substeps from the objective and verification sentence. Either granularity is valid input — the granularity is a property of the plan, not a switch on this skill.
+This skill accepts a plan artifact path. The plan lives in a lineage folder under the thread root — `docs/threads/<YYMMDDHHMMSSZ-slug>/plans/NNN[-<desc>]/plan.md`. The plan file is simply `plan.md` inside its lineage folder `NNN[-<desc>]/`; it carries no UTC stamp and no `v<N>` in its name — the lineage folder is the stable identifier and the unit of reference. The plan is a numbered-task Markdown document produced by a prior plan-authoring pass — both loose-granularity and strict-granularity formats are valid input. Both honor the contract that every plan task is **sequential, isolated, independently implementable, and independently reviewable**, and both are executed in plan order by this skill. Strict-granularity plans give the implementer subagent and the spec-compliance reviewer subagent more to match against (a six-field per-task block: objective, files modified, substeps, verification, acceptance criteria, rollback notes). Loose-granularity plans require the implementer to infer the obvious substeps from the objective and verification sentence. Either granularity is valid input — the granularity is a property of the plan, not a switch on this skill.
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the walk covers only the named task(s); when omitted, the walk covers every numbered task in the plan in order.
 
-If the input is ambiguous — multiple plan artifacts exist and the user named "the plan" without a specific path, or the user pointed at a folder containing two competing versions — ASK the user which plan artifact is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest version number, or by sort order.
+If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (V2 structurally removes the "which version/variant is current" question: there is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
 
 ## Four-State Status Protocol
 
@@ -94,9 +94,9 @@ Because this skill runs every implementation on the current working tree without
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. The orchestrator runs the dirty-worktree check at the very start. If clean, proceed. If dirty, ASK; on abort, stop. Do not dispatch any subagent until the check is satisfied.
 
-2. **Resolve the active thread.** Identify the thread root directory that contains the plan artifact. If the plan path is already absolute, the thread is implicit. If multiple thread roots exist and the plan path is ambiguous about which thread it belongs to, ASK the user — do not silently pick the most recent timestamp.
+2. **Resolve the active thread and read the ledger.** Identify the thread root directory (`docs/threads/<YYMMDDHHMMSSZ-slug>/`) that contains the plan artifact. If the plan path is already thread-rooted, the thread is implicit. If multiple thread roots exist and the plan path is ambiguous about which thread it belongs to, ASK the user — do not silently pick the most recent timestamp. Once the thread root is known, the orchestrator reads its `ledger.md` (append-only; the current value of each key is its last matching line) for the **tier** and **disposition**. A plan input means tier ≥2 work, so the implementation report is part of this thread's Definition of Done. If the disposition is `closed: …`, the thread is sealed — stop and tell the user; do not write into a closed thread, do not spawn any subagent.
 
-3. **Resolve the plan artifact path.** Detect the plan path from the user's invocation. If multiple plan artifacts could plausibly match the user's reference (multiple versions, candidate variants with descriptors, "the plan" with no clear referent), ASK the user which plan is intended. Do not pick by recency, by highest version number, or by descriptor match.
+3. **Resolve the plan artifact path.** Detect the plan path from the user's invocation. If multiple plan lineages could plausibly match the user's reference (`plans/001/`, `plans/002-cli/`, "the plan" with no clear referent), ASK the user which plan lineage is intended. Do not pick by recency, by highest `NNN`, or by descriptor match.
 
 4. **Read the plan READ-ONLY.** The plan artifact is IMMUTABLE — open it for reading only. Parse the numbered task list. For each task, record its objective, its verification block (if present), its acceptance criteria (if present in strict-granularity plans), and its files-modified list (if present in strict-granularity plans). If the user passed a specific task identifier, narrow the task list to that subset; otherwise walk every numbered task in plan order.
 
@@ -120,7 +120,37 @@ Because this skill runs every implementation on the current working tree without
 
    i. **Write the orchestration cycle task report.** Use the four-state status block (with the subagent audit) from `## Four-State Status Protocol`. The state goes in chat output and / or (if a commit was made) the commit message body. Note any live dissents from the walk.
 
-6. **Final out-message.** Once every plan task has run (or the run was halted at a `BLOCKED` task or by user decision), emit a final summary listing every plan task by its four-state status, the per-task subagent audit, and the commit SHA + subject for each commit made. Include the plan artifact path so the user has the audit trail anchored to the source plan.
+6. **The orchestrator emits the implementation report.** Once every plan task has run (or the run was halted at a `BLOCKED` task or by user decision), the ORCHESTRATOR writes the implementation report per `## Implementation Report` — this is a synthesis the orchestrator owns, folded from the per-cycle task reports, the subagent audit, and the live walk decisions it already holds; it is NOT delegated to a subagent. This is the run's durable record and part of the Definition of Done.
+
+7. **Final out-message.** Emit a final summary listing every plan task by its four-state status, the per-task subagent audit, the commit SHA + subject for each commit made, the plan lineage path the run executed (so the user has the audit trail anchored to the source plan), and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation Report`.
+
+## Implementation Report
+
+The ORCHESTRATOR emits exactly one **implementation report** per run — a record, immutable from the moment it is written (the industry analog is a PR description). The orchestrator writes it directly (it is a synthesis of the per-cycle task reports, the subagent audits, and the live walk decisions the orchestrator already holds); it is not delegated to a subagent, and the orchestrator does not load any subagent reply as the report's content. The four-state task blocks, the subagent audit, and the git history are the in-flight trail; the report is the summary that survives. The verify stage that may follow checks the implementation against the spec's acceptance criteria — not against the plan — so the report's account of where the implementation diverged from the plan matters.
+
+**Where it lands.** Write it to the active thread's flat `implementation/` folder:
+
+```text
+implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
+```
+
+`implementation/` is FLAT — records sit directly inside it, with no lineage (`NNN/`) subfolders and no `v<N>` folders (unlike `plans/`, which uses lineage folders). The filename uses the 12-character UTC stamp (no separators, trailing `Z`), a short kebab description, and the mandatory `implementation-report` artifact-type token. Reference the report path thread-relative (relative to the thread root), never absolute; reference anything in another thread repo-relative (`docs/threads/<other>/…`). The report is NOT a `.wip/` scratch file — `.wip/` holds the recursively-gitignored reviewer review files; the implementation report is an emitted, version-controlled record under `implementation/`.
+
+**It carries no frontmatter.** The report is a record with no lifecycle status of its own — so no YAML frontmatter at all. Its body is frozen at emission: never edit it after writing. If something needs correcting later, that is a NEW record, not an edit to this one.
+
+**What it captures** — four content categories, all four present (write "none" where a category is empty):
+
+1. **Deviations from the plan, with justification.** Every place the implementation diverged from what the plan task called for, each with a one-or-two-sentence reason — including the live deviations the user signed off on during the walk, dissents flagged per the `## Anti-Sycophancy Stance`, deviations the implementer subagents surfaced, and deviations either reviewer subagent flagged. Pull these from the `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` cycle reports.
+2. **Surprises.** Things the codebase or the task turned out to be that the plan did not anticipate.
+3. **Problems hit.** Blockers, failures, non-converging fix loops, and anything that forced a `BLOCKED` status.
+4. **Follow-ups.** Work this run discovered but intentionally did not do — including scope-drift branches the user chose to defer during the walk.
+
+**Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
+
+- **Default — seeds of future threads.** Capture each follow-up as a seed for a new thread (its own genesis record), or surface it in the report as a clearly-labelled candidate seed for the user to open later. This is the default for any standalone follow-up.
+- **Tier-3 phased work — the next phase's discussion.** If the active thread is tier-3 phased work with a living roadmap, a follow-up that belongs to a later phase routes to that next phase's `discussions/` folder (the roadmap is a living list, not a frozen contract — a phase may welcome or defer the follow-ups appended to it). Confirm the thread is tier-3 phased work (per the ledger) before routing this way.
+
+Name the routing decision for each follow-up in the report so the trail is explicit.
 
 ## Subagent Briefs
 
@@ -180,13 +210,13 @@ The rationale ties back to the `## Anti-Sycophancy Stance`: bad commits become e
 - **Reviewer-surfaced deviations.** Either reviewer (spec-compliance first, code-quality second) may surface a deviation in its findings. The orchestrator surfaces those LIVE to the user. Per the `## Anti-Sycophancy Stance`, the orchestrator MAY honor the user's choice to skip a fix iteration but reports `DONE_WITH_CONCERNS` for the task in that case — with the dissent named in the task report and (if applicable) in the commit message body.
 - **The walk is the live push-back channel.** This skill has the user in-loop for every orchestration cycle. Use the walk to raise deviations early — before the implementer subagent is dispatched, before the reviewer subagents are dispatched, and before the ASK gate at commit time. The ASK gate is the second checkpoint where the user has the chance to reject.
 
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the orchestrator does NOT edit the plan artifact in place — the plan is immutable. Surface the finding live during the walk, propose stopping the run, and recommend the user re-shape the plan in a separate plan-authoring pass that emits a new versioned plan. The new plan is then handed back on a fresh run.
+If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the orchestrator does NOT re-shape the plan as a side effect of this run. Surface the finding live during the walk, capture it in the implementation report, propose stopping the run, and recommend the user re-shape the plan in a separate plan-adjustment pass (a plan is a disposable compiler-IR edited in place by its own authoring/adherence loop). The re-shaped plan is then handed back on a fresh run. If the plan deviates because the SPEC is ambiguous or incomplete, that is a spec fault — it routes to the human to fix the spec, never to a silent plan patch — but resolving it is outside this run's mandate; surface it and stop.
 
 ## Decision Log
 
 The default behavior of this skill is to NOT auto-write a separate decision log. Most implementation-time decisions are captured fully in commit messages and in the four-state task report — settled decisions cited inline, dissents flagged where they emerged, reviewer findings surfaced and resolved live during the walk, deviations the user signed off on documented in the task report. A standalone decision log is written ONLY when durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in commit messages or the task report — for example, a structural choice the user weighed multiple alternatives for and explicitly rejected the others, with rationale that downstream readers will need to understand independently of any specific commit.
 
-When such a decision log IS warranted, write it under the thread's `discussions/` folder using the project's filename convention, with sequential `## D<N>: <Title>` headings and `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim.
+When such a decision log IS warranted, the orchestrator writes it to the implementation node's discussions folder — `implementation/discussions/<UTC>-<kebab-desc>-decision-log.md` (a record: UTC stamp, kebab description, the mandatory `decision-log` artifact-type token, no frontmatter). Discussions attach to the spine node they serve, and a decision that emerged while implementing serves the implementation node. Use sequential `## D<N>: <Title>` headings with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. Reference the log thread-relative.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
 
@@ -194,8 +224,8 @@ When in doubt about whether a side-conversation rises to "durable trade-off" sta
 
 When the user introduces a branch that is outside the plan being walked, do not silently follow them and do not let the run grow into a different shape than the one the plan defines. Propose ONE of:
 
-1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Capture a short markdown record in the thread's inbox so the side-finding survives without polluting this run.
-2. **Split into its own task / plan / discussion thread.** When the branch is itself worth a dedicated plan or a separate discussion, hand it off rather than expanding the current run beyond the plan's intent.
+1. **Capture as a follow-up for the implementation report** (PREFERRED for non-blocking side-findings). Note the side-finding so it lands in the report's follow-ups section and routes per `## Implementation Report` — to a seed of a future thread (the default), or, in tier-3 phased work, to the next phase's `discussions/`. There is no inbox in this workflow.
+2. **Split into its own thread.** When the branch is itself worth a dedicated spec or a separate discussion, hand it off — capture it as a seed for a new thread rather than expanding the current run beyond the plan's intent.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in the walk and let it pass.
 
 ASK the user which. Do not pick silently.
@@ -206,4 +236,4 @@ Plan artifacts are IMMUTABLE. The orchestrator reads them READ-ONLY; the impleme
 
 If during the walk the user proposes editing the plan in place (e.g., "fix the typo in task 2 while you're at it", "remove task 5 because we already did it"), refuse per the immutability rule and per the `## Anti-Sycophancy Stance`. A revised plan is a new plan version produced in a separate plan-authoring pass, then handed back on a fresh run. The orchestrator does not perform that revision inside this run.
 
-What the subagents DO modify is source code (the implementer subagent) or `.wip/` review scratch files (the reviewer subagents). Review scratch files are written under the thread's `.wip/` folder — `.wip/` is recursively gitignored, so the review output does not enter version control. The orchestrator MAY ALSO write (a) an Inbox item if a scope-drift branch surfaces and the user picks "park", and (b) a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold. The implementer does NOT create new spec, proposal, or plan artifacts inside this run; those require a separate authoring pass.
+What the subagents DO modify is source code (the implementer subagent) or `.wip/` review scratch files (the reviewer subagents). Review scratch files are written under the thread's `.wip/` folder — `.wip/` is recursively gitignored, so the review output does not enter version control. The ORCHESTRATOR additionally emits exactly one implementation report per `## Implementation Report` (the run's durable thread artifact, under `implementation/`) and MAY ALSO (a) capture a discovered follow-up or a scope-drift branch as a seed for a future thread (or, in tier-3 phased work, append it to the next phase's `discussions/`) per the follow-up-routing rule, and (b) write a decision log per `## Decision Log` when the user signs off on the durable-trade-off threshold. There is no inbox in this workflow. Neither the orchestrator nor any subagent creates new spec, proposal, or plan artifacts inside this run; those require a separate authoring pass. Thread folders are created on demand (a folder appears only when its first artifact lands); within-thread paths are written thread-relative, cross-thread paths repo-relative, never absolute.

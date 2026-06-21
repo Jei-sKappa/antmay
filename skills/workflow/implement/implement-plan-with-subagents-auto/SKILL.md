@@ -3,12 +3,12 @@ name: implement-plan-with-subagents-auto
 description: Execute every task in a plan artifact through an autonomous implementer and dual-reviewer subagent loop with per-cycle commits when the user wants the heavier review path and the runtime supports subagents.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Implement Plan With Subagents Auto
 
-Orchestrate the autonomous, plan-driven, multi-subagent implementation of a plan artifact. This skill is the orchestrator role: it does not write code itself — it reads the plan artifact READ-ONLY, walks the numbered task list in plan order, dispatches an **implementer subagent** for each task, dispatches a **spec-compliance reviewer subagent** (first pass), dispatches a **code-quality reviewer subagent** (second pass), respawns a NEW implementer subagent on review failure, re-reviews every fix before advancing, commits per orchestration cycle, and reports a four-state status per plan task on the way out. It does not ask clarifying questions at each step, it does not ask before committing, and it does not rewrite history.
+Orchestrate the autonomous, plan-driven, multi-subagent implementation of a plan artifact. This skill is the orchestrator role: it does not write code itself — it reads the plan artifact READ-ONLY, walks the numbered task list in plan order, dispatches an **implementer subagent** for each task, dispatches a **spec-compliance reviewer subagent** (first pass), dispatches a **code-quality reviewer subagent** (second pass), respawns a NEW implementer subagent on review failure, re-reviews every fix before advancing, commits per orchestration cycle, reports a four-state status per plan task, and emits a single immutable **implementation report** record on the way out. It does not ask clarifying questions at each step, it does not ask before committing, and it does not rewrite history.
 
 ## Subagent Capability Precondition
 
@@ -24,17 +24,17 @@ No parallel implementer dispatch. No per-task worktree branch. The orchestration
 
 ## Inputs
 
-This skill accepts a plan artifact path. The plan artifact lives under:
+This skill accepts a plan artifact path. The plan artifact lives in a lineage folder under the thread root:
 
 ```text
-docs/threads/<thread>/plans/<YYMMDDHHMMSSZ>-v<N>[-<kebab-descriptor>]-plan.md
+docs/threads/<YYMMDDHHMMSSZ-slug>/plans/NNN[-<desc>]/plan.md
 ```
 
-Plan artifacts use a UTC-prefixed versioned filename: `YYMMDDHHMMSSZ` (12-character UTC stamp, no separators, trailing `Z`), followed by `-v<N>`, an optional kebab descriptor, and the `-plan.md` suffix. Both LOOSE and STRICT granularity plans are valid input — both require every task to be sequential, isolated, independently implementable, and independently reviewable. Strict-granularity plans provide a six-field per-task block (objective / input-context / steps-substeps / files-modified / verification / acceptance criteria). Loose-granularity plans require the implementer to infer the obvious substeps from the objective + verification sentence; the spec-compliance reviewer adapts accordingly. The granularity is a property of the plan, not a switch on this skill.
+The plan file is simply `plan.md` inside its lineage folder `NNN[-<desc>]/` (`NNN` is a zero-padded 3-digit sequence starting at `001`); it carries no UTC stamp and no `v<N>` in its name — the lineage folder is the stable identifier and the unit of reference. Both LOOSE and STRICT granularity plans are valid input — both require every task to be sequential, isolated, independently implementable, and independently reviewable. Strict-granularity plans provide a six-field per-task block (objective / input-context / steps-substeps / files-modified / verification / acceptance criteria). Loose-granularity plans require the implementer to infer the obvious substeps from the objective + verification sentence; the spec-compliance reviewer adapts accordingly. The granularity is a property of the plan, not a switch on this skill.
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the orchestrator runs the dispatch loop only for the named task(s); when omitted, it runs every numbered task in the plan in order.
 
-If the input is ambiguous — multiple plan artifacts exist in the thread and the user named "the plan" without a specific path, the user pointed at a `plans/` folder containing two competing versions for the same target version, or the user passed a descriptor that matches multiple files — ASK the user which plan artifact is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest version number, or by sort order.
+If the input is ambiguous — the thread holds multiple plan lineages (`plans/001/`, `plans/002-cli/`) and the user named "the plan" without a specific path — ASK the user which plan lineage is intended. There is no global "latest plan" algorithm. Do not silently pick by recency, by highest `NNN`, or by sort order. (V2 structurally removes the "which version/variant is current" question: there is exactly one `plan.md` per lineage; competing drafts never become emitted siblings — they live in `.wip/`.)
 
 ## Four-State Status Protocol
 
@@ -81,9 +81,9 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. The orchestrator runs the dirty-worktree check at the very start. If clean, proceed. If dirty, ASK; on abort, stop. Do not dispatch any subagent until the check is satisfied.
 
-2. **Resolve the active thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If the plan artifact path the user passed is already absolute or thread-rooted, the thread is implicit. If multiple thread roots exist and the plan path is ambiguous about which thread it belongs to, ASK — do not silently pick the most recent UTC stamp.
+2. **Resolve the active thread and read the ledger.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If the plan artifact path the user passed is already thread-rooted, the thread is implicit. If multiple thread roots exist and the plan path is ambiguous about which thread it belongs to, ASK — do not silently pick the most recent UTC stamp. Once the thread root is known, the orchestrator reads its `ledger.md` (append-only; the current value of each key is its last matching line) for the **tier** and **disposition**. A plan input means tier ≥2 work, so the implementation report is part of this thread's Definition of Done. If the disposition is `closed: …`, the thread is sealed — stop and tell the user; do not write into a closed thread, do not spawn any subagent.
 
-3. **Resolve the plan artifact path.** Detect the plan path from the user's invocation. If multiple plan artifacts could plausibly match the user's reference (multiple versions, candidate variants with descriptors, "the plan" with no clear referent), ASK the user which plan is intended. Do not pick by recency, by highest version number, or by descriptor match. When multiple candidates exist and the reference is ambiguous, that ambiguity is often a real decision in disguise — surface it rather than resolving it silently.
+3. **Resolve the plan artifact path.** Detect the plan path from the user's invocation. If multiple plan lineages could plausibly match the user's reference (`plans/001/`, `plans/002-cli/`, "the plan" with no clear referent), ASK the user which plan lineage is intended. Do not pick by recency, by highest `NNN`, or by descriptor match. When multiple lineages exist and the reference is ambiguous, that ambiguity is often a real decision in disguise (which lineage won) — surface it rather than resolving it silently.
 
 4. **Read the plan READ-ONLY.** The plan artifact is IMMUTABLE — open it for reading only. Parse the numbered task list. For each task, record its objective, its verification block (if present), its acceptance criteria (if present in strict-granularity plans), and its files-modified list (if present in strict-granularity plans). If the user passed a specific task identifier, narrow the task list to that subset; otherwise execute every numbered task in plan order.
 
@@ -103,7 +103,37 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
    g. **Write the orchestration cycle task report.** Use the four-state status block (with the subagent audit) from `## Four-State Status Protocol`. The state goes in chat output and / or the commit message body. The audit line lists which subagents ran, how many fix iterations occurred per review pass, and the final state.
 
-6. **Final out-message.** Once every plan task has run (or the run was halted at a `BLOCKED` task), emit a final summary listing every plan task by its four-state status, the per-task subagent audit, and the commit SHA + subject for each commit made. Include the plan artifact path (relative to repository root) so the user has the audit trail anchored to the source plan.
+6. **The orchestrator emits the implementation report.** Once every plan task has run (or the run was halted at a `BLOCKED` task), the ORCHESTRATOR writes the implementation report per `## Implementation Report` — this is a synthesis the orchestrator owns, folded from the per-cycle task reports and the subagent audit it already holds; it is NOT delegated to a subagent. This is the run's durable record and part of the Definition of Done.
+
+7. **Final out-message.** Emit a final summary listing every plan task by its four-state status, the per-task subagent audit, the commit SHA + subject for each commit made, the plan lineage path the run executed (so the user has the audit trail anchored to the source plan), and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation Report`.
+
+## Implementation Report
+
+The ORCHESTRATOR emits exactly one **implementation report** per run — a record, immutable from the moment it is written (the industry analog is a PR description). The orchestrator writes it directly (it is a synthesis of the per-cycle task reports and subagent audits the orchestrator already holds); it is not delegated to a subagent, and the orchestrator does not load any subagent reply as the report's content. The four-state task blocks, the subagent audit, and the git history are the in-flight trail; the report is the summary that survives. The verify stage that may follow checks the implementation against the spec's acceptance criteria — not against the plan — so the report's account of where the implementation diverged from the plan matters.
+
+**Where it lands.** Write it to the active thread's flat `implementation/` folder:
+
+```text
+implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
+```
+
+`implementation/` is FLAT — records sit directly inside it, with no lineage (`NNN/`) subfolders and no `v<N>` folders (unlike `plans/`, which uses lineage folders). The filename uses the 12-character UTC stamp (no separators, trailing `Z`), a short kebab description, and the mandatory `implementation-report` artifact-type token. Reference the report path thread-relative (relative to the thread root), never absolute; reference anything in another thread repo-relative (`docs/threads/<other>/…`). The report is NOT a `.wip/` scratch file — `.wip/` holds the recursively-gitignored reviewer review files; the implementation report is an emitted, version-controlled record under `implementation/`.
+
+**It carries no frontmatter.** The report is a record with no lifecycle status of its own — so no YAML frontmatter at all. Its body is frozen at emission: never edit it after writing. If something needs correcting later, that is a NEW record, not an edit to this one.
+
+**What it captures** — four content categories, all four present (write "none" where a category is empty):
+
+1. **Deviations from the plan, with justification.** Every place the implementation diverged from what the plan task called for, each with a one-or-two-sentence reason — including deviations the implementer subagents surfaced in their reply summaries and deviations either reviewer subagent flagged. Pull these from the `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` cycle reports.
+2. **Surprises.** Things the codebase or the task turned out to be that the plan did not anticipate.
+3. **Problems hit.** Blockers, failures, non-converging fix loops, and anything that forced a `BLOCKED` status.
+4. **Follow-ups.** Work this run discovered but intentionally did not do.
+
+**Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
+
+- **Default — seeds of future threads.** Capture each follow-up as a seed for a new thread (its own genesis record), or surface it in the report as a clearly-labelled candidate seed for the user to open later. This is the default for any standalone follow-up.
+- **Tier-3 phased work — the next phase's discussion.** If the active thread is tier-3 phased work with a living roadmap, a follow-up that belongs to a later phase routes to that next phase's `discussions/` folder (the roadmap is a living list, not a frozen contract — a phase may welcome or defer the follow-ups appended to it). Confirm the thread is tier-3 phased work (per the ledger) before routing this way.
+
+Name the routing decision for each follow-up in the report so the trail is explicit.
 
 ## Subagent Briefs
 
@@ -163,29 +193,31 @@ The policy is judgment-based and surfaced-via-task-report — not pre-clearance,
 - **Surface deviations in the task report.** Every deviation goes into the four-state status block (with the subagent audit). Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the plan did not specify) are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations (the implementer made a structural choice the plan did not anticipate, the implementer skipped a sub-step because it was unsafe to apply blindly, the implementer's read of the observed code conflicts with the plan task's input field) are `NEEDS_CONTEXT` with a clear "user clarification on X" next-action.
 - **Reviewer-surfaced deviations.** Either reviewer (spec-compliance first, code-quality second) may surface a deviation in its findings. The orchestrator weighs the finding against the fix-loop convergence: if a fresh implementer can address the finding, do so; if the finding is structural and no fix iteration would close it, report `NEEDS_CONTEXT` for the task.
 
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the orchestrator does NOT edit the plan artifact in place — the plan is immutable. The orchestrator surfaces the finding with `NEEDS_CONTEXT`, stops the run, and the user re-shapes the plan by producing a new versioned plan artifact to hand back on a fresh run.
+If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the orchestrator does NOT re-shape the plan as a side effect of this run. The orchestrator surfaces the finding with `NEEDS_CONTEXT`, captures it in the implementation report, stops the run, and the user re-shapes the plan in a separate plan-adjustment pass (a plan is a disposable compiler-IR edited in place by its own authoring/adherence loop) to hand back on a fresh run. If the plan deviates because the SPEC is ambiguous or incomplete, that is a spec fault — it routes to the human to fix the spec, never to a silent plan patch — but resolving it is outside this run's mandate; surface it and stop.
 
 ## Immutability
 
 Plan artifacts are IMMUTABLE. The orchestrator reads them READ-ONLY; the implementer subagent reads them READ-ONLY; both reviewer subagents read them READ-ONLY. The plan file is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
 
-If during the orchestration cycle the implementer or a reviewer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the four-state task report with `DONE_WITH_CONCERNS` (if the implementer routed around the issue and finished the task and both reviewers passed) or `NEEDS_CONTEXT` (if the issue is structural and the fix loop did not converge). The plan artifact stays as it was. A revised plan is a new plan version produced in a separate plan-authoring flow, then handed back on a fresh run.
+If during the orchestration cycle the implementer or a reviewer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the four-state task report with `DONE_WITH_CONCERNS` (if the implementer routed around the issue and finished the task and both reviewers passed) or `NEEDS_CONTEXT` (if the issue is structural and the fix loop did not converge), and record it in the implementation report. The orchestrator does not re-shape the plan inside this run; that is a separate plan-adjustment pass, handed back on a fresh run.
 
-What the subagents DO modify is source code (the implementer subagent) or `.wip/` review scratch files (the reviewer subagents). The reviewer scratch files live under `docs/threads/<thread>/.wip/` — `.wip/` is recursively gitignored, so the review output does not enter version control. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.
+What the subagents DO modify is source code (the implementer subagent) or `.wip/` review scratch files (the reviewer subagents). The reviewer scratch files live under the thread's `.wip/` folder (`docs/threads/<thread>/.wip/`) — `.wip/` is recursively gitignored, so the review output does not enter version control. The ORCHESTRATOR additionally emits exactly one implementation report per `## Implementation Report` (the run's durable thread artifact, under `implementation/`) and MAY capture a discovered follow-up as a seed for a future thread (or, in tier-3 phased work, append it to the next phase's `discussions/`) per the follow-up-routing rule. There is no inbox in this workflow. Neither the orchestrator nor any subagent creates new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.
 
-The thread folder set uses the following structure (folders are created on-demand, not pre-created):
+The thread folder set uses the following structure (folders are created on-demand, not pre-created — a folder appears only when its first artifact lands):
 
 ```text
 docs/threads/<YYMMDDHHMMSSZ-slug>/
+├── ledger.md                              # thread root — append-only tier + disposition
+├── seed/                                  # genesis bucket (exactly one seed)
 ├── proposals/
+│   └── NNN[-<desc>]/                      # lineage folder
 ├── specs/
+│   └── NNN[-<desc>]/
 ├── plans/
-├── discussions/
-├── inbox/
-│   ├── open/
-│   ├── processed/
-│   └── dropped/
-└── .wip/
+│   └── NNN[-<desc>]/                      # the plan this skill reads: plans/NNN/plan.md
+├── implementation/                        # flat, records-only — the report lands here
+│   └── <UTC>-<desc>-implementation-report.md
+└── .wip/                                  # recursively gitignored scratch
 ```
 
-The `.wip/` folder is recursively gitignored and is never used for emitted artifacts — only for in-progress scratch material.
+There is no `inbox/` — V1's inbox is removed in V2; the orchestrator never writes one. Within-thread references are written thread-relative; cross-thread references repo-relative; never absolute. The `.wip/` folder is recursively gitignored and is never used for emitted artifacts — only for in-progress scratch material such as the reviewer review files.
