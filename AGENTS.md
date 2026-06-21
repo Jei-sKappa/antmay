@@ -28,14 +28,14 @@ Skills live under one of two top-level buckets, and within `skills/workflow/` ar
 
 ```
 skills/
-├── deprecated/                  retired skills kept on disk so existing installs do not break
+├── deprecated/                  retired skills kept on disk: capture-inbox, discussion-loop, review-decision-document
 └── workflow/                    all active skills, grouped by spine phase / overlay module
-    ├── capture-discussion/      capture-inbox, discussion, seeded-discussion
+    ├── capture-discussion/      open-thread, open-ticket, discussion, seeded-discussion
     ├── propose/                 propose-{auto,interactive}
     ├── spec/                    spec-{auto,interactive}
     ├── plan/                    plan-loose-*, plan-strict-*, adjust-plan-granularity-*
     ├── implement/               implement-*, implement-plan-*, implement-plan-with-subagents-*
-    ├── review/                  review-{proposal,spec,plan,implementation,code}-{auto,interactive}
+    ├── review/                  review-{proposal,spec,plan,implementation,code}-{auto,interactive}, review-lossless-mapping
     ├── merge/                   merge-artifacts-{auto,interactive}
     ├── finish-navigate/         finish, whats-next
     ├── research/                afk-exploration, the-librarian
