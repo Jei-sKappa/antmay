@@ -1,14 +1,14 @@
 ---
 name: adjust-plan-granularity-interactive
-description: Walk an existing plan task by task to decide whether to split, merge, expand, contract, or leave each task, then write a new versioned plan when the user wants to think the granularity shift through collaboratively.
+description: Walk an existing living plan task by task to decide whether to split, merge, expand, contract, or leave each task, then edit the plan in place when the user wants to think the granularity shift through collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Adjust Plan Granularity Interactive
 
-Walk the user through an existing plan task-by-task, decide per task what action to take (SPLIT / MERGE / EXPAND / CONTRACT / LEAVE), accept freeform answers per task, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass before emission, and write a NEW versioned plan artifact to the active thread's `plans/` folder. The source plan stays IMMUTABLE — reading it is a read-only operation; the original filename and body are preserved exactly as on disk. This skill is the collaborative half of the granularity-adjust pair: it interviews, it disagrees when warranted, it surfaces what the source plan didn't ask about, and it leaves an adjusted plan behind alongside the source. Granularity shifts at this stage are cheaper than at implementation time — push back on user-requested shifts that violate the plan contract (e.g., a MERGE request that would make the resulting task not-independently-implementable; refuse to log it silently).
+Walk the user through an existing plan task-by-task, decide per task what action to take (SPLIT / MERGE / EXPAND / CONTRACT / LEAVE), accept freeform answers per task, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass before saving, and edit the living `plan.md` in place at its lineage folder. This skill is the collaborative half of the granularity-adjust pair: it interviews, it disagrees when warranted, it surfaces what the plan didn't ask about, and it leaves the plan at a new granularity behind. Granularity shifts at this stage are cheaper than at implementation time — push back on user-requested shifts that violate the plan contract (e.g., a MERGE request that would make the resulting task not-independently-implementable; refuse to log it silently).
 
 ## Anti-Sycophancy Stance
 
@@ -16,112 +16,86 @@ Your job is to help the user reach an adjusted plan that survives later scrutiny
 
 Hold these together:
 
-- **Disagree when you disagree.** If the user's chosen action for a task (SPLIT / MERGE / EXPAND / CONTRACT / LEAVE) conflicts with the evidence, your read of the source plan's structure, the upstream spec or proposal, or the codebase reality, say so plainly before they commit it to the adjusted body. Don't soften it into ambiguity.
-- **Push back on weak or incomplete reasoning.** If the user's proposed action rests on an unexamined assumption ("merge tasks 5 and 6 because they're adjacent" without checking whether the merged task is independently implementable in one sitting), ignores a known constraint, or skips a risk or trade-off the implementation will pay for, name the gap and bring it into the conversation before writing.
-- **Surface what they didn't ask about.** Tasks that should be SPLIT but the user marked LEAVE, tasks that already are over-split and should be MERGED, files-modified the source plan forgot, verification that the source plan made interpretive rather than mechanical — raise them, even if it slows the walk down. The walk MAY also propose NEW tasks the source plan missed and surface gaps in the source plan's coverage of the upstream goal.
+- **Disagree when you disagree.** If the user's chosen action for a task (SPLIT / MERGE / EXPAND / CONTRACT / LEAVE) conflicts with the evidence, your read of the plan's structure, the upstream spec or proposal, or the codebase reality, say so plainly before they commit it to the plan body. Don't soften it into ambiguity.
+- **Push back on weak or incomplete reasoning.** If the user's proposed action rests on an unexamined assumption ("merge tasks 5 and 6 because they're adjacent" without checking whether the merged task is independently implementable in one sitting), ignores a known constraint, or skips a risk or trade-off the implementation will pay for, name the gap and bring it into the conversation before saving.
+- **Surface what they didn't ask about.** Tasks that should be SPLIT but the user marked LEAVE, tasks that already are over-split and should be MERGED, files-modified the plan forgot, verification that the plan made interpretive rather than mechanical — raise them, even if it slows the walk down. The walk MAY also propose NEW tasks the plan missed and surface gaps in the plan's coverage of the upstream goal.
 - **Take the user's input seriously.** If they push back, add context, or challenge your framing, evaluate the substance. Update your view when they provide new facts, sharper constraints, or a better argument.
 - **Do not treat pushback as correctness.** The user disagreeing with you is not itself evidence. Separate useful new information from preference, frustration, momentum, or wishful thinking. Never soften your read of a task just because the user pushed back — only when they give you a real reason to.
-- **Make disagreement productive.** When you and the user see a task's adjustment differently, identify the exact assumption or value judgment causing the split, then resolve it before writing the task into the adjusted body.
-- **Refuse to log a plan task you believe is wrong without flagging it.** If the user insists on an action that produces a task you believe violates the sequential-isolated-independent contract — for example, a MERGE that produces a task too large for one sitting, or a CONTRACT that strips a task's verification down to "looks correct" — refuse to log it silently. If the user insists, write it, but note the dissent in the adjusted plan body — either inline next to the relevant task or in a `## Notes` / `## Open questions` section at the bottom. Example: `Note: task 3 logged as user-chosen merge of source tasks 5 and 6; recommended keeping them separate because the merged task likely exceeds one sitting — flagged for implementer to revisit.`
-- **Keep the plan owned by the evidence.** The goal is not for either side to win. The goal is to emit an adjusted plan that survives the implementation phase because the relevant context, objections, and trade-offs were actually considered.
+- **Make disagreement productive.** When you and the user see a task's adjustment differently, identify the exact assumption or value judgment causing the split, then resolve it before writing the task into the plan body.
+- **Refuse to log a plan task you believe is wrong without flagging it.** If the user insists on an action that produces a task you believe violates the sequential-isolated-independent contract — for example, a MERGE that produces a task too large for one sitting, or a CONTRACT that strips a task's verification down to "looks correct" — refuse to log it silently. If the user insists, write it, but note the dissent in the plan body — either inline next to the relevant task or in a `## Notes` / `## Open questions` section at the bottom. Example: `Note: task 3 logged as user-chosen merge of source tasks 5 and 6; recommended keeping them separate because the merged task likely exceeds one sitting — flagged for implementer to revisit.`
+- **Keep the plan owned by the evidence.** The goal is not for either side to win. The goal is to leave behind an adjusted plan that survives the implementation phase because the relevant context, objections, and trade-offs were actually considered.
 
-If you believe the user is about to commit an action into the adjusted plan that is wrong, refuse to log it silently. Either resolve the disagreement first, or write it with the dissent included in the adjusted body. Granularity shifts at this stage are cheaper than at implementation time — this is the cheap moment to push back, and the shift compounds: a wrong action on task 3 propagates through every downstream task that consumes task 3's output.
+If you believe the user is about to commit an action into the plan that is wrong, refuse to log it silently. Either resolve the disagreement first, or write it with the dissent included in the plan body. Granularity shifts at this stage are cheaper than at implementation time — this is the cheap moment to push back, and the shift compounds: a wrong action on task 3 propagates through every downstream task that consumes task 3's output.
 
 ## Inputs
 
 This skill requires TWO inputs to open the walk. The walk MAY refine either input as the conversation surfaces — the user does not have to commit to the target instruction up front.
 
-1. **Source plan path** — an existing plan artifact under `docs/threads/<thread>/plans/`. The path must point to a real file on disk. Reading the source is a READ-ONLY operation — see `## Immutability Discipline` below. If multiple plausible plans exist in the thread (for example, two plans at the same version with different descriptors, or a recently-emitted draft that may or may not be the intended source), ASK the user which is intended — never silently pick the most recent. There is no global "latest plan" algorithm. The source plan MUST exist; this skill does NOT create plans from scratch.
+1. **Source plan path** — an existing living plan at `plans/NNN[-<desc>]/plan.md` inside a thread. The lineage folder `NNN[-<desc>]/` (zero-padded 3-digit sequence, optional kebab descriptor) is the stable identifier and unit of reference. The path must point to a real `plan.md` file on disk. This skill adjusts the granularity of an existing living plan; it does NOT create plans from scratch. If the thread holds multiple plan lineages (`plans/001/` and `plans/002-cli/`), a bare "the plan" is ambiguous — ASK the user which lineage is intended; there is no "most recent `NNN`" or "highest number" fallback. Because each lineage holds exactly one living `plan.md`, the question of "which version is current" cannot arise — there are no version files.
 
-2. **Target instruction** — what shift to apply to the source plan. One of two forms:
+2. **Target instruction** — what shift to apply to the plan. One of two forms:
 
    - **Coarse direction.** One of four named directions:
      - `looser` → fewer tasks, higher-level objective sentences, less prescriptive substeps. Collapses adjacent fine-grained tasks into broader ones; trims per-task fields toward the loose body shape (objective sentence + observable verification sentence, 1–3 sentences per task).
      - `stricter` → more substeps per task, explicit verification per task, files-modified per task, acceptance criteria per task. Expands the body toward the strict six-field per-task shape (objective / input / steps / files-modified / verification / acceptance).
-     - `more-implementation-ready` → fills in concrete files-modified, mechanical verification commands, observable acceptance criteria where the source plan only described the intent.
+     - `more-implementation-ready` → fills in concrete files-modified, mechanical verification commands, observable acceptance criteria where the plan only described the intent.
      - `more-high-level` → collapses substeps into objectives, removes per-task fields, removes verification detail.
 
    - **Specific phrase.** Free-form natural-language instruction targeting a specific shift the four named directions do not cover. Examples: `split task 3 into substeps`, `merge task 5 and 6`, `add verification to all tasks`, `remove acceptance criteria detail`, `tighten just task 2`, `surface the implicit prerequisite in task 4`. The agent interprets the degree of the shift naturally — there is no fixed list of transformations.
 
 The interactive walk MAY refine the target instruction as the conversation surfaces. The user may start with a coarse direction and adjust it task-by-task ("go stricter overall but leave task 1 as-is because it's already at the right granularity"), or may start with a specific phrase and expand it as similar gaps emerge in other tasks. Confirm the working target with the user at the start of the walk and revisit it whenever a task's chosen action drifts from it. If the user has no target instruction in mind at all, ASK before opening the walk — adjustment without a target shape becomes free-form rewriting, which is rescoping, not adjustment.
 
-## Immutability Discipline
+## Output Mechanics: Edit the Living Plan In Place
 
-The source plan is NEVER edited, rewritten, renamed, or moved. Reading the source is a READ-ONLY operation. This is the binding constraint for this skill — every other piece of behavior follows from it.
+The plan is a **living artifact** — a disposable compiler-IR derived from the spec, edited in place while the thread is active. The granularity adjustment edits `plan.md` directly inside its lineage folder. This is the only V2 change to this skill's mechanics, and the binding constraint for everything below.
 
-- **Read-only on the source.** The skill opens the source plan with read intent only. It does not stage the source for edit, it does not copy the source to `.wip/` for in-place modification, it does not call any tool whose effect on disk would be to mutate the source file. The source's timestamp, version integer, descriptor, and body content are all preserved exactly as they exist on disk.
-- **Output is a NEW versioned plan.** The adjusted body lands as a fresh artifact in the same thread's `plans/` folder, under a new filename whose version integer is `N+1` and whose descriptor encodes the granularity shift. See `## Output Filename and Version` below for the grammar.
-- **Both versions remain reviewable side by side.** A downstream reader looking into `plans/` sees the source at its original filename and the adjusted plan at the new filename — the lineage between them is recoverable from the surrounding thread, not from any in-file metadata.
-- **No source-relation YAML frontmatter on the adjusted plan.** Artifacts do NOT carry `Supersedes:`, `Adjusted from:`, `Source:`, or any other lineage frontmatter. The adjusted plan body is plain markdown like any other plan.
-
-Emitted artifacts are immutable once written to their target folder. Drafts under `docs/threads/<thread>/.wip/` are editable while the adjusted body is being composed during the walk; the immutability lock applies the moment the file is written into `plans/` under the canonical filename grammar.
+- **Edit `plan.md` in place — no new version file.** The adjusted body, assembled through the walk, overwrites the plan body at `plans/NNN[-<desc>]/plan.md`. There is NO new filename, NO `v<N>` segment, NO timestamp stamp, NO descriptor suffix, and NO second plan file. The V1 "emit a fresh `<UTC>-v<N+1>-<descriptor>-plan.md`" mechanic is gone. A plan lineage holds exactly one living `plan.md`; the walk mutates that file.
+- **Git holds the evolution.** The plan carries no version history of its own — git is the record of how the body changed from coarse to fine (or fine to coarse). Do not preserve the pre-shift body as a separate file, a backup, or a commented-out block; the prior state lives in git history.
+- **The plan carries NO frontmatter.** Plans have no `version` field and no `status:` map — no human approves a plan, so it has no latch. Do NOT add a `version` field to record the granularity shift, do NOT add lineage frontmatter (`Supersedes:`, `Adjusted from:`, `Source:`), and do NOT add a `status:` map. The plan body is plain markdown with no YAML frontmatter block at all. (Dissent flagged during the walk goes inline next to the task or in a `## Notes` / `## Open questions` body section — never in frontmatter.)
+- **Record-backed.** The granularity shift is justified by a **lightweight record separate from the plan body** — a decision log capturing *why* the granularity changed (the target instruction, the per-task actions that materially restructured the plan, any dissent the user proceeded past). The record is what makes the shift auditable; the plan body stays clean. The record is a separate file, never a section inside `plan.md`. See `## Record the Shift` below.
+- **Drafting happens in `.wip/`.** While the walk assembles the adjusted body, work in the thread's gitignored `.wip/` scratch area; copy the finished body into `plan.md` once self-review passes. Do not stage half-edited bodies into the live `plan.md` mid-walk.
 
 ## Per-Task Walk
 
 Instead of consuming the target instruction and producing the adjusted body in one shot, the walk traverses the source plan one task at a time and decides per task what action to take. The five actions are:
 
-- **SPLIT** — break the source task into two or more smaller tasks. This action fits a source task that bundles work that should be done as separate independently-implementable units, or a `stricter` target where the source task's substeps are themselves plan-task-shaped.
-- **MERGE** — combine the source task with an adjacent task (next or previous). This action fits two source tasks that are trivial enough to combine into a single still-independently-implementable task, or a `looser` target where the granularity has over-split related work.
-- **EXPAND** — keep the source task as a single task but add structure: files-modified, mechanical verification, observable acceptance criteria, or other strict per-task fields. This action fits a `stricter` or `more-implementation-ready` target where the source task is well-bounded but under-specified.
-- **CONTRACT** — keep the source task as a single task but strip structure: remove substeps, fold per-task fields into the objective sentence, simplify verification. This action fits a `looser` or `more-high-level` target where the source task carries strict per-task fields the downstream implementer does not need.
-- **LEAVE** — keep the source task exactly as-is, including any per-task fields or substeps it already has. This action fits a source task that is already at the right granularity for the target.
+- **SPLIT** — break the task into two or more smaller tasks. This action fits a task that bundles work that should be done as separate independently-implementable units, or a `stricter` target where the task's substeps are themselves plan-task-shaped.
+- **MERGE** — combine the task with an adjacent task (next or previous). This action fits two tasks that are trivial enough to combine into a single still-independently-implementable task, or a `looser` target where the granularity has over-split related work.
+- **EXPAND** — keep the task as a single task but add structure: files-modified, mechanical verification, observable acceptance criteria, or other strict per-task fields. This action fits a `stricter` or `more-implementation-ready` target where the task is well-bounded but under-specified.
+- **CONTRACT** — keep the task as a single task but strip structure: remove substeps, fold per-task fields into the objective sentence, simplify verification. This action fits a `looser` or `more-high-level` target where the task carries strict per-task fields the downstream implementer does not need.
+- **LEAVE** — keep the task exactly as-is, including any per-task fields or substeps it already has. This action fits a task that is already at the right granularity for the target.
 
-For each source task, present the task to the user (objective sentence + a brief read of the current granularity) and propose an action per the working target instruction. The user confirms, overrides, or asks for discussion. If the user picks an action that violates the sequential-isolated-independent contract — for example, a SPLIT that produces a task without observable verification, a MERGE that produces a task too large for one sitting, a CONTRACT that strips a task's verification down to "looks correct" — push back per the `## Anti-Sycophancy Stance` BEFORE applying the action. Refuse to log the action silently; either resolve the disagreement, or apply it with the dissent noted in the adjusted body.
+For each task, present the task to the user (objective sentence + a brief read of the current granularity) and propose an action per the working target instruction. The user confirms, overrides, or asks for discussion. If the user picks an action that violates the sequential-isolated-independent contract — for example, a SPLIT that produces a task without observable verification, a MERGE that produces a task too large for one sitting, a CONTRACT that strips a task's verification down to "looks correct" — push back per the `## Anti-Sycophancy Stance` BEFORE applying the action. Refuse to log the action silently; either resolve the disagreement, or apply it with the dissent noted in the plan body.
 
-The walk MAY also propose tasks the source plan didn't anticipate or surface gaps in the source plan's coverage of the upstream goal. A `stricter` walk that fills in files-modified per task may surface that the source plan never accounted for a config file the implementation will need to touch — propose the missing task and walk it through the action list (SPLIT off as its own task, MERGE into an existing task, or LEAVE as a note for the implementer). A `looser` walk that merges adjacent tasks may surface that two seemingly-related tasks are actually coupled to different upstream decisions — push back against the merge.
+The walk MAY also propose tasks the plan didn't anticipate or surface gaps in the plan's coverage of the upstream goal. A `stricter` walk that fills in files-modified per task may surface that the plan never accounted for a config file the implementation will need to touch — propose the missing task and walk it through the action list (SPLIT off as its own task, MERGE into an existing task, or LEAVE as a note for the implementer). A `looser` walk that merges adjacent tasks may surface that two seemingly-related tasks are actually coupled to different upstream decisions — push back against the merge.
 
 Move to the next task. The adjusted task list emerges through the walk, not from a pre-built checklist.
 
-## Output Filename and Version
+## Record the Shift
 
-The adjusted plan uses the versioned-form filename grammar with a MANDATORY descriptor that encodes the granularity shift:
+The granularity shift must be backed by a lightweight record so the change is auditable without re-reading git diffs. The record is SEPARATE from the plan body — never a section inside `plan.md`.
 
-```text
-docs/threads/<thread>/plans/<YYMMDDHHMMSSZ>-v<N+1>-<descriptor>-plan.md
-```
+- **What to record.** The target instruction (the coarse direction or specific phrase), the per-task actions that materially restructured the plan (which tasks were SPLIT / MERGED / EXPANDED / CONTRACTED, in one or two lines), and the reason the new granularity fits better (the downstream implementer, the now-known implementation surface, etc.). If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, carry that dissent verbatim into the record's rationale.
+- **Where to write it.** A record under the thread's `discussions/` folder that serves this plan lineage — for example `plans/NNN[-<desc>]/discussions/` if the plan lineage has one, or the thread-level discussions that serve the plan. Use the record filename grammar `<YYMMDDHHMMSSZ>-<kebab-desc>-decision-log.md`. The `decision-log` artifact-type token is MANDATORY.
+- **Decision-log shape.** Append-only with sequential `## D<N>: <Title>` headings, each carrying `Decision:` and `Rationale:` lines. The record is a frozen record once written — a later granularity change is a NEW record, never an edit of the old one. The plan body cites the record by thread-relative path + `D<N>` at the inline locations where its decisions are operative; do not copy decision text from the record into the plan.
+- **Keep it lightweight.** This is a justification record, not a second plan. Do not duplicate the plan body into it; capture only why the granularity changed.
 
-Rules:
-
-- **`N+1` is the next mainline integer AFTER the source plan's version.** Read the source's filename — extract `<N>` from the `v<N>` segment — and use `N+1` for the adjusted plan. If the source is `v1`, the adjusted plan is `v2`. If the source is `v3`, the adjusted plan is `v4`. The `v<N+1>` segment names the TARGET version this artifact represents, not a predecessor it derives from. The version increments by one regardless of how many candidate variants exist at the source version.
-- **The descriptor encoding the granularity shift is REQUIRED on the adjusted plan**, even though first-emission plans authored from scratch default to NO descriptor. The descriptor is what tells a downstream reader at a glance that this is a granularity-shifted variant rather than a from-scratch next-version emission. Recommended descriptor patterns by target instruction form:
-  - `looser` target → `v<N+1>-looser-plan.md`
-  - `stricter` target → `v<N+1>-stricter-plan.md`
-  - `more-implementation-ready` target → `v<N+1>-impl-ready-plan.md`
-  - `more-high-level` target → `v<N+1>-high-level-plan.md`
-  - Specific-phrase target → descriptor chosen during the walk to summarize the shift in kebab-case. Examples: `v<N+1>-split-task-3-plan.md`, `v<N+1>-merge-5-and-6-plan.md`, `v<N+1>-add-verification-plan.md`. Keep the descriptor under ~5 words; the goal is recognizability at a glance.
-- **The 12-character UTC stamp `YYMMDDHHMMSSZ` is captured at write time**, never re-derived afterward.
-- **The `plan` artifact-type suffix is MANDATORY.**
-
-### Worked Example
-
-Suppose the source plan lives at:
-
-```text
-docs/threads/260520095223Z-auth-migration/plans/260520120000Z-v1-plan.md
-```
-
-A `stricter` target instruction, walked task-by-task and emitted at write time `260521094500Z`, produces:
-
-```text
-docs/threads/260520095223Z-auth-migration/plans/260521094500Z-v2-stricter-plan.md
-```
-
-Both files coexist in the same `plans/` folder. The source is unchanged. The adjusted plan is the new artifact. A downstream reader scanning the folder sees `v1` and `v2-stricter` side by side and understands the relationship without consulting any metadata. Neither file contains wave numbers, dependency arrays, bracketed wave prefixes, or fork/join syntax — the plan artifact contract holds across the granularity shift.
+When in doubt about whether the walk's restructuring rises to needing a recorded rationale, ASK the user. A non-trivial granularity shift should leave a record; a tiny one-task tweak may not.
 
 ## Plan Artifact Contract
 
-The adjusted plan honors the same plan content contract the source did: every task in the emitted plan MUST be **sequential, isolated, independently implementable, and independently reviewable**. The granularity changes; the contract does not.
+The adjusted plan honors the same plan content contract it did before: every task in the plan MUST be **sequential, isolated, independently implementable, and independently reviewable**. The granularity changes; the contract does not.
 
 - **Sequential** — tasks are numbered in execution order. Implementers execute tasks in plan order; the order is the only execution graph this plan format supports.
 - **Isolated** — a task does not read or write state from other in-progress tasks in the same plan beyond what is explicitly captured in its description. If two tasks need to share state, that state must be written into an artifact the second task reads, not left in implicit cross-task memory.
 - **Independently implementable** — a single implementer (human or agent) can complete the task in one sitting given the task's stated input. A walk action — SPLIT, MERGE, EXPAND, CONTRACT, LEAVE — that would produce a task violating independent implementability is a candidate for push-back, not a candidate for silent logging.
 - **Independently reviewable** — a reviewer can verify the task succeeded from observable evidence: a file written, a behavior observable, a test passing, a configuration changed. A CONTRACT action that strips a task's verification down to "looks correct" violates this property; push back.
 
-The phrase "sequential, isolated, independently implementable" is the plan content contract — every task in every emitted plan (adjusted or from-scratch) must satisfy it. During the walk, the anti-sycophancy stance and this contract reinforce each other: a chosen action that does not satisfy independent implementability or independent reviewability is a push-back trigger.
+The phrase "sequential, isolated, independently implementable" is the plan content contract — every task in the plan must satisfy it. During the walk, the anti-sycophancy stance and this contract reinforce each other: a chosen action that does not satisfy independent implementability or independent reviewability is a push-back trigger.
 
 ## No Parallelization
 
-Plans are sequential. Plan bodies MUST NOT contain wave numbers, dependency arrays, task-graph notation, fork/join syntax, depends_on fields, parallelization markers (bracketed wave prefixes on tasks, `parallel:` blocks), or any other construct that suggests tasks may run concurrently. This applies to the adjusted plan as much as it applies to the source — the granularity shifts; the prohibition does not.
+Plans are sequential. Plan bodies MUST NOT contain wave numbers, dependency arrays, task-graph notation, fork/join syntax, depends_on fields, parallelization markers (bracketed wave prefixes on tasks, `parallel:` blocks), or any other construct that suggests tasks may run concurrently. This applies after the granularity shift as much as before — the granularity shifts; the prohibition does not.
 
 - **Wave numbers**: do not emit. The implementation phase executes tasks in plan order. There are no waves.
 - **Dependency arrays / depends_on fields**: do not emit. The implicit dependency is "the previous numbered task ran first". Anything stronger is out of scope.
@@ -132,70 +106,45 @@ These constructs are forbidden at the artifact level. If during the walk the use
 
 ## Self-Review
 
-The walk closes WITH the self-review pass BEFORE emission. Run the following four-check pass IN-SESSION against the drafted adjusted plan body. The emitted plan body does NOT contain a "self-review notes" section — the artifact stays clean. Self-review is a quality discipline, not output.
+The walk closes WITH the self-review pass BEFORE saving. Run the following four-check pass IN-SESSION against the drafted adjusted plan body. The plan body does NOT contain a "self-review notes" section — the artifact stays clean. Self-review is a quality discipline, not output.
 
-1. **Coherence** — does the adjusted plan, executed end-to-end, still achieve the source plan's goal? The goal does not change just because the granularity does. If the source plan exists to migrate the auth middleware to JWT, the adjusted plan still migrates the auth middleware to JWT — the path through the tasks may be coarser or finer, but the destination is unchanged. If the walk's actions added or removed tasks in a way that changes what the plan accomplishes, the shift went past granularity into rescoping; surface this and ASK the user before proceeding.
-2. **Granularity fit** — does the adjusted plan actually match the requested target? For a `looser` target, are tasks meaningfully broader (fewer tasks, less prescriptive substeps, shorter per-task fields)? For a `stricter` target, do tasks now carry the substep / verification / files-modified / acceptance structure characteristic of strict plans? For a specific-phrase target, does the named shift actually appear in the relevant task(s) of the adjusted plan? If the walk's per-task actions added up to something other than the working target — for example, the user picked LEAVE so often that the adjusted plan looks identical to the source — flag this and ask whether the target instruction is still right.
-3. **No under-splitting** — is every task in the adjusted plan independently implementable in one sitting? `looser` walks are especially at risk here because MERGE actions collapse multiple source tasks into broader ones; a merged task that bundles "redesign the schema and rewrite the migration runner and update every caller" is three tasks, not one — split it before emitting even though the user picked MERGE.
-4. **No over-splitting** — are any tasks in the adjusted plan trivial 1-line tasks that bloat the output? `stricter` walks are especially at risk here because SPLIT and EXPAND actions can produce pseudo-tasks; a task that just says "add a comment to `foo.ts`" with one substep is not a plan task — fold it into an adjacent task even though the user picked SPLIT.
+1. **Coherence** — does the adjusted plan, executed end-to-end, still achieve the plan's goal? The goal does not change just because the granularity does. If the plan exists to migrate the auth middleware to JWT, it still migrates the auth middleware to JWT after the shift — the path through the tasks may be coarser or finer, but the destination is unchanged. If the walk's actions added or removed tasks in a way that changes what the plan accomplishes, the shift went past granularity into rescoping; surface this and ASK the user before proceeding.
+2. **Granularity fit** — does the adjusted plan actually match the requested target? For a `looser` target, are tasks meaningfully broader (fewer tasks, less prescriptive substeps, shorter per-task fields)? For a `stricter` target, do tasks now carry the substep / verification / files-modified / acceptance structure characteristic of strict plans? For a specific-phrase target, does the named shift actually appear in the relevant task(s)? If the walk's per-task actions added up to something other than the working target — for example, the user picked LEAVE so often that the body looks identical to its pre-shift state — flag this and ask whether the target instruction is still right.
+3. **No under-splitting** — is every task independently implementable in one sitting? `looser` walks are especially at risk here because MERGE actions collapse multiple tasks into broader ones; a merged task that bundles "redesign the schema and rewrite the migration runner and update every caller" is three tasks, not one — split it before saving even though the user picked MERGE.
+4. **No over-splitting** — are any tasks trivial 1-line tasks that bloat the output? `stricter` walks are especially at risk here because SPLIT and EXPAND actions can produce pseudo-tasks; a task that just says "add a comment to `foo.ts`" with one substep is not a plan task — fold it into an adjacent task even though the user picked SPLIT.
 
-Run the four checks against the drafted adjusted body. If any check fails, revise the draft IN-SESSION with the user (the `.wip/` draft is editable before emission) before emitting. After the four checks pass, write the artifact. The walk produces drafts under `.wip/` (editable); the immutability lock applies at write into `plans/`.
+Run the four checks against the drafted adjusted body. If any check fails, revise the draft IN-SESSION with the user (the `.wip/` draft is editable before saving) before saving. After the four checks pass, edit `plan.md` in place.
 
 ## Workflow
 
-1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. The thread is recoverable from the source plan path — `docs/threads/<thread>/plans/<source-plan-filename>`. If the source plan path is absolute and unambiguous, the thread is the segment between `docs/threads/` and the `plans/` folder. If the source plan path is relative or the thread is otherwise unclear, ASK the user — do not silently pick the most recent timestamp.
+1. **Resolve the thread and plan lineage.** From the source plan path, identify the thread root and the plan lineage folder `plans/NNN[-<desc>]/` — the adjusted body lands back in `plan.md` inside that same lineage folder. If the thread holds more than one plan lineage and the intended one is ambiguous, ASK the user — do not pick by recency or highest `NNN`.
 
-2. **Read the source plan (READ-ONLY).** Open the source plan and read its body. Do not edit, do not copy to `.wip/` for in-place modification, do not call any mutation tool against it. Extract from the source filename: the version integer `N`, the descriptor (if any), and the UTC stamp. Extract from the source body: the goal, the numbered task list, any per-task fields, any notes / open questions sections.
+2. **Read the ledger for tier awareness.** Read the thread's `ledger.md` at the thread root to note the thread's tier and disposition. If the disposition is `deferred` or `closed: …`, the thread (or its artifacts) may be frozen — surface this and ASK the user before editing rather than mutating a paused or sealed thread. On an active thread, the tier is context only; proceed.
 
-3. **Confirm or refine the target instruction with the user.** Restate the user's target in one or two sentences and confirm it before opening the walk. If the user supplied only a coarse direction, ask whether the shift applies uniformly across all source tasks or whether some tasks should be left alone. If the user supplied a specific phrase, confirm which task(s) the phrase targets. The walk MAY revisit the working target as per-task actions surface new evidence.
+3. **Read the source plan.** Open `plan.md` and read its body. Extract the goal, the numbered task list, any per-task fields, and any notes / open-questions sections. The plan carries no frontmatter to parse.
 
-4. **Walk the source plan task-by-task per `## Per-Task Walk`.** For each source task, present the task with a brief read of its current granularity, propose an action (SPLIT / MERGE / EXPAND / CONTRACT / LEAVE) per the working target, and confirm with the user. Push back per the `## Anti-Sycophancy Stance` when the chosen action violates the sequential-isolated-independent contract or the no-parallelization prohibition. Move to the next task. Surface new tasks the source plan missed and gaps in coverage when relevant.
+4. **Confirm or refine the target instruction with the user.** Restate the user's target in one or two sentences and confirm it before opening the walk. If the user supplied only a coarse direction, ask whether the shift applies uniformly across all tasks or whether some tasks should be left alone. If the user supplied a specific phrase, confirm which task(s) the phrase targets. The walk MAY revisit the working target as per-task actions surface new evidence.
 
-5. **Compute the next version integer and descriptor.** `N+1` where `N` is the source plan's version integer. The descriptor encodes the granularity shift — for coarse directions, use the recommended descriptor (`looser` / `stricter` / `impl-ready` / `high-level`); for specific phrases, choose a kebab-case descriptor that summarizes the shift in roughly five words or fewer.
+5. **Walk the source plan task-by-task per `## Per-Task Walk`.** For each task, present the task with a brief read of its current granularity, propose an action (SPLIT / MERGE / EXPAND / CONTRACT / LEAVE) per the working target, and confirm with the user. Push back per the `## Anti-Sycophancy Stance` when the chosen action violates the sequential-isolated-independent contract or the no-parallelization prohibition. Move to the next task. Surface new tasks the plan missed and gaps in coverage when relevant. Assemble the adjusted body in the thread's `.wip/` scratch area as the walk proceeds.
 
-6. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time. Stamp once and reuse — never re-derive after writing.
+6. **Run self-review.** Execute the four checks from `## Self-Review` against the drafted adjusted body, with the user in the loop. Revise the `.wip/` draft until all four pass. The body does not contain self-review notes.
 
-7. **Run self-review.** Execute the four checks from `## Self-Review` against the drafted adjusted body, with the user in the loop. Revise the draft in `.wip/` (or in memory) until all four pass. The emitted body does not contain self-review notes — the discipline runs before emission.
+7. **Edit `plan.md` in place.** Copy the finished body into `plans/NNN[-<desc>]/plan.md`, overwriting the prior body. Do not create a new file, do not add a version segment or stamp, do not back up the old body — git holds the prior state. The plan stays a single living `plan.md` in its lineage folder.
 
-8. **Write the new artifact.** Create `docs/threads/<thread>/plans/<UTC>-v<N+1>-<descriptor>-plan.md` (write-once). The `plan` artifact-type suffix is MANDATORY. The `plans/` folder already exists because the source plan lives there. The source plan remains in place under its original filename.
+8. **Record the shift.** Write the lightweight justification record per `## Record the Shift` — a `decision-log` record under the thread's `discussions/` that serves this plan lineage, using the record filename grammar, carrying any walk dissent verbatim in its rationale. The plan body cites it by thread-relative path + `D<N>` where operative; the body itself stays clean.
 
-9. **Confirm the output path.** Tell the user: `Plan written: <relative-path-to-the-adjusted-plan>`. No closing remark, no summary. Do not announce that the source plan is unchanged — a downstream reader can verify the source's continued presence by listing the `plans/` folder.
-
-## Decision Log
-
-This skill does NOT auto-write a separate decision log. The default behavior is to capture the adjusted plan artifact only — most granularity-shift conversation is captured fully inside the adjusted plan body, with any push-back items the user proceeded past noted alongside the relevant task or in a `## Notes` / `## Open questions` section at the bottom. A decision log is written ONLY if durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in the adjusted plan body itself — for example, a major restructuring of the source plan the user considered and rejected with rationale that downstream readers will need to understand independently of the adjusted plan, or a target-instruction trade-off (loose-vs-strict-vs-impl-ready) the user reasoned through and committed to that affects how to interpret every per-task action.
-
-When such a decision log IS warranted, write it to `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md` (record form, `decision-log` artifact-type token). Use an append-only single-record shape with sequential `## D<N>: <Title>` headings, each carrying `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The adjusted plan body cites the new decision log by absolute path + `D<N>` at the inline locations where its decisions are operative — do not copy decision text from the log into the plan.
-
-When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
+9. **Confirm the output paths.** Tell the user, using thread-relative paths: `Plan updated in place: <plan path>` and `Shift recorded: <record path>`. No closing remark, no summary.
 
 ## Scope Drift
 
-When the user introduces a branch that is outside the granularity adjustment being walked — re-litigating the upstream spec, proposing implementation work, opening a new feature — do not silently follow them and do not let the adjusted plan grow into a different shape than a shift on the source plan. Propose ONE of:
+When the user introduces a branch that is outside the granularity adjustment being walked — re-litigating the upstream spec, proposing implementation work, opening a new feature — do not silently follow them and do not let the plan grow into a different shape than a shift on its prior body. Propose ONE of:
 
-1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this adjustment.
-2. **Split into its own plan or discussion thread.** When the branch is itself worth a dedicated plan (e.g., the user surfaced a new feature mid-walk) or a multi-decision discussion (e.g., the user wants to revisit a settled spec decision), start a new artifact rather than expand the adjusted plan beyond its intent.
+1. **Capture it as a seed for a future thread** (PREFERRED for non-blocking side-findings). A tangential item that deserves its own work later becomes the genesis narrative of a new thread, so it survives without polluting this adjustment.
+2. **Split into its own plan lineage or discussion.** When the branch is itself worth a dedicated plan (e.g., the user surfaced a new feature mid-walk) or a multi-decision discussion (e.g., the user wants to revisit a settled spec decision), start a new lineage folder or discussion record rather than expand this plan beyond its intent.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
 ASK the user which. Do not pick silently.
 
-## Filename and Folder
-
-The adjusted plan artifact uses the versioned-form filename grammar:
-
-```text
-<YYMMDDHHMMSSZ>-v<N+1>-<kebab-descriptor>-plan.md
-```
-
-Rules:
-
-- The 12-character UTC stamp `YYMMDDHHMMSSZ` comes first, captured at write time and never re-derived afterward.
-- `v<N+1>` is the next mainline integer AFTER the source plan's version. The `v<N+1>` segment names the TARGET version this artifact represents — not a predecessor it derives from.
-- The `<kebab-descriptor>` is MANDATORY on adjusted plans (unlike first-emission from-scratch plans, which default to no descriptor).
-- The `plan` artifact-type token is MANDATORY in every plan filename.
-
-The adjusted plan lands at `docs/threads/<thread>/plans/<filename>` — the SAME `plans/` folder as the source. The folder is on-disk already because the source plan lives there.
-
 ## Commit Policy
 
-This skill NEVER commits the emitted plan automatically (or the optional decision log). Commits happen only if the surrounding session explicitly requests one. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch. The same rule applies to the source plan: do not stage, do not modify, do not touch it in git in any way.
+This skill NEVER commits automatically (neither the plan edit nor the decision log). Commits happen only if the surrounding session explicitly requests one. Editing the plan and writing the record is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch.
