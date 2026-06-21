@@ -3,12 +3,14 @@ name: plan-strict-interactive
 description: Walk the user through a strict-granularity plan one task at a time, collecting objective, context, substeps, files modified, verification, and acceptance criteria when the user wants an agent-leaning plan shaped collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Plan Strict Interactive
 
-Walk the user through a strict-granularity plan task-by-task — fleshing out each task's objective, input/context, substeps, files modified, verification, and acceptance criteria — accept freeform answers per field, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass before emission, and write the artifact to the active thread's `plans/` folder. This skill interviews, disagrees when warranted, surfaces what wasn't asked about, and leaves a strict plan behind. Bad plan decisions become especially expensive in strict-granularity implementation — the downstream implementer is agent-leaning and will execute the substeps literally, so unflagged design errors compound into real broken code, not paused-and-reconsidered judgment calls.
+Walk the user through a strict-granularity plan task-by-task — fleshing out each task's objective, input/context, substeps, files modified, verification, and acceptance criteria — accept freeform answers per field, push back on weak reasoning per the `## Anti-Sycophancy Stance`, run a self-review pass before emission, and write the plan into its lineage folder under the active thread's `plans/`. This skill interviews, disagrees when warranted, surfaces what wasn't asked about, and leaves a strict plan behind. Bad plan decisions become especially expensive in strict-granularity implementation — the downstream implementer is agent-leaning and will execute the substeps literally, so unflagged design errors compound into real broken code, not paused-and-reconsidered judgment calls.
+
+The plan is a **disposable compiler-IR**: the spec plus its acceptance criteria are the contract a reviewer and the implementation are judged against, and the plan is downstream scaffolding compiled from that contract. This is why the plan is the one versioned-artifact type that carries **no stored status latch and no `version` in its frontmatter** — nothing about a plan needs auditing, because the spec it compiles is the audited artifact. Human-in-the-loop planning (this skill) stays fully supported; autonomy is a default, not a rule. See `## Plan Has No Frontmatter`.
 
 ## Anti-Sycophancy Stance
 
@@ -31,13 +33,13 @@ If you believe the user is about to commit a task into the plan that is wrong, r
 
 This skill accepts ONE of the following five input forms as the starting point of the walk. Detect which form was passed before opening the conversation:
 
-1. **A spec artifact path** under `docs/threads/<thread>/specs/<UTC>-v<N>-spec.md`. The spec is the most common upstream input — its semantic-contract elements (intended outcome, expected behavior, constraints, acceptance guidance) drive the plan's task list directly, and the spec's acceptance guidance maps cleanly onto per-task acceptance criteria.
-2. **A proposal artifact path** under `docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md`. When the input is a proposal rather than a spec, the walk elaborates the proposal's rough shape into an implementable sequence; the proposal's open questions are items the walk either resolves or surfaces in the plan. Strict-granularity from a proposal is heavier weight — if the proposal is thin, push back during the walk and suggest a loose-granularity plan instead.
-3. **A decision-log artifact path** under `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md`. The log carries one or more settled decisions with sequential `## D<N>: <Title>` headings. Each settled decision may map to a task (or constrain one) — cite the source log by absolute path + `D<N>` where the decision is operative in the relevant task's input/context field.
+1. **A spec artifact path** — a spec document on disk, typically `specs/NNN[-<desc>]/spec.md` in the active thread. The spec is the most common upstream input — its semantic-contract elements (intended outcome, expected behavior, constraints, acceptance guidance) drive the plan's task list directly, its acceptance criteria map cleanly onto per-task acceptance criteria, and its Degrees-of-freedom section tells the plan which *hows* are open. Before walking from a spec, confirm it is approved (its frontmatter `status:` map carries an `approved` latch); planning from a Draft spec is allowed but flag that the contract is not yet signed.
+2. **A proposal artifact path** — a proposal document on disk, typically `proposals/NNN[-<desc>]/proposal.md` in the active thread. When the input is a proposal rather than a spec, the walk elaborates the proposal's rough shape into an implementable sequence; the proposal's open questions are items the walk either resolves or surfaces in the plan. Strict-granularity from a proposal is heavier weight — if the proposal is thin, push back during the walk and suggest a loose-granularity plan instead.
+3. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## D<N>: <Title>` headings. Each settled decision may map to a task (or constrain one) — cite the source log by path + `D<N>` where the decision is operative in the relevant task's input/context field (same-thread references thread-relative, e.g. `discussions/<UTC>-<slug>-decision-log.md D3`; cross-thread references repo-relative, `docs/threads/<other>/…`).
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the starting context; treat the issue title and labels as additional framing.
 5. **A raw user prompt**. When no artifact is referenced, the user's prompt is itself the input — the plan is forward-designed directly from the conversation, with no upstream artifact backing it.
 
-If the input is ambiguous — multiple plausible specs share the same version number in the thread, multiple decision logs cover overlapping topics, the issue identifier is incomplete, the prompt references "the spec" with no clear referent — ASK the user which artifact is intended. There is no global "latest input" algorithm. Do not silently pick by recency.
+If the input is ambiguous — multiple plausible spec lineages could be meant (`specs/001-api/` vs `specs/002-cli/`), multiple decision logs cover overlapping topics, the issue identifier is incomplete, the prompt references "the spec" with no clear referent — ASK the user which artifact is intended. There is no "highest number" or "most recent" fallback; do not silently pick by recency or by `NNN`.
 
 ## Plan Artifact Contract
 
@@ -80,7 +82,7 @@ Each task MAY add additional fields (notes, rollback procedure, performance budg
 
 The plan body uses freeform markdown. The walk MAY suggest a section heading scaffold (for example `## Goal`, `## Tasks`, `## Notes`) at the plan level, but inside each task the six fields above are the structural backbone. Section headings should help the downstream agent-leaning reader follow the prescriptive shape, not bloat the artifact.
 
-Do NOT add YAML frontmatter to the plan body. The filename is the identifier; the body is plain markdown. Lineage between plan versions lives in the filename and the surrounding thread, not in metadata on the file.
+Do NOT add YAML frontmatter to the plan. Unlike a proposal or a spec, the plan carries **no `version` and no `status:` map** — it has no latch and no review-cycle counter (see `## Plan Has No Frontmatter`). The lineage folder is the identifier; the body is plain markdown.
 
 ### Worked Example
 
@@ -120,15 +122,17 @@ The walk closes with a self-review pass BEFORE emission. Run the following four-
 3. **No under-splitting** — is every task independently implementable in one sitting? A task that bundles "redesign the schema and rewrite the migration runner and update every caller" is three tasks, not one. Split it. Strict-granularity tasks are especially easy to under-split because the substep block hides the size — if the substeps would themselves be plan-task-shaped, the task is too big.
 4. **No over-splitting** — are any tasks trivial 1-line tasks that bloat the plan? A task that just says "add a comment to `foo.ts`" with one substep is not a strict plan task; fold it into an adjacent task. Strict plans favor meatier tasks; the six-field overhead must be earned.
 
-Run the four checks against the drafted plan body. If any check fails, revise the draft in-session with the user before emitting. Drafts composed during the walk are editable until the artifact is written to `plans/`. After the four checks pass, write the artifact.
+Run the four checks against the drafted plan body. If any check fails, revise the draft in-session with the user before emitting. Drafts composed during the walk are editable scratch under `.wip/` (gitignored). After the four checks pass, write the plan into its lineage folder. A plan is alive in place after emission too — see `## Alive in Place`; the self-review is the quality bar before the first write.
 
 ## Workflow
 
 1. **Resolve the thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent UTC stamp. If no thread exists, ASK where to create one OR auto-create when the input's slug is obvious.
 
-2. **Resolve and read the input artifact (if any).** Detect which of the five `## Inputs` forms was passed. For a path input, read the file. For a GitHub issue, fetch the issue body and title. For a raw prompt, the prompt itself is the seed. If multiple plausible inputs match the reference (two specs at the same version, two decision logs on the same topic), ASK which is intended. Do not pick by recency.
+2. **Read the ledger and confirm the tier.** Open the thread's `ledger.md` at the thread root and read the current `tier` (the last `tier:` line wins) and `disposition` (the last of `deferred` / `resumed` / `closed: done` / `closed: dropped`; absence means active). Planning is a tier ≥1 stage; strict granularity suits the design-decision work of tier 2+. If the ledger records no tier yet, propose one (the default for anything carrying a design decision is tier 2) and confirm it with the user before writing — append a dated, justified `tier: <N> @ <UTC> — <why>` line to the ledger. If the thread is `deferred` or `closed`, STOP — a paused or sealed thread is frozen; do not write. See `## Tier Awareness`.
 
-3. **Walk the input task-by-task with the user, fleshing each task to all six fields.** This is the collaborative aspect of this skill. Open the conversation with the input's intended outcome restated in one or two sentences, then propose the first task or ask the user to. For each candidate task, present and collect each of the six fields in turn:
+3. **Resolve and read the input artifact (if any).** Detect which of the five `## Inputs` forms was passed. For a path input, read the file. For a GitHub issue, fetch the issue body and title. For a raw prompt, the prompt itself is the seed. If multiple plausible inputs match the reference (two spec lineages, two decision logs on the same topic), ASK which is intended. Do not pick by recency or by `NNN`.
+
+4. **Walk the input task-by-task with the user, fleshing each task to all six fields.** This is the collaborative aspect of this skill. Open the conversation with the input's intended outcome restated in one or two sentences, then propose the first task or ask the user to. For each candidate task, present and collect each of the six fields in turn:
    1. **Objective sentence** — confirm what this task accomplishes.
    2. **Input / context** — confirm the artifacts, files, settled decisions (cited by absolute path + `D<N>` where applicable), and upstream state the task depends on.
    3. **Steps / substeps** — walk the prescriptive substeps one at a time; push back if a substep is a sub-objective rather than a concrete action, or if substeps skip a constraint.
@@ -138,21 +142,21 @@ Run the four checks against the drafted plan body. If any check fails, revise th
 
    Push back per the `## Anti-Sycophancy Stance` throughout. Adjust granularity in conversation — split if the task is too large (the six-field block would not fit one sitting), fold if it's too trivial. Move to the next task. The task list and the per-task fields emerge through the walk, not from a pre-built checklist.
 
-4. **Reference, do not copy, settled decisions from upstream input.** When the user references a decision in the input (or one already settled in a referenced decision log), cite the source by absolute path + `D<N>` at the inline location where the decision becomes operative — typically in the relevant task's input/context field. Do not paste decision text into a freestanding plan section. Cross-log references must include the full path of the source decision log.
+5. **Reference, do not copy, settled decisions from upstream input.** When the user references a decision in the input (or one already settled in a referenced decision log), cite the source by path + `D<N>` at the inline location where the decision becomes operative — typically in the relevant task's input/context field. Do not paste decision text into a freestanding plan section. Same-thread references are thread-relative; cross-thread references are repo-relative.
 
-5. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time. Stamp once and reuse — never re-derive after writing.
+6. **Choose the lineage folder.** Plans live in a numbered lineage folder `plans/NNN[-<desc>]/`. `NNN` is a zero-padded 3-digit sequence starting at `001`. If no plan lineage exists yet, use `001`. If plans already exist and this is a NEW, distinct plan subject, use the next free `NNN` and add a short kebab `-<desc>` only when needed to tell the lineages apart; adding a slug to a later lineage never renames an earlier one. If which existing lineage the work belongs to is ambiguous, ASK — there is no "highest number" fallback.
 
-6. **Run self-review.** Execute the four checks from `## Self-Review` against the drafted body, with the user in the loop. Revise the draft (in memory or in a `.wip/` scratch file) until all four pass. The emitted body does not contain self-review notes — the discipline runs before emission.
+7. **Run self-review.** Execute the four checks from `## Self-Review` against the drafted body, with the user in the loop, until all four pass. The emitted body does not contain self-review notes — the discipline runs before emission.
 
-7. **Write the artifact.** Create `docs/threads/<thread>/plans/<UTC>-v1-plan.md` (first emission defaults to NO `<kebab-descriptor>` — the mainline integer-only file is the canonical first form). The `plan` artifact-type suffix is MANDATORY. The `plans/` folder is created on-demand. The plan body is plain markdown — no YAML frontmatter on the plan itself.
+8. **Write the plan.** Create `docs/threads/<thread>/plans/NNN[-<desc>]/plan.md`. The file is named exactly `plan.md` — no UTC stamp, no `v<N>`, no descriptor in the filename, and no YAML frontmatter on the plan itself. The `plans/` parent and the `NNN[-<desc>]/` lineage folder are created on-demand; do not pre-create them.
 
-8. **Confirm.** Tell the user: `Plan written: <relative-path-to-the-file>`. No closing remark, no summary.
+9. **Confirm.** Tell the user: `Plan written: <thread-relative-path-to-the-file>` (e.g. `plans/001/plan.md`). No closing remark, no summary.
 
 ## Decision Log
 
 This skill does NOT auto-write a separate decision log. The default behavior is to capture the plan artifact only — most plan authoring is captured fully inside the plan body, with settled decisions cited inline in the relevant task's input/context field and any push-back items the user proceeded past noted alongside the relevant task or in a `## Notes` / `## Open questions` section at the bottom. A decision log is written ONLY if durable trade-offs or rejected alternatives emerge during the walk that cannot reasonably be captured in the plan body itself — for example, a major sequencing alternative the user considered and rejected with rationale that downstream readers will need to understand independently of the plan, or a substeps-vs-tooling trade-off that affects more than one task.
 
-When such a decision log IS warranted, write it to `docs/threads/<thread>/discussions/<UTC>-<kebab-desc>-decision-log.md` (record form, `decision-log` artifact-type token). Use an append-only single-record shape with sequential `## D<N>: <Title>` headings, each with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The plan body cites the new log by absolute path + `D<N>` at the inline locations where its decisions are operative — do not copy decision text from the log into the plan.
+When such a decision log IS warranted, write it as a **record** into the `discussions/` of the upstream artifact it serves — the plan is a disposable compiler-IR and has no `discussions/` folder of its own, so a durable planning trade-off attaches to the spec lineage that the plan compiles: `docs/threads/<thread>/specs/NNN[-<desc>]/discussions/<UTC>-<kebab-desc>-decision-log.md` (record form, MANDATORY `decision-log` artifact-type suffix). If the plan has no upstream spec lineage, the seed's `discussions/` (`seed/discussions/`) is the fallback target. A decision log carries no lifecycle status of its own, so it carries no frontmatter. Use an append-only single-record shape with sequential `## D<N>: <Title>` headings, each with `Decision:` and `Rationale:` lines. If a dissent was flagged during the walk per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim. The plan body cites the new log by path + `D<N>` (thread-relative within the thread) at the inline locations where its decisions are operative — do not copy decision text from the log into the plan.
 
 When in doubt about whether a side-conversation rises to "durable trade-off" status, ASK the user. The default is no decision log.
 
@@ -160,51 +164,62 @@ When in doubt about whether a side-conversation rises to "durable trade-off" sta
 
 When the user introduces a branch that is outside the plan being authored, do not silently follow them and do not let the plan grow into a different shape than the one being discussed. Propose ONE of:
 
-1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Capture a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this plan.
+1. **Capture it as a follow-up for a future thread** (PREFERRED for non-blocking side-findings). Name the side-finding clearly so it survives — it becomes the seed of a future thread (or a ticket in the tracker) — without polluting this plan. There is no inbox in this workflow; tangential items route to future-thread seeds or to the implementation report, not to a folder under this thread.
 2. **Split into its own plan or discussion thread.** When the branch is itself worth a dedicated plan or a multi-decision discussion, start a new artifact rather than expand the current plan beyond its intent.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
 ASK the user which. Do not pick silently.
 
-## Filename and Folder
+## Lineage Folder and Filename
 
-The plan artifact uses the versioned-form filename grammar:
-
-```text
-<YYMMDDHHMMSSZ>-v<N>[-<kebab-descriptor>]-plan.md
-```
-
-Rules:
-
-- The 12-character UTC stamp `YYMMDDHHMMSSZ` comes first, captured at write time and never re-derived afterward.
-- `N` starts at `1`, not `0`. First emission is `v1`. There is no `v0`.
-- First emission defaults to NO `<kebab-descriptor>` — the mainline integer-only file is `<UTC>-v1-plan.md`.
-- A `<kebab-descriptor>` marks the file as a candidate or variant for mainline `v<N>` (e.g., parallel drafts as `v1-opus-plan.md`, `v1-sonnet-plan.md`, with the promoted file becoming `v1-plan.md`).
-- The `plan` artifact-type token is MANDATORY in every plan filename.
-- The `v<N>` segment names the TARGET version this artifact represents — not a predecessor it derives from.
-
-Canonical first-emission example:
+The plan is a **versioned-artifact type, but the disposable one**: it lives in a numbered lineage folder, the file carries no UTC stamp and no `v<N>` in its name, and — unlike a proposal or spec — it carries no frontmatter at all.
 
 ```text
-260521120000Z-v1-plan.md
+docs/threads/<thread>/plans/NNN[-<desc>]/plan.md
 ```
 
-Example with descriptor (parallel candidate for the same target version):
+- `NNN` — a mandatory zero-padded 3-digit sequence starting at `001`. It is the stable identifier; numbered folders sort in creation order.
+- `-<desc>` — an optional kebab slug, added ONLY to distinguish one plan lineage from another. It never renames an earlier lineage, so links stay stable.
+- The file is always literally `plan.md` — the path carries the type (parent folder) and the subject (thread slug), so the bare filename needs neither a stamp nor a version. The plan has no `version` to put anywhere (see `## Plan Has No Frontmatter`).
+- No `v1/` / `v2/` folder names, and no per-revision file. A plan is edited alive in place — git holds its evolution (see `## Alive in Place`). A second lineage is a different plan subject, not a revision of an earlier one.
+
+Examples:
 
 ```text
-260521120000Z-v1-auth-migration-plan.md
+plans/001/plan.md
+plans/001-auth-migration/plan.md
+plans/002-billing/plan.md
 ```
 
-The file lands at `docs/threads/<thread>/plans/<filename>`. The `plans/` folder is created on-demand on the first plan written for the thread; do not pre-create empty folders.
+Within-thread references in the body are thread-relative (`plans/001/plan.md`, `specs/001/spec.md`, `discussions/<UTC>-<slug>-decision-log.md`), never repo-rooted and never absolute; cross-thread references are repo-relative (`docs/threads/<other>/…`). The `plans/` folder and its lineage subfolder are created on-demand on the first plan written; do not pre-create empty folders.
 
-## Immutability
+## Plan Has No Frontmatter
 
-Emitted plan artifacts are immutable. Once the file is written into `plans/`, it is part of the thread's reviewable history and is not edited. A typo discovered in an emitted v1 plan means emitting a new version (`v2`), not an in-place edit. The same rule applies to every subsequent version — `v2` is locked once written, and a revision to `v2` means emitting `v3`. Never edit a plan file in place after it lands in `plans/`.
+The plan is the one versioned-artifact type that carries **no `version` and no `status:` map** — it has neither a latch nor a review-cycle counter. This is deliberate: the plan is a disposable compiler-IR, the spec plus its acceptance criteria are the contract, and nothing about a plan needs auditing because the spec it compiles is the audited artifact.
 
-Drafts under `docs/threads/<thread>/.wip/` are editable until emission. While composing the plan body in scratch space (or in memory) during the walk, revisions are free. The lock applies the moment the file is written into `plans/` under the canonical filename grammar. The same rule applies to the optional decision log: append-only records, no in-place edits after emission.
+- **No `version`.** A spec or proposal counts review→revise cycles in a `version` field; a plan does not. There is no plan version to track anywhere — not in the filename, not in frontmatter.
+- **No stored status, no latch.** No human approves a plan. A proposal latches at `approved`/`rejected` and a spec latches at `approved` then `implemented`; a plan has no such event. Its only quality state is the derived verdict of a downstream machine adherence review (does the plan adhere to the spec, honoring the spec's Degrees-of-freedom section), which is computed, never stored on the plan.
+- **No frontmatter at all.** Because there is neither a `version` nor a `status:` map to carry, a fresh `plan.md` opens directly with its body (e.g. `# <goal>`), with no `---` YAML block. Do not add one.
 
-No source-relation YAML frontmatter is added to the plan body — lineage lives in filenames and the surrounding thread, not in metadata on the file. The accepted trade-off is that a filename cannot tell whether `v2` came directly from `v1`, from a `v2` candidate variant, or from a merge — that history is recovered from the thread itself, not from the file.
+## Alive in Place
+
+A plan is edited **alive in place** — there are NO version files, NO `v<N>` filenames, and NO emitting a new file per revision. When the plan needs to change (a self-review fix, an auto-fix after a machine adherence review found a deviation, a refinement during implementation), edit `plan.md` in its lineage folder directly. **Git holds the evolution** — the fine-grained history of how the plan changed lives in the commit log, not in a chain of stamped files.
+
+The plan stays alive for the whole time the thread is active and freezes only when the thread closes (the ledger's terminal `closed:` event). There is no per-edit backing record for a plan — it is disposable scaffolding, not a signed contract, so authoring it and refining it are free while the thread is active. (The optional decision log is a separate record and obeys record immutability: append-only, no in-place edits after emission.)
+
+Competing candidate plans for ONE subject (e.g. parallel multi-model drafts of the same plan) are pre-emission scratch and live under `docs/threads/<thread>/.wip/` (gitignored, editable). Compare them there and emit only the chosen-or-merged result once as `plans/NNN[-<desc>]/plan.md`. They are NOT separate lineages and NOT separate version files.
+
+## Tier Awareness
+
+The tier scales the rigor of the upstream contract this plan compiles and is stored in the thread's `ledger.md` (append-only, last `tier:` line wins) with a one-line justification — never derived from which artifacts are present. The four tiers, by escalating ceremony:
+
+- **Tier 0 — chore:** no behavior change, reversible in one commit. No thread, no ledger — a plan does not belong here.
+- **Tier 1 — patch:** small fix/feature, low blast radius, no open design question. A plan is optional; the spec may be light. Strict granularity is usually overkill here.
+- **Tier 2 — feature:** anything with a design decision (the default). The spec is reviewed and approved with machine-checkable acceptance criteria, which is what makes autonomous strict planning safe — though this skill keeps the human in the loop regardless.
+- **Tier 3 — initiative:** multi-week, architectural, or hard to reverse. Tier 2 plus a proposal stage and adversarial reviews.
+
+Read the ledger to learn the tier. If no tier is recorded, propose one (default tier 2 for design-decision work) and confirm it with the user, appending a dated, justified `tier: <N> @ <UTC> — <why>` line. Do not write a plan into a thread the ledger marks `deferred` or `closed`.
 
 ## Commit Policy
 
-This skill NEVER commits the emitted plan automatically (or the optional decision log). Commits happen only if the surrounding session explicitly requests one. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator skill, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch.
+This skill NEVER commits the emitted plan automatically (or the optional decision log or the ledger line). Commits happen only if the surrounding session explicitly requests one. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator skill, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch.
