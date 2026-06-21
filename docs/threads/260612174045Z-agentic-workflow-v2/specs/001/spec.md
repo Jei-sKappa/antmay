@@ -1,5 +1,7 @@
 ---
 version: 2
+status:
+  approved: 260621080825Z
 ---
 
 # Spec: Modular Agentic Workflow V2 — in-repo build contract
@@ -18,8 +20,10 @@ decision-log entry (§Traceability); anything not so traceable is marked a Degre
 Freedom (§Degrees of freedom) or recorded — now resolved — in §Owner flags.
 
 It dogfoods V2: it lives in a lineage folder (`specs/001/`); its frontmatter
-carries `version` only with no `status:` map yet, so its derived condition is
-**Draft** (no `status.approved` latch); within-thread references are
+now carries a `status:` map with the `approved` latch set, so its derived
+condition is **Approved** — it stays alive (amendable only via owner-approved,
+record-backed amendments) until an `implemented` latch would freeze it (§4);
+within-thread references are
 thread-relative; cross-location references (skills, `docs/workflow/`) are
 repo-relative; all timestamps use the `YYMMDDHHMMSSZ` UTC grammar. (`version: 2`
 records that this spec has completed one review→revise cycle: the
