@@ -49,7 +49,7 @@ The reviewer writes a single markdown file at the path the orchestrator named. S
 Verdict: PASS
 
 References:
-- Plan: docs/threads/<thread>/plans/<UTC>-v<N>-<descriptor>-plan.md
+- Plan: plans/NNN[-<desc>]/plan.md
 - Modified files:
   - <path>
   - <path>
@@ -67,7 +67,7 @@ Findings:
 2. **<short title>** — Expected: <…>. Observed: <…>. Suggested fix: <…>.
 
 References:
-- Plan: docs/threads/<thread>/plans/<UTC>-v<N>-<descriptor>-plan.md
+- Plan: plans/NNN[-<desc>]/plan.md
 - Modified files:
   - <path>
   - <path>
