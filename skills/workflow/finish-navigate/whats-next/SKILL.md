@@ -1,138 +1,329 @@
 ---
 name: whats-next
-description: Inspect the active thread's artifacts and recent commits, then suggest 2–4 coherent next actions when the user wants a quick map after completing work, hitting uncertainty, finding open inbox items, or getting stuck.
+description: Read a thread's state — ledger, lineage folders, and frontmatter status latches — and fold it on demand to answer "what now / what next / is it closed", then suggest coherent next actions when the user wants a quick map after completing work, hitting uncertainty, or getting stuck.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 2.0.0
 ---
 
 # What's Next
 
-Inspect the current thread context — what artifacts exist under `proposals/`, `specs/`, `plans/`, `discussions/`, `inbox/open/` and what recent commits live on the current branch — and suggest 2–4 coherent next actions IN CHAT. The chat reply IS the deliverable. The skill writes NO artifact by default; only on explicit user opt-in does it offer to save a suggestion as an Inbox item for later.
+Read the active thread's state READ-ONLY — its ledger, its lineage folders, the
+frontmatter `status:` latches on its artifacts, and recent commits — then FOLD that
+state on demand to answer three questions IN CHAT: **what now**, **what next**, and
+**is it closed**. Then suggest 2–4 coherent next actions. The chat reply IS the
+deliverable. The skill writes NO artifact and never modifies anything it reads.
+
+## This Skill Is the Derived-Status Reader (a CLI Precursor)
+
+This skill is the workflow's **derived-status reader**. State in this workflow is
+**derived, never stored — the workflow is event-sourced.** Truth lives in append-only
+events (each artifact's frontmatter `status:`-map latches, the thread's ledger, and
+the records themselves); current state is a **projection folded from those events on
+demand**, never a stored mutable current-state file. There is NO `STATE.md`, no
+`events.jsonl`, and no materialized `state.json` to read — those were all considered
+and rejected as drift-prone stores of derivable state. `whats-next` IS the on-demand
+fold, done for a human reader.
+
+State this plainly when you answer: a future status CLI (and its in-memory
+`state.json` projection) that would generalize this fold is **deferred and is NOT
+built here**. `whats-next` is the human-facing on-demand reader that such a CLI would
+later generalize. You compute the answer by parsing the thread every time — you do not
+read or write any cached state.
 
 ## Anti-Sycophancy Stance
 
-Your job is to help the user identify the right next action given the current thread context, not to make them feel good about whatever they suggest. Treat the advisory pass as a mutual attempt to get closer to the truth: you may be missing context, the user may be missing consequences, and either side may notice something the other overlooked. Sycophancy is a costly failure mode here — recommending a "next action" that ignores the open inbox items, the unaddressed review-findings, or the obvious blocker the thread has surfaced is worse than admitting the thread is stuck and the user needs to address those signals first.
+Your job is to help the user identify the right next action given the current thread
+state, not to make them feel good about whatever they suggest. Treat the advisory pass
+as a mutual attempt to get closer to the truth: you may be missing context, the user
+may be missing consequences, and either side may notice something the other
+overlooked. Sycophancy is a costly failure mode here — recommending a "next action"
+that ignores an open review-finding, an unaddressed blocker, or a spine stage that has
+not been done yet is worse than admitting the thread is stuck and the user needs to
+address those signals first.
 
-The skill is ADVISORY, not opinion-driven: there is NO stage-specific amplifier. The skill's role is to inspect, recognize, and suggest — not to argue against settled work. The cheap moment to push back is when the user is about to take a next action that ignores a clear signal in the thread (an open blocker review-finding, an uncommitted change, an unresolved conflict marker, a phase that has not been done yet).
+The skill is ADVISORY, not opinion-driven: there is NO stage-specific amplifier. The
+skill's role is to read, fold, recognize, and suggest — not to argue against settled
+work. The cheap moment to push back is when the user is about to take a next action
+that ignores a clear signal in the thread (an open review-finding, an uncommitted
+change, an unresolved conflict marker, a spine stage that has not happened yet, or a
+ledger disposition that says the thread is paused or closed).
 
 Hold these together:
 
-- **Disagree when you disagree.** If the user's hint or implicit assumption about what to do next conflicts with the evidence in the thread (e.g., "I think we should implement the plan" while there is no plan artifact yet, or "let's move to review" while the implementation has not been committed), say so plainly before suggesting next actions. Don't soften it into ambiguity.
-- **Push back on weak or incomplete reasoning.** If the user dismisses an obvious signal — "the inbox items don't matter", "the review-findings are nits", "we'll address the conflict marker later" — name the gap, surface the substance, and bring it into the suggestions. The signal is in the thread for a reason.
-- **Surface what they didn't ask about.** Risks, hidden costs, downstream consequences, the phase the user skipped — raise them, even if the user wants to move on. Better captured in the suggestion list than rediscovered when the next phase wedges.
-- **Take the user's input seriously.** If they push back, add context, or challenge your reading of the thread, evaluate the substance. Update your view when they provide new facts, sharper constraints, or a better argument. ("The open inbox items are future deferrals, not blockers for the next action" is real information.)
-- **Do not treat pushback as correctness.** The user disagreeing with you is not itself evidence. Separate useful new information from preference, frustration, momentum, or wishful thinking. Never drop a suggestion just because the user pushed back — only when they give you a real reason to.
-- **Make disagreement productive.** When you and the user see the next action differently, identify the exact assumption or value judgment causing the split, then resolve THAT before settling on a suggestion list.
-- **Refuse to log a suggestion you believe is wrong without flagging it.** If the user insists on capturing as an Inbox item a suggestion you believe is built on a flawed assumption, proceed with the capture per the user's explicit consent (the skill does not bypass user choice), but include the dissent in the chat reply BEFORE capturing. The capture goes through — the trail records the dissent for whoever reads the inbox item next.
-- **Keep the advice owned by the evidence.** The goal is not for either side to win. The goal is to surface suggestions that survive later scrutiny because the thread's signals were actually inspected and considered. The advisory pass is cheap — the next phase the user enters is not.
+- **Disagree when you disagree.** If the user's hint or implicit assumption about what
+  to do next conflicts with the folded state (e.g., "I think we should implement the
+  plan" while no plan lineage folder exists yet, or "let's move to review" while the
+  implementation has not been committed), say so plainly before suggesting next
+  actions. Don't soften it into ambiguity.
+- **Push back on weak or incomplete reasoning.** If the user dismisses an obvious
+  signal — "the open review doesn't matter", "those findings are nits", "we'll address
+  the conflict marker later" — name the gap, surface the substance, and bring it into
+  the suggestions. An undisposed review is open for a reason.
+- **Surface what they didn't ask about.** Risks, hidden costs, downstream
+  consequences, the spine stage the user skipped — raise them, even if the user wants
+  to move on.
+- **Take the user's input seriously.** If they push back, add context, or challenge
+  your reading of the thread, evaluate the substance. Update your view when they
+  provide new facts, sharper constraints, or a better argument.
+- **Do not treat pushback as correctness.** The user disagreeing with you is not
+  itself evidence. Separate useful new information from preference, frustration,
+  momentum, or wishful thinking. Never drop a suggestion just because the user pushed
+  back — only when they give you a real reason to.
+- **Make disagreement productive.** When you and the user see the next action
+  differently, identify the exact assumption or value judgment causing the split, then
+  resolve THAT before settling on a suggestion list.
+- **Keep the advice owned by the evidence.** The goal is not for either side to win.
+  The goal is to surface suggestions that survive later scrutiny because the thread's
+  actual state was folded and considered. The advisory pass is cheap — the next stage
+  the user enters is not.
 
-The skill is ADVISORY. It does NOT have an opinion on settled work (already-emitted artifacts, settled decision logs, already-committed implementations). What it has an opinion on is the GAP between what the thread has done and what it could do next.
+The skill is ADVISORY. It does NOT have an opinion on settled work (frozen artifacts,
+settled decision logs, already-committed implementations). What it has an opinion on is
+the GAP between what the thread has done and what it could do next.
 
 ## Inputs
 
 This skill accepts an OPTIONAL hint from the user as input. Examples:
 
 - "I just finished the spec — what's next?"
-- "I have an open inbox item — should I address it?"
 - "Thread feels stuck — what should I look at?"
+- "Is this thread closed?"
 - "Where are we?"
 - (no input — the user starts without a hint)
 
-The hint shapes the advisory framing but does NOT replace the thread-context pass. If no hint is provided, run the default thread-context pass and suggest 2–4 next actions tied to the observable thread state.
+The hint shapes the advisory framing but does NOT replace the read-and-fold pass. If no
+hint is provided, run the default pass and answer all three questions tied to the
+folded thread state.
 
-**Ambiguity fallback:** if the active thread is ambiguous (multiple thread roots exist, none clearly active; or `cwd` is not inside any thread root and multiple plausible candidates live in `docs/threads/`), ASK the user which thread to advise on. Do NOT pick by recency. Do NOT pick by sort order. Do NOT pick by any heuristic — silently picking would hide a real navigation decision (which thread the user is actually in) behind a sort order.
+**Ambiguity fallback:** if the active thread is ambiguous (multiple thread roots exist,
+none clearly active; or `cwd` is not inside any thread root and multiple plausible
+candidates live in `docs/threads/`), ASK the user which thread to read. Do NOT pick by
+recency. Do NOT pick by sort order. Do NOT pick by any heuristic — silently picking
+would hide a real navigation decision (which thread the user is actually in) behind a
+sort order.
 
-The thread itself is the input — what artifacts exist, where the commits sit, what is open in the inbox. The hint is supplementary.
+The thread itself is the input — its ledger, its lineage folders, its artifacts'
+frontmatter latches, where the commits sit. The hint is supplementary.
 
-## Thread Inspection
+## What to Read and Fold
 
-This skill inspects the active thread READ-ONLY. Nothing is edited during inspection — no artifact frontmatter, no artifact bodies, no folder structures, no inbox state transitions. The skill does NOT move items from `inbox/open/` to `inbox/processed/` or `inbox/dropped/`; inbox state transitions are manual file moves by design. The skill does NOT write any artifact during inspection.
+This skill reads the active thread READ-ONLY and folds its state. Nothing is edited —
+no ledger line, no artifact frontmatter, no artifact body, no folder structure. Read
+these sources and fold them into an answer:
 
-The skill inspects:
+### 1. The thread root and the ledger
 
-1. **Active thread root** at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If the thread is ambiguous (multiple candidates, none clearly active), ASK per `## Inputs` above.
+The active thread root is `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits
+inside a thread root, that is the thread. If the thread is ambiguous, ASK per
+`## Inputs`.
 
-2. **Folder set** under the active thread root. Report which folders have content and which are empty:
-   - `proposals/` — emitted proposal artifacts.
-   - `specs/` — emitted spec artifacts.
-   - `plans/` — emitted plan artifacts.
-   - `discussions/` — emitted discussion and decision-log artifacts.
-   - `inbox/open/` — open inbox items and review-finding records still awaiting triage.
+Read the thread's **`ledger.md` at the thread root**. The ledger is append-only and
+carries the only two facts a thread cannot derive from its artifacts: its **tier** and
+its **disposition**. Its line grammar is `<event> @ <YYMMDDHHMMSSZ> — <justification>`,
+where `<event>` is one of `tier: <0–3>`, `deferred`, `resumed`, `closed: done`, or
+`closed: dropped`. Only transitions are written; the resting default is never recorded.
+The **current value of each key is its last matching line**:
 
-   Enumerate non-empty folders by artifact count. Folder presence and artifact counts are the primary signal — they indicate which kinds of durable work have already been completed and which kinds may still be missing.
+- **Tier** — the value of the **last `tier:` line**. Tiers: 0 = chore, 1 = patch,
+  2 = feature (the default), 3 = initiative. The tier scales what artifacts the thread
+  is expected to carry, so it shapes "what next."
+- **Disposition** — the **last** of the disposition events (`deferred` / `resumed` /
+  `closed: done` / `closed: dropped`). Absence of any such event (or a last value of
+  `resumed`) means **active**:
+  - `(none)` or `resumed` → **active** (being worked — the resting default)
+  - `deferred` → **paused** (intentionally on hold; content frozen, reversible)
+  - `closed: done` → **terminal** (the whole spine finished; sealed)
+  - `closed: dropped` → **terminal** (abandoned; any successor is named in the reason)
 
-3. **Recent commits on the current branch.** Suggested invocation: `git log --oneline -5` (or `-10`; the cap is at executor discretion — the purpose is signal, not audit). The commit history is the implementation audit trail; recent commits tell the skill whether implementation work has landed since the last artifact in `plans/` was emitted.
+A thread with no `ledger.md` at all is a thread that never recorded a tier — treat tier
+as unknown and say so.
 
-The skill READS artifacts and folder structures READ-ONLY — does NOT edit anything during inspection. Emitted artifacts are immutable: the inspection pass reads the thread's history without modifying it.
+### 2. The spine position — derived from which lineage folders/artifacts exist
+
+The spine is `seed → discussion(s) → [proposal] → spec → plan → implement → verify →
+finish`. Derive the spine position from **which folders and artifacts exist** under the
+thread root and from their frontmatter latches. Folders are created on demand — a folder
+appears only once a skill has written its first artifact there, so presence is itself
+signal. The folder set:
+
+- **`seed/`** — the genesis bucket: `<UTC>-<desc>-seed.md` (exactly one, a frozen
+  narrative), optional genesis notes, and `seed/discussions/`.
+- **`proposals/NNN[-<desc>]/`** — lineage folders, each holding `proposal.md`,
+  `discussions/`, `reviews/`. (Optional, a tier-3 stage.)
+- **`specs/NNN[-<desc>]/`** — lineage folders, each holding `spec.md`, `discussions/`,
+  `reviews/`.
+- **`plans/NNN[-<desc>]/`** — lineage folders, each holding `plan.md` and `reviews/`
+  (machine-adherence reviews). The plan carries NO `version` and NO `status:` map — it
+  is a disposable compiler-IR, not an audited contract; do not look for a latch on it.
+- **`implementation/`** — flat, records-only: the `<UTC>-<desc>-implementation-report.md`
+  plus `discussions/` and `reviews/` (code reviews, verifications) directly inside.
+
+`NNN` is a zero-padded 3-digit sequence (`001`, `002`, …) and is the stable lineage
+identifier. **Multiple lineage folders are distinct subjects you intend to keep** (an
+API spec and a CLI spec), NOT competing variants — variants live in `.wip/` and are not
+emitted. If two lineages exist where you'd expect one subject, that itself is a signal
+worth surfacing.
+
+### 3. The derived condition of each versioned artifact
+
+For a proposal or a spec, do NOT look for a stored condition — derive it from the
+frontmatter `status:` map plus undisposed reviews, by this precedence (the
+authoritative derivation):
+
+```text
+status.implemented present        → Implemented
+else status.approved present      → Approved   (+ "has open findings" if an
+                                                 undisposed review exists)
+else an undisposed review exists  → In Review
+else                              → Draft
+```
+
+Read linearly, a spec moves Draft → In Review → Approved → Implemented. Latches are
+**sticky** — they record an event that happened and do not revert. A new review opening
+against an `approved` spec does NOT drop it back to In Review; the condition is
+"Approved + has open findings." Condition is ALWAYS derived this way and is never stored
+anywhere.
+
+### 4. Open findings — undisposed reviews
+
+A **review with no `status.disposed` field in its frontmatter is open**, mechanically,
+by parse — there is no open/processed folder move and no separate record. Scan the
+`reviews/` folders (under each spec/proposal lineage, under `plans/NNN/`, and under
+`implementation/`) for reviews whose frontmatter `status:` map lacks `disposed`. Each
+such review is an open finding. An undisposed review against an `approved` spec is the
+"+ has open findings" rider; an undisposed review against an un-approved artifact is
+what makes its condition In Review.
+
+### 5. Recent commits on the current branch
+
+Suggested invocation: `git log --oneline -5` (or `-10`; the cap is at executor
+discretion — the purpose is signal, not audit). Commit history is the implementation
+audit trail; recent commits tell you whether implementation work has landed since the
+last plan was emitted.
+
+Everything above is read READ-ONLY. The freeze model means frozen artifacts (a spec at
+`implemented`, a proposal at `approved`/`rejected`, anything in a `closed:` thread) are
+immutable — but this skill never edits anything regardless, so it cannot run afoul of
+the freeze.
+
+## The Three Questions
+
+Fold the sources above into answers to all three:
+
+- **What now** — the current state: the **tier** (from the ledger), the **spine
+  position** (which stages have artifacts), the **derived condition** of the relevant
+  versioned artifact(s) (Draft / In Review / Approved [+ open findings] / Implemented),
+  any **open findings** (undisposed reviews), and the **disposition** (from the ledger).
+- **What next** — the recommended next spine step given that state. Walk the spine:
+  if there's a seed and discussions but no spec, the next step is the spec; if there's
+  an `approved` spec but no plan, the next step is the plan; if there's an undisposed
+  review, the next step is disposing it (revise the target, or reject in the review's
+  frontmatter); if the implementation has landed but not been verified, the next step
+  is verify-against-the-spec's-acceptance-criteria; if everything is done, the next step
+  is finish (update living docs, set the spec's `status.implemented`, append
+  `closed: done` to the ledger). Scale the recommendation to the tier — a tier-1 patch
+  may legitimately skip the spec/plan stages; a tier-2 feature expects an approved spec.
+- **Is it closed** — read the ledger disposition directly: **active** (being worked),
+  **paused** (`deferred`), or **terminal** (`closed: done` / `closed: dropped`). If
+  paused, the only forward move recorded is `resumed`; if terminal, the thread is sealed
+  and resurrecting the work means opening a NEW thread, not reopening this one.
 
 ## Chat-First Answer
 
-The skill's PRIMARY output is a CHAT reply with 2–4 suggested next actions:
+The skill's PRIMARY output is a CHAT reply:
 
 - The chat reply IS the deliverable.
-- The skill NEVER writes an artifact by default. The 2–4 suggestions stay in the chat — no file is written, no decision log appended, no inbox item captured. The default is zero file writes.
-- Each suggestion SHOULD name the action that would execute it (e.g., "draft the plan", "run a spec review", "merge the two competing artifacts", "capture this as an inbox item"). Naming the action gives the user a concrete handle on what to do next.
-- The chat answer is FREEFORM markdown — no rigid template, no required sections, no fixed length. The suggestion count cap is 2–4 to keep the advisory pass narrow and decision-shaped; suggesting 10 next actions defeats the purpose.
+- The skill NEVER writes an artifact and never modifies anything. The default — and
+  only — behavior is zero file writes.
+- Open with the folded answer to the three questions (what now / what next / is it
+  closed), then give **2–4 suggested next actions**.
+- Each suggestion SHOULD name the action that would execute it (e.g., "draft the
+  spec", "run a spec review", "dispose the open review by revising the spec", "walk the
+  closure question"). Naming the action gives the user a concrete handle.
+- The chat answer is FREEFORM markdown — no rigid template, no required length. The
+  suggestion count cap is 2–4 to keep the advisory pass narrow and decision-shaped;
+  suggesting 10 next actions defeats the purpose.
 
-Each suggestion follows a loose shape (executor discretion on prose; the substance is what matters):
+Each suggestion follows a loose shape (executor discretion on prose; the substance is
+what matters):
 
-- A one-sentence statement of the suggested action, tied to an observable thread signal (NOT speculative; NOT "you could do X" in the abstract — "you have an emitted spec at <path> and no plan yet — consider drafting the plan").
+- A one-sentence statement of the suggested action, tied to an observed thread signal
+  (NOT speculative — "you have an `approved` spec at `specs/001/spec.md` and no plan
+  lineage folder yet — consider drafting the plan").
 - The action that would execute it.
-- A one-clause justification — what in the thread context supports this suggestion.
+- A one-clause justification — what in the folded state supports this suggestion.
 
-Example chat suggestions (illustrative — the skill produces NEW suggestions tied to the actual thread state inspected, not these examples):
+Example chat suggestions (illustrative — produce NEW suggestions tied to the actual
+folded state, not these examples; paths shown are thread-relative):
 
-- "You have an emitted spec at `specs/260520120000Z-v1-auth-spec.md` and no plan yet — consider drafting the plan next (agent-leaning or human-leaning depending on your preference)."
-- "`inbox/open/` has 3 unaddressed review-finding records — consider walking them point-by-point in a discussion, or addressing them by emitting a new version of the reviewed artifact."
-- "Two competing spec candidates exist at `v2-stricter-auth-spec.md` and `v2-impl-ready-auth-spec.md` — consider merging them into a promoted `v3` to resolve the ambiguity."
-- "Implementation commits land on `<current-branch>` but no review has run yet — consider reviewing the implementation diff against the source plan before moving forward."
-- "The thread looks complete — consider walking the closure question (merge / PR / leave as is) to wrap it up."
+- "You have a spec at `specs/001/spec.md` whose frontmatter carries `status.approved`
+  and no `plans/` folder yet — its derived condition is Approved and the next spine step
+  is the plan; consider drafting it."
+- "`specs/001/reviews/` holds a review with no `status.disposed` in its frontmatter —
+  the spec's condition is In Review (an open finding); consider disposing it by revising
+  the spec, or by setting `disposition: rejected` in the review's frontmatter."
+- "Implementation commits land on `<current-branch>` and an implementation report sits
+  in `implementation/`, but no verification review exists — consider verifying the
+  implementation against the spec's acceptance criteria before finishing."
+- "The ledger's last disposition line is `deferred` — this thread is paused; the only
+  recorded way forward is to append a `resumed` line to `ledger.md` before continuing."
+- "Everything is implemented and verified — consider the finish step: update the living
+  docs, set the spec's `status.implemented` latch, and append `closed: done` to the
+  ledger."
 
-The chat reply may include one or two clarifying questions if the advisory pass surfaces ambiguity the skill cannot resolve from the thread alone — but the primary content is the 2–4 suggestions.
+The chat reply may include one or two clarifying questions if the fold surfaces
+ambiguity the skill cannot resolve from the thread alone — but the primary content is
+the three-question answer plus the 2–4 suggestions.
 
-## Optional Inbox Capture
+## Path References
 
-AFTER surfacing the 2–4 suggestions, the skill MAY ask the user whether to save any of them as Inbox items for later. This is the ONLY artifact-writing path this skill exposes, and it is GATED ON EXPLICIT USER OPT-IN.
+When citing artifacts in the chat reply:
 
-Rules:
-
-- **Default OFF.** The skill does NOT capture by default. The chat suggestions stay in chat. The user must affirmatively opt IN.
-- **The opt-in MUST be explicit.** Suggested phrasing (executor discretion): "Want to save any of these as Inbox items for later?" / "Should I park any of these in `inbox/open/`?" The user's response must be an affirmative explicit acceptance — silence, ambiguity, or "maybe later" does NOT constitute opt-in.
-- **On opt-in,** write an inbox item under `docs/threads/<thread>/inbox/open/` named `<UTC>-<kebab-desc>-inbox-item.md`. The item body begins with a mandatory `**Why:**` line summarising the suggestion, followed by any relevant context from the thread inspection. Confirm back to the user once written.
-- **On opt-out (or no response).** No inbox item is written. The suggestions stay in chat only. The skill exits cleanly without any file write.
-- **No auto-capture, no default capture, no capture without affirmative user consent.** The skill is advisory by default; the inbox-capture path is opt-in by design.
-
-The user may opt in to saving ONE suggestion (e.g., "save the merge suggestion as an inbox item so I remember it next week") while ignoring the others. Each per-suggestion opt-in is independent. The user may also opt in to saving the entire suggestion list — write one inbox item per saved suggestion.
+- **Within-thread references are thread-relative** — written relative to the thread
+  root (`specs/001/spec.md`, `plans/001/reviews/…`), never from the repo root.
+- **Cross-thread references are repo-relative** — (`docs/threads/<other>/…`).
+- **Never absolute.**
 
 ## Workflow
 
-1. **Resolve the active thread.** Identify the thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If the thread is ambiguous (multiple roots, none clearly active), ASK the user per `## Inputs` above. Do NOT pick silently.
+1. **Resolve the active thread.** Identify the thread root at
+   `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root,
+   that is the thread. If the thread is ambiguous, ASK the user per `## Inputs`. Do NOT
+   pick silently.
 
-2. **Capture any user hint.** If the user passed an explicit hint about what they are trying to figure out, hold it as supplementary framing for the advisory pass. If no hint was passed, run the default thread-context pass.
+2. **Capture any user hint.** If the user passed an explicit hint, hold it as
+   supplementary framing. If no hint was passed, run the default pass.
 
-3. **Inspect the folders + recent commits per `## Thread Inspection`.** Read READ-ONLY. Enumerate non-empty folders by artifact count. Sample recent commits on the current branch. Note any obvious signals (open inbox items count, conflict markers in artifacts, two competing variants at the same target version, etc.).
+3. **Read and fold the state per `## What to Read and Fold`.** Read READ-ONLY: the
+   ledger (last `tier:` line → tier; last disposition event → disposition); the lineage
+   folders that exist (→ spine position); the frontmatter `status:` map of each
+   proposal/spec (→ derived condition); the `reviews/` folders (undisposed = open
+   findings); recent commits on the current branch.
 
-4. **Compose 2–4 chat suggestions tied to observable signals.** Each suggestion names the action that would execute it. Apply the Anti-Sycophancy Stance when warranted — if the user's hint conflicts with what the thread shows, surface the conflict in the suggestion list rather than rubber-stamping the hint.
+4. **Answer the three questions per `## The Three Questions`** — what now, what next, is
+   it closed — and **compose 2–4 next-action suggestions** tied to the folded state.
+   Apply the Anti-Sycophancy Stance when the user's hint conflicts with the folded
+   state.
 
-5. **Present the suggestions in chat.** The chat reply is the deliverable. No artifact is written.
-
-6. **ASK (optional) whether to save any suggestion as an Inbox item.** If YES with explicit opt-in, write inbox items per `## Optional Inbox Capture` (one item per saved suggestion). If NO (or silent), STOP — exit cleanly with no file write.
-
-7. **Final state.** The chat reply with suggestions IS the deliverable. If the user opted in to capture, the inbox items are the persistent artifacts; this skill itself wrote nothing beyond those. No closing remark.
+5. **Present the answer in chat.** The chat reply is the deliverable. No artifact is
+   written. No closing remark.
 
 ## Commit Policy
 
-This skill writes no artifacts by default and so does NOT commit anything. If the user opts IN to capture, the resulting inbox item is written to disk but NOT committed; any commit is the surrounding session's decision.
+This skill writes no artifacts and so does NOT commit anything. It does NOT stage,
+commit, push, branch, or merge. It runs entirely in advisory, read-only mode.
 
-This skill itself does NOT stage, does NOT commit, does NOT push, does NOT branch, does NOT merge. It runs entirely in advisory mode.
+## Read-Only Discipline
 
-## Immutability
+The read-and-fold pass reads the ledger, the seed, proposals, specs, plans,
+implementation records, and reviews READ-ONLY — it does NOT edit them, does NOT rewrite
+them, does NOT add or change frontmatter, does NOT append a ledger line, does NOT
+propose edits to their bodies.
 
-The Thread Inspection pass reads artifacts under `proposals/`, `specs/`, `plans/`, `discussions/`, and `inbox/open/` READ-ONLY — does NOT edit them, does NOT rewrite them, does NOT add frontmatter to them, does NOT propose edits to their bodies during inspection.
-
-The chat reply containing the 2–4 suggestions is EPHEMERAL — not a committed artifact, not part of the thread's reviewable history. If the user wants any suggestion preserved, the opt-in capture path is the durable mechanism (an inbox item under `inbox/open/` is the persistent record).
-
-The skill does NOT modify inbox state. It does NOT move items from `inbox/open/` to `inbox/processed/` or `inbox/dropped/`. Inbox state transitions are manual file moves; status is a property of the folder, not of the file.
-
-No YAML frontmatter beyond the mandatory fields is added to inbox items this skill writes. The inbox item body starts with a `**Why:**` line and free-form context after — nothing else.
+The chat reply with the three-question answer and the suggestions is EPHEMERAL — not a
+committed artifact, not part of the thread's reviewable history. State in this workflow
+is derived, never stored: this skill folds the existing events into an answer and writes
+nothing back. If the user wants a derivable fact recorded, the durable mechanisms are
+the workflow's own append-only surfaces (the ledger, a new record, an artifact's
+frontmatter latch) written by the skills that own them — never by this reader.
