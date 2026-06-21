@@ -1,14 +1,14 @@
 ---
 name: review-proposal-interactive
-description: Walk a proposal artifact one finding at a time with the user, testing each finding against the proposal and capturing decisions when the user wants the proposal review kept collaborative.
+description: Walk a proposal artifact one finding at a time with the user, testing each finding and consistency with the thread's decision logs, then emit a references-first review record into the proposal's reviews/ folder when the user wants the proposal review kept collaborative.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.2
+  version: 2.0.0
 ---
 
 # Review Proposal Interactive
 
-This is a LIGHTWEIGHT review — the walk checks for the three things a proposal can plausibly miss at its early stage: gaps, risks, and ambiguities. It stops there. Missing semantic-contract elements (intended outcome, scope/non-scope, acceptance guidance) are not findings against a proposal because a proposal is an early sketch and does not promise to carry them; those belong in a later, heavier review of the spec that follows.
+This is a LIGHTWEIGHT review — the walk checks for the things a proposal can plausibly miss at its early stage: gaps, risks, ambiguities, and consistency with the thread's decision logs. It stops there. Missing semantic-contract elements (intended outcome, scope/non-scope, acceptance guidance) are not findings against a proposal because a proposal is an early sketch and does not promise to carry them; those belong in a later, heavier review of the spec that follows.
 
 ## Anti-Sycophancy Stance
 
@@ -31,21 +31,28 @@ If you believe a finding is being dismissed without real reason, refuse to log i
 
 ## Inputs
 
-This skill accepts ONE input: a proposal artifact path under `docs/threads/<thread>/proposals/<UTC>-<kebab-desc>-proposal.md`. The path may be passed absolute or relative to the repo root.
+This skill accepts ONE input: a proposal artifact path. A proposal lives inside its **lineage folder** under the thread root:
 
-If the path is not supplied, ASK the user which proposal to review — do not pick by recency. If multiple plausible proposal artifacts exist in `docs/threads/<thread>/proposals/` and the user's reference is vague ("the proposal", "the latest proposal", "the auth one"), ASK the user which artifact is intended — there is NO global "latest proposal" algorithm. Silently picking the most recent file would hide a real decision — which proposal won, which variant survived discussion — behind a sort order.
+```text
+docs/threads/<thread>/proposals/NNN[-<desc>]/proposal.md
+```
 
-The folder `docs/threads/<thread>/proposals/` is the only location proposal artifacts land in. If the path passed is not under that folder, refuse and ASK the user to confirm — a proposal not in `proposals/` is either a misplaced draft (still in `.wip/`, not yet emitted) or not actually a proposal artifact.
+where `NNN` is a zero-padded 3-digit lineage sequence (`001`, `002`, …) and `-<desc>` is an optional kebab slug used only to distinguish one lineage from another. The lineage folder (the full path) is the unit of reference — `proposal.md` is meaningless bare. The path may be passed thread-relative or repo-relative.
+
+If the path is not supplied, ASK the user which proposal to review — do not pick by recency or by highest lineage number. If a thread holds multiple proposal lineages (`proposals/001-api/`, `proposals/002-cli/`) and the user's reference is vague ("the proposal", "the latest proposal", "the auth one"), ASK which lineage is intended. There is NO "most recent `NNN`" or "highest number" fallback. Silently picking would hide a real decision — which proposal lineage is meant — behind a sort order.
+
+A proposal lives only inside a `proposals/NNN[-<desc>]/` lineage folder. If the path passed is not a `proposal.md` under such a folder, refuse and ASK the user to confirm — a file elsewhere is either a misplaced draft (still in `.wip/`, not yet emitted) or not actually a proposal artifact.
 
 ## What This Skill Reviews
 
-A proposal-review pass surfaces three categories of finding:
+A proposal-review pass surfaces these categories of finding:
 
 - **Gaps** — missing intent (what the proposal is trying to do is unclear), missing context (why the proposal is being raised now is unclear), or a rough shape so under-specified that a downstream reader cannot react to it.
 - **Risks** — named or unnamed downstream consequences the proposal commits to without acknowledging. Cost, complexity, scope creep, dependency surprises, security or correctness pitfalls implied by the rough shape, breakages of existing behavior the proposal does not flag.
 - **Ambiguities** — statements that admit more than one reasonable reading. Soft language ("robust", "scalable", "modern", "clean", "appropriate", "as needed") and any rough shape two different implementers would translate into two different artifacts.
+- **Consistency with the thread's decision logs** — part of the standard proposal review. Verify the proposal is consistent with the decision logs already recorded in the thread: no settled decision contradicted, no previously-settled point silently reversed. A proposal that quietly walks back a decision the thread already settled is a finding, and the contradicting decision log is the evidence.
 
-This is a LIGHTWEIGHT review — gaps, risks, ambiguities only. Heavier checks (semantic-contract coverage, source-spec adherence, code-vs-original-intent fidelity, general-purpose code quality) belong in downstream reviews of the spec, plan, and implementation that follow. A finding that escalates beyond gaps/risks/ambiguities is out of scope here — flag it as a suggestion for a later, heavier review rather than performing the heavier check inline.
+This is a LIGHTWEIGHT review — gaps, risks, ambiguities, and decision-log consistency only. Heavier checks (semantic-contract coverage, source-spec adherence, code-vs-original-intent fidelity, general-purpose code quality) belong in downstream reviews of the spec, plan, and implementation that follow. A finding that escalates beyond these categories is out of scope here — flag it as a suggestion for a later, heavier review rather than performing the heavier check inline.
 
 ## Walk Format
 
@@ -53,77 +60,82 @@ The walk presents the candidate findings list to the user up front (after the sk
 
 For each finding (or topic, or component — grain is the executor's discretion, but each loop iteration must settle ONE thing):
 
-1. **Surface the finding.** State the finding with its severity tag — suggested vocabulary `blocker` (the proposal cannot reasonably escalate downstream without addressing this), `issue` (the proposal can escalate, but a downstream reader will hit confusion), `nit` (worth flagging but not blocking). State its category (gap / risk / ambiguity). State why it matters for whoever picks up the proposal next.
-2. **Cite the evidence.** Quote the proposal section heading or a short passage (≤ one sentence) the finding is grounded in. Reference, do not recite — do not paste large blocks of the proposal back.
+1. **Surface the finding.** State the finding with its severity tag — suggested vocabulary `blocker` (the proposal cannot reasonably escalate downstream without addressing this), `issue` (the proposal can escalate, but a downstream reader will hit confusion), `nit` (worth flagging but not blocking). State its category (gap / risk / ambiguity / decision-log inconsistency). State why it matters for whoever picks up the proposal next.
+2. **Cite the evidence.** Quote the proposal section heading or a short passage (≤ one sentence) the finding is grounded in; for a decision-log inconsistency, cite the contradicting decision-log entry. Reference, do not recite — do not paste large blocks of the proposal back.
 3. **ASK the user for their view.** Open the loop with a question that gives the user room to answer: "What's your read on this?" / "Does the proposal already cover this somewhere I missed?" / "How does this land for you?". Accept the user's freeform answer.
 4. **TEST the user's explanation against the proposal artifact.** Re-read the cited section. Check whether the user's framing actually resolves the finding or merely defends it. Look for: (a) a section of the proposal you missed that genuinely covers the finding, (b) an upstream decision log the proposal cites that the user can point to, (c) context the user has but the proposal does not record. ASK the user for their view when useful AND TEST the user's explanation against the artifact — do not just accept. The user disagreeing with you is not itself evidence; the user pointing at a passage that resolves the finding IS evidence. Push back per the `## Anti-Sycophancy Stance` when the test fails.
-5. **Settle the finding.** Together, settle as one of:
-   - `resolved` — the proposal already covers the finding (a section the reviewer missed), OR the user's clarification points to an upstream artifact (a decision log, prior proposal, settled context) that genuinely resolves it. Settlement stays in the decision log only.
-   - `rejected` — the finding is not actually a finding (false positive from the candidate-list draft). Settlement stays in the decision log only.
-   - `accepted` — the finding is genuine and actionable; it will need to be addressed (typically by re-versioning the proposal, opening a discussion, or escalating to spec). Dumps to the inbox-open review-finding artifact at end-of-session.
-   - `deferred` — the finding is genuine but the user wants to park it for later (out of scope for this review run; address in a future version or a future review). Dumps to the inbox-open review-finding artifact at end-of-session.
-   - `parked` — same as deferred but the user has explicitly asked to capture it as an Inbox item rather than treat it as a review-finding. The walk may route to an inbox-capture flow instead of (or in addition to) the inbox-open dump.
-6. **Append a record to the decision log.** Use the `## D<N>: <Finding title>` shape. `Decision: <settlement>` and `Rationale: <one or two sentences>`. Include the severity tag and category in the title or rationale so the decision log carries the per-finding outcome legibly. If the settlement included a dissent per the `## Anti-Sycophancy Stance`, the rationale line carries that dissent verbatim.
+5. **Settle the finding** as one of:
+   - `resolved` — the proposal already covers the finding (a section the reviewer missed), OR the user's clarification points to an upstream artifact (a decision log, prior proposal, settled context) that genuinely resolves it. Does not appear in the emitted review report.
+   - `rejected` — the finding is not actually a finding (false positive from the candidate-list draft). Does not appear in the emitted review report.
+   - `actionable` — the finding is genuine and the proposal needs to address it (typically by revising the proposal, opening a discussion, or escalating to spec). Appears in the emitted review report.
+   - `deferred` — the finding is genuine but the user wants to park it for later (out of scope for this review run; address in a future revision or a future review). Appears in the emitted review report, noted as deferred.
+6. **Note the settlement in-session.** Keep the per-finding outcome (settlement, severity, category, rationale, any dissent per the `## Anti-Sycophancy Stance`) in working memory through the walk; it feeds the report's `## Findings` and `## Next Actions` at the end. Tell the user: `Settled: <finding title> — <settlement>.`
 7. **Move to the next finding.** Do not move on while the current finding is still ambiguous — settle it cleanly first. Silence is not a settlement.
 
-If a finding splits into sub-findings during the walk (e.g., a "risk" that turns out to be two unrelated risks once examined), settle each sub-finding as its own `## D<N>` record rather than collapsing them.
+If a finding splits into sub-findings during the walk (e.g., a "risk" that turns out to be two unrelated risks once examined), settle each sub-finding separately rather than collapsing them.
 
-## Output Artifacts
+## Report Format — References-First
 
-This skill produces UP TO TWO artifacts. The decision log is the primary deliverable; the inbox-open review-finding dump is conditional.
+This skill emits ONE review **record** at the end of the walk, organized **references-first**: a `## References` section comes FIRST, naming the artifact under review BEFORE any verdict. The review carries the settled walk: the actionable and deferred findings are the report's findings; resolved and rejected findings do not appear (they were settled away during the walk and need no further action). The body MUST cover the following six sections in this exact order:
 
-### Decision Log (primary, written when the walk produces at least one settlement)
-
-```text
-docs/threads/<thread>/discussions/<YYMMDDHHMMSSZ>-<kebab-desc>-decision-log.md
-```
-
-The `decision-log` artifact-type suffix is MANDATORY — no other suffix is permitted, and the artifact MUST NOT use a versioned form (decision logs are records, not versioned artifacts).
-
-- The 12-character UTC stamp `YYMMDDHHMMSSZ` is captured ONCE at write time — never re-derive after writing.
-- `<kebab-desc>` is typically `<proposal-slug>-review` or `proposal-review-<topic>` capturing the review topic. Confirm the slug with the user before the first settlement.
-- The `discussions/` folder is created on-demand. Do not pre-create empty folders.
-
-The decision log is **append-only**. Each settled finding is appended as one record with a sequential per-log local heading:
-
-```markdown
-## D<N>: <Finding title> (<severity> · <category>)
-
-Decision: <settlement: resolved / rejected / accepted / deferred / parked>
-
-Rationale: <one or two sentences explaining why; flag any dissent per the Anti-Sycophancy stance>
-```
-
-Where `N` starts at `1` for the first settlement in this log and increments by `1` per settlement IN THIS LOG. The `## D<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's path.
-
-Resolved AND rejected findings remain in the decision log only. They are NOT written to the inbox-open dump — they are already settled and need no further action.
-
-### Inbox-Open Review-Finding Dump (conditional, written ONLY if unresolved actionable findings remain)
-
-```text
-docs/threads/<thread>/inbox/open/<YYMMDDHHMMSSZ>-<kebab-desc>-review-finding.md
-```
-
-The `review-finding` artifact-type suffix is MANDATORY.
-
-This artifact is written ONLY at the END of the walk, and ONLY if at least one `accepted` / `deferred` / `parked` finding remains. **No Inbox file if nothing remains.** If every finding was settled as `resolved` or `rejected`, no inbox-open dump is written — the decision log is the only artifact, and the closing message states explicitly that no unresolved findings remain. The same rule reads as "no Inbox dump if all findings resolved" or "no Inbox file when nothing remains" — capturing nothing produces nothing.
-
-When written, the inbox-open dump carries ONLY the unresolved actionable findings in this six-section findings-first shape:
-
-1. **`## Verdict`** — overall judgment on what remains (typically `partially ready` or `not ready` if findings remain; the dump itself never carries a `ready` verdict because nothing would land in it in that case).
-2. **`## Findings`** — only the `accepted` / `deferred` / `parked` findings, each carrying its severity tag and category.
-3. **`## Evidence`** — proposal section heading or short quote for each finding.
-4. **`## References`** — the proposal path under review (absolute path), the decision log path emitted by this same walk (absolute path), and any related decision logs or prior review-findings by absolute path.
+1. **`## References`** — list every artifact the review reads or depends on, naming the proposal under review FIRST. Format each entry as `- <description>: <path>`. Each path carries a description — never emit a bare path list. Use **thread-relative** paths for artifacts within the same thread (e.g. `proposals/001/proposal.md`, `proposals/001/discussions/<UTC>-<desc>-decision-log.md`), and **repo-relative** paths for cross-thread artifacts (e.g. `docs/threads/<other>/…`). **Never absolute.** Include the proposal path, any decision logs the consistency check relied on, and any prior reviews on the same proposal.
+2. **`## Verdict`** — overall judgment on the proposal given the walk's settlements. Suggested vocabulary (executor MAY refine): `ready` (no actionable findings remain; the proposal can escalate as-is), `partially ready` (some actionable findings remain; specify which), `not ready` (substantial revision needed first). One overall verdict plus a one-line tether to the highest-impact remaining finding.
+3. **`## Findings`** — only the `actionable` and `deferred` findings from the walk, each carrying its severity tag and category. Mark deferred findings as such. Resolved and rejected findings are NOT included.
+4. **`## Evidence`** — proposal section heading or short quote for each finding above; for a decision-log inconsistency, the contradicting decision-log entry.
 5. **`## Open Questions`** — clarifications worth confirming. Frame as questions, not as gaps to autofill.
-6. **`## Next Actions`** — what to do next for each unresolved finding. Typically: re-version the proposal, open a dedicated discussion, escalate to spec, or run a dedicated adversarial pressure pass (see `## Adversarial Pass Delegation`).
+6. **`## Next Actions`** — what to do next for each remaining finding. Typically: revise the proposal in place (it is a versioned artifact, alive while in flight — see `## Immutability`), open a dedicated discussion, escalate to spec, or run a dedicated adversarial pressure pass (see `## Adversarial Pass Delegation`).
 
-Resolved and rejected findings are NOT repeated in the inbox-open dump — they are already settled in the decision log and require no further triage.
+Skip a section entirely rather than padding it — if `Open Questions` has nothing real to add, drop the heading. The single exception is `## References`, which is mandatory and always comes first. Do NOT collapse two sections into one.
+
+## Output Artifact
+
+A proposal review is a **record** that lands in the **target proposal's own `reviews/` folder**:
+
+```text
+docs/threads/<thread>/proposals/NNN[-<desc>]/reviews/<YYMMDDHHMMSSZ>-<kebab-desc>-review.md
+```
+
+The review nests inside the proposal lineage folder it serves — records attach to the spine node they serve. There is NO inbox and NO open/processed/dropped lifecycle; nothing is moved between folders to express status (see `## Disposition`).
+
+- The `review` artifact-type token is MANDATORY — no other suffix is permitted, and the artifact MUST NOT use a versioned form (`v<N>`) because reviews are records, not versioned artifacts.
+- The 12-character UTC stamp `YYMMDDHHMMSSZ` is captured ONCE at write time — never re-derive after writing.
+- `<kebab-desc>` is typically `<proposal-slug>-review` or a phrase capturing the review topic. Confirm the slug with the user before writing.
+- The proposal's `reviews/` folder is created on-demand. Do not pre-create empty folders.
+
+Example path:
+
+```text
+docs/threads/260518200115Z-auth/proposals/001/reviews/260521101212Z-auth-flow-review.md
+```
+
+The review record always carries the full six-section references-first report. If every finding was settled as `resolved` or `rejected` during the walk, the report still gets written: `## Verdict` reads `ready`, `## Findings` is empty (drop the heading), and the closing message states that no actionable findings remain. A walk that produces only resolved/rejected findings can be disposed `accepted` at emission (see `## Disposition`) — there is nothing left to act on.
+
+## Disposition
+
+A review carries its own **disposition** — accepted or rejected — in its YAML frontmatter, under a `status:` map. A review with **no `status.disposed` field is open**, mechanically, by parse. There is no folder move and no separate disposing record; status is read from frontmatter, never from a folder location. The shape, set once:
+
+```yaml
+status:
+  disposed: <YYMMDDHHMMSSZ>
+  disposition: accepted | rejected
+  rationale: <thread-relative path>   # optional
+```
+
+Because this walk reaches an agreed conclusion with the user, ASK whether to dispose the review at emission, or leave it open:
+
+- **Leave open** (no `status.disposed`): emit the review with **no frontmatter at all** (a record with no lifecycle status of its own carries no frontmatter). Someone disposes it later. This is the right default when actionable findings remain that the user has not yet decided how to handle.
+- **Accept-and-revise**: if the user accepts the review's findings and will revise the proposal, set `disposition: accepted` — the revision of the proposal IS the record; no separate accepting document is required.
+- **Reject**: if the user rejects the review's findings, set `disposition: rejected` — no separate disposing document is required.
+
+The optional `rationale` is a thread-relative path to a discussion or decision log capturing the reasoning; a discussion no longer owns disposition, it is only the optional linked rationale. If the walk warranted recording the settlement reasoning, emit a `decision-log` record in the proposal lineage's `discussions/` folder (`docs/threads/<thread>/proposals/NNN[-<desc>]/discussions/<UTC>-<kebab-desc>-decision-log.md`) and point `rationale` at it (thread-relative).
+
+Disposition is **set-once**: changing your mind is a new review or a thread reopen, not a frontmatter flip-flop. Set it (or leave it open) once at emission; do not flip it on a later invocation.
 
 ## Adversarial Pass Delegation
 
 Adversarial pressure on a proposal — pre-mortem analysis, devil's-advocate cross-examination, "what's missing that would kill this" framing — is out of scope for this skill. This skill does NOT perform an adversarial pass during the walk.
 
-If during the walk the user wants to surface adversarial findings beyond the standard gaps/risks/ambiguities pass, suggest running a separate adversarial pass after the walk closes. The walk continues with the standard settlements; any adversarial pass happens outside this walk. Cite any resulting adversarial artifact under `## References` in a subsequent review run if the user wants those findings folded into a future review-finding artifact.
+If during the walk the user wants to surface adversarial findings beyond the standard gaps/risks/ambiguities/decision-log pass, suggest running a separate adversarial pass after the walk closes. The walk continues with the standard settlements; any adversarial pass happens outside this walk. Cite any resulting adversarial artifact under `## References` in a subsequent review run if the user wants those findings folded into a future review record.
 
 This skill does NOT mark a proposal as "fully reviewed" just because the walk produced settlements. A proposal that has had a collaborative review pass but not an adversarial pass is still missing that layer — flag that in `## Next Actions` if the proposal is high-stakes enough to warrant it.
 
@@ -131,54 +143,48 @@ This skill does NOT mark a proposal as "fully reviewed" just because the walk pr
 
 1. **Resolve the active thread.** Identify the thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent UTC stamp.
 
-2. **Resolve the proposal artifact.** Detect the proposal path from the user's invocation. If the path is unsupplied, vague ("the proposal"), or multiple plausible proposals exist in `docs/threads/<thread>/proposals/`, ASK the user which is intended. Do not pick by recency. Confirm the resolved path before reading.
+2. **Resolve the proposal artifact.** Detect the proposal path from the user's invocation. If the path is unsupplied, vague ("the proposal"), or multiple proposal lineages exist under `docs/threads/<thread>/proposals/`, ASK the user which lineage is intended. Do not pick by recency or highest `NNN`. Confirm the resolved path before reading.
 
-3. **Read the proposal READ-ONLY.** Emitted proposal artifacts are immutable. This skill reads the proposal but does NOT edit it, does NOT rewrite it, does NOT add frontmatter, and does NOT propose edits to the proposal body during the walk.
+3. **Read the proposal READ-ONLY.** A proposal is a versioned artifact, alive in flight; this skill reviews it but does NOT edit it, does NOT rewrite it, does NOT touch its frontmatter, and does NOT propose edits to the proposal body during the walk.
 
-4. **Identify the candidate findings list.** Walk the proposal once end-to-end and draft a candidate list of findings tagged gap / risk / ambiguity with suggested severity. Cluster related findings rather than fragmenting. Aim for fewer, higher-quality candidates over many minor ones.
+4. **Read the thread's decision logs.** To run the consistency-with-decision-logs check, locate the relevant decision logs in the thread (the proposal lineage's `discussions/`, and any other discussions that settled decisions bearing on this proposal). Note any contradiction or silent reversal as a candidate finding.
 
-5. **Confirm the candidate findings list with the user before walking.** List the candidates by short title back to the user and ASK whether the list is complete and correctly ordered. Re-ordering before the loop starts is cheaper than re-doing settlements later. If the user adds findings the candidate list missed, fold them in. If the user removes findings as not worth walking, drop them.
+5. **Identify the candidate findings list.** Walk the proposal once end-to-end and draft a candidate list of findings tagged gap / risk / ambiguity / decision-log inconsistency with suggested severity. Cluster related findings rather than fragmenting. Aim for fewer, higher-quality candidates over many minor ones.
 
-6. **For each finding IN ORDER, run the per-finding loop from `## Walk Format`.** Surface → cite evidence → ASK the user → TEST the user's explanation against the artifact (do not just accept) → settle → log. Push back per the `## Anti-Sycophancy Stance` when warranted.
+6. **Confirm the candidate findings list with the user before walking.** List the candidates by short title back to the user and ASK whether the list is complete and correctly ordered. Re-ordering before the loop starts is cheaper than re-doing settlements later. If the user adds findings the candidate list missed, fold them in. If the user removes findings as not worth walking, drop them.
 
-7. **Capture the UTC stamp.** When the FIRST settlement lands and the decision log needs to be created, compute the 12-character `YYMMDDHHMMSSZ` stamp at write time. Stamp once and reuse — never re-derive after writing. The decision log is created LAZILY on the first settlement (per `## Decision Log Lazy Creation`).
+7. **For each finding IN ORDER, run the per-finding loop from `## Walk Format`.** Surface → cite evidence → ASK the user → TEST the user's explanation against the artifact (do not just accept) → settle → note in-session. Push back per the `## Anti-Sycophancy Stance` when warranted.
 
-8. **Append per-settlement records to the decision log.** After each settlement, append a `## D<N>: <Finding title>` record per `## Walk Format` step 6. Tell the user: `Decision saved: <short summary>.`
+8. **At the END of the walk: draft the references-first review report.** Capture the 12-character `YYMMDDHHMMSSZ` stamp at write time (stamp once, never re-derive). Compose the six sections in order: `## References` → `## Verdict` → `## Findings` → `## Evidence` → `## Open Questions` → `## Next Actions`. References comes first and names the proposal under review before any verdict. The report carries only the `actionable` and `deferred` findings; resolved and rejected findings do not appear.
 
-9. **At the END of the walk: write the inbox-open dump IF unresolved findings remain.** If at least one `accepted` / `deferred` / `parked` finding remains, capture the UTC stamp for the dump (separate from the decision log's stamp), draft the six-section findings-first report covering only the unresolved findings, and write the artifact to `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-review-finding.md`. If ALL findings were settled as `resolved` or `rejected`, do NOT write an inbox-open file — capturing nothing produces nothing, and the closing message says so explicitly.
+9. **Decide disposition.** ASK whether to dispose the review at emission (`accepted` / `rejected`) or leave it open, per `## Disposition`. If a `rationale` discussion/decision-log is warranted, emit it in the proposal lineage's `discussions/` folder and point `rationale` at it (thread-relative).
 
-10. **Final message.** Cite the decision log path. If the inbox-open dump was written, cite its path too. If the dump was NOT written, state explicitly: `No unresolved findings — no inbox file written.` No closing remark.
+10. **Write the review artifact.** Create `docs/threads/<thread>/proposals/NNN[-<desc>]/reviews/<UTC>-<kebab-desc>-review.md`. The `review` artifact-type suffix is MANDATORY. The proposal's `reviews/` folder is created on-demand. If left open, the review carries no frontmatter; if disposed, it carries the `status:` map per `## Disposition`.
 
-## Decision Log Lazy Creation
-
-The decision log is created LAZILY at the FIRST settled finding — not proactively in step 4 or 5. If the candidate-list confirmation produces no walk (user decides the candidates are all false positives and aborts) and no findings are settled, NO decision log is written. An interrupted walk with no settled findings leaves no artifact.
-
-A walk that produces no decisions produces no log. The skill keeps state in-session until the first settlement, then creates the log at write time of the first `## D<N>` record.
-
-If the user pauses mid-walk after at least one settlement has landed, the partial decision log is durable: every settlement up to the pause is recorded. Resuming the walk on a later invocation appends to the same log (the next `## D<N+k>` record).
+11. **Final message.** Cite the review path (thread-relative). If a rationale decision log was written, cite its path too. State the disposition (open / accepted / rejected). If no actionable findings remained, say so explicitly: `No actionable findings — proposal review is clean.` No closing remark.
 
 ## Scope Drift
 
-When the user introduces a branch that is outside the proposal-review walk — a finding about a different proposal, a tangent about the process being used, a refactor idea unrelated to the proposal's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
+When the user introduces a branch that is outside the proposal-review walk — a finding about a different proposal lineage, a tangent about the process being used, a refactor idea unrelated to the proposal's intent — do not silently follow them and do not let the walk grow into a different shape than the one being discussed. Propose ONE of:
 
-1. **Park as an Inbox item** (PREFERRED for non-blocking side-findings). Captures a short markdown record at `docs/threads/<thread>/inbox/open/<UTC>-<kebab-desc>-inbox-item.md` so the side-finding survives without polluting this review's decision log.
-2. **Split into its own decision log.** When the branch is itself a multi-finding discussion that deserves its own walk, start a new `<UTC>-<kebab-desc>-decision-log.md` in `discussions/` for it.
+1. **Capture as a seed for a future thread** (PREFERRED for non-blocking side-findings unrelated to this proposal). A tangential item that deserves its own work later becomes the genesis of a separate thread, not clutter in this review. (V2 has no inbox; tangential items are served by a future thread's seed or by a tracker ticket.)
+2. **Split into its own discussion.** When the branch is itself a multi-point discussion that deserves its own walk, start a new `decision-log` discussion in the proposal lineage's `discussions/` folder for it.
 3. **Defer to "later".** When the branch is not yet shaped enough to capture, name it in conversation and let it pass.
 
 ASK the user which. Do not pick silently.
 
 ## Commit Policy
 
-This skill NEVER auto-commits any emitted artifact — neither the decision log nor the (conditional) inbox-open review-finding dump. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator skill, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch.
+This skill NEVER auto-commits any emitted artifact — neither the review record nor any rationale decision log it writes. Writing the file is where the skill stops. Any commit is the surrounding session's decision — the user, an orchestrator skill, or a separate commit-helper flow. Do not stage, do not commit, do not push, do not branch.
 
 The same prohibition applies to any draft material under `docs/threads/<thread>/.wip/` — drafts are editable during the session but are never committed by this skill.
 
 ## Immutability
 
-Emitted decision logs are append-only. Once a `## D<N>` record has been written, it is part of the decision log's reviewable history and is NOT edited. A revision to a decision settles as a NEW `## D<N+k>` record explaining the change — never an in-place edit of an earlier record. The log itself is the state — there is no separate state file, no progress tracker.
+A review is a **record**. Its body is frozen at emission — once written into the proposal's `reviews/` folder, the body is part of the thread's reviewable history and is NOT edited. A revision to a review's findings is a NEW review record (new UTC stamp, new kebab-desc), not an in-place body edit. The one carve-out is the review's own frontmatter `status:` map: it is a live surface until the review is disposed (then it freezes too), and **disposition is set-once** — changing your mind is a new review or a thread reopen, never a frontmatter flip-flop.
 
-Emitted review-finding artifacts (the conditional inbox-open dump) are also immutable. Once written into `inbox/open/`, the review-finding is part of the thread's reviewable history and is NOT edited. A revision to a review-finding is a NEW review-finding record (new UTC stamp, new kebab-desc), not an in-place edit.
+Any rationale `decision-log` this skill emits is also a record: append-only and immutable. Once a decision record is written, it is NOT edited; a revision settles as a NEW record explaining the change.
 
-The proposal under review is ALSO IMMUTABLE. The reviewer reads READ-ONLY and does NOT edit the proposal. Findings that warrant revisions to the proposal are surfaced under `## Next Actions` in the inbox-open dump (or noted in the decision log) with the explicit recommendation to emit a NEW proposal record (or to escalate to a spec-level review if the proposal is ready for spec) — never an instruction to edit the existing proposal.
+The proposal under review is a **versioned artifact** — alive while in flight, edited in place through review→revise cycles, and frozen only at its own `status.approved` (or `status.rejected`) latch. The reviewer reads READ-ONLY and does NOT edit the proposal. Findings that warrant revisions are surfaced under `## Next Actions` with the recommendation to revise the proposal in place (if still in flight) or, once it is `approved`/`rejected` and therefore frozen, to open a new lineage — never an instruction for this skill to edit the proposal itself.
 
-No source-relation YAML frontmatter is added to any emitted artifact — lineage between the decision log, the review-finding dump, and the proposal they review lives in the `## References` section (by absolute path), not in metadata on the files. That history is recovered from the body's references, not from the filename.
+No source-relation or lineage frontmatter is added to any emitted artifact (no `Supersedes:`, `Reviews:`, etc.) — the only frontmatter a review ever carries is the lifecycle `status:` map once disposed, and a decision log carries none. Lineage between the review, any rationale decision log, and the proposal they serve lives in the `## References` section (by thread-relative path) and in the artifacts' locations (inside that proposal lineage's folders), not in metadata on the files.
