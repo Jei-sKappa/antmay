@@ -28,6 +28,7 @@
     "plan-strict-interactive",
     "propose-auto",
     "propose-interactive",
+    "record-verdict",
     "report-to-the-owner",
     "review-code-auto",
     "review-code-interactive",

@@ -339,6 +339,14 @@ Perform a thread's terminal handshake — set the spec's implemented latch, appe
 npx skills add Jei-sKappa/skills --skill finish
 ```
 
+#### [`record-verdict`](./skills/workflow/finish-navigate/record-verdict/SKILL.md)
+
+Record a human's explicit lifecycle verdict on a thread artifact by setting the matching set-once frontmatter status latch — approve or reject a proposal, approve a spec, or accept or reject a review — when the user has explicitly decided an artifact's fate and wants that decision stamped into the artifact's status map, never to evaluate or judge the artifact itself.
+
+```sh
+npx skills add Jei-sKappa/skills --skill record-verdict
+```
+
 #### [`whats-next`](./skills/workflow/finish-navigate/whats-next/SKILL.md)
 
 Read a thread's state — ledger, lineage folders, and frontmatter status latches — and fold it on demand to answer "what now / what next / is it closed", then suggest coherent next actions when the user wants a quick map after completing work, hitting uncertainty, or getting stuck.

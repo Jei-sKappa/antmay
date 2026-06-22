@@ -22,6 +22,7 @@
       "source": "./",
       "skills": [
         "./skills/workflow/finish-navigate/finish",
+        "./skills/workflow/finish-navigate/record-verdict",
         "./skills/workflow/finish-navigate/whats-next"
       ]
     },
