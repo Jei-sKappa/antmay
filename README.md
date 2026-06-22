@@ -203,7 +203,7 @@ npx skills add Jei-sKappa/skills --skill implement-plan-interactive
 
 #### [`implement-plan-with-subagents-auto`](./skills/workflow/implement/implement-plan-with-subagents-auto/SKILL.md)
 
-**Autonomous** plan-driven implementation with subagent dual-review loop — takes a plan artifact path and executes every plan task in order by orchestrating a dispatch loop: implementer subagent → spec-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop — and auto-commits per orchestration cycle. REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit and emits a single immutable implementation report record on the way out. Never rewrites history.
+**Autonomous** plan-driven implementation with subagent dual-review loop — takes a plan artifact path and executes every plan task in order by orchestrating a dispatch loop: implementer subagent → plan-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop — and auto-commits per orchestration cycle. REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit and emits a single immutable implementation report record on the way out. Never rewrites history.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-auto

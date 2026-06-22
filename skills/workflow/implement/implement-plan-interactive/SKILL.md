@@ -78,7 +78,7 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 This skill is SINGLE-AGENT. The current session reads the plan, walks the user through each plan task in order, implements each task, and self-reviews after each task. NO subagents are spawned. There is no `Task` tool invocation, no implementer / reviewer separation, no orchestrator role distinct from the implementer role — the single session IS all of those, and the self-review pass after each task plus the user's per-commit ASK gate are the only review layers in this single-agent topology.
 
-If the user wants subagent-driven execution (orchestrator + implementer subagent + spec-compliance reviewer subagent + code-quality reviewer subagent, with re-spawn of a new implementer subagent on review failure), stop and tell them that this run is single-agent only. This skill does not spawn subagents and does not have an orchestrator role separate from the implementer role.
+If the user wants subagent-driven execution (orchestrator + implementer subagent + plan-compliance reviewer subagent + code-quality reviewer subagent, with re-spawn of a new implementer subagent on review failure), stop and tell them that this run is single-agent only. This skill does not spawn subagents and does not have an orchestrator role separate from the implementer role.
 
 ## Workflow
 
