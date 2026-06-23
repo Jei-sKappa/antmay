@@ -3,7 +3,7 @@ name: implement-plan-auto
 description: Execute a structured plan artifact end-to-end on the current working tree, reading tasks in order, self-reviewing after each task, and auto-committing per task when the user wants the plan fully implemented without per-task prompts.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Implement Plan Auto
@@ -81,7 +81,7 @@ This skill is SINGLE-AGENT. The current session reads the plan, executes each pl
 
    a. **Implement the task.** Apply the substeps if the plan is strict-granularity — follow the steps block literally. Infer the obvious substeps if the plan is loose-granularity — read the objective sentence and the verification statement, derive the substeps the human-leaning author left implicit. Make the code changes the task calls for. Use judgment if the plan is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the task report per `## Plan Deviation Policy`.
 
-   b. **Self-review the implementation.** Re-read the diff against the plan task's stated objective + verification + acceptance criteria. Check that the change is coherent with the plan, does not break adjacent code paths the implementer can see, and matches the project's conventions. If the plan task has a mechanical verification block (a `grep` check, a `test -f` check, a `npm test` invocation), run it and record the result. Self-review is in-session — no artifact file is written.
+   b. **Self-review the implementation.** Re-read the diff against the plan task's stated objective + verification + acceptance criteria. Check that the change is coherent with the plan, does not break adjacent code paths the implementer can see, and matches the project's conventions. If the plan task has a mechanical verification block (a `grep` check, a `test -f` check, a `npm test` invocation), run it and record the result. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the task report and the implementation report. Self-review is in-session — no artifact file is written.
 
    c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, jump to the failed-commit branch in `## Commit Policy` — report `BLOCKED` for this plan task and stop the entire run.
 
@@ -111,6 +111,8 @@ implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
 2. **Surprises.** Things the codebase or the task turned out to be that the plan did not anticipate.
 3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
 4. **Follow-ups.** Work this run discovered but intentionally did not do.
+
+The assumptions, forced judgment calls, and known risks the per-task self-review surfaced fold into these existing categories rather than a new section: assumptions and forced judgment calls into Deviations (1), each with its justification; known risks into Follow-ups (4), or Problems hit (3) where the risk was already realized during the run.
 
 **Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
 

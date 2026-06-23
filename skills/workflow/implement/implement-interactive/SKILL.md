@@ -3,7 +3,7 @@ name: implement-interactive
 description: Implement a less-structured input on the current working tree collaboratively, walking implicit tasks with the user, self-reviewing after each task, and asking before each commit when the user wants implementation decisions kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Implement Interactive
@@ -91,7 +91,7 @@ This skill does not use `git worktree` isolation — every implementation runs o
 5. **For each implicit task, in order:**
    a. **Confirm the task with the user before implementing.** Re-state the objective and observable verification. If the user wants to adjust, adjust. If the implementer disagrees with the user's adjustment, push back per the `## Anti-Sycophancy Stance`.
    b. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — but during the walk, prefer to SURFACE the deviation LIVE to the user before applying it, per `## Plan Deviation Policy`. After the user has decided, write the code.
-   c. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent, does not break adjacent code paths, and matches the project's conventions.
+   c. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent, does not break adjacent code paths, and matches the project's conventions. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the task report and the implementation report. Self-review is in-session — no artifact file is written.
    d. **ASK before committing.** Show the user the proposed commit (subject + body + the changed-files list). ASK the user before committing: "Commit these changes as `<proposed subject>`? Or adjust the subject / body / boundary before committing? Or skip the commit and continue making changes?". Wait for the user's answer. On confirm, commit per `## Commit Policy`. On adjust, revise per the user's instruction and re-ASK. On skip, do not commit; continue.
    e. **Commit or skip.** If the user confirmed, commit. If the commit succeeds, capture the SHA + subject. If commit fails, jump to the failed-commit branch in `## Commit Policy` — report `BLOCKED` for this implicit task and stop the entire run.
    f. **Write the task report.** Use the four-state status block from `## Four-State Status Protocol`. The state goes in chat output and/or (if a commit was made) the commit message body.
@@ -120,6 +120,8 @@ implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
 2. **Surprises.** Things the codebase or the task turned out to be that the input did not anticipate.
 3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
 4. **Follow-ups.** Work this run discovered but intentionally did not do — including scope-drift branches the user chose to defer during the walk.
+
+The assumptions, forced judgment calls, and known risks the per-task self-review surfaced fold into these existing categories rather than a new section: assumptions and forced judgment calls into Deviations (1), each with its justification; known risks into Follow-ups (4), or Problems hit (3) where the risk was already realized during the run.
 
 **Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
 

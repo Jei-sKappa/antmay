@@ -3,7 +3,7 @@ name: implement-auto
 description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task when the user wants autonomous implementation without per-step confirmation.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Implement Auto
@@ -73,7 +73,7 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 5. **For each implicit task, in order:**
    a. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the task report per `## Plan Deviation Policy`.
-   b. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent with the input, does not break adjacent code paths the implementer can see, and matches the project's conventions. Self-review is in-session — no artifact file is written.
+   b. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent with the input, does not break adjacent code paths the implementer can see, and matches the project's conventions. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the task report and the implementation report. Self-review is in-session — no artifact file is written.
    c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, report `BLOCKED` for this implicit task and stop the entire run.
    d. **Write the task report.** Use the four-state status block from `## Four-State Status Protocol`. The state goes in chat output and/or the commit message body.
 
@@ -101,6 +101,8 @@ implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
 2. **Surprises.** Things the codebase or the task turned out to be that the input did not anticipate.
 3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
 4. **Follow-ups.** Work this run discovered but intentionally did not do.
+
+The assumptions, forced judgment calls, and known risks the per-task self-review surfaced fold into these existing categories rather than a new section: assumptions and forced judgment calls into Deviations (1), each with its justification; known risks into Follow-ups (4), or Problems hit (3) where the risk was already realized during the run.
 
 **Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
 

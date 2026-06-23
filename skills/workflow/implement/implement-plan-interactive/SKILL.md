@@ -3,7 +3,7 @@ name: implement-plan-interactive
 description: Execute a structured plan artifact collaboratively on the current working tree, presenting each task, self-reviewing, and asking before each commit when the user wants plan implementation kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Implement Plan Interactive
@@ -96,7 +96,7 @@ If the user wants subagent-driven execution (orchestrator + implementer subagent
 
    b. **Implement the task.** Apply the substeps literally if strict-granularity; infer the obvious substeps if loose-granularity. Make the code changes the task calls for. Use judgment if the plan is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — but during the walk, prefer to SURFACE the deviation LIVE to the user before applying it, per `## Plan Deviation Policy`. After the user has decided, write the code.
 
-   c. **Self-review the implementation.** Re-read the diff against the plan task's stated objective + verification + acceptance criteria. Check that the change is coherent with the plan, does not break adjacent code paths, and matches the project's conventions. If the plan task has a mechanical verification block (a `grep` check, a `test -f` check, a `npm test` invocation), run it and record the result. Self-review is in-session — no artifact file is written.
+   c. **Self-review the implementation.** Re-read the diff against the plan task's stated objective + verification + acceptance criteria. Check that the change is coherent with the plan, does not break adjacent code paths, and matches the project's conventions. If the plan task has a mechanical verification block (a `grep` check, a `test -f` check, a `npm test` invocation), run it and record the result. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the task report and the implementation report. Self-review is in-session — no artifact file is written.
 
    d. **ASK the user before committing.** Show the user the proposed commit (subject + body + the changed-files list). ASK: "Commit task `<N>` now as `<proposed subject>`? Or adjust the subject / body / boundary before committing? Or skip the commit and continue making changes?". Wait for the user's answer. On confirm, commit per `## Commit Policy`. On adjust, revise per the user's instruction and re-ASK. On skip, do not commit; continue.
 
@@ -128,6 +128,8 @@ implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
 2. **Surprises.** Things the codebase or the task turned out to be that the plan did not anticipate.
 3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
 4. **Follow-ups.** Work this run discovered but intentionally did not do — including scope-drift branches the user chose to defer during the walk.
+
+The assumptions, forced judgment calls, and known risks the per-task self-review surfaced fold into these existing categories rather than a new section: assumptions and forced judgment calls into Deviations (1), each with its justification; known risks into Follow-ups (4), or Problems hit (3) where the risk was already realized during the run.
 
 **Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
 
