@@ -2,6 +2,7 @@
 version: 2
 status:
   approved: 260622214418Z
+  implemented: 260623090207Z
 ---
 
 # Spec: Structured implementer-subagent outcome report (verification index) for the subagent-driven implement skills
