@@ -1,5 +1,5 @@
 ---
-version: 1
+version: 2
 status:
   approved: 260622214418Z
 ---
@@ -70,7 +70,7 @@ Every acceptance criterion is a pass/fail check; each traces to its requirement 
 
 ### FR-2 — Outcome report content and template
 
-- **AC-2.1** (`DL P3`) — When written, the outcome file contains the core fields `Status`, `Summary`, `Assumptions`, `Blockers & open questions`, and the optional fields `Validation` and `Known risks` only where they apply.
+- **AC-2.1** (`DL P3`) — When written, the outcome file's **epistemic field set** is the core fields `Status`, `Summary`, `Assumptions`, `Blockers & open questions`, plus the optional fields `Validation` and `Known risks` only where they apply. Beyond these, the file carries a `References` navigational pointer (the plan task, for human orientation per the pinned template in AC-2.4 / `DL P11`) — `References` is not one of P3's diff-blind content fields and adds no field beyond this set.
 - **AC-2.2** (`DL P3`) — The outcome file contains no modified-files list and no requirements-addressed list.
 - **AC-2.3** (`DL P3`) — When `Validation` is present, it carries only diff-blind content: a `Ran` bucket (checks beyond the plan's verification block, with results) and a `Not run` bucket (deliberately-skipped checks, with reasons); it does not restate the plan's prescribed verification.
 - **AC-2.4** (`DL P11`) — The file matches the pinned template: an `# Implementer Outcome — Task <N>` heading, a greppable `Status:` line, the fixed section order (Status, Summary, Assumptions, Blockers & open questions, Validation, Known risks, References), and empty optional sections omitted rather than written as "none".
