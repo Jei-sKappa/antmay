@@ -3,7 +3,7 @@ name: plan-loose-auto
 description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact autonomously when the user has the input in hand and wants brief task descriptions suited for a human-leaning implementer.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Plan Loose Auto
@@ -56,6 +56,8 @@ Each task MUST contain at minimum:
 
 1. An **objective sentence** stating what the task accomplishes. One sentence is enough.
 2. **Observable verification** — one sentence stating how a reviewer (or the implementer) will know the task succeeded. A file path, a behavior, a test name, an output to inspect.
+
+This verification sentence is *task-specific* and layers on top of — it never replaces — the project's standing required gates (the bar a project enforces on any code allowed to land; a project may define none). Do not defer a cheap standing gate to a later task; defer to a dedicated closing task only the genuinely expensive, churn-heavy whole-change gates (full end-to-end suites, golden regeneration, living-docs, a full build) the feature would otherwise re-run on every task.
 
 Each task MAY add a third sentence noting context, the input it consumes, or a constraint that affects execution. Three sentences is the ceiling — past that, the plan is sliding into strict granularity and strict-granularity planning is the better fit.
 

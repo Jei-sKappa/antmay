@@ -3,7 +3,7 @@ name: implement-interactive
 description: Implement a less-structured input on the current working tree collaboratively, walking implicit tasks with the user, self-reviewing after each task, and asking before each commit when the user wants implementation decisions kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.1.0
+  version: 2.2.0
 ---
 
 # Implement Interactive
@@ -47,7 +47,7 @@ If the input is ambiguous — for example, the thread holds multiple lineages of
 
 Every task report carries one of FOUR statuses. Use the names verbatim — downstream reviewers match against these tokens.
 
-- `DONE` — the implicit task was completed and the implementer has no concerns to surface. The expected behavior is in place and the self-review pass found nothing to flag. This is the only state that means "ready for next task with no follow-up".
+- `DONE` — the implicit task was completed and the implementer has no concerns to surface. The expected behavior is in place, the self-review pass found nothing to flag, and the project's standing required gates — if the project defines any (see `## Commit Policy`) — pass on the changed code. This is the only state that means "ready for next task with no follow-up".
 - `DONE_WITH_CONCERNS` — the implicit task was completed but at least one concern was surfaced during the walk: partial test coverage, a code smell the user accepted, an ambiguous input area the user made a judgment call on, a possible-but-unverified edge case, a deviation the implementer applied (or that the user accepted live during the walk). The task IS done; the concerns are signals for downstream review or future work.
 - `BLOCKED` — the implicit task could not be completed. Includes failed commits (see `## Commit Policy`), missing dependencies, inaccessible files, contradictory inputs, runtime errors that the implementer did not have enough context to resolve, and any state where progress is genuinely halted. A `BLOCKED` report ends the flow at this task — subsequent implicit tasks are NOT attempted under `BLOCKED` cover.
 - `NEEDS_CONTEXT` — the implicit task cannot proceed without information the implementer does not have. Includes "user clarification needed during the walk", "access to file outside repo needed", "external system credentials needed", "the input contradicts the observed code state and the implementer cannot pick the right side without further input". Distinct from `BLOCKED`: `BLOCKED` hit a hard error during execution; `NEEDS_CONTEXT` did not start because the missing input was a precondition.
@@ -137,6 +137,7 @@ This skill ASKS before each commit. The per-commit gate is non-skippable.
 - **Default boundary granularity:** One commit per implicit task that the agent derives from the input. The boundary is the implicit task; after the implement → self-review pair for a task succeeds, ASK the user whether to commit the diff that constitutes the task.
 - **Override boundary:** When the user's invocation or in-walk instruction contains an EXPLICIT Git instruction — for example, "commit at the end as one commit", "make one commit per file touched", "do not commit, just leave the changes staged" — honor the explicit instruction over the default cadence.
 - **ASK the user before committing at every equivalent checkpoint.** Before EVERY commit boundary the skill would otherwise cross, ASK the user: present the proposed subject, body, and changed-files list; wait for confirm / adjust / skip. Do NOT commit silently. Do NOT commit on a sensible-looking default if the user has been silent.
+- **Baseline gate (before the per-commit ASK):** A task's self-review confirms THAT task's objective; it does not necessarily capture the project's *standing* required gates: the bar a project enforces on any code allowed to land (discoverable from the project's tooling or conventions — for example a `check` / `lint` / `format` / `typecheck` script, a documented pre-commit command, or a CI gate). **A project may define no such gate**, in which case there is nothing to run beyond the self-review and this clause is a no-op. When the project DOES define standing gates, run them on the changed code and resolve any failure BEFORE presenting the per-commit ASK, so the user is asked to confirm a commit that already clears the project's bar — even when the task's own verification omits it. Scope the gate to the changed code where the project's tooling allows it, so an unrelated pre-existing failure elsewhere does not block this task. Only genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) are legitimately deferred to a closing task — a cheap standing commit-gate is not one of those and is not deferred.
 
 Commits use the repository's existing commit convention when it is discoverable from recent history or local tooling. If no convention is obvious, use a short imperative subject that describes the implicit task's objective. Stage only the files the implicit task touched; never run `git add -A` blindly. Commit message bodies MAY include the four-state task report block.
 
