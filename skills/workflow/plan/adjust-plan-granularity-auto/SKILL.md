@@ -3,7 +3,7 @@ name: adjust-plan-granularity-auto
 description: Adjust an existing living plan to a new granularity level autonomously by editing it in place when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Adjust Plan Granularity Auto
@@ -25,6 +25,8 @@ This skill requires TWO inputs. Both are mandatory; the skill refuses to draft a
      - `more-high-level` → collapses substeps into objectives, removes per-task fields, removes verification detail. Adjacent to `looser` but emphasizes "what" over "how". This target fits handoff to a reviewer, sponsor, or planning conversation that does not need the substep block.
 
    - **Specific phrase.** Free-form natural-language instruction targeting a specific shift the four named directions do not cover. Examples: `split task 3 into substeps`, `merge task 5 and 6`, `add verification to all tasks`, `remove acceptance criteria detail`, `tighten just task 2`, `surface the implicit prerequisite in task 4`. The agent interprets the degree of the shift naturally — there is no fixed list of transformations. The agent MUST apply the requested shift while still honoring every plan contract (`## Plan Artifact Contract` below); a specific-phrase instruction that would violate the sequential-isolated-independent contract or the no-parallelization prohibition is REFUSED, not silently followed.
+
+Whenever a shift writes or fills in a task's verification (a `stricter`, `more-implementation-ready`, or EXPAND-style move, or a specific phrase such as `add verification`), that verification is *task-specific* and layers on top of — it never replaces — the project's standing required gates (the bar a project enforces on any code allowed to land; a project may define none). Do not produce a verification block that silently drops a standing gate, and do not push a cheap standing gate into a later task; only genuinely expensive, churn-heavy whole-change gates (full end-to-end suites, golden regeneration, living-docs, a full build) belong in a dedicated closing task.
 
 If either input is missing — no source plan path provided, or no target instruction provided — ASK the user before proceeding. Do not invent a target; do not pick a default direction; do not pick a plan lineage by recency or by highest `NNN`. Both inputs are explicit.
 

@@ -3,7 +3,7 @@ name: adjust-plan-granularity-interactive
 description: Walk an existing living plan task by task to decide whether to split, merge, expand, contract, or leave each task, then edit the plan in place when the user wants to think the granularity shift through collaboratively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Adjust Plan Granularity Interactive
@@ -42,6 +42,8 @@ This skill requires TWO inputs to open the walk. The walk MAY refine either inpu
      - `more-high-level` → collapses substeps into objectives, removes per-task fields, removes verification detail.
 
    - **Specific phrase.** Free-form natural-language instruction targeting a specific shift the four named directions do not cover. Examples: `split task 3 into substeps`, `merge task 5 and 6`, `add verification to all tasks`, `remove acceptance criteria detail`, `tighten just task 2`, `surface the implicit prerequisite in task 4`. The agent interprets the degree of the shift naturally — there is no fixed list of transformations.
+
+Whenever a shift writes or fills in a task's verification (a `stricter`, `more-implementation-ready`, or EXPAND action, or a specific phrase such as `add verification`), that verification is *task-specific* and layers on top of — it never replaces — the project's standing required gates (the bar a project enforces on any code allowed to land; a project may define none). Do not produce a verification block that silently drops a standing gate, and do not push a cheap standing gate into a later task; only genuinely expensive, churn-heavy whole-change gates (full end-to-end suites, golden regeneration, living-docs, a full build) belong in a dedicated closing task.
 
 The interactive walk MAY refine the target instruction as the conversation surfaces. The user may start with a coarse direction and adjust it task-by-task ("go stricter overall but leave task 1 as-is because it's already at the right granularity"), or may start with a specific phrase and expand it as similar gaps emerge in other tasks. Confirm the working target with the user at the start of the walk and revisit it whenever a task's chosen action drifts from it. If the user has no target instruction in mind at all, ASK before opening the walk — adjustment without a target shape becomes free-form rewriting, which is rescoping, not adjustment.
 
