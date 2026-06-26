@@ -3,7 +3,7 @@ name: open-thread
 description: Open a local workflow thread from either a brand-new idea or an existing tracker ticket — writing the thread folder, the one frozen seed, and the lifecycle ledger with its initial tier line — use when a unit of work needs a durable home on disk before any proposal, spec, or plan exists.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Open Thread
@@ -25,7 +25,7 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 
 Opening a thread writes exactly two things, both **on demand** (empty placeholder folders are never pre-created):
 
-1. **The seed** — `seed/<YYMMDDHHMMSSZ>-<kebab-desc>-seed.md`, the frozen genesis narrative, inside the `seed/` genesis bucket.
+1. **The seed** — `seed/seed.md`, the frozen genesis narrative, inside the `seed/` genesis bucket (a fixed-name singleton — no stamp, no slug).
 2. **The ledger** — `ledger.md` at the **thread root** (NOT in `seed/`), with its initial `tier:` line.
 
 Nothing else is created. A freshly opened thread contains `ledger.md` and `seed/` and nothing more until a proposal, spec, plan, or implementation actually lands later.
@@ -64,13 +64,13 @@ External: <tracker URL | "none" + why>
 
 The seed has **no tier and no disposition** — those live in the ledger, not the seed. Optionally, if this thread is known to replace an older one, you MAY add a free-form forward-link breadcrumb in plain prose (a line starting `Supersedes…` / `Invalidates…`); it is offered as a grep aid, never mandated, and never stored as frontmatter.
 
-The seed's filename uses the **record grammar** with the `seed` artifact-type token:
+The seed is a **fixed-name singleton**: it is always written as **`seed.md`** inside the thread's `seed/` bucket — no UTC stamp, no slug, no version suffix.
 
 ```text
-seed/<YYMMDDHHMMSSZ>-<kebab-desc>-seed.md
+seed/seed.md
 ```
 
-The UTC stamp, the kebab description, and the mandatory `seed` type suffix are all required. Example: `seed/260612174045Z-feature-trigger-seed.md`.
+There is exactly one seed per thread, so the `seed/` folder already identifies it: the path carries the type (`seed/`) and the subject (the thread slug), and a stamp or a copied slug would only duplicate the thread-root folder name. This mirrors the ledger, which is the fixed-name `ledger.md` at the thread root.
 
 ## The `External:` Line Is the Join Point
 
@@ -139,7 +139,7 @@ Preflight comes before any side-effecting step — never run until something bre
 
 ## Path References
 
-Within-thread references in any artifact body are **thread-relative** (`seed/<…>-seed.md`, `ledger.md`), never repo-rooted and never absolute, so the thread can be moved or archived without breaking its internal links. Cross-thread and external references are **repo-relative** (`docs/threads/<other>/…`). The single exception is the ticket backlink's permalink, which is an external URL pointing at the thread folder.
+Within-thread references in any artifact body are **thread-relative** (`seed/seed.md`, `ledger.md`), never repo-rooted and never absolute, so the thread can be moved or archived without breaking its internal links. Cross-thread and external references are **repo-relative** (`docs/threads/<other>/…`). The single exception is the ticket backlink's permalink, which is an external URL pointing at the thread folder.
 
 ## Workflow
 
@@ -147,19 +147,19 @@ Within-thread references in any artifact body are **thread-relative** (`seed/<�
 
 2. **In Mode B, preflight the tracker, then read the ticket.** Check the tracker CLI/API is available first; if it is missing, fail cleanly with a clear warning (or accept a user-pasted title/body if offered). Read the ticket's title and body — they seed the trigger narrative — and capture its URL for the `External:` line.
 
-3. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp once, at open time. Reuse it for the thread-root folder name, the seed filename, and the initial ledger line; never re-derive it.
+3. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp once, at open time. Reuse it for the thread-root folder name and the initial ledger line; never re-derive it. (The seed filename is the fixed `seed.md` and carries no stamp.)
 
 4. **Choose the slug and propose the tier.** Pick a short kebab slug for the subject. Propose a tier (default tier 2 for design-decision work) and confirm it with the user. If the work is genuinely tier 0, do not open a thread — tell the user and stop.
 
 5. **Create the thread root on demand.** `docs/threads/<YYMMDDHHMMSSZ-slug>/`. Do not pre-create empty subfolders.
 
-6. **Write the seed.** Create `seed/<YYMMDDHHMMSSZ>-<kebab-desc>-seed.md` per `## The Seed Format`: a `# Seed: <title>` line, an `External:` line (the ticket URL in Mode B; `none` + why or a user-supplied URL in Mode A), and 1–5 lines of trigger narrative. No frontmatter, no owner field. Create the `seed/` folder on demand.
+6. **Write the seed.** Create `seed/seed.md` per `## The Seed Format`: a `# Seed: <title>` line, an `External:` line (the ticket URL in Mode B; `none` + why or a user-supplied URL in Mode A), and 1–5 lines of trigger narrative. No frontmatter, no owner field. Create the `seed/` folder on demand.
 
 7. **Write the ledger.** Create `ledger.md` at the thread root with the initial line `tier: <0–3> @ <YYMMDDHHMMSSZ> — <why>` per `## The Ledger and Its Initial Tier Line`. The justification is mandatory.
 
 8. **Post the backlink if a ticket is linked.** If the `External:` line carries a ticket URL (Mode B, or Mode A with a user-supplied URL), preflight the tracker, check no backlink already exists, then post **exactly one** comment with a permalink back to the thread folder. If the tracker is unavailable, warn and continue — finish will post it later. If `External: none`, skip this step.
 
-9. **Confirm.** Tell the user where the thread was opened, e.g. `Thread opened: docs/threads/<YYMMDDHHMMSSZ-slug>/` plus the seed's thread-relative path (`seed/<…>-seed.md`) and the recorded tier. If the backlink was posted, say so; if it was skipped (no ticket) or deferred (tracker unavailable), note that. No preamble, no closing remark.
+9. **Confirm.** Tell the user where the thread was opened, e.g. `Thread opened: docs/threads/<YYMMDDHHMMSSZ-slug>/` plus the seed's thread-relative path (`seed/seed.md`) and the recorded tier. If the backlink was posted, say so; if it was skipped (no ticket) or deferred (tracker unavailable), note that. No preamble, no closing remark.
 
 ## Commit Policy
 

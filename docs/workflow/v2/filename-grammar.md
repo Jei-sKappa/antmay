@@ -3,7 +3,7 @@
 
 This is the V2 successor to `v1/filename-grammar.md`. V2 has **two** filename forms —
 a versioned form that drops V1's `v<N>` machinery entirely, and a record form
-unchanged from V1 — plus one fixed-name file (the ledger). The deep change is that
+unchanged from V1 — plus two fixed-name files (the ledger and the seed). The deep change is that
 versioned artifacts no longer encode a version in the filename: the lineage folder is
 the stable link target, and the version lives in frontmatter.
 
@@ -46,7 +46,7 @@ plans/001/plan.md
 
 ## Record Form
 
-Record artifacts — discussions, decision logs, reviews, implementation reports, seeds,
+Record artifacts — discussions, decision logs, reviews, implementation reports,
 notes, postmortems — use the V1 record form, **unchanged**:
 
 ```text
@@ -69,7 +69,7 @@ More examples:
 260520120000Z-workflow-v2-consultation-handoff-discussion.md
 260521120000Z-review-findings-decision-log.md
 260521101212Z-spec-lossless-mapping-review.md
-260612174045Z-feature-trigger-seed.md
+260612174045Z-handoff-brief-notes.md
 260625120000Z-auth-cutover-implementation-report.md
 ```
 
@@ -81,14 +81,31 @@ per thread). Its line grammar is defined in [`./lifecycle.md`](./lifecycle.md) (
 `<event> @ <YYMMDDHHMMSSZ> — <justification>` form); this doc only fixes the name and
 location.
 
+## The Seed
+
+The seed is a **fixed-name singleton** named **`seed.md`**, inside the thread's `seed/`
+genesis bucket (`seed/seed.md`) — **no stamp, no slug, no `v<N>`**. There is **exactly
+one seed per thread**, so — exactly like the versioned `<type>.md` files and like
+`ledger.md` at the root — its containing folder is already a stable, unique identifier:
+the path carries the type (`seed/`) and the subject (the thread slug). A stamp and a
+copied slug would only duplicate the thread-root folder name and could drift from it on
+a rename, so the seed drops both.
+
+The seed remains an **immutable, frozen genesis record** (see
+[`./lifecycle.md`](./lifecycle.md)); only its *filename* is fixed rather than stamped.
+It carries no filename stamp: its event time is the thread-root UTC stamp and its
+precise creation time is git. The `seed` type token is retained — it is the whole short
+filename `seed.md`, the way `spec`/`plan`/`proposal` are.
+
 ## V2 Artifact-Type Token Vocabulary
 
 Relative to V1's token list:
 
 - **Keep:** `proposal`, `spec`, `plan` (now the whole short filename `<token>.md`),
   `discussion`, `decision-log`.
-- **Add:** `seed`, `review` (replacing V1's `review-finding`), `implementation-report`,
-  `notes`.
+- **Add:** `seed` (now a whole short filename — the fixed-name `seed.md`, like
+  `spec.md`, not a stamped record token), `review` (replacing V1's `review-finding`),
+  `implementation-report`, `notes`.
 - **Remove:** `inbox-item` (the inbox is gone — see [`./thread-layout.md`](./thread-layout.md))
   and `review-finding` (replaced by `review`).
 

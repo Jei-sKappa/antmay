@@ -3,7 +3,7 @@ name: implement-auto
 description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task when the user wants autonomous implementation without per-step confirmation.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.2.0
+  version: 2.2.1
 ---
 
 # Implement Auto
@@ -20,7 +20,7 @@ This skill accepts ONE of the following SEVEN input forms. Detect which form was
 2. **A proposal artifact path** under a thread's `proposals/` folder. The proposal's rough shape becomes the implicit task list; the proposal's open questions become either tasks the implementation resolves or `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` flags in the four-state report.
 3. **A decision-log artifact path** under a spine node's `discussions/` folder. The log carries one or more settled decisions. Each settled decision may map to an implicit task (or constrain one); cite the source log by path and decision identifier in the task report where the decision is operative.
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the input; treat the issue title and labels as additional framing.
-5. **A seed artifact path** under a thread's `seed/` folder (`seed/<UTC>-<desc>-seed.md`). The seed is the thread's genesis record; its trigger narrative names the intended outcome and the body sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before deriving tasks.
+5. **A seed artifact path** under a thread's `seed/` folder (`seed/seed.md`). The seed is the thread's genesis record; its trigger narrative names the intended outcome and the body sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before deriving tasks.
 6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and derives implicit tasks from the observed state (e.g., "remove dead code in `src/legacy/`", "fix the import order in `src/foo.ts`"). This input form fits requests where the user's intent is "look at this and do the obvious thing" rather than a written input.
 7. **A raw user prompt**. When no artifact or code reference is passed, the user's prompt is itself the input. Derive implicit tasks directly from the prompt's stated intent.
 

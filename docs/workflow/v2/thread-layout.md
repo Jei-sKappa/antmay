@@ -26,7 +26,7 @@ write workflow artifacts to.
 docs/threads/<YYMMDDHHMMSSZ-slug>/
 ├── ledger.md                              # thread root — append-only tier + disposition
 ├── seed/                                  # genesis bucket
-│   ├── <UTC>-<desc>-seed.md               # exactly one — frozen genesis narrative
+│   ├── seed.md                            # exactly one — frozen genesis narrative (fixed name)
 │   ├── <UTC>-<desc>-notes.md              # optional — genesis source material
 │   └── discussions/                       # pre-artifact discussions target the seed
 ├── proposals/
@@ -105,7 +105,8 @@ the thread root. See [`./lifecycle.md`](./lifecycle.md).
 
 `seed/` is the **genesis bucket** and may hold **exactly three kinds of thing**:
 
-1. **The seed** — `<UTC>-<desc>-seed.md`, **exactly one**.
+1. **The seed** — `seed.md`, **exactly one** (a fixed-name singleton — no stamp, no
+   slug; see [`./filename-grammar.md`](./filename-grammar.md)).
 2. **Genesis source material** — immutable records carrying the raw inputs /
    provenance the thread was born from (copied notes, an external doc, a handoff
    brief), under the record grammar with the appropriate token (`notes`, `discussion`,

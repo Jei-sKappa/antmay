@@ -3,7 +3,7 @@ name: implement-interactive
 description: Implement a less-structured input on the current working tree collaboratively, walking implicit tasks with the user, self-reviewing after each task, and asking before each commit when the user wants implementation decisions kept in-loop.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.2.0
+  version: 2.2.1
 ---
 
 # Implement Interactive
@@ -37,7 +37,7 @@ This skill accepts ONE of the following SEVEN input forms. Detect which form was
 2. **A proposal artifact path** — a Markdown file capturing a rough proposal. The proposal's shape becomes the starting implicit task list; the proposal's open questions become items the walk either resolves or surfaces in the four-state task report.
 3. **A decision-log artifact path** — a Markdown file carrying one or more settled decisions with sequential `## P<N>: <Title>` headings. Each settled decision may map to an implicit task (or constrain one); cite the source log by path + `P<N>` in the task report where the decision is operative.
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL or the short `owner/repo#NNN` form. The issue body becomes the starting context; treat the issue title and labels as additional framing.
-5. **A seed artifact path** — the thread's genesis record at `seed/<UTC>-<desc>-seed.md`. Its trigger narrative names the intended outcome and sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before opening the walk.
+5. **A seed artifact path** — the thread's genesis record at `seed/seed.md`. Its trigger narrative names the intended outcome and sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before opening the walk.
 6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and walks the implicit task list with the user from the observed state.
 7. **A raw user prompt**. When no artifact or code reference is passed, the user's prompt is itself the input; the walk derives the implicit task list directly from the conversation.
 

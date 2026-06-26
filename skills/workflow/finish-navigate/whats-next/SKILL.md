@@ -3,7 +3,7 @@ name: whats-next
 description: Read a thread's state — ledger, lineage folders, and frontmatter status latches — and fold it on demand to answer "what now / what next / is it closed", then suggest coherent next actions when the user wants a quick map after completing work, hitting uncertainty, or getting stuck.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # What's Next
@@ -147,7 +147,7 @@ thread root and from their frontmatter latches. Folders are created on demand �
 appears only once a skill has written its first artifact there, so presence is itself
 signal. The folder set:
 
-- **`seed/`** — the genesis bucket: `<UTC>-<desc>-seed.md` (exactly one, a frozen
+- **`seed/`** — the genesis bucket: `seed.md` (exactly one, a fixed-name frozen
   narrative), optional genesis notes, and `seed/discussions/`.
 - **`proposals/NNN[-<desc>]/`** — lineage folders, each holding `proposal.md`,
   `discussions/`, `reviews/`. (Optional, a tier-3 stage.)
