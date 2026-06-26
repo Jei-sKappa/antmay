@@ -15,7 +15,7 @@ working-tree-is-ground-truth inspection is preserved, never replaced.
 
 - Spec (the contract): `specs/001/spec.md` (approved). Acceptance criteria AC-1.1 … AC-7.2 are the per-task acceptance backbone below.
 - Decision log: `seed/discussions/260622200031Z-outcome-report-design-decision-log.md` (cited as `DL P<N>`).
-- Genesis seed: `seed/260622192813Z-subagent-outcome-report-seed.md`.
+- Genesis seed: `seed/seed.md`.
 
 All three are thread-relative to `docs/threads/260622192813Z-subagent-outcome-report/`. The source-code files being edited live outside the thread, so they are cited repo-relative under `skills/workflow/implement/`.
 

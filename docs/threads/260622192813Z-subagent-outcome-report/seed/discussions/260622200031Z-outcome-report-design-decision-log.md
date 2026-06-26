@@ -1,7 +1,7 @@
 # Decision log — implementer-subagent outcome report design (the seed)
 
 Thread: docs/threads/260622192813Z-subagent-outcome-report/
-Target: seed/260622192813Z-subagent-outcome-report-seed.md
+Target: seed/seed.md
 Subject: settling the design of a structured implementer-subagent → orchestrator outcome report (a "verification index, not a verdict") for the subagent-driven implement skills — status vocabulary, weight/core fields, format, de-duplication against the orchestrator's diff check and the reviewers, reviewer states, and scope.
 
 Premise treated as settled foundation going in (from the seed + the blind expert consultation): the implementer's return is a structured **claim set** the orchestrator treats as an index of what to verify, never as evidence of correctness ("verify, don't trust"); and the status model is **two-level** — the implementer reports a *claim*, the orchestrator synthesizes the *verified verdict*.

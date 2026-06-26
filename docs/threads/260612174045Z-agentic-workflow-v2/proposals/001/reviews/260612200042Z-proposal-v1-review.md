@@ -16,7 +16,7 @@ the V2 token list is itself finding F-13 below).
 
 - Artifact under review: `proposals/001/proposal.md` (Status: Draft, Version: 1)
   (path updated in place per decision P1 — folder renamed after emission; original emission path was `proposals/agentic-workflow-v2/`; within-thread paths normalized to thread-relative per P17)
-- Thread seed: `seed/260612174045Z-agentic-workflow-v2-seed.md`
+- Thread seed: `seed/seed.md`
 - Source — maintainer TODO (verbatim copy): `seed/260612175420Z-maintainer-workflow-todo-notes.md`
 - Source — consultation handoff: `seed/discussions/260612175420Z-workflow-v2-consultation-handoff-discussion.md`
 - Ruleset being revised: `docs/workflow/v1/README.md`, `docs/workflow/v1/thread-layout.md`, `docs/workflow/v1/filename-grammar.md`, `docs/workflow/v1/immutability.md`

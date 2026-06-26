@@ -10,7 +10,7 @@ status:
 
 - Spec under review: `specs/001/spec.md`
 - Source decision log (cited as `DL P1`–`P12`): `seed/discussions/260622200031Z-outcome-report-design-decision-log.md` — operative finding below is against `DL P1` (empty-diff `DONE` orchestrator obligation).
-- Genesis seed (premises the spec leans on): `seed/260622192813Z-subagent-outcome-report-seed.md`
+- Genesis seed (premises the spec leans on): `seed/seed.md`
 - Prior review on this spec (lossless-mapping axis, disposed `accepted`): `specs/001/reviews/260622212249Z-spec-lossless-mapping-review.md` — its Open Question is the same item flagged here, viewed from a different axis.
 - Existing skills the spec edits (read read-only to ground AC-7.1/7.2 and the Scope "four reviewer reference prompts" claim): `implement-plan-with-subagents-auto/`, `implement-plan-with-subagents-interactive/` (each carrying `references/plan-compliance-reviewer.md` + `references/code-quality-reviewer.md`), and the four single-agent skills `implement-auto/`, `implement-interactive/`, `implement-plan-auto/`, `implement-plan-interactive/`, all under `skills/workflow/implement/` (repo-relative; outside this thread).
 

@@ -10,7 +10,7 @@ status:
 
 - Document under review (the spec): `specs/001/spec.md`
 - Source decision log (cited as `DL P1`–`P12`): `seed/discussions/260622200031Z-outcome-report-design-decision-log.md`
-- Genesis seed (premises the spec leans on): `seed/260622192813Z-subagent-outcome-report-seed.md`
+- Genesis seed (premises the spec leans on): `seed/seed.md`
 - Thread lifecycle (tier 2): `ledger.md`
 
 The spec self-declares both sources in its preamble; they are the only discussion records in the thread, so the in-scope source set is unambiguous and was not re-confirmed.

@@ -9,7 +9,7 @@ status:
 
 This spec defines a delta to the existing implement skills. It does not rewrite them; it adds a structured implementer→orchestrator outcome report and the verification behavior around it, and ports a lighter discipline to the single-agent variants. All existing invariants of the affected skills (no-worktree isolation, sequential subagents, orchestrator-commits-per-cycle, plan immutability, no history rewriting) remain in force unless an acceptance criterion below changes them.
 
-**Source decision log** (cited throughout as `DL P<N>`): `seed/discussions/260622200031Z-outcome-report-design-decision-log.md`. **Genesis context**: `seed/260622192813Z-subagent-outcome-report-seed.md`. Both are thread-relative to `docs/threads/260622192813Z-subagent-outcome-report/`.
+**Source decision log** (cited throughout as `DL P<N>`): `seed/discussions/260622200031Z-outcome-report-design-decision-log.md`. **Genesis context**: `seed/seed.md`. Both are thread-relative to `docs/threads/260622192813Z-subagent-outcome-report/`.
 
 ## Intended outcome
 

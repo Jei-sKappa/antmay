@@ -116,7 +116,7 @@ the proposal traces to one of three sources — nothing was invented:
 
 ## What exists in this thread right now
 
-- `seed/260612174045Z-agentic-workflow-v2-seed.md` — the genesis (tier 3).
+- `seed/seed.md` — the genesis (tier 3).
 - `seed/260612175420Z-maintainer-workflow-todo-notes.md` — the TODO, verbatim,
   with provenance header (the proposal's §17 line references resolve against
   the original numbering, preserved below that file's header).
