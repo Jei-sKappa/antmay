@@ -13,3 +13,5 @@ actually needs and the common parts are maintained in one place rather than copy
 Anchors for the work: the jastr repo lives at `.library/sources/Jei-sKappa_jastr` (referenced
 elsewhere in this project under its former name `Jei-sKappa/skillrouter`), and
 `docs/threads/260612174045Z-agentic-workflow-v2/` carries relevant prior design context.
+
+Useful tools: `temp/skill_header_stats.py` to analyze the skills and identify the common parts.
