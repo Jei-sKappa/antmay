@@ -2,6 +2,7 @@
 version: 1
 status:
   approved: 260627162004Z
+  implemented: 260627193943Z
 ---
 
 # Spec: Remove the auto/interactive skill variants
