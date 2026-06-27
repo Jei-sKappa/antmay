@@ -17,8 +17,8 @@ The workflow has TWO layers: a forward spine of artifact-producing stages, and o
 | **Spine**  | `seed → discussion(s) → [proposal] → spec → plan → implement → verify → finish`                  |
 | Capture    | `open-thread` (local thread + seed + ledger) / `open-ticket` (remote tracker ticket)             |
 | Discussion | `discussion` / `seeded-discussion`                                                               |
-| Review     | `review-{proposal,spec,plan,implementation,code}-{auto,interactive}` / `review-lossless-mapping` |
-| Merge      | `merge-artifacts-{auto,interactive}`                                                             |
+| Review     | `review-{proposal,spec,plan,implementation,code}` / `review-lossless-mapping`                    |
+| Merge      | `merge-artifacts`                                                                                 |
 | Navigation | `whats-next` (derived-status reader)                                                             |
 
 ```
@@ -35,13 +35,17 @@ Each thread lives at `docs/threads/<YYMMDDHHMMSSZ-slug>/`: an append-only `ledge
 
 | Use case                                | Path                                                                                                                              |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Implementing a feature from rough idea  | `discussion → propose-interactive → spec-interactive → plan-strict-interactive → implement-plan-with-subagents-auto → review-implementation-interactive → finish` (canonical full workflow) |
-| Fixing a bug                            | `implement-auto → review-code-interactive → finish`                                                                               |
-| Exploring an idea                       | `discussion → propose-auto` (no further commitment)                                                                               |
-| Refining a plan                         | `plan-strict-auto → review-plan-interactive → adjust-plan-granularity-interactive → implement-plan-auto`                          |
-| Reconciling two artifact variants       | `merge-artifacts-interactive → review-spec-interactive → finish`                                                                  |
+| Implementing a feature from rough idea  | `discussion → propose → spec → plan-strict → implement-plan-with-subagents → review-implementation → finish` (canonical full workflow) |
+| Fixing a bug                            | `implement → review-code → finish`                                                                                                |
+| Exploring an idea                       | `discussion → propose` (no further commitment)                                                                                    |
+| Refining a plan                         | `plan-strict → review-plan → adjust-plan-granularity → implement-plan`                                                            |
+| Reconciling two artifact variants       | `merge-artifacts → review-spec → finish`                                                                                          |
 
 Each path is one valid composition — not the only valid composition. Pick the entry point that matches what you have in hand and stop when you've shipped the outcome you wanted.
+
+## Steering interactivity
+
+Every spine skill runs autonomously by default but stays steerable — interactivity is a usage pattern, not a separate skill. To keep a human in the loop, run a `discussion` (or `seeded-discussion`) before invoking the skill, or append a steering instruction to the invocation (for example, asking it to check in at each step or walk the findings with you). The skill honors that steer instead of running straight through.
 
 ## Skills by Module
 
@@ -81,226 +85,122 @@ npx skills add Jei-sKappa/skills --skill seeded-discussion
 
 ### Propose
 
-#### [`propose-auto`](./skills/workflow/propose/propose-auto/SKILL.md)
+#### [`propose`](./skills/workflow/propose/propose/SKILL.md)
 
-**Autonomous** end-to-end proposal generation — turns a rough prompt (or a referenced artifact) into a freeform proposal artifact in its lineage folder (`proposals/NNN/proposal.md`), with no clarifying questions; the proposal carries its lifecycle in a frontmatter `status:` map (`approved` / `rejected` latches) and its condition is derived. Useful when you already know what you want and just need the proposal written down — not when you want to think it through together (use `propose-interactive` for that).
-
-```sh
-npx skills add Jei-sKappa/skills --skill propose-auto
-```
-
-#### [`propose-interactive`](./skills/workflow/propose/propose-interactive/SKILL.md)
-
-**Interactive** proposal authoring — walks the user through the four suggested elements of a proposal (intent, context, rough shape, open questions) one at a time, then assembles and writes a freeform proposal artifact in its lineage folder (`proposals/NNN/proposal.md`), with its lifecycle in a frontmatter `status:` map (`approved` / `rejected` latches). Useful when you want to think the proposal through together with the agent, surface open questions live, and have the resulting artifact written for you — not when you already have the prompt fully shaped (use `propose-auto` for that).
+End-to-end proposal generation — turns a rough prompt (or a referenced artifact) into a freeform proposal artifact in its lineage folder (`proposals/NNN/proposal.md`); the proposal carries its lifecycle in a frontmatter `status:` map (`approved` / `rejected` latches) and its condition is derived. Useful when a tier-3 initiative needs its direction sketched and written down.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill propose-interactive
+npx skills add Jei-sKappa/skills --skill propose
 ```
 
 > **Note:** Adversarial review (pre-mortem, red-team) is delegated to the external `the-fool` skill — there is no native adversarial-review skill in this suite. Use `the-fool` against a proposal or spec draft to surface adversarial risks before the spec / plan / implementation stages.
 
 ### Spec
 
-#### [`spec-auto`](./skills/workflow/spec/spec-auto/SKILL.md)
+#### [`spec`](./skills/workflow/spec/spec/SKILL.md)
 
-**Autonomous** end-to-end spec generation — turns a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade spec artifact in its lineage folder (`specs/NNN/spec.md`), covering all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) — plus a Degrees-of-freedom section and, at tier ≥2, machine-checkable acceptance criteria — with no clarifying questions; the spec's lifecycle lives in a frontmatter `status:` map (`approved` then `implemented` latches). Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`take-snapshot`](./skills/workflow/documentation/take-snapshot/SKILL.md) instead. Useful when you already have the upstream input in hand and just need the spec written down — not when you want to author it together (use `spec-interactive`).
-
-```sh
-npx skills add Jei-sKappa/skills --skill spec-auto
-```
-
-#### [`spec-interactive`](./skills/workflow/spec/spec-interactive/SKILL.md)
-
-**Interactive** spec authoring — walks the user through the eight handoff-grade semantic-contract elements of a spec one at a time, then assembles and writes a spec artifact in its lineage folder (`specs/NNN/spec.md`) — with a Degrees-of-freedom section and, at tier ≥2, machine-checkable acceptance criteria — its lifecycle carried in a frontmatter `status:` map (`approved` then `implemented` latches). Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`take-snapshot`](./skills/workflow/documentation/take-snapshot/SKILL.md) instead. Useful when you want to think the spec through together with the agent, push back on weak reasoning before it becomes expensive in implementation, and have the resulting artifact written for you — not when you already have the upstream input fully shaped (use `spec-auto` for that).
+End-to-end spec generation — turns a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade spec artifact in its lineage folder (`specs/NNN/spec.md`), covering all eight semantic-contract elements (intended outcome, context, scope/non-scope, expected behavior, constraints, explicit decisions, unresolved questions, acceptance guidance) — plus a Degrees-of-freedom section and, at tier ≥2, machine-checkable acceptance criteria; the spec's lifecycle lives in a frontmatter `status:` map (`approved` then `implemented` latches). Forward-design only — for reverse-engineering a spec FROM an existing codebase use [`take-snapshot`](./skills/workflow/documentation/take-snapshot/SKILL.md) instead.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill spec-interactive
+npx skills add Jei-sKappa/skills --skill spec
 ```
 
 ### Plan
 
-#### [`plan-loose-auto`](./skills/workflow/plan/plan-loose-auto/SKILL.md)
+#### [`plan-loose`](./skills/workflow/plan/plan-loose/SKILL.md)
 
-**Autonomous** loose-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact in its lineage folder (`plans/NNN/plan.md`), end-to-end, with no clarifying questions. Loose plans use brief 1–3 sentence task descriptions optimized for a human-leaning implementer who fills in details. Plans are sequential, isolated, independently implementable, self-reviewed before emission, carry no stored status (the plan is a disposable compiler-IR — the spec and its acceptance criteria are the contract), are edited alive in place rather than re-versioned, and are NEVER auto-committed. Useful when you already have the upstream input in hand and want a loose plan written down autonomously.
+Loose-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact in its lineage folder (`plans/NNN/plan.md`), end-to-end. Loose plans use brief 1–3 sentence task descriptions optimized for a human-leaning implementer who fills in details. Plans are sequential, isolated, independently implementable, self-reviewed before emission, carry no stored status (the plan is a disposable compiler-IR — the spec and its acceptance criteria are the contract), are edited alive in place rather than re-versioned, and are NEVER auto-committed.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill plan-loose-auto
+npx skills add Jei-sKappa/skills --skill plan-loose
 ```
 
-#### [`plan-loose-interactive`](./skills/workflow/plan/plan-loose-interactive/SKILL.md)
+#### [`plan-strict`](./skills/workflow/plan/plan-strict/SKILL.md)
 
-**Interactive** loose-granularity plan authoring — walks the user through a loose-granularity plan task-by-task, drafting numbered tasks with brief 1–3 sentence descriptions per task, pushing back on weak reasoning, then assembles and writes a plan artifact in its lineage folder (`plans/NNN/plan.md`) that carries no stored status and is edited alive in place. Useful when you want to think the plan through together with the agent and have the resulting artifact written for you.
+Strict-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan artifact in its lineage folder (`plans/NNN/plan.md`), end-to-end. Strict plans carry explicit substeps, verification notes, files modified, and acceptance criteria per task — optimized for an agent-leaning implementer that needs unambiguous prescriptive steps; the plan carries no stored status and is edited alive in place.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill plan-loose-interactive
+npx skills add Jei-sKappa/skills --skill plan-strict
 ```
 
-#### [`plan-strict-auto`](./skills/workflow/plan/plan-strict-auto/SKILL.md)
+#### [`adjust-plan-granularity`](./skills/workflow/plan/adjust-plan-granularity/SKILL.md)
 
-**Autonomous** strict-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan artifact in its lineage folder (`plans/NNN/plan.md`), end-to-end, with no clarifying questions. Strict plans carry explicit substeps, verification notes, files modified, and acceptance criteria per task — optimized for an agent-leaning implementer that needs unambiguous prescriptive steps; the plan carries no stored status and is edited alive in place. Useful when you already have the upstream input in hand and want a strict plan written down autonomously.
-
-```sh
-npx skills add Jei-sKappa/skills --skill plan-strict-auto
-```
-
-#### [`plan-strict-interactive`](./skills/workflow/plan/plan-strict-interactive/SKILL.md)
-
-**Interactive** strict-granularity plan authoring — walks the user through a strict-granularity plan task-by-task, fleshing out each task's objective, input, substeps, files modified, verification, and acceptance criteria, pushing back on weak reasoning, then assembles and writes a plan artifact in its lineage folder (`plans/NNN/plan.md`) that carries no stored status and is edited alive in place. Useful when you want to think the strict plan through together with the agent and have the resulting artifact written for you.
+Adjust an existing living plan to a new granularity level by editing it in place when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill plan-strict-interactive
-```
-
-#### [`adjust-plan-granularity-auto`](./skills/workflow/plan/adjust-plan-granularity-auto/SKILL.md)
-
-Adjust an existing living plan to a new granularity level autonomously by editing it in place when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
-
-```sh
-npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-auto
-```
-
-#### [`adjust-plan-granularity-interactive`](./skills/workflow/plan/adjust-plan-granularity-interactive/SKILL.md)
-
-Walk an existing living plan task by task to decide whether to split, merge, expand, contract, or leave each task, then edit the plan in place when the user wants to think the granularity shift through collaboratively.
-
-```sh
-npx skills add Jei-sKappa/skills --skill adjust-plan-granularity-interactive
+npx skills add Jei-sKappa/skills --skill adjust-plan-granularity
 ```
 
 ### Implement
 
-#### [`implement-auto`](./skills/workflow/implement/implement-auto/SKILL.md)
+#### [`implement`](./skills/workflow/implement/implement/SKILL.md)
 
-**Autonomous** end-to-end implementation from less-structured input — takes a spec, proposal, decision log, GitHub issue, code context, or raw prompt and implements it on the current working tree, autonomously deriving implicit tasks from the input itself, self-reviewing after each task, and auto-committing per implicit task. Single-agent (current session + self-review); no subagents are spawned. Reads the thread ledger for tier and disposition, reports each implicit task by the four-state status protocol (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`), and emits a single immutable implementation report record on the way out. Never rewrites history — no `--amend`, no rebase, no force-push.
+End-to-end implementation from less-structured input — takes a spec, proposal, decision log, GitHub issue, code context, or raw prompt and implements it on the current working tree, deriving implicit tasks from the input itself, self-reviewing after each task, and auto-committing per implicit task. Single-agent (current session + self-review); no subagents are spawned. Reads the thread ledger for tier and disposition, reports each implicit task by the four-state status protocol (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`), and emits a single immutable implementation report record on the way out. Never rewrites history — no `--amend`, no rebase, no force-push.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill implement-auto
+npx skills add Jei-sKappa/skills --skill implement
 ```
 
-#### [`implement-interactive`](./skills/workflow/implement/implement-interactive/SKILL.md)
+#### [`implement-plan`](./skills/workflow/implement/implement-plan/SKILL.md)
 
-**Interactive** implementation from less-structured input — takes a spec, proposal, decision log, GitHub issue, code context, or raw prompt and implements it collaboratively on the current working tree, walking the implicit task list with the user, pushing back per the anti-sycophancy stance, self-reviewing after each task, and ASKING the user before each commit. Single-agent (current session + self-review); no subagents are spawned. Reports each implicit task by the four-state status protocol and emits a single immutable implementation report record on the way out. Never rewrites history.
+Plan-driven implementation — takes a plan artifact path (loose or strict granularity, produced by any of the `plan-*` skills) and executes every plan task in order on the current working tree, self-reviewing after each task and auto-committing per plan task. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the four-state status protocol and emits a single immutable implementation report record on the way out. Never rewrites history.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill implement-interactive
+npx skills add Jei-sKappa/skills --skill implement-plan
 ```
 
-#### [`implement-plan-auto`](./skills/workflow/implement/implement-plan-auto/SKILL.md)
+#### [`implement-plan-with-subagents`](./skills/workflow/implement/implement-plan-with-subagents/SKILL.md)
 
-**Autonomous** plan-driven implementation — takes a plan artifact path (loose or strict granularity, produced by any of the `plan-*` skills) and executes every plan task in order on the current working tree, self-reviewing after each task and auto-committing per plan task. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the four-state status protocol and emits a single immutable implementation report record on the way out. Never rewrites history.
-
-```sh
-npx skills add Jei-sKappa/skills --skill implement-plan-auto
-```
-
-#### [`implement-plan-interactive`](./skills/workflow/implement/implement-plan-interactive/SKILL.md)
-
-**Interactive** plan-driven implementation — takes a plan artifact path (loose or strict granularity) and executes its tasks in order on the current working tree COLLABORATIVELY — presenting each plan task to the user, pushing back per the anti-sycophancy stance, self-reviewing after each task, and ASKING the user before committing at each plan-task boundary. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the four-state status protocol and emits a single immutable implementation report record on the way out. Never rewrites history.
+Plan-driven implementation with subagent dual-review loop — takes a plan artifact path and executes every plan task in order by orchestrating a dispatch loop: implementer subagent → plan-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop — and auto-commits per orchestration cycle. REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit and emits a single immutable implementation report record on the way out. Never rewrites history.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill implement-plan-interactive
-```
-
-#### [`implement-plan-with-subagents-auto`](./skills/workflow/implement/implement-plan-with-subagents-auto/SKILL.md)
-
-**Autonomous** plan-driven implementation with subagent dual-review loop — takes a plan artifact path and executes every plan task in order by orchestrating a dispatch loop: implementer subagent → plan-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop — and auto-commits per orchestration cycle. REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit and emits a single immutable implementation report record on the way out. Never rewrites history.
-
-```sh
-npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-auto
-```
-
-#### [`implement-plan-with-subagents-interactive`](./skills/workflow/implement/implement-plan-with-subagents-interactive/SKILL.md)
-
-**Interactive** plan-driven implementation with subagent dual-review loop — same dual-reviewer dispatch loop as `implement-plan-with-subagents-auto`, but ASKS the user before committing each orchestration cycle. Collaborative (per-commit ASK; live anti-sycophancy push-back during the walk surfaces reviewer findings to the user as they emerge). REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit and emits a single immutable implementation report record on the way out. Never rewrites history.
-
-```sh
-npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents-interactive
+npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents
 ```
 
 ### Review
 
-> **Note:** Verification of implementations is covered by `review-implementation-auto` and `review-implementation-interactive`, which check the implementation against the spec's acceptance criteria — there is no separate `verify-*` skill in this suite.
+> **Note:** Verification of implementations is covered by `review-implementation`, which checks the implementation against the spec's acceptance criteria — there is no separate `verify-*` skill in this suite.
 >
 > **Note:** Adversarial review (pre-mortem, red-team) is delegated to the external `the-fool` skill — there is no native adversarial-review skill in this suite. Use `the-fool` against a proposal or spec draft to surface adversarial risks before the spec / plan / implementation stages.
 
-#### [`review-proposal-auto`](./skills/workflow/review/review-proposal-auto/SKILL.md)
+#### [`review-proposal`](./skills/workflow/review/review-proposal/SKILL.md)
 
-Read a proposal artifact and write a references-first review report into the proposal's reviews/ folder, covering gaps, risks, ambiguities, and consistency with the thread's decision logs, when the user wants a lightweight autonomous proposal review.
+Read a proposal artifact and write a references-first review report into the proposal's reviews/ folder, covering gaps, risks, ambiguities, and consistency with the thread's decision logs.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill review-proposal-auto
+npx skills add Jei-sKappa/skills --skill review-proposal
 ```
 
-#### [`review-proposal-interactive`](./skills/workflow/review/review-proposal-interactive/SKILL.md)
+#### [`review-spec`](./skills/workflow/review/review-spec/SKILL.md)
 
-Walk a proposal artifact one finding at a time with the user, testing each finding and consistency with the thread's decision logs, then emit a references-first review record into the proposal's reviews/ folder when the user wants the proposal review kept collaborative.
+Read a spec artifact and write a references-first review report checking all eight semantic-contract elements against the handoff-grade bar and consistency with the thread's decision logs.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill review-proposal-interactive
+npx skills add Jei-sKappa/skills --skill review-spec
 ```
 
-#### [`review-spec-auto`](./skills/workflow/review/review-spec-auto/SKILL.md)
+#### [`review-plan`](./skills/workflow/review/review-plan/SKILL.md)
 
-Read a spec artifact and write a references-first review report checking all eight semantic-contract elements against the handoff-grade bar and consistency with the thread's decision logs when the user wants an autonomous spec quality review.
+Read a plan artifact and write a references-first adherence review that checks the plan against its spec, sorts the result into one of four outcomes, auto-fixes plan-fault deviations, and routes spec-fault findings to the human.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill review-spec-auto
+npx skills add Jei-sKappa/skills --skill review-plan
 ```
 
-#### [`review-spec-interactive`](./skills/workflow/review/review-spec-interactive/SKILL.md)
+#### [`review-implementation`](./skills/workflow/review/review-implementation/SKILL.md)
 
-Walk a spec artifact one element or finding at a time with the user, testing it against all eight semantic-contract elements and consistency with the thread's decision logs, and capturing the resolved-vs-unresolved split when the user wants a collaborative spec review.
+Verify an implementation against its spec's acceptance criteria and write a references-first review record capturing acceptance, constraint, scope, behavior, and test-coverage findings.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill review-spec-interactive
+npx skills add Jei-sKappa/skills --skill review-implementation
 ```
 
-#### [`review-plan-auto`](./skills/workflow/review/review-plan-auto/SKILL.md)
+#### [`review-code`](./skills/workflow/review/review-code/SKILL.md)
 
-Read a plan artifact and write a references-first adherence review that checks the plan against its spec, sorts the result into one of four outcomes, auto-fixes plan-fault deviations and routes spec-fault findings to the human when the user wants an autonomous plan adherence review.
-
-```sh
-npx skills add Jei-sKappa/skills --skill review-plan-auto
-```
-
-#### [`review-plan-interactive`](./skills/workflow/review/review-plan-interactive/SKILL.md)
-
-Walk a plan artifact one finding or task at a time with the user, checking the plan against its spec, classifying each deviation into one of four outcomes, and capturing the resolved-vs-unresolved split with spec faults routed to the human when the user wants a collaborative plan adherence review.
+Read a code reference and write a references-first code-quality review report covering quality, safety, idioms, and testability, anchored to the spec's acceptance criteria as the definition of right.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill review-plan-interactive
-```
-
-#### [`review-implementation-auto`](./skills/workflow/review/review-implementation-auto/SKILL.md)
-
-Autonomously verify an implementation against its spec's acceptance criteria and write a references-first review record capturing acceptance, constraint, scope, behavior, and test-coverage findings when the user wants the implementation checked without a per-finding walk.
-
-```sh
-npx skills add Jei-sKappa/skills --skill review-implementation-auto
-```
-
-#### [`review-implementation-interactive`](./skills/workflow/review/review-implementation-interactive/SKILL.md)
-
-Walk an implementation against its spec's acceptance criteria one finding at a time and capture the resolved-vs-unresolved split when the user wants implementation fidelity verified collaboratively.
-
-```sh
-npx skills add Jei-sKappa/skills --skill review-implementation-interactive
-```
-
-#### [`review-code-auto`](./skills/workflow/review/review-code-auto/SKILL.md)
-
-Read a code reference and write a references-first code-quality review report covering quality, safety, idioms, and testability, anchored to the spec's acceptance criteria as the definition of right, when the user wants a lightweight autonomous code review.
-
-```sh
-npx skills add Jei-sKappa/skills --skill review-code-auto
-```
-
-#### [`review-code-interactive`](./skills/workflow/review/review-code-interactive/SKILL.md)
-
-Walk a code reference collaboratively one finding at a time, testing each finding against the code and anchoring right to the spec's acceptance criteria, and capturing the resolved-vs-unresolved split when the user wants a code-quality review kept in-loop.
-
-```sh
-npx skills add Jei-sKappa/skills --skill review-code-interactive
+npx skills add Jei-sKappa/skills --skill review-code
 ```
 
 #### [`review-lossless-mapping`](./skills/workflow/review/review-lossless-mapping/SKILL.md)
@@ -313,20 +213,12 @@ npx skills add Jei-sKappa/skills --skill review-lossless-mapping
 
 ### Merge
 
-#### [`merge-artifacts-auto`](./skills/workflow/merge/merge-artifacts-auto/SKILL.md)
+#### [`merge-artifacts`](./skills/workflow/merge/merge-artifacts/SKILL.md)
 
-Reconcile two or more competing candidate drafts of one artifact into the single canonical artifact, folding non-conflicting content automatically and preserving unresolvable subjective conflicts via HTML-comment markers, when the user wants an autonomous merge.
-
-```sh
-npx skills add Jei-sKappa/skills --skill merge-artifacts-auto
-```
-
-#### [`merge-artifacts-interactive`](./skills/workflow/merge/merge-artifacts-interactive/SKILL.md)
-
-Reconcile two or more competing candidate drafts of one artifact into the single canonical artifact by walking each subjective conflict with the user and capturing each resolution in a mandatory decision log, when the user wants an interactive merge.
+Reconcile two or more competing candidate drafts of one artifact into the single canonical artifact, folding non-conflicting content and preserving unresolvable subjective conflicts via HTML-comment markers.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill merge-artifacts-interactive
+npx skills add Jei-sKappa/skills --skill merge-artifacts
 ```
 
 ### Finish & Navigate
@@ -377,7 +269,7 @@ npx skills add Jei-sKappa/skills --skill the-librarian
 
 #### [`take-snapshot`](./skills/workflow/documentation/take-snapshot/SKILL.md)
 
-Derives a comprehensive, stack-agnostic specification document from an existing codebase — a hybrid SRS + PRD with append-only requirement IDs, traceability back to source files, and a consolidated open-questions list. Useful when you want to extract a single source of truth for a 1:1 rebuild (same stack or different), or to document an undocumented application, without baking any migration or target-stack guidance into the output. **Reverse direction** — for forward-design spec authoring use `spec-auto` / `spec-interactive` instead.
+Derives a comprehensive, stack-agnostic specification document from an existing codebase — a hybrid SRS + PRD with append-only requirement IDs, traceability back to source files, and a consolidated open-questions list. Useful when you want to extract a single source of truth for a 1:1 rebuild (same stack or different), or to document an undocumented application, without baking any migration or target-stack guidance into the output. **Reverse direction** — for forward-design spec authoring use `spec` instead.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill take-snapshot
@@ -423,7 +315,7 @@ npx skills add Jei-sKappa/skills --skill meta-prompting
 
 - **`capture-inbox`** — retired 2026-06-21. The V2 workflow removes the inbox concept: a unit of work now gets a durable home by opening a thread directly with `open-thread` (local) or a tracker work-item with `open-ticket` (remote), and no V2 spine path writes to an inbox. The legacy folder remains on disk at `skills/deprecated/capture-inbox` so existing installs do not break; new installs should pick `open-thread` / `open-ticket`. Pre-existing `inbox/` captures under older threads remain valid as-is and require no migration.
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
-- **`review-decision-document`** — retired 2026-05-21. Evolved into `review-spec-auto` (autonomous) and `review-spec-interactive` (collaborative), which check a spec against its acceptance criteria. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing review outputs produced by the legacy skill remain valid as-is and require no migration.
+- **`review-decision-document`** — retired 2026-05-21. Evolved into `review-spec`, which checks a spec against its acceptance criteria. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing review outputs produced by the legacy skill remain valid as-is and require no migration.
 
 ## Installation
 
@@ -433,10 +325,10 @@ Install any skill individually via:
 npx skills add Jei-sKappa/skills --skill <skill-name>
 ```
 
-For example, to install the autonomous spec generator:
+For example, to install the spec generator:
 
 ```sh
-npx skills add Jei-sKappa/skills --skill spec-auto
+npx skills add Jei-sKappa/skills --skill spec
 ```
 
 Skills are grouped under one marketplace plugin per `skills/workflow/` folder — for example `JeisKappa-plan` (rendered as **`JeisKappa Plan`**), `JeisKappa-handoff` (**`JeisKappa Handoff`**), `JeisKappa-research` (**`JeisKappa Research`**), and so on. Retired skills live under `JeisKappa-deprecated`. Dashes in the plugin name are split into spaces and each segment capitalized in `npx skills list`.

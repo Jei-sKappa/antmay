@@ -4,7 +4,9 @@
 The spine is V2's end-to-end shape for a unit of work. **Every stage is optional and
 tier-gated** (see [`./tiers.md`](./tiers.md)) — only the seed is mandatory, and only at
 tier ≥1. The centerpiece is the **spec**: the last artifact the human reads and
-approves, written so that the plan can follow mechanically.
+approves, written so that the plan can follow mechanically. **Every spine stage is
+autonomous by default but steerable** — run a discussion before invoking it, or append a
+steering instruction to the invocation.
 
 ## The Spine
 
@@ -88,11 +90,11 @@ DoF.** This is the prevention side of the lossless-mapping review (see
 
 The plan is derived from the spec. **Plan autonomy is V2's recommended default, not a
 law.** When the spec carries machine-checkable ACs and a Degrees-of-freedom section, the
-plan follows mechanically — so `plan-*-auto` can produce it and a machine adherence
+plan follows mechanically — so the plan skills can produce it and a machine adherence
 review can clear it **without the human ever reading it.** Those two spec preconditions
-are what make that *safe*. **Human-in-the-loop planning stays supported**
-(`plan-*-interactive` is retained); autonomy is a default, not a rule forced on a second
-user.
+are what make that *safe*. **Human-in-the-loop planning stays supported** — run a
+discussion before planning, or append a steering instruction to the invocation; autonomy
+is a default, not a rule forced on a second user.
 
 ### The Plan Is a Disposable Compiler-IR
 
