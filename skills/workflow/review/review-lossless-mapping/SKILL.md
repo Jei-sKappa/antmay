@@ -10,7 +10,7 @@ metadata:
 
 Read a document and the discussions it was produced from, READ-ONLY, and emit a references-first review report into the reviewed document's `reviews/` folder. This skill verifies that the document is a **lossless and additive-free** mapping of what the user actually saw and accepted in the discussions: nothing the user never agreed to was smuggled in, and nothing the user decided was dropped. It does not edit the document, it does not ask clarifying questions one-at-a-time, and it does not walk findings with the user. It does not commit.
 
-This is the **detection side** of the document's own authoring constraint: a document (typically a spec) is supposed to commit to no decision or assumption the user did not see and accept in the discussions, unless the document explicitly marks it a Degree of Freedom. This review confirms that obligation was met. Because the human-judgment step — disposing the findings, deciding whether a flagged item is acceptable — lands in a follow-on discussion, there is no interactive variant of this skill: an interactive mode would only re-implement that downstream discussion loop. This skill produces the findings; a separate discussion disposes them.
+This is the **detection side** of the document's own authoring constraint: a document (typically a spec) is supposed to commit to no decision or assumption the user did not see and accept in the discussions, unless the document explicitly marks it a Degree of Freedom. This review confirms that obligation was met. This skill produces the findings; a separate discussion disposes them.
 
 ## Inputs
 
