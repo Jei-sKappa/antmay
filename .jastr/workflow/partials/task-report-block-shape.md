@@ -10,4 +10,4 @@ Notes: <1–3 sentences explaining the rationale or surfaced concerns.>
 Next: <suggested action — "ready for next task", "user clarification on X", "stop and surface this finding", "ready for review", etc.>
 ```
 
-The final out-message from the skill summarizes EVERY {{task-noun}} by its four-state status, plus the commit SHA + subject for every commit made during the run. This is the implementation audit trail; the user reads it to understand {{report-tether}} and what to do next.
+The final out-message from the skill summarizes EVERY {{report-task-noun}} by its four-state status, plus the commit SHA + subject for every commit made during the run. This is the implementation audit trail; the user reads it to understand {{report-tether}} and what to do next.
