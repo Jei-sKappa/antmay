@@ -6,7 +6,7 @@ description: Implement a less-structured input end-to-end on the current working
   needs to be carried to working code.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 ---
 
 # Implement

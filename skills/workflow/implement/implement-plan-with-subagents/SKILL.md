@@ -5,7 +5,7 @@ description: Execute every task in a plan artifact through an implementer and
   heavier review path and the runtime supports subagents.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 ---
 
 # Implement Plan With Subagents

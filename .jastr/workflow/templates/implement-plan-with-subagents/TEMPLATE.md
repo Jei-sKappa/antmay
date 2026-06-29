@@ -6,7 +6,7 @@ targets:
       description: Execute every task in a plan artifact through an implementer and dual-reviewer subagent loop with per-cycle commits; use when a plan needs the heavier review path and the runtime supports subagents.
       metadata:
         author: https://github.com/Jei-sKappa
-        version: 3.0.0
+        version: 3.0.1
 inputs:
   task-noun:
     type: string

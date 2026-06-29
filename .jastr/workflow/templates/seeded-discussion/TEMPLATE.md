@@ -6,7 +6,7 @@ targets:
       description: Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending each on-target decision to a target-scoped log when the user already has concrete points to settle.
       metadata:
         author: https://github.com/Jei-sKappa
-        version: 2.0.0
+        version: 2.0.1
 inputs:
   session-noun:
     type: string

@@ -6,7 +6,7 @@ targets:
       description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when an input that does not enumerate its tasks needs to be carried to working code.
       metadata:
         author: https://github.com/Jei-sKappa
-        version: 3.0.0
+        version: 3.0.1
 inputs:
   task-noun:
     type: string

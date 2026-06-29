@@ -6,7 +6,7 @@ description: Walk a predetermined list of discussion points one at a time,
   has concrete points to settle.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Seeded Discussion
