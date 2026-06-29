@@ -1,6 +1,9 @@
 ---
 name: take-snapshot
-description: Derive a comprehensive, stack-agnostic snapshot document of an existing codebase when the user wants a hybrid SRS and PRD for a 1:1 rebuild, rewrite, port, or documentation pass without migration or target-stack guidance.
+description: Derive a comprehensive, stack-agnostic snapshot document of an
+  existing codebase when the user wants a hybrid SRS and PRD for a 1:1 rebuild,
+  rewrite, port, or documentation pass without migration or target-stack
+  guidance.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.2.1

@@ -1,6 +1,9 @@
 ---
 name: review-plan
-description: Read a plan artifact and write a references-first adherence review that checks the plan against its spec, sorts the result into one of four outcomes, auto-fixes plan-fault deviations, and routes spec-fault findings to the human; use when a plan needs to be checked for adherence to its spec.
+description: Read a plan artifact and write a references-first adherence review
+  that checks the plan against its spec, sorts the result into one of four
+  outcomes, auto-fixes plan-fault deviations, and routes spec-fault findings to
+  the human; use when a plan needs to be checked for adherence to its spec.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

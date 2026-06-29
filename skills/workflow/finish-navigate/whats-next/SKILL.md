@@ -1,6 +1,9 @@
 ---
 name: whats-next
-description: Read a thread's state — ledger, lineage folders, and frontmatter status latches — and fold it on demand to answer "what now / what next / is it closed", then suggest coherent next actions when the user wants a quick map after completing work, hitting uncertainty, or getting stuck.
+description: Read a thread's state — ledger, lineage folders, and frontmatter
+  status latches — and fold it on demand to answer "what now / what next / is it
+  closed", then suggest coherent next actions when the user wants a quick map
+  after completing work, hitting uncertainty, or getting stuck.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 2.0.1

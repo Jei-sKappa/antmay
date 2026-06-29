@@ -1,6 +1,8 @@
 ---
 name: adjust-plan-granularity
-description: Adjust an existing living plan to a new granularity level by editing it in place; use when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
+description: Adjust an existing living plan to a new granularity level by
+  editing it in place; use when the current plan is too loose, too strict, or
+  otherwise mismatched to the intended implementer.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

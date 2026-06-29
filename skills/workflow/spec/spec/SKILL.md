@@ -1,6 +1,8 @@
 ---
 name: spec
-description: Turn a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade spec markdown file; use when an upstream input needs to be forward-designed into a complete spec a downstream executor can build from.
+description: Turn a proposal, decision log, GitHub issue, or raw prompt into a
+  handoff-grade spec markdown file; use when an upstream input needs to be
+  forward-designed into a complete spec a downstream executor can build from.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

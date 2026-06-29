@@ -1,6 +1,9 @@
 ---
 name: merge-artifacts
-description: Reconcile two or more competing candidate drafts of one artifact into the single canonical artifact, folding non-conflicting content and preserving unresolvable subjective conflicts via HTML-comment markers; use when a multi-draft bake-off needs to be collapsed into one canonical artifact.
+description: Reconcile two or more competing candidate drafts of one artifact
+  into the single canonical artifact, folding non-conflicting content and
+  preserving unresolvable subjective conflicts via HTML-comment markers; use
+  when a multi-draft bake-off needs to be collapsed into one canonical artifact.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

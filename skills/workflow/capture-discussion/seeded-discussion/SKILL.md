@@ -1,6 +1,9 @@
 ---
 name: seeded-discussion
-description: Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending each on-target decision to a target-scoped log when the user already has concrete points to settle.
+description: Walk a predetermined list of discussion points one at a time,
+  presenting options or a single well-argued recommendation for each and
+  appending each on-target decision to a target-scoped log when the user already
+  has concrete points to settle.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 2.0.0
@@ -134,7 +137,7 @@ Log every decision that is **about this walk's target** — every on-target poin
 
 Do NOT log anything **off-target** — an exchange that is not about the target artifact. The canonical example is the end-of-walk "what should I do next?" exchange — write a spec, discard the work, push, commit. That is workflow navigation, not a decision about the target; handle it in conversation (see `## Finish`) and leave no record for it.
 
-The log is still created **lazily**: a walk that settles no on-target decision writes nothing. But once the first on-target decision lands, the log is created and **every** on-target point settled thereafter is recorded — there is no "too trivial to log" discretion for on-target decisions.
+The log is still created **lazily**: a walk that settles no on-target decision writes nothing. But once the first on-target decision lands, the log is created and **every** on-target decision thereafter is recorded — there is no "too trivial to log" discretion for on-target decisions.
 
 ## Scope Drift
 

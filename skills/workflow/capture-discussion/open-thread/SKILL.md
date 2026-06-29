@@ -1,6 +1,9 @@
 ---
 name: open-thread
-description: Open a local workflow thread from either a brand-new idea or an existing tracker ticket — writing the thread folder, the one frozen seed, and the lifecycle ledger with its initial tier line — use when a unit of work needs a durable home on disk before any proposal, spec, or plan exists.
+description: Open a local workflow thread from either a brand-new idea or an
+  existing tracker ticket — writing the thread folder, the one frozen seed, and
+  the lifecycle ledger with its initial tier line — use when a unit of work
+  needs a durable home on disk before any proposal, spec, or plan exists.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.1.0

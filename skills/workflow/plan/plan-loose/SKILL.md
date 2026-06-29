@@ -1,6 +1,8 @@
 ---
 name: plan-loose
-description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact; use when the downstream implementer is human-leaning and brief task descriptions suffice.
+description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt
+  into a loose-granularity plan artifact; use when the downstream implementer is
+  human-leaning and brief task descriptions suffice.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

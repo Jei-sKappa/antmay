@@ -1,6 +1,9 @@
 ---
 name: discussion
-description: Conduct an open-ended interview where questions are discovered live, surfacing options or a recommendation only at concrete decision points and appending decisions to a target-scoped log when the user wants to think a topic through without knowing every question up front.
+description: Conduct an open-ended interview where questions are discovered
+  live, surfacing options or a recommendation only at concrete decision points
+  and appending decisions to a target-scoped log when the user wants to think a
+  topic through without knowing every question up front.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 2.0.0

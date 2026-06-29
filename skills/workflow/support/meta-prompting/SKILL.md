@@ -1,6 +1,7 @@
 ---
 name: meta-prompting
-description: Refine a draft prompt for a fresh AI session only when the user explicitly mentions "meta-prompt" or "meta-prompting".
+description: Refine a draft prompt for a fresh AI session only when the user
+  explicitly mentions "meta-prompt" or "meta-prompting".
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.3.1

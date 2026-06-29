@@ -1,6 +1,9 @@
 ---
 name: review-code
-description: Read a code reference and write a references-first code-quality review report covering quality, safety, idioms, and testability, anchored to the spec's acceptance criteria as the definition of right; use when code needs a quality review on its own merits.
+description: Read a code reference and write a references-first code-quality
+  review report covering quality, safety, idioms, and testability, anchored to
+  the spec's acceptance criteria as the definition of right; use when code needs
+  a quality review on its own merits.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

@@ -1,6 +1,9 @@
 ---
 name: implement
-description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when an input that does not enumerate its tasks needs to be carried to working code.
+description: Implement a less-structured input end-to-end on the current working
+  tree, deriving implicit tasks, self-reviewing after each task, and
+  auto-committing per task; use when an input that does not enumerate its tasks
+  needs to be carried to working code.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0
@@ -130,7 +133,7 @@ A failed commit is typically a project signal — a pre-commit hook failed, a li
 
 ### No history rewriting
 
-**This skill does NOT rewrite history — no `--amend`, no rebase, no force-push.** The git history this skill produces is append-only. The implementer does not amend commits (no `commit --amend`, even for typos in commit subjects), does not rebase in any form, does not force-push (neither the `--force` flag nor its `-f` shorthand to any remote), and does not delete commits the skill made earlier in the same run. If a commit needs revising after the fact, that is the surrounding session's decision and the user's command — not this skill's responsibility.
+**This skill does NOT rewrite history — no `--amend`, no rebase, no force-push.** The git history this skill produces is append-only. The implementer does not amend commits (no `commit --amend`, even for typos in commit subjects), does not rebase (no `rebase` invocation in any form, even to clean up the local branch), does not force-push (neither the `--force` flag nor its `-f` shorthand to any remote, even when the remote is behind), and does not delete commits the skill made earlier in the same run. If a commit needs revising after the fact, that is the surrounding session's decision and the user's command — not this skill's responsibility, and not within this skill's mandate.
 
 This rule pairs with the failed-commit → `BLOCKED` rule above: a failed commit cannot be "recovered" by rewriting an earlier commit or by amending the failed attempt. The recovery path is to surface the failure and let the user resolve it explicitly.
 

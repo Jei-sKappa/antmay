@@ -1,6 +1,9 @@
 ---
 name: review-proposal
-description: Read a proposal artifact and write a references-first review report into the proposal's reviews/ folder covering gaps, risks, ambiguities, and consistency with the thread's decision logs; use when a proposal needs a lightweight quality review.
+description: Read a proposal artifact and write a references-first review report
+  into the proposal's reviews/ folder covering gaps, risks, ambiguities, and
+  consistency with the thread's decision logs; use when a proposal needs a
+  lightweight quality review.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

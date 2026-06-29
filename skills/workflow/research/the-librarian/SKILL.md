@@ -1,6 +1,8 @@
 ---
 name: the-librarian
-description: Route local reference-repository work to stock, consult, or research flows when the user wants to clone repos into the library, consult stocked repos, or produce in-depth reports from them.
+description: Route local reference-repository work to stock, consult, or
+  research flows when the user wants to clone repos into the library, consult
+  stocked repos, or produce in-depth reports from them.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.4.1

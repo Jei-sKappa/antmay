@@ -1,6 +1,10 @@
 ---
 name: open-ticket
-description: Create a remote tracker ticket (GitHub Issues, Jira, Linear, ClickUp, …) from a brand-new idea — the only skill in the workflow that writes to the tracker — use when an idea needs a work-item home in the team's tracker before (or instead of) a local thread, so a later thread can link it from its seed.
+description: Create a remote tracker ticket (GitHub Issues, Jira, Linear,
+  ClickUp, …) from a brand-new idea — the only skill in the workflow that writes
+  to the tracker — use when an idea needs a work-item home in the team's tracker
+  before (or instead of) a local thread, so a later thread can link it from its
+  seed.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0

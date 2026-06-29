@@ -1,6 +1,8 @@
 ---
 name: report-to-the-owner
-description: Draft a casual, context-rich message to a code owner when the user has hit a blocker in code owned elsewhere and wants to hand off the issue with a proposed change rather than ask for advice.
+description: Draft a casual, context-rich message to a code owner when the user
+  has hit a blocker in code owned elsewhere and wants to hand off the issue with
+  a proposed change rather than ask for advice.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.3.2

@@ -1,6 +1,9 @@
 ---
 name: plan-strict
-description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan with explicit substeps, files modified, verification, and acceptance criteria; use when the downstream implementer is agent-leaning and needs a prescriptive plan.
+description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt
+  into a strict-granularity plan with explicit substeps, files modified,
+  verification, and acceptance criteria; use when the downstream implementer is
+  agent-leaning and needs a prescriptive plan.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

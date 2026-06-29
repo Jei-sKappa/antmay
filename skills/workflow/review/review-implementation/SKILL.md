@@ -1,6 +1,9 @@
 ---
 name: review-implementation
-description: Verify an implementation against its spec's acceptance criteria and write a references-first review record capturing acceptance, constraint, scope, behavior, and test-coverage findings; use when an implementation needs to be checked against the spec it was meant to deliver.
+description: Verify an implementation against its spec's acceptance criteria and
+  write a references-first review record capturing acceptance, constraint,
+  scope, behavior, and test-coverage findings; use when an implementation needs
+  to be checked against the spec it was meant to deliver.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

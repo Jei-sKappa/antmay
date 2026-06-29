@@ -1,6 +1,7 @@
 ---
 name: afk-exploration
-description: Start AFK exploration on a topic only when the user explicitly asks for AFK research or exploration.
+description: Start AFK exploration on a topic only when the user explicitly asks
+  for AFK research or exploration.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.4.3

@@ -1,6 +1,10 @@
 ---
 name: finish
-description: Perform a thread's terminal handshake — set the spec's implemented latch, append closed:done to the ledger, update the living docs, close the linked ticket with its backlink — then run a lightweight thread check and ask the user how to dispose of the branch (merge into main, merge into another branch, create a PR, or leave as-is) when the work is complete.
+description: Perform a thread's terminal handshake — set the spec's implemented
+  latch, append closed:done to the ledger, update the living docs, close the
+  linked ticket with its backlink — then run a lightweight thread check and ask
+  the user how to dispose of the branch (merge into main, merge into another
+  branch, create a PR, or leave as-is) when the work is complete.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 2.0.0

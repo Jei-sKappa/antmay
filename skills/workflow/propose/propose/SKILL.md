@@ -1,6 +1,8 @@
 ---
 name: propose
-description: Turn a rough prompt or referenced artifact into a freeform proposal markdown file under a thread's proposals/ folder; use when high-ceremony initiative work needs its direction sketched and written down.
+description: Turn a rough prompt or referenced artifact into a freeform proposal
+  markdown file under a thread's proposals/ folder; use when high-ceremony
+  initiative work needs its direction sketched and written down.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

@@ -1,6 +1,10 @@
 ---
 name: review-lossless-mapping
-description: Read a set of discussions and the document produced from them, then write a references-first review report verifying the mapping is lossless and additive-free — flagging only smuggled-in decisions/assumptions and dropped user decisions — when the user wants to confirm a document (typically a spec) committed to nothing the user did not see and accept and left nothing out.
+description: Read a set of discussions and the document produced from them, then
+  write a references-first review report verifying the mapping is lossless and
+  additive-free — flagging only smuggled-in decisions/assumptions and dropped
+  user decisions — when the user wants to confirm a document (typically a spec)
+  committed to nothing the user did not see and accept and left nothing out.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0

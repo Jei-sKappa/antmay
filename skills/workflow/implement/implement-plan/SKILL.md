@@ -1,6 +1,9 @@
 ---
 name: implement-plan
-description: Execute a structured plan artifact end-to-end on the current working tree, reading tasks in order, self-reviewing after each task, and auto-committing per task; use when a plan needs to be carried to working code in a single agent.
+description: Execute a structured plan artifact end-to-end on the current
+  working tree, reading tasks in order, self-reviewing after each task, and
+  auto-committing per task; use when a plan needs to be carried to working code
+  in a single agent.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 3.0.0

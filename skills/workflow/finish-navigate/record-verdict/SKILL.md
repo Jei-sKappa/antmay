@@ -1,6 +1,10 @@
 ---
 name: record-verdict
-description: Record a human's explicit lifecycle verdict on a thread artifact by setting the matching set-once frontmatter status latch — approve or reject a proposal, approve a spec, or accept or reject a review — use when the user has explicitly decided an artifact's fate and wants that decision stamped into the artifact's status map, never to evaluate or judge the artifact itself.
+description: Record a human's explicit lifecycle verdict on a thread artifact by
+  setting the matching set-once frontmatter status latch — approve or reject a
+  proposal, approve a spec, or accept or reject a review — use when the user has
+  explicitly decided an artifact's fate and wants that decision stamped into the
+  artifact's status map, never to evaluate or judge the artifact itself.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0
