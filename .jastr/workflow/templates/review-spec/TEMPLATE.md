@@ -1,14 +1,46 @@
 ---
-name: review-spec
-description: Read a spec artifact and write a references-first review report
-  checking all eight semantic-contract elements against the handoff-grade bar
-  and consistency with the thread's decision logs; use when a spec needs a
-  quality review before downstream work.
-metadata:
-  author: https://github.com/Jei-sKappa
-  version: 3.0.0
+targets:
+  agent-skill:
+    frontmatter:
+      name: review-spec
+      description: Read a spec artifact and write a references-first review report checking all eight semantic-contract elements against the handoff-grade bar and consistency with the thread's decision logs; use when a spec needs a quality review before downstream work.
+      metadata:
+        author: https://github.com/Jei-sKappa
+        version: 3.0.0
+inputs:
+  open-by-parse-trailer:
+    type: string
+    required: false
+    default: '**open, mechanically, by parse**. There is no separate "open" marker to set; the absence of the latch is the open state.'
+  disposition-record:
+    type: string
+    required: false
+    default: the **revision of the spec is the record**
+  rationale-bullet:
+    type: string
+    required: false
+    default: The optional `rationale` is a thread-relative path to a discussion, if one happened. A discussion never owns the disposition — the frontmatter does.
+  disposed-state:
+    type: string
+    required: false
+    default: with no
+  has-disposing-aside:
+    type: boolean
+    required: false
+    default: false
+  disposing-aside:
+    type: string
+    required: false
+    default: ' — DISPOSING-ASIDE-PLACEHOLDER —'
+  has-frontmatter-lineage-tail:
+    type: boolean
+    required: false
+    default: false
+  frontmatter-lineage-tail:
+    type: string
+    required: false
+    default: ' FRONTMATTER-LINEAGE-TAIL-PLACEHOLDER.'
 ---
-
 # Review Spec
 
 Read a spec artifact READ-ONLY and emit a references-first review report into the target spec's `reviews/` folder. This skill reads the spec, checks every one of the eight semantic-contract elements against the handoff-grade bar, checks the spec for consistency with the thread's decision logs, drafts the report end-to-end, and writes one record per review run. By default it runs end-to-end without walking findings with the user one-at-a-time, but it honors an invocation that asks it to check in or walk the findings interactively. It does not commit.
@@ -104,25 +136,7 @@ specs/001/reviews/260521101212Z-auth-spec-review.md
 
 There is NO open/processed/dropped lifecycle and NO folder-move to express status. A review's disposition is not expressed by where it lives.
 
-### Disposition Frontmatter
-
-A review records its own disposition in its YAML frontmatter, under a `status:` map. **This skill emits the review with NO `status.disposed` field** — a review with no `status.disposed` is **open, mechanically, by parse**. There is no separate "open" marker to set; the absence of the latch is the open state.
-
-When the review is later acted on, its disposition is recorded directly in this same frontmatter, set once:
-
-```yaml
-status:
-  disposed: <YYMMDDHHMMSSZ>
-  disposition: accepted | rejected
-  rationale: <thread-relative path>   # optional
-```
-
-- **Accept-and-revise** sets the frontmatter directly — the **revision of the spec is the record**; no separate disposing document is written.
-- **Reject** sets the frontmatter with **no document at all** — no separate disposing record is required.
-- The optional `rationale` is a thread-relative path to a discussion, if one happened. A discussion never owns the disposition — the frontmatter does.
-- Disposition is **set-once**: changing your mind is a new review or a thread reopen, not a frontmatter flip-flop.
-
-This skill only EMITS the review (open, with no `status.disposed`). Disposing it is a downstream act, out of scope for this skill.
+::include{root="group", path="partials/disposition-frontmatter.md"}
 
 ## Adversarial Review
 

@@ -16,4 +16,19 @@ status:
 - {{rationale-bullet}}
 - Disposition is **set-once**: changing your mind is a new review or a thread reopen, not a frontmatter flip-flop.
 
+::::::if{condition="${has-disposing-aside}"}
+:::::if{condition="${has-frontmatter-lineage-tail}"}
 This skill only EMITS the review (open, {{disposed-state}} `status.disposed`). Disposing it{{disposing-aside}} is a downstream act, out of scope for this skill.{{frontmatter-lineage-tail}}
+:::::
+:::::else
+This skill only EMITS the review (open, {{disposed-state}} `status.disposed`). Disposing it{{disposing-aside}} is a downstream act, out of scope for this skill.
+:::::
+::::::
+::::::else
+:::::if{condition="${has-frontmatter-lineage-tail}"}
+This skill only EMITS the review (open, {{disposed-state}} `status.disposed`). Disposing it is a downstream act, out of scope for this skill.{{frontmatter-lineage-tail}}
+:::::
+:::::else
+This skill only EMITS the review (open, {{disposed-state}} `status.disposed`). Disposing it is a downstream act, out of scope for this skill.
+:::::
+::::::
