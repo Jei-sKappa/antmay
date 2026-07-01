@@ -3,7 +3,7 @@ name: seeded-discussion
 description: Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending each on-target decision to a target-scoped log when the user already has concrete points to settle.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Seeded Discussion
@@ -100,7 +100,7 @@ Within-thread references (the target path, cross-links to other artifacts in thi
 
 The decision log lives in the target's `discussions/` folder at `<target-discussions-folder>/<UTC>-<kebab-desc>-decision-log.md` — e.g. `seed/discussions/<UTC>-<kebab-desc>-decision-log.md` for a genesis walk, or `specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` for a spec walk. Use a 12-character `YYMMDDHHMMSSZ` UTC stamp captured once at creation time (no separators, trailing `Z` for UTC, e.g. `260518200115Z`). The `decision-log` artifact-type suffix is MANDATORY.
 
-The log is **append-only**. Create it lazily on the FIRST on-target decision in this walk (no proactive creation in `## Setup`; see `## Log What Serves the Target`). After the user settles each on-target point, append one record with a sequential per-log local heading. The record mirrors what the user saw at the point, so the log carries enough context to reconstruct what was discussed later without re-reading the chat:
+The log is **append-only**. Create it lazily on the FIRST on-target decision in this walk (no proactive creation in `## Setup`; see `## Log What Serves the Target`). After the user settles each on-target point, append one record with a sequential per-log local heading. The record captures the **decision, not the deliberation**. Only the two context fields the user saw — the Point and What you need to know — are mirrored verbatim; the record then states the chosen resolution and its rationale. The options menu and your recommendation are **deliberately not logged** — the log records what was decided, not the menu it was picked from. This still reconstructs the fork later without re-reading the chat: the two verbatim fields frame the question, and the Decision states the answer in full:
 
 ```markdown
 ## P<N>: <Point title>
@@ -109,7 +109,7 @@ Point: <the Point line you presented, verbatim — what this decision point is a
 
 What you need to know: <the background block you presented, verbatim — keep multi-paragraph context as paragraphs, keep file paths and line numbers; do NOT summarize or compress>
 
-Decision: <what the user chose>
+Decision: <the chosen resolution written out in full — in creative mode write the *substance* of the chosen option, NEVER a bare letter like "A"; never restate the other options or your recommendation>
 
 Rationale: <why the choice made sense, including the main trade-off; flag any dissent per the Peer Framing stance>
 ```

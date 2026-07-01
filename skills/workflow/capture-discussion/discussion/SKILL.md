@@ -3,7 +3,7 @@ name: discussion
 description: Conduct an open-ended interview where questions are discovered live, surfacing options or a recommendation only at concrete decision points and appending decisions to a target-scoped log when the user wants to think a topic through without knowing every question up front.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.1
+  version: 2.0.2
 ---
 
 # Discussion
@@ -97,7 +97,7 @@ Within-thread references (the target path, cross-links to other artifacts in thi
 
 ## Logging Format
 
-The decision log is **append-only**. Each on-target decided point is appended as one record with a sequential per-log local heading. The record mirrors what the user saw at the decision point, so the log carries enough context to reconstruct what was discussed later without re-reading the chat:
+The decision log is **append-only**. Each on-target decided point is appended as one record with a sequential per-log local heading. The record captures the **decision, not the deliberation**. Only the two context fields the user saw — the Point and What you need to know — are mirrored verbatim; the record then states the chosen resolution and its rationale. The options menu and your recommendation are **deliberately not logged** — the log records what was decided, not the menu it was picked from. This still reconstructs the fork later without re-reading the chat: the two verbatim fields frame the question, and the Decision states the answer in full:
 
 ```markdown
 ## P<N>: <Title>
@@ -106,7 +106,7 @@ Point: <the Point line you presented, verbatim — what this decision point is a
 
 What you need to know: <the background block you presented, verbatim — keep multi-paragraph context as paragraphs, keep file paths and line numbers; do NOT summarize or compress>
 
-Decision: <what the user chose>
+Decision: <the chosen resolution written out in full — in creative mode write the *substance* of the chosen option, NEVER a bare letter like "A"; never restate the other options or your recommendation>
 
 Rationale: <why the choice made sense, including the main trade-off; flag any dissent per the Peer Framing stance>
 ```
