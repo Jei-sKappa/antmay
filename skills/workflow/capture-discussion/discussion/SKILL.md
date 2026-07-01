@@ -3,7 +3,7 @@ name: discussion
 description: Conduct an open-ended interview where questions are discovered live, surfacing options or a recommendation only at concrete decision points and appending decisions to a target-scoped log when the user wants to think a topic through without knowing every question up front.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Discussion
@@ -142,7 +142,7 @@ ASK the user which. Do not pick silently.
 
 ## Question Budget
 
-There is NO fixed limit on questions or decisions. Ask "shall we keep going or finish here?" whenever you sense natural closure: the user's pace slows, the topic feels exhausted, roughly 10–15 decisions have been logged, or the conversation starts repeating itself. The decision is the user's; the prompt is your job.
+There is NO fixed limit on questions or decisions. Ask "shall we keep going or finish here?" whenever you sense natural closure: the user's pace slows, the topic feels exhausted, or the conversation starts repeating itself. The decision is the user's; the prompt is your job.
 
 ## Finish
 
