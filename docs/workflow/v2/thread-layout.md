@@ -40,8 +40,11 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/
 │       ├── discussions/
 │       └── reviews/
 ├── plans/
-│   └── NNN[-<desc>]/
-│       ├── plan.md
+│   └── NNN[-<desc>]/                      # multi-file plan artifact — index is authoritative for task count + order
+│       ├── plan.md                        # the INDEX — objective, Source, Global Constraints, ordered task list
+│       ├── tasks/                         # dispatchable briefs — tasks/NN-<kebab-slug>.md, one per task
+│       │   ├── 01-<kebab-slug>.md         # two-digit zero-padded ordinal + kebab slug
+│       │   └── …
 │       └── reviews/                       # machine adherence reviews
 ├── implementation/                        # flat, records-only spine node
 │   ├── <UTC>-<desc>-implementation-report.md
@@ -165,7 +168,7 @@ thread"** — only then would lineage folders for `implementation/` be reconside
 
 ## Companion Docs
 
-- [`./filename-grammar.md`](./filename-grammar.md) — the two filename forms, the UTC
+- [`./filename-grammar.md`](./filename-grammar.md) — the primary filename forms plus the plan-local task-file form, the UTC
   stamp, the artifact-type token vocabulary, and ambiguous-reference resolution.
 - [`./lifecycle.md`](./lifecycle.md) — the ledger spec, immutability, the freeze model,
   and the frontmatter status contract.

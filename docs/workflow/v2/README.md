@@ -17,9 +17,10 @@ Each doc is short and self-contained. Read in this order:
    lineage folders, the `seed/` genesis bucket, the ledger's location, records
    attaching to their target, the inbox removal, lineages-vs-variants, and path
    references.
-2. [`filename-grammar.md`](./filename-grammar.md) — the two filename forms (versioned
-   `<type>.md` with no stamp/no `v<N>`; the unchanged record form), the UTC stamp, the
-   ledger's fixed name, the V2 token vocabulary, and the shrunk ambiguity rule.
+2. [`filename-grammar.md`](./filename-grammar.md) — the two primary filename forms (versioned
+   `<type>.md` with no stamp/no `v<N>`; the unchanged record form) plus the plan-local
+   task-file form, the UTC stamp, the ledger's fixed name, the V2 token vocabulary, and
+   the shrunk ambiguity rule.
 3. [`lifecycle.md`](./lifecycle.md) — the two artifact classes plus the ledger, record
    immutability, stored latches vs derived condition, the freeze model and its guard,
    the frontmatter status contract, event sourcing, and the thread lifecycle ledger

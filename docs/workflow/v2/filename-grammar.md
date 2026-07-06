@@ -1,9 +1,10 @@
 # V2 Filename Grammar
-**Realizes:** §3 (the two filename forms, the token vocabulary, ambiguity); §16 (the V2 vocabulary replacing V1's token list)
+**Realizes:** §3 (the two primary filename forms, the token vocabulary, ambiguity); §16 (the V2 vocabulary replacing V1's token list)
 
-This is the V2 successor to `v1/filename-grammar.md`. V2 has **two** filename forms —
-a versioned form that drops V1's `v<N>` machinery entirely, and a record form
-unchanged from V1 — plus two fixed-name files (the ledger and the seed). The deep change is that
+This is the V2 successor to `v1/filename-grammar.md`. V2 has **two** primary filename
+forms — a versioned form that drops V1's `v<N>` machinery entirely, and a record form
+unchanged from V1 — plus a plan-local task-file form and two fixed-name files (the
+ledger and the seed). The deep change is that
 versioned artifacts no longer encode a version in the filename: the lineage folder is
 the stable link target, and the version lives in frontmatter.
 
@@ -43,6 +44,26 @@ plans/001/plan.md
   `-v2-` files and no `-descriptor-` variant files in the emitted record; competing
   drafts live in `.wip/` and only the canonical artifact is emitted (see
   [`./thread-layout.md`](./thread-layout.md)).
+
+## Plan Task-File Form
+
+A strict plan is a **multi-file artifact**: the versioned index at `plan.md` (the
+`<type>.md` file above) is accompanied by one task file per task under a `tasks/`
+subfolder:
+
+```text
+plans/001/plan.md                  # the versioned index
+plans/001/tasks/01-<kebab-slug>.md
+plans/001/tasks/02-<kebab-slug>.md
+```
+
+Task files use a **plan-local form** — `tasks/NN-<kebab-slug>.md`: a two-digit
+zero-padded ordinal (`01`, `02`, …) plus a kebab slug, carrying **no UTC stamp, no
+`v<N>`, and no artifact-type token**. It is neither the versioned form nor the record
+form — it is a form carried *inside* the plan artifact (the plan folder as a whole is
+the reviewable unit), so it needs no independent identifier: the ordinal fixes task
+order and the slug is chosen when the plan is authored. The index `plan.md` remains the
+versioned `<type>.md` file.
 
 ## Record Form
 
