@@ -127,7 +127,7 @@ docs/threads/<thread>/.wip/implement/plans-NNN/
 
 **Run progress ledger** (log P9): the per-task report block moves to `.wip/implement/plans-NNN/progress.md`:
 
-- Immediately after each cycle's commit, append that task's block — append-only, one block per completed task. Block content: claimed status vs verified verdict, dispatch counts, fix iterations per verdict lane, deviations, unresolved concerns verbatim (resolved findings counted, never restated), the commit SHA + subject, and brief notes.
+- Append-only, one block per **attempted** task, **cycle-gated not commit-gated** (disposition log P7): every orchestration cycle that reaches a verified outcome appends exactly one block — committed cycles immediately after the commit; empty-diff `DONE` / `BLOCKED` / `NEEDS_CONTEXT` cycles append their block with `Commit: none` before advancing or stopping (a pre-flight halt appends nothing — no cycle started). Block content: claimed status vs verified verdict, dispatch counts, fix iterations per verdict lane, deviations, unresolved concerns verbatim (resolved findings counted, never restated), the commit SHA + subject for committed cycles (else `Commit: none`), and brief notes.
 - The commit message body keeps carrying the block (it omits the SHA of the commit itself).
 - Chat shrinks to one line per task (e.g. `Task 04: verified DONE, commit abc1234`).
 - The implementation report is folded from the ledger file re-read from disk at the end. Compaction recovery: the ledger + `git log` are the resume state, never conversation recollection.
@@ -155,7 +155,7 @@ Both `references/plan-compliance-reviewer.md` and `references/code-quality-revie
 
 - **Mandatory:** multi-file plan handling (parse index, read task files itself — it is the implementer), the mechanical pre-flight, the `Source:` read at startup, loose-granularity removal, and the same deviation-policy rewording (currently at its SKILL.md:155 and :161).
 - **With adaptation:** the P12 self-review changes (unverified-concern classification; positive focus framing instead of any out-of-task ban) and the P2 awareness sentence (its per-task self-review is a task-scoped gate; broader review happens downstream).
-- **Ledger:** same `.wip/implement/plans-NNN/progress.md`, appended after each cycle's commit, chat one-liner per task, implementation report folded from disk — without the subagent-audit lines (nothing is dispatched).
+- **Ledger:** same `.wip/implement/plans-NNN/progress.md`, cycle-gated append (disposition log P7 — one block per attempted task: committed cycles after the commit, empty-diff `DONE` / `BLOCKED` / `NEEDS_CONTEXT` cycles with `Commit: none` before advancing or stopping), chat one-liner per task, implementation report folded from disk — without the subagent-audit lines (nothing is dispatched).
 - **Excluded:** merged-reviewer machinery, dispatch scratch files (only the ledger lives in the `.wip/implement/plans-NNN/` layout), brief-construction rules, model-selection content.
 
 ### 7. Deprecations and registrations
@@ -219,7 +219,7 @@ Traceability: each AC cites the log record(s) it enforces.
 - AC-4.7: The Subagent Briefs section forbids pre-rating severity, excluding finding categories, or declaring questions settled in reviewer briefs, listing the red-flag phrasings, and cites the existing unclassified-injection as the pattern. (P13)
 
 **FR-5 — Run ledger and reporting (`implement-plan-with-subagents`)**
-- AC-5.1: After each cycle's commit, the orchestrator appends the task's report block to `.wip/implement/plans-NNN/progress.md` (append-only), with content: claimed vs verified status, dispatch counts, fix iterations per verdict lane, deviations, unresolved concerns verbatim, resolved findings counted not restated, commit SHA + subject, notes. (P9)
+- AC-5.1: The orchestrator appends one block per attempted task to `.wip/implement/plans-NNN/progress.md` (append-only, cycle-gated not commit-gated): committed cycles immediately after the commit, empty-diff `DONE` / `BLOCKED` / `NEEDS_CONTEXT` cycles with `Commit: none` before advancing or stopping (a pre-flight halt appends nothing). Content: claimed vs verified status, dispatch counts, fix iterations per verdict lane, deviations, unresolved concerns verbatim, resolved findings counted not restated, commit SHA + subject for committed cycles (else `Commit: none`), notes. (P9; disposition log P7)
 - AC-5.2: The commit message body carries the block; per-task chat output is one line. (P9)
 - AC-5.3: The implementation report is folded from the ledger re-read from disk; the skill names the ledger + `git log` as the compaction-recovery state. (P9)
 
@@ -242,7 +242,7 @@ Traceability: each AC cites the log record(s) it enforces.
 - AC-8.1: Multi-file plan handling: parse index, mechanical pre-flight (same three checks, same halt semantics), `Source:` read at startup, task files read by the session itself. (P14, P11)
 - AC-8.2: Deviation passages reworded identically to AC-6.3. (P4)
 - AC-8.3: Self-review adopts the unverified-concern classification and positive focus framing (no out-of-task ban); the P2 awareness sentence is present. (P14, P12, P2)
-- AC-8.4: The run ledger at `.wip/implement/plans-NNN/progress.md` is appended after each cycle's commit, without subagent-audit lines; chat is one line per task; the implementation report folds from the ledger re-read from disk. (P14, P9)
+- AC-8.4: The run ledger at `.wip/implement/plans-NNN/progress.md` is appended cycle-gated not commit-gated (one block per attempted task: committed cycles after the commit, empty-diff `DONE` / `BLOCKED` / `NEEDS_CONTEXT` cycles with `Commit: none`), without subagent-audit lines; chat is one line per task; the implementation report folds from the ledger re-read from disk. (P14, P9; disposition log P7)
 - AC-8.5: No loose-granularity handling remains; no merged-reviewer or brief-construction machinery is added. (P3, P14)
 
 **FR-9 — Deprecations and registrations**
