@@ -38,7 +38,7 @@ Each thread lives at `docs/threads/<YYMMDDHHMMSSZ-slug>/`: an append-only `ledge
 | Implementing a feature from rough idea  | `discussion → propose → spec → plan-strict → implement-plan-with-subagents → review-implementation → finish` (canonical full workflow) |
 | Fixing a bug                            | `implement → review-code → finish`                                                                                                |
 | Exploring an idea                       | `discussion → propose` (no further commitment)                                                                                    |
-| Refining a plan                         | `plan-strict → review-plan → adjust-plan-granularity → implement-plan`                                                            |
+| Refining a plan                         | `plan-strict → review-plan → implement-plan`                                                                                      |
 | Reconciling two artifact variants       | `merge-artifacts → review-spec → finish`                                                                                          |
 
 Each path is one valid composition — not the only valid composition. Pick the entry point that matches what you have in hand and stop when you've shipped the outcome you wanted.
@@ -107,28 +107,12 @@ npx skills add Jei-sKappa/skills --skill spec
 
 ### Plan
 
-#### [`plan-loose`](./skills/workflow/plan/plan-loose/SKILL.md)
-
-Loose-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a loose-granularity plan artifact in its lineage folder (`plans/NNN/plan.md`), end-to-end. Loose plans use brief 1–3 sentence task descriptions optimized for a human-leaning implementer who fills in details. Plans are sequential, isolated, independently implementable, self-reviewed before emission, carry no stored status (the plan is a disposable compiler-IR — the spec and its acceptance criteria are the contract), are edited alive in place rather than re-versioned, and are NEVER auto-committed.
-
-```sh
-npx skills add Jei-sKappa/skills --skill plan-loose
-```
-
 #### [`plan-strict`](./skills/workflow/plan/plan-strict/SKILL.md)
 
-Strict-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity plan artifact in its lineage folder (`plans/NNN/plan.md`), end-to-end. Strict plans carry explicit substeps, verification notes, files modified, and acceptance criteria per task — optimized for an agent-leaning implementer that needs unambiguous prescriptive steps; the plan carries no stored status and is edited alive in place.
+Strict-granularity plan generation — turns a spec, proposal, decision log, GitHub issue, or raw prompt into a multi-file strict plan artifact in its lineage folder: an index at `plans/NNN/plan.md` plus one dispatchable task file per task under `tasks/`, end-to-end. Each task file carries explicit substeps, verification notes, files modified, and acceptance criteria — a directly dispatchable brief for an agent-leaning implementer that needs unambiguous prescriptive steps; the plan carries no stored status and is edited alive in place.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill plan-strict
-```
-
-#### [`adjust-plan-granularity`](./skills/workflow/plan/adjust-plan-granularity/SKILL.md)
-
-Adjust an existing living plan to a new granularity level by editing it in place when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
-
-```sh
-npx skills add Jei-sKappa/skills --skill adjust-plan-granularity
 ```
 
 ### Implement
@@ -143,7 +127,7 @@ npx skills add Jei-sKappa/skills --skill implement
 
 #### [`implement-plan`](./skills/workflow/implement/implement-plan/SKILL.md)
 
-Plan-driven implementation — takes a plan artifact path (loose or strict granularity, produced by any of the `plan-*` skills) and executes every plan task in order on the current working tree, self-reviewing after each task and auto-committing per plan task. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the four-state status protocol and emits a single immutable implementation report record on the way out. Never rewrites history.
+Plan-driven implementation — takes a multi-file plan artifact (an index plus one task file per task) and executes every plan task in order on the current working tree, running a mechanical pre-flight over the plan first, then self-reviewing after each task and auto-committing per plan task. Single-agent (current session + self-review); no subagents are spawned. Reports each plan task by the four-state status protocol, keeps a durable run ledger, and emits a single immutable implementation report record on the way out. Never rewrites history.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill implement-plan
@@ -151,7 +135,7 @@ npx skills add Jei-sKappa/skills --skill implement-plan
 
 #### [`implement-plan-with-subagents`](./skills/workflow/implement/implement-plan-with-subagents/SKILL.md)
 
-Plan-driven implementation with subagent dual-review loop — takes a plan artifact path and executes every plan task in order by orchestrating a dispatch loop: implementer subagent → plan-compliance reviewer subagent (first pass) → fix loop respawning a NEW implementer with re-review until pass → code-quality reviewer subagent (second pass) → same fix loop — and auto-commits per orchestration cycle. REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit and emits a single immutable implementation report record on the way out. Never rewrites history.
+Plan-driven implementation with a subagent review loop — takes a multi-file plan artifact and executes every plan task in order by orchestrating a dispatch loop: implementer subagent → one merged reviewer subagent that returns two lane verdicts (plan-compliance and code-quality) → fix loop respawning a NEW implementer with re-review until both lanes pass — and auto-commits per orchestration cycle. REQUIRES subagent capability (no inline fallback). Reports each plan task by the four-state status protocol with the subagent audit, keeps a durable run ledger, and emits a single immutable implementation report record on the way out. Never rewrites history.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill implement-plan-with-subagents
@@ -313,8 +297,10 @@ npx skills add Jei-sKappa/skills --skill meta-prompting
 
 ## Retired skills
 
+- **`adjust-plan-granularity`** — retired 2026-07-06. With a single plan granularity there is nothing to adjust; there is no successor skill — a plan that no longer fits is edited alive in place or recompiled from its spec. The legacy folder remains on disk at `skills/deprecated/adjust-plan-granularity` so existing installs do not break. Pre-existing plans require no migration.
 - **`capture-inbox`** — retired 2026-06-21. The V2 workflow removes the inbox concept: a unit of work now gets a durable home by opening a thread directly with `open-thread` (local) or a tracker work-item with `open-ticket` (remote), and no V2 spine path writes to an inbox. The legacy folder remains on disk at `skills/deprecated/capture-inbox` so existing installs do not break; new installs should pick `open-thread` / `open-ticket`. Pre-existing `inbox/` captures under older threads remain valid as-is and require no migration.
 - **`discussion-loop`** — retired 2026-05-21. Split into `discussion` (open-ended interviews) and `seeded-discussion` (predetermined point walks) when V1's thread layout shipped. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing logs at `docs/discussions/*-discussion.md` are valid as-is and require no migration.
+- **`plan-loose`** — retired 2026-07-06. The strict multi-file plan (an index plus one task file per task) is now the single plan format the workflow emits; there is no separate loose granularity. The legacy folder remains on disk at `skills/deprecated/plan-loose` so existing installs do not break; new installs should pick `plan-strict`. Pre-existing loose plans under older threads remain valid as-is and require no migration.
 - **`review-decision-document`** — retired 2026-05-21. Evolved into `review-spec`, which checks a spec against its acceptance criteria. The legacy folder remains on disk so existing installs do not break; new installs should pick the relevant replacement skill. Pre-existing review outputs produced by the legacy skill remain valid as-is and require no migration.
 
 ## Installation

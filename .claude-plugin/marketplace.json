@@ -55,9 +55,7 @@
       "name": "JeisKappa-plan",
       "source": "./",
       "skills": [
-        "./skills/workflow/plan/plan-loose",
-        "./skills/workflow/plan/plan-strict",
-        "./skills/workflow/plan/adjust-plan-granularity"
+        "./skills/workflow/plan/plan-strict"
       ]
     },
     {
@@ -105,8 +103,10 @@
       "name": "JeisKappa-deprecated",
       "source": "./",
       "skills": [
+        "./skills/deprecated/adjust-plan-granularity",
         "./skills/deprecated/capture-inbox",
         "./skills/deprecated/discussion-loop",
+        "./skills/deprecated/plan-loose",
         "./skills/deprecated/review-decision-document"
       ]
     }
