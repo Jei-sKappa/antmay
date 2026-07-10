@@ -252,7 +252,7 @@ Traceability: each AC cites the log record(s) it enforces.
 - AC-9.4: `AGENTS.md` Layout section shows both skills under `deprecated/` and only `plan-strict` under `plan/`. (P3, P4)
 
 **FR-10 — Repo-wide consistency**
-- AC-10.1: `grep -rn "plan-loose\|adjust-plan-granularity" README.md AGENTS.md .claude-plugin/ skills/workflow/` returns no hits (deprecated folder and thread records excluded). (P3, P4)
+- AC-10.1: No stale reference treats either deprecated skill as active. `grep -rn "plan-loose\|adjust-plan-granularity" README.md AGENTS.md .claude-plugin/ skills/workflow/` returns ONLY the intentional deprecation registrations mandated by AC-9.2–9.4 — the marketplace `JeisKappa-deprecated` entries, the README Retired-skills entries, and the AGENTS.md `deprecated/` Layout line — and no other hit: no plan-group listing, no active recipe/workflow row, no `skills/workflow/` occurrence. The deprecated folder (`skills/deprecated/`) and thread records (`docs/threads/`) remain excluded. (P3, P4; disposition log P8)
 - AC-10.2: `docs/workflow/v2/thread-layout.md` shows the plans lineage folder containing `plan.md` + `tasks/NN-<kebab-slug>.md` (+ `reviews/`). (P5)
 - AC-10.3: No text in the four updated skills or two method files assumes a single-file plan (e.g. "the plan file", "parse the numbered task list from the plan artifact") without the index/tasks framing. (P5)
 - AC-10.4: The four updated skills carry a major version bump in frontmatter; the two deprecated skills' versions are unchanged. (repo rule)
