@@ -2,6 +2,7 @@
 version: 2
 status:
   approved: 260706142220Z
+  implemented: 260710131853Z
 ---
 
 # Spec: Superpowers v6 sync — multi-file strict plans and hardened plan execution
