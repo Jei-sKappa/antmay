@@ -3,7 +3,7 @@ name: discussion-loop
 description: Walk through existing discussion points one at a time, always presenting options and a recommendation, then append each user decision to a per-thread decision log. Use when the user has findings, open questions, review comments, design points, or a concrete plan they want to discuss and decide interactively.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.5.0
+  version: 1.5.1
 ---
 
 # Discussion Loop
@@ -42,7 +42,7 @@ Hold these together:
 
 ## Loop
 
-For each point, settle on a concise title for the point — this title is reused verbatim in the log under a `## P<N>: <title>` heading, where `N` starts at `1` for the first point in this log and increments by `1` per point IN THIS LOG. The `## P<N>:` IDs are LOCAL to this log — NOT thread-global, NOT project-global. Cross-log references must include the source log's path.
+For each point, settle on a concise title for the point — this title is reused verbatim in the log under a `## DP<N>: <title>` heading, where `N` starts at `1` for the first point in this log and increments by `1` per point IN THIS LOG. The `## DP<N>:` IDs are LOCAL to this log — NOT thread-global, NOT project-global. Cross-log references must include the source log's path.
 Then ask one question at a time and always include:
 
 1. **Point** — what this point is about.
@@ -59,7 +59,7 @@ Continue discussing the current point until the user decides. Do not move on whi
 After the user decides, append one record that mirrors what the user saw during the interview, so the log carries enough context to reconstruct what was discussed later without re-reading the chat:
 
 ```markdown
-## P<N>: <the concise title for the point, verbatim>
+## DP<N>: <the concise title for the point, verbatim>
 
 Point: <the Point line you presented, verbatim>
 

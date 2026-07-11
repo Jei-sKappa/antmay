@@ -3,7 +3,7 @@ name: plan-strict
 description: Turn a spec, proposal, decision log, GitHub issue, or raw prompt into a strict-granularity multi-file plan (an index plus one dispatchable brief per task) with explicit substeps, files modified, verification, and acceptance criteria; use when the downstream implementer is agent-leaning and needs a prescriptive plan.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.0.1
 ---
 
 # Plan Strict
@@ -18,7 +18,7 @@ Accept ONE of the following five input forms. Detect which form was passed befor
 
 1. **A spec artifact path** — a spec document on disk, typically `specs/NNN[-<desc>]/spec.md` in the active thread. The spec is the most common upstream input — its semantic-contract elements (intended outcome, expected behavior, constraints, acceptance guidance) drive the plan's task list directly, its acceptance criteria map cleanly onto per-task acceptance criteria, and its Degrees-of-freedom section tells the plan which *hows* are open. Before drafting from a spec, confirm the spec is approved (its frontmatter `status:` map carries an `approved` latch); planning from a Draft spec is allowed but flag that the contract is not yet signed.
 2. **A proposal artifact path** — a proposal document on disk, typically `proposals/NNN[-<desc>]/proposal.md` in the active thread. When the input is a proposal rather than a spec, the plan tasks elaborate the proposal's rough shape into an implementable sequence; treat the proposal's open questions as items the plan either resolves or carries forward. A thin proposal yields a thin plan — if there is not enough substance to warrant per-task briefs, flag it in self-review rather than padding the structure.
-3. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## P<N>: <Title>` headings. Each settled decision may map to a task (or constrain one) — cite the source log by path + `P<N>` where the decision is operative in the relevant task's input/context field (same-thread references thread-relative, e.g. `discussions/<UTC>-<slug>-decision-log.md P3`; cross-thread references repo-relative, `docs/threads/<other>/…`).
+3. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## DP<N>: <Title>` headings. Each settled decision may map to a task (or constrain one) — cite the source log by path + `DP<N>` where the decision is operative in the relevant task's input/context field (same-thread references thread-relative, e.g. `discussions/<UTC>-<slug>-decision-log.md DP3`; cross-thread references repo-relative, `docs/threads/<other>/…`).
 4. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the upstream input; treat the issue title and labels as additional context.
 5. **A raw user prompt**. When no artifact is referenced, the user's prompt is itself the input — the plan is forward-designed directly from it.
 
@@ -70,7 +70,7 @@ The index MUST contain:
 Each task file is a directly dispatchable brief carrying the six mandatory fields plus two hand-off lines. The six mandatory fields:
 
 1. **Objective** — one sentence stating what this task accomplishes. The objective is the "why" of the task, before any "how".
-2. **Input / context** — the artifacts, files, or upstream state the task depends on. Cite settled decisions by absolute path + `P<N>` here when they constrain the task. If the task starts from the previous numbered task's output (the implicit dependency), say so explicitly.
+2. **Input / context** — the artifacts, files, or upstream state the task depends on. Cite settled decisions by absolute path + `DP<N>` here when they constrain the task. If the task starts from the previous numbered task's output (the implicit dependency), say so explicitly.
 3. **Steps / substeps** — a numbered list of the explicit sub-actions the implementer takes. The substeps are prescriptive; an agent-leaning implementer can follow them literally. Each substep is one concrete action ("create file X", "add function Y to module Z", "run command Q"), not a sub-objective. **Code blocks are the exception, not the default**: describe the action (e.g. "add `verifyToken(token): Promise<UserClaims | null>` to `src/lib/jwt.ts`") and let the implementer write the code. Include an actual code block only when the exact code is load-bearing — a precise signature or interface that must not drift, or a subtle algorithm or edge case likely to be gotten wrong — or when the spec, a discussion, or the user explicitly asked for the code to be pinned. Otherwise, prose substeps.
 4. **Files modified** — the exact files this task touches. List every file by relative path. If a file is created, note `(NEW)` next to it; if removed, note `(DELETED)`. The list is the source of truth for the task's filesystem footprint.
 5. **Verification** — how the implementer (or a reviewer) confirms the task succeeded. Prefer a concrete command, `grep`, `jq`, `test -f` check, or named test over "looks correct". Verification is mechanical, not interpretive — a reviewer running the verification block should reach the same conclusion as the implementer. The verification block is *task-specific*: it captures the checks that confirm THIS task's objective, and it layers on top of — never replaces — the project's standing required gates (the bar a project enforces on any code allowed to land; a project may define none). Do NOT narrow a task's verification to a subset that silently drops a standing gate, and do NOT defer a cheap standing gate to a later task. Defer to a dedicated closing task only the genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) that the feature would otherwise re-run on every task — a cheap standing commit-gate is not one of those.
@@ -106,7 +106,7 @@ A task file `tasks/01-add-jwt-helper.md`:
 
 **Objective:** Provide a reusable verification function that the auth middleware will call.
 
-**Input / context:** Settled decision per `discussions/<UTC>-auth-decision-log.md P2` — use the `jose` library, not `jsonwebtoken`.
+**Input / context:** Settled decision per `discussions/<UTC>-auth-decision-log.md DP2` — use the `jose` library, not `jsonwebtoken`.
 
 **Steps:**
 1. Add `jose` to `package.json` dependencies and run install.
@@ -167,7 +167,7 @@ Run the four checks against the drafted plan folder (index + task files). If any
 
 4. **Choose the lineage folder.** Plans live in a numbered lineage folder `plans/NNN[-<desc>]/`. `NNN` is a zero-padded 3-digit sequence starting at `001`. If no plan lineage exists yet, use `001`. If plans already exist and this is a NEW, distinct plan subject, use the next free `NNN` and add a short kebab `-<desc>` only when needed to tell the lineages apart (`plans/001-api/`, `plans/002-cli/`); adding a slug to a later lineage never renames an earlier one. The full path is the unit of reference. If which existing lineage the work belongs to is ambiguous, ASK — there is no "highest number" fallback. (Competing candidate plans for ONE subject — e.g. parallel multi-model drafts — are NOT separate lineages; they are `.wip/` scratch and only the chosen-or-merged result is emitted once.)
 
-5. **Draft the index and task files.** Compose the plan folder per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields (objective / input / steps / files-modified / verification / acceptance) plus the `Consumes:`/`Produces:` hand-off lines. Reference settled decisions from the upstream input by path + `P<N>` in the relevant task's input/context field. No parallelization markers anywhere in the folder. No YAML frontmatter anywhere in the folder.
+5. **Draft the index and task files.** Compose the plan folder per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields (objective / input / steps / files-modified / verification / acceptance) plus the `Consumes:`/`Produces:` hand-off lines. Reference settled decisions from the upstream input by path + `DP<N>` in the relevant task's input/context field. No parallelization markers anywhere in the folder. No YAML frontmatter anywhere in the folder.
 
 6. **Run self-review.** Execute the four checks from `## Self-Review` across the whole drafted folder (index + task files) until all four pass. The emitted files do not contain self-review notes — the discipline runs before emission.
 

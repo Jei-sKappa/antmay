@@ -28,9 +28,9 @@ perform every time.
 When options are presented, they are **lettered (A / B / C)** so the user can reference
 them tersely ("go with B").
 
-## Target-Scoped P-Numbering
+## Target-Scoped DP-Numbering
 
-Decision points are **P-numbered, scoped to the discussion's target.** **Off-target
+Decision points are **DP-numbered, scoped to the discussion's target.** **Off-target
 exchanges** — e.g. an end-of-discussion "what should I do next?" navigation exchange — are
 **never logged.** Polluting a target's log with non-target decisions is a known failure
 mode.
@@ -43,7 +43,7 @@ what the discussion was about and what it served from the header alone.
 
 ## The Discussion Record
 
-Each on-target decided point is appended as one **append-only**, P-numbered record that
+Each on-target decided point is appended as one **append-only**, DP-numbered record that
 **mirrors what the user saw**, so a future reader can reconstruct the decision without the
 chat. A discussion record carries **four fields**:
 
@@ -56,7 +56,7 @@ chat. A discussion record carries **four fields**:
 
 This four-field shape is specific to the discussion logs. Decision logs emitted by other
 phases (proposal, spec, plan, review, merge, implementation) keep their lighter
-`Decision` / `Rationale` records under the same `## P<N>:` heading.
+`Decision` / `Rationale` records under the same `## DP<N>:` heading.
 
 ## The Optional Pause
 

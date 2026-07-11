@@ -3,7 +3,7 @@ name: discussion
 description: Conduct an open-ended interview where questions are discovered live, surfacing options or a recommendation only at concrete decision points and appending decisions to a target-scoped log when the user wants to think a topic through without knowing every question up front.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.2
+  version: 2.0.3
 ---
 
 # Discussion
@@ -71,9 +71,9 @@ If the point or its options would benefit from codebase context, inspect the rel
 
 Continue discussing the current decision point until the user decides. Do not log a decision while it is still ambiguous.
 
-## Target-Scoped P-Numbering
+## Target-Scoped DP-Numbering
 
-Decision points are P-numbered and **scoped to this discussion's target** — the records logged here are about that one artifact. **Off-target exchanges** — for example an end-of-discussion "what should I do next?" exchange that is workflow navigation, not a decision about the target — are **never logged** (see `## Log What Serves the Target`). Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
+Decision points are DP-numbered and **scoped to this discussion's target** — the records logged here are about that one artifact. **Off-target exchanges** — for example an end-of-discussion "what should I do next?" exchange that is workflow navigation, not a decision about the target — are **never logged** (see `## Log What Serves the Target`). Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
 
 ## Context-Rich Headers
 
@@ -100,7 +100,7 @@ Within-thread references (the target path, cross-links to other artifacts in thi
 The decision log is **append-only**. Each on-target decided point is appended as one record with a sequential per-log local heading. The record captures the **decision, not the deliberation**. Only the two context fields the user saw — the Point and What you need to know — are mirrored verbatim; the record then states the chosen resolution and its rationale. The options menu and your recommendation are **deliberately not logged** — the log records what was decided, not the menu it was picked from. This still reconstructs the fork later without re-reading the chat: the two verbatim fields frame the question, and the Decision states the answer in full:
 
 ```markdown
-## P<N>: <Title>
+## DP<N>: <Title>
 
 Point: <the Point line you presented, verbatim — what this decision point is about>
 
@@ -111,9 +111,9 @@ Decision: <the chosen resolution written out in full — in creative mode write 
 Rationale: <why the choice made sense, including the main trade-off; flag any dissent per the Peer Framing stance>
 ```
 
-Where `N` starts at `1` for the first decision in this log and increments by `1` per decision IN THIS LOG. The `## P<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
+Where `N` starts at `1` for the first decision in this log and increments by `1` per decision IN THIS LOG. The `## DP<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
 
-A log is a record. **Records are immutable by default**: do NOT rewrite earlier records. If a decision changes later, APPEND a new record (`## P<N+k>: <Title>` for the same or revised title) explaining the change — an append-only log evolves only by appending new records, never by editing prior ones. An interrupted session leaves a usable partial log: every decision recorded up to the interruption is durable.
+A log is a record. **Records are immutable by default**: do NOT rewrite earlier records. If a decision changes later, APPEND a new record (`## DP<N+k>: <Title>` for the same or revised title) explaining the change — an append-only log evolves only by appending new records, never by editing prior ones. An interrupted session leaves a usable partial log: every decision recorded up to the interruption is durable.
 
 The one exception to immutability is an **owner-authorized in-place correction**. If the human owner explicitly authorizes fixing an emitted record, the change MUST be **visibly marked** — an erratum or edit note alongside the original text — so the change is auditable. Never silently edit an emitted record.
 
@@ -149,7 +149,7 @@ There is NO fixed limit on questions or decisions. Ask "shall we keep going or f
 When the user signals they want to stop:
 
 1. Say so plainly.
-2. Summarize what was decided in this session by `## P<N>` ID: `P1: <Title> → <decision>`, `P2: <Title> → <decision>`, …
+2. Summarize what was decided in this session by `## DP<N>` ID: `DP1: <Title> → <decision>`, `DP2: <Title> → <decision>`, …
 3. Name any deferred branches in conversation so they are not lost.
 4. Tell the user where the decision log lives (its thread-relative path), e.g. `Decision log: specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` — or note that no log was written if no on-target decision was reached.
 

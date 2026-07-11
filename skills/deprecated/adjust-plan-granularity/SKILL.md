@@ -3,7 +3,7 @@ name: adjust-plan-granularity
 description: Adjust an existing living plan to a new granularity level by editing it in place; use when the current plan is too loose, too strict, or otherwise mismatched to the intended implementer.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 ---
 
 # Adjust Plan Granularity
@@ -63,7 +63,7 @@ The granularity shift must be backed by a lightweight record so the change is au
 
 - **What to record.** The target instruction (the coarse direction or specific phrase), what changed at the granularity level (which tasks were collapsed, split, expanded, or contracted, in one or two lines), and the reason the new granularity fits better (the downstream implementer, the now-known implementation surface, etc.).
 - **Where to write it.** A record under the thread's `discussions/` folder that serves this plan lineage — for example `plans/NNN[-<desc>]/discussions/` if the plan lineage has one, or the thread-level discussions that serve the plan. Use the record filename grammar `<YYMMDDHHMMSSZ>-<kebab-desc>-decision-log.md` (or `-notes.md` for a plainer note). The `decision-log` / `notes` artifact-type token is MANDATORY.
-- **Decision-log shape.** Append-only with sequential `## P<N>: <Title>` headings, each carrying `Decision:` and `Rationale:` lines. The record is a frozen record once written — a later granularity change is a NEW record, never an edit of the old one.
+- **Decision-log shape.** Append-only with sequential `## DP<N>: <Title>` headings, each carrying `Decision:` and `Rationale:` lines. The record is a frozen record once written — a later granularity change is a NEW record, never an edit of the old one.
 - **Keep it lightweight.** This is a justification record, not a second plan. Do not duplicate the plan body into it; capture only why the granularity changed.
 
 ## Plan Artifact Contract

@@ -3,7 +3,7 @@ name: spec
 description: Turn a proposal, decision log, GitHub issue, or raw prompt into a handoff-grade spec markdown file; use when an upstream input needs to be forward-designed into a complete spec a downstream executor can build from.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 ---
 
 # Spec
@@ -17,7 +17,7 @@ The spec is the centerpiece of the workflow and **the last artifact the human re
 Accept ONE of the following four input forms. Detect which form was passed before drafting:
 
 1. **A proposal artifact path** — a proposal document on disk, typically `proposals/NNN[-<desc>]/proposal.md` in the active thread. The proposal is a common upstream input; it carries intent, context, and a rough shape that the spec elaborates into expected behavior, constraints, and acceptance guidance.
-2. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## P<N>: <Title>` headings. Each settled decision becomes a citation in the spec body, NOT a copy-paste into a separate spec section — see `## Semantic Contract` below.
+2. **A decision-log artifact path** — a record carrying one or more settled decisions with sequential `## DP<N>: <Title>` headings. Each settled decision becomes a citation in the spec body, NOT a copy-paste into a separate spec section — see `## Semantic Contract` below.
 3. **A GitHub issue URL or identifier** — accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the upstream input; treat the issue title and labels as additional context.
 4. **A raw user prompt** — when no artifact is referenced, the user's prompt is itself the input; the spec is forward-designed directly from it.
 
@@ -32,13 +32,13 @@ The emitted spec MUST cover all EIGHT of the following elements in its body, reg
 3. **Scope / non-scope** — the boundary statement, INCLUDING what is explicitly out.
 4. **Expected behavior** — the observable behaviors a future executor needs.
 5. **Constraints** — tech, repo, harness, and safety constraints that bind the implementation.
-6. **Explicit decisions** — settled trade-offs INLINED into the body where operative (in scope, in constraints, in expected behavior, in acceptance). When a settled decision comes from a referenced decision log, cite the SOURCE by path + `P<N>` ID — e.g., `(per discussions/<UTC>-<slug>-decision-log.md P3)` for a same-thread log, or the repo-relative `docs/threads/<other>/…` path for a cross-thread one — rather than copying the decision text.
+6. **Explicit decisions** — settled trade-offs INLINED into the body where operative (in scope, in constraints, in expected behavior, in acceptance). When a settled decision comes from a referenced decision log, cite the SOURCE by path + `DP<N>` ID — e.g., `(per discussions/<UTC>-<slug>-decision-log.md DP3)` for a same-thread log, or the repo-relative `docs/threads/<other>/…` path for a cross-thread one — rather than copying the decision text.
 7. **Unresolved questions** — open issues that do NOT block emission. The spec is shipped with these flagged.
 8. **Acceptance guidance** — how a reviewer will know the implementation is right. At tier ≥2 this is the machine-checkable acceptance-criteria model required below, not loose prose.
 
 The eight elements MAY be presented as a copy-paste template, OR they MAY be interleaved into a freeform structure appropriate to the input — section names and ordering are at the executor's discretion. What is NOT at the executor's discretion: every one of the eight must appear, the two spec obligations below must appear, and the spec must read as handoff-grade.
 
-There is NO mandatory `## Decisions` section heading. Forcing a separate decisions section produces dead weight — settled decisions belong INLINED into the elements they govern (scope notes, constraint statements, expected-behavior caveats, acceptance preconditions), with a citation back to the source decision log by path + `P<N>`. Do not introduce a `## Decisions` section just to satisfy an implicit template.
+There is NO mandatory `## Decisions` section heading. Forcing a separate decisions section produces dead weight — settled decisions belong INLINED into the elements they govern (scope notes, constraint statements, expected-behavior caveats, acceptance preconditions), with a citation back to the source decision log by path + `DP<N>`. Do not introduce a `## Decisions` section just to satisfy an implicit template.
 
 ## The Two Spec Obligations
 
@@ -72,13 +72,13 @@ Choosing silently — pinning an undiscussed decision into expected behavior or 
 
 3. **Resolve and read the input.** Detect which of the four `## Inputs` forms was passed. For a path input, read the file. For a GitHub issue, fetch the issue body and title. For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ask which is intended. Do not pick by recency or by `NNN`.
 
-4. **Reference, do not copy, settled decisions from the upstream input.** When the input is a decision log, do not paste decision text into a freestanding spec section. Instead, cite the source by path + `P<N>` at the inline location where each decision becomes operative — in the constraint statement, in the expected-behavior bullet, or in the acceptance criterion that depends on it. Same-thread references are thread-relative; cross-thread references are repo-relative.
+4. **Reference, do not copy, settled decisions from the upstream input.** When the input is a decision log, do not paste decision text into a freestanding spec section. Instead, cite the source by path + `DP<N>` at the inline location where each decision becomes operative — in the constraint statement, in the expected-behavior bullet, or in the acceptance criterion that depends on it. Same-thread references are thread-relative; cross-thread references are repo-relative.
 
 5. **Choose the lineage folder.** Specs live in a numbered lineage folder `specs/NNN[-<desc>]/`. `NNN` is a zero-padded 3-digit sequence starting at `001`. If no spec lineage exists yet, use `001`. If specs already exist and this is a NEW, distinct spec subject, use the next free `NNN` and add a short kebab `-<desc>` only when needed to tell the lineages apart (`specs/001-api/`, `specs/002-cli/`); adding a slug to a later lineage never renames an earlier one. The full path is the unit of reference. If which existing lineage the work belongs to is ambiguous, ask — there is no "highest number" fallback.
 
 6. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp at write time (two-digit year, month, day, hour, minute, second, trailing `Z` for UTC). It is needed to stamp the frontmatter latch when the spec is later approved and implemented; do not bake any stamp into the folder or filename.
 
-7. **Draft the body, honoring the lossless constraint.** Cover all eight elements, inline settled decisions where operative, cite source decision logs by path + `P<N>`, and add the two spec obligations: machine-checkable acceptance criteria (FR/AC + coverage + traceability) at tier ≥2, and a `## Degrees of freedom` section. Commit no decision or assumption the user did not see and accept — for any specific the input did not settle, either leave it an `## Unresolved question` (take it back to discussion) or mark it a Degree of Freedom; never bake it in silently. Keep the spec readable end-to-end by a stranger with no prior context.
+7. **Draft the body, honoring the lossless constraint.** Cover all eight elements, inline settled decisions where operative, cite source decision logs by path + `DP<N>`, and add the two spec obligations: machine-checkable acceptance criteria (FR/AC + coverage + traceability) at tier ≥2, and a `## Degrees of freedom` section. Commit no decision or assumption the user did not see and accept — for any specific the input did not settle, either leave it an `## Unresolved question` (take it back to discussion) or mark it a Degree of Freedom; never bake it in silently. Keep the spec readable end-to-end by a stranger with no prior context.
 
 8. **Write the artifact.** Create `docs/threads/<thread>/specs/NNN[-<desc>]/spec.md`. The file is named exactly `spec.md` — no UTC stamp, no `v<N>`, no descriptor in the filename. The lineage folder is the stable link target. Initialize the frontmatter status contract per `## Frontmatter Status Contract` (a fresh spec carries `version: 1` and an empty/absent `status:` map — it is a Draft). Create the `specs/` parent and the `NNN[-<desc>]/` lineage folder on-demand; do not pre-create empty folders.
 

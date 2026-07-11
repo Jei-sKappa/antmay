@@ -35,7 +35,7 @@ Each doc is short and self-contained. Read in this order:
    lossless authoring constraint, plan autonomy and the plan-as-compiler-IR, the
    four-outcome adherence review, and finish.
 7. [`discussions.md`](./discussions.md) — the two modes, recommendation-first
-   legitimacy, lettered options, target-scoped P-numbering, context-rich headers, the
+   legitimacy, lettered options, target-scoped DP-numbering, context-rich headers, the
    optional pause, peer framing, and write-only-if-useful.
 8. [`reviews.md`](./reviews.md) — review placement, disposition via frontmatter, the
    references-first report format, the lossless-mapping review and its cadence, the

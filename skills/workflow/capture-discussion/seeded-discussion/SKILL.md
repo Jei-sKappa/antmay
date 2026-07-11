@@ -3,7 +3,7 @@ name: seeded-discussion
 description: Walk a predetermined list of discussion points one at a time, presenting options or a single well-argued recommendation for each and appending each on-target decision to a target-scoped log when the user already has concrete points to settle.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.1
+  version: 2.0.2
 ---
 
 # Seeded Discussion
@@ -72,9 +72,9 @@ If the point or its options would benefit from codebase context, inspect the rel
 
 Continue discussing the current point until the user decides. Do NOT move on while the current decision is still ambiguous. The log shape (`## Logging`) demands a clear decision per recorded point — silence is not a decision.
 
-## Target-Scoped P-Numbering
+## Target-Scoped DP-Numbering
 
-Decision points are P-numbered and **scoped to this walk's target** — the records logged here are about that one artifact. **Off-target exchanges** — for example an end-of-walk "what next?" exchange that is workflow navigation, not a decision about the target — are **never logged** (see `## Log What Serves the Target`). A mid-walk tangent that is itself a real decision for a *different* target is handled by `## Scope Drift`, not folded in here. Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
+Decision points are DP-numbered and **scoped to this walk's target** — the records logged here are about that one artifact. **Off-target exchanges** — for example an end-of-walk "what next?" exchange that is workflow navigation, not a decision about the target — are **never logged** (see `## Log What Serves the Target`). A mid-walk tangent that is itself a real decision for a *different* target is handled by `## Scope Drift`, not folded in here. Polluting a target's log with non-target decisions is a known failure mode: keep the log about its target.
 
 ## Context-Rich Headers
 
@@ -103,7 +103,7 @@ The decision log lives in the target's `discussions/` folder at `<target-discuss
 The log is **append-only**. Create it lazily on the FIRST on-target decision in this walk (no proactive creation in `## Setup`; see `## Log What Serves the Target`). After the user settles each on-target point, append one record with a sequential per-log local heading. The record captures the **decision, not the deliberation**. Only the two context fields the user saw — the Point and What you need to know — are mirrored verbatim; the record then states the chosen resolution and its rationale. The options menu and your recommendation are **deliberately not logged** — the log records what was decided, not the menu it was picked from. This still reconstructs the fork later without re-reading the chat: the two verbatim fields frame the question, and the Decision states the answer in full:
 
 ```markdown
-## P<N>: <Point title>
+## DP<N>: <Point title>
 
 Point: <the Point line you presented, verbatim — what this decision point is about>
 
@@ -114,7 +114,7 @@ Decision: <the chosen resolution written out in full — in creative mode write 
 Rationale: <why the choice made sense, including the main trade-off; flag any dissent per the Peer Framing stance>
 ```
 
-Where `N` starts at `1` for the first decision logged in this walk and increments by `1` per recorded point. The `## P<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
+Where `N` starts at `1` for the first decision logged in this walk and increments by `1` per recorded point. The `## DP<N>:` IDs are LOCAL to this decision log — NOT thread-global, NOT project-global. Cross-log references must include the source log's (thread-relative) path.
 
 After appending, tell the user: `Decision saved: <short summary>.`
 
@@ -153,7 +153,7 @@ There is NO fixed limit on questions or sub-questions within a point. The walk i
 
 If the user pauses mid-walk, the skill resumes on next invocation by READING the existing decision log in the target's `discussions/` folder and identifying which seeded points have been logged versus remain. The log itself IS the state — there is no separate state file, no progress tracker, no `processed:` field. (Every on-target seeded point that was settled has a log entry, so the log maps cleanly back to the seeded list; reconcile against the seeded list and the conversation when a point was raised but left unsettled.)
 
-1. Map each `## P<N>: <Point title>` heading in the log to its point in the seeded list.
+1. Map each `## DP<N>: <Point title>` heading in the log to its point in the seeded list.
 2. Compute the remaining points: those in the seeded list with no matching log entry yet — an on-target settled point always has a log entry, so a point with no entry is one not yet settled (confirm with the user if unsure).
 3. Ask the user which remaining point to take next (default: the next one in seeded order; the user may pick differently).
 
@@ -164,7 +164,7 @@ If the seeded list itself has changed since the previous session, confirm the ne
 When no seeded points remain (or the user wants to stop):
 
 1. Say so plainly.
-2. Summarize what was decided in this session by `## P<N>` ID: `P1: <Point title> → <decision>`, `P2: <Point title> → <decision>`, …
+2. Summarize what was decided in this session by `## DP<N>` ID: `DP1: <Point title> → <decision>`, `DP2: <Point title> → <decision>`, …
 3. Name any unresolved branches or out-of-scope items raised during the walk in conversation so they are not lost.
 4. Tell the user where the decision log lives (its thread-relative path), e.g. `Decision log: specs/001/discussions/<UTC>-<kebab-desc>-decision-log.md` — or note that no log was written if no on-target decision was reached.
 
