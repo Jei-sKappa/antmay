@@ -21,6 +21,7 @@
       "name": "JeisKappa-finish-navigate",
       "source": "./",
       "skills": [
+        "./skills/workflow/finish-navigate/archive-thread",
         "./skills/workflow/finish-navigate/finish",
         "./skills/workflow/finish-navigate/record-verdict",
         "./skills/workflow/finish-navigate/whats-next"

@@ -4,6 +4,7 @@
   "conventionalCommits.scopes": [
     "adjust-plan-granularity",
     "afk-exploration",
+    "archive-thread",
     "brief-the-recipient",
     "capture-inbox",
     "consult-the-expert",

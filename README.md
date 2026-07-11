@@ -207,6 +207,14 @@ npx skills add Jei-sKappa/skills --skill merge-artifacts
 
 ### Finish & Navigate
 
+#### [`archive-thread`](./skills/workflow/finish-navigate/archive-thread/SKILL.md)
+
+Relocate finished or intentionally-abandoned workflow threads into docs/threads/archive/ (or move one back out) as a pure git mv that keeps cross-thread references resolvable; use when the docs/threads/ listing is cluttered with closed threads and you want to declutter it without breaking links.
+
+```sh
+npx skills add Jei-sKappa/skills --skill archive-thread
+```
+
 #### [`finish`](./skills/workflow/finish-navigate/finish/SKILL.md)
 
 Perform a thread's terminal handshake — set the spec's implemented latch, append closed:done to the ledger, update the living docs, close the linked ticket with its backlink — then run a lightweight thread check and ask the user how to dispose of the branch (merge into main, merge into another branch, create a PR, or leave as-is) when the work is complete.

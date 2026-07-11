@@ -37,7 +37,7 @@ skills/
     ├── implement/               implement, implement-plan, implement-plan-with-subagents
     ├── review/                  review-{proposal,spec,plan,implementation,code}, review-lossless-mapping
     ├── merge/                   merge-artifacts
-    ├── finish-navigate/         finish, record-verdict, whats-next
+    ├── finish-navigate/         archive-thread, finish, record-verdict, whats-next
     ├── research/                afk-exploration, the-librarian
     ├── documentation/           take-snapshot
     ├── handoff/                 brief-the-recipient, consult-the-expert, report-to-the-owner

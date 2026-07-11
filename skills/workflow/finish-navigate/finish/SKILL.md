@@ -3,7 +3,7 @@ name: finish
 description: Perform a thread's terminal handshake — set the spec's implemented latch, append closed:done to the ledger, update the living docs, close the linked ticket with its backlink — then run a lightweight thread check and ask the user how to dispose of the branch (merge into main, merge into another branch, create a PR, or leave as-is) when the work is complete.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Finish
@@ -240,6 +240,8 @@ If a merge or push needs revising after the fact (a wrong merge target, a merge 
    - `Left as is. Current branch: <branch>, <N> commits ahead of <base>.`
 
    If the closure executed AFTER an anti-sycophancy dissent, append the dissent: `Note: flagged <signal>; user accepted the trade-off.`
+
+   Because the thread is now closed, it no longer needs to sit among the active threads under `docs/threads/`. If decluttering would help, mention to the user — in plain language — that this closed thread can now be moved into an archive so it stops crowding the active listing, and let them decide whether to do that now or later. This is an offer only: do not perform any move here, and do not gate finish on it.
 
    No closing remark.
 
