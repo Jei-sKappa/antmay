@@ -6,5 +6,9 @@ temp/
 .codex/
 .cursor/
 
+# Local Worktrunk setup
+.config/wt.toml
+.worktreeinclude
+
 # Thread-local WIP scratch (per docs/workflow/v1/thread-layout.md)
 docs/threads/**/.wip/
