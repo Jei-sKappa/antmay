@@ -1,0 +1,4 @@
+# Seed: Archive finished/abandoned threads without breaking links
+External: none — no tracker in use for this repo; visibility is the git history and this thread.
+
+After a project runs for a while the `docs/threads/` folder grows huge and confusing, and finished or intentionally-abandoned threads can't be told apart from active ones or ones still open without an implementation. Moving threads into an "Archive" folder is the obvious idea, but relocating a thread breaks any natural-language or direct cross-thread links pointing at its old path — so a solution must preserve link integrity. Possibly split archived threads by year/month/day for browsability, but only inside the archive. The "Archived folder" framing is a starting hypothesis, not a settled decision — a different approach may win.
