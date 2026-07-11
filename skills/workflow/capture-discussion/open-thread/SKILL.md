@@ -3,7 +3,7 @@ name: open-thread
 description: Open a local workflow thread from either a brand-new idea or an existing tracker ticket — writing the thread folder, the one frozen seed, and the lifecycle ledger with its initial tier line — use when a unit of work needs a durable home on disk before any proposal, spec, or plan exists.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Open Thread
@@ -39,8 +39,8 @@ There is no inbox — status-by-folder broke links, so status is derived from th
 This is **one** skill that accepts two input forms — like the suite's plan and spec skills that take "a raw idea OR an issue URL." Detect which mode applies before writing; do not split the work by input shape.
 
 - **Mode A — a brand-new idea.** The user describes the idea in prose. The seed's `External:` line is then either:
-  - `External: none` plus a short why (allowed for tier 0–1 personal work, where the repo is the sole owner and there is nothing to drift against), OR
-  - a **user-supplied tracker URL**, if the user already has a ticket they want this thread to link.
+  - `External: none` plus a short why — **the default when the user supplies no ticket URL** (any tier), OR
+  - a **user-supplied tracker URL**, if the user already has a ticket they want this thread to link (this overrides the default).
 - **Mode B — an existing tracker ticket.** The user passes a ticket URL or identifier. **Read the ticket** (title + body) and let it seed the trigger narrative; the ticket's **URL becomes the seed's `External:` line.**
 
 In both modes the output is identical in shape: one thread, one seed, one ledger with a tier line.
@@ -77,9 +77,9 @@ There is exactly one seed per thread, so the `seed/` folder already identifies i
 The `External:` line is the **single join point** between the repo's thread and the external tracker (Jira, Linear, ClickUp, GitHub Issues). It is the only place the two link — they shake hands again exactly once, later, at finish; they never continuously mirror, because continuous mirroring is the dual-tracking that rots.
 
 - **Mode B** — the ticket's URL fills the `External:` line.
-- **Mode A** — either `External: none` (+ a short why) for tier 0–1 personal work, or a user-supplied ticket URL.
+- **Mode A** — `External: none` (+ a short why) is the **default** when the user supplies no URL; a user-supplied ticket URL overrides it.
 
-`External: none` is allowed for tier 0–1 personal work; **tier ≥2 team work should carry a ticket** (visibility and audit are the point of a team tracker). If the thread is tier ≥2 and the user gave no ticket, say so plainly and ask whether they want one before settling on `none`.
+**No ticket is assumed by default** — when the user gives none, write `External: none` with a short why and do not block to ask. A tracker still buys visibility and audit (the point of a team tracker), which matters most for tier ≥2 work; if the user wants that, they can link one. The closing summary states the no-ticket default plainly and invites exactly this. If the user supplies a ticket in response (the open-time correction window), rewrite the seed's `External:` line and post the backlink.
 
 ## The Ledger and Its Initial Tier Line
 
@@ -107,16 +107,17 @@ The justification is mandatory. Example ledger after open:
 tier: 2 @ 260612174045Z — new pipeline facet; carries a design decision
 ```
 
-## Propose and Confirm the Tier
+## Assign the Tier (Default Tier 2)
 
-The agent **proposes** a tier and the user **confirms** it before the line is written. The four tiers:
+**When the user specifies no tier, assign tier 2** — do not block to confirm, and do not guess between tiers from the work in front of you. If the user explicitly states a tier, honor it (1, 2, or 3).
 
+The four tiers:
 - **Tier 0 — chore:** no behavior change, reversible in one commit. **Tier 0 leaves no thread and no ledger** — the commit message is its only record. If the work is genuinely tier 0, do NOT open a thread; tell the user so and stop. (A behavior-changing dependency bump is tier 1, not tier 0.)
 - **Tier 1 — patch:** small fix/feature, low blast radius, no open design question.
-- **Tier 2 — feature:** anything carrying a design decision. **This is the default** — propose tier 2 whenever the work involves a design decision.
+- **Tier 2 — feature:** anything carrying a design decision. **This is the default** — assign tier 2 whenever the user does not specify a tier.
 - **Tier 3 — initiative:** multi-week, architectural, or hard to reverse.
 
-A thread is therefore always tier ≥1 (it has a ledger). Tier 0 chores leave no thread. Propose the tier from the work in front of you, default to tier 2 for design-decision work, and confirm with the user before writing the line. Recording the tier with its justification is what makes later escalation or de-escalation cheap, explicit, and auditable — a future appended `tier:` line, never a silent rewrite.
+A thread is therefore always tier ≥1 (it has a ledger). Tier 0 chores leave no thread — the tier-0 gate is the one pre-check that can still stop the skill before it opens anything. Past that gate, the default is tier 2. The `— <justification>` on the tier line is still mandatory. The assigned tier is reported in the closing summary, where the user can correct it (the open-time correction window); recording the tier with its justification is what makes later escalation or de-escalation cheap, explicit, and auditable — a future appended `tier:` line, never a silent rewrite.
 
 ## The Ticket-Backlink Convention
 
@@ -149,17 +150,17 @@ Within-thread references in any artifact body are **thread-relative** (`seed/see
 
 3. **Capture the UTC stamp.** Compute the 12-character `YYMMDDHHMMSSZ` stamp once, at open time. Reuse it for the thread-root folder name and the initial ledger line; never re-derive it. (The seed filename is the fixed `seed.md` and carries no stamp.)
 
-4. **Choose the slug and propose the tier.** Pick a short kebab slug for the subject. Propose a tier (default tier 2 for design-decision work) and confirm it with the user. If the work is genuinely tier 0, do not open a thread — tell the user and stop.
+4. **Choose the slug and assign the tier.** Pick a short kebab slug for the subject. Assign tier 2 unless the user explicitly specified a tier (then honor it) — do not confirm upfront. If the work is genuinely tier 0, do not open a thread — tell the user and stop.
 
 5. **Create the thread root on demand.** `docs/threads/<YYMMDDHHMMSSZ-slug>/`. Do not pre-create empty subfolders.
 
-6. **Write the seed.** Create `seed/seed.md` per `## The Seed Format`: a `# Seed: <title>` line, an `External:` line (the ticket URL in Mode B; `none` + why or a user-supplied URL in Mode A), and 1–5 lines of trigger narrative. No frontmatter, no owner field. Create the `seed/` folder on demand.
+6. **Write the seed.** Create `seed/seed.md` per `## The Seed Format`: a `# Seed: <title>` line, an `External:` line (the ticket URL in Mode B; in Mode A, a user-supplied URL, or `none` + why as the default when no URL was supplied), and 1–5 lines of trigger narrative. No frontmatter, no owner field. Create the `seed/` folder on demand.
 
 7. **Write the ledger.** Create `ledger.md` at the thread root with the initial line `tier: <0–3> @ <YYMMDDHHMMSSZ> — <why>` per `## The Ledger and Its Initial Tier Line`. The justification is mandatory.
 
 8. **Post the backlink if a ticket is linked.** If the `External:` line carries a ticket URL (Mode B, or Mode A with a user-supplied URL), preflight the tracker, check no backlink already exists, then post **exactly one** comment with a permalink back to the thread folder. If the tracker is unavailable, warn and continue — finish will post it later. If `External: none`, skip this step.
 
-9. **Confirm.** Tell the user where the thread was opened, e.g. `Thread opened: docs/threads/<YYMMDDHHMMSSZ-slug>/` plus the seed's thread-relative path (`seed/seed.md`) and the recorded tier. If the backlink was posted, say so; if it was skipped (no ticket) or deferred (tracker unavailable), note that. No preamble, no closing remark.
+9. **Confirm, and invite correction.** Tell the user where the thread was opened, e.g. `Thread opened: docs/threads/<YYMMDDHHMMSSZ-slug>/` plus the seed's thread-relative path (`seed/seed.md`). **State the assigned tier explicitly** — e.g. "Assigned **tier 2** (the default)." — and, when no ticket was linked, **state the no-ticket default** — e.g. "No external ticket linked — `External: none`." Then **invite the user to correct either**: if that wasn't the tier they wanted, or they want to link a ticket, they can say so now. If the user corrects the tier, **rewrite the initial `tier:` line in place**; if they supply a ticket, **rewrite the seed's `External:` line and post the backlink** (step 8). If the backlink was posted, say so; if it was skipped (no ticket) or deferred (tracker unavailable), note that. No preamble, no closing remark.
 
 ## Commit Policy
 
@@ -168,3 +169,5 @@ This skill NEVER auto-commits. It writes the thread folder, the seed, and the le
 ## Immutability
 
 The seed is a **frozen narrative record**: once written, its body is not edited. A change of understanding is captured downstream (a discussion, a later artifact), never by rewriting the seed. The ledger is **append-only**: this skill writes the initial `tier:` line and never rewrites it; later tier or disposition changes are new appended lines. The one exception across records is an explicit, owner-authorized in-place correction, which must be **visibly marked** (an erratum note) so it stays auditable — never a silent edit.
+
+**Open-time correction window.** There is one narrow, bounded exception scoped to this skill: during the *same* open-thread run, before handoff and before any commit (this skill never auto-commits), the just-written initial `tier:` line and the seed's `External:` line MAY be rewritten in place to apply a user correction to the open-time defaults surfaced in the closing summary. This is not an erratum edit and needs no erratum note — the values were written moments ago in this same run and are still open-time state, not a settled artifact. Once the run returns, this window closes: the seed is frozen, and all future tier or disposition changes are new appended ledger lines.
