@@ -75,13 +75,13 @@ The orchestrator may inject — unclassified — the assumptions / known-risks t
 
 ## Process
 
-1. **Read the task file and the index READ-ONLY.** Your brief names the task file (`tasks/NN-<slug>.md`) and the plan index (`plan.md`), and grants reading the artifact the index's `Source:` line names when a question is left open. The plan folder is immutable — open all of these for reading only. From the task file, record the objective, the `Files modified` list, the verification block (if any), the acceptance criteria (if any), and the `Consumes:`/`Produces:` hand-off lines. From the index, note the Global Constraints that bind every task.
+1. **Read the task file and the index READ-ONLY.** Your brief names the task file (`plan-tasks/NN-<slug>.md`) and the plan index (`plan.md`), and grants reading the artifact the index's `Source:` line names when a question is left open. The plan is immutable — open all of these for reading only. From the task file, record the objective, the `Files modified` list, the verification block (if any), the acceptance criteria (if any), and the `Consumes:`/`Produces:` hand-off lines. From the index, note the Global Constraints that bind every task.
 2. **Inspect the diff.** Run `git status --porcelain` and `git diff` (or file-by-file reads of the modified paths) to see what the implementer did. Make sure the working-tree state you are inspecting is the current post-implementer state for THIS task — the orchestrator gave you the cycle's starting state via the brief; the diff is the difference from there.
 3. **Run the task's verification block if present.** If the task file has a mechanical verification (a `grep` invocation, a `test -f` check, a named test, an `npm test` or equivalent invocation), execute it and record the result. PASS / FAIL with the output snippet for the finding.
 4. **Compare against acceptance criteria.** For each criterion in the task file's acceptance criteria block, mark it SATISFIED / MISSING / PARTIAL. When a task file carries no explicit acceptance criteria, evaluate against its objective sentence.
 5. **Identify plan-compliance gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific plan-task statement and the specific diff observation), not vague ("the diff feels incomplete"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to fix. Label any finding that traces to the plan's own text `[plan-mandated]`; record any criterion you cannot verify from within the run as an unverified concern; note any discovery beyond the current task in the out-of-task section. Assess any implementer-supplied assumptions that fall within this lane's lens per `## Verdict`.
 6. **Classify each finding and determine the verdict.** Mark each finding BLOCKING or non-blocking (default to blocking when uncertain) per `## Verdict`. The verdict is `ISSUES` iff at least one blocking finding exists; otherwise `PASS` (carrying any non-blocking concerns in a `Concerns:` section). Reserve `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
-7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a `.wip/` scratch file under the active thread) — see the write condition below. Do NOT modify code, do NOT modify the plan folder.
+7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a scratch file under the run's workspace directory) — see the write condition below. Do NOT modify code, do NOT modify the plan.
 
 ## Output Template
 
@@ -106,8 +106,8 @@ Out-of-task observations:
 Reason: <BLOCKED / NEEDS_CONTEXT only — the hard impossibility that blocks assessment, or the judgment call you cannot make alone>.
 
 References:
-- Plan index: plans/NNN[-<desc>]/plan.md
-- Task file: plans/NNN[-<desc>]/tasks/NN-<slug>.md
+- Plan index: plan.md
+- Task file: plan-tasks/NN-<slug>.md
 - Modified files:
   - <path>
 ```

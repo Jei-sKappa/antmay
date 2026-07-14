@@ -71,13 +71,13 @@ The orchestrator may inject — unclassified — the assumptions / known-risks t
 
 ## Process
 
-1. **Read the task file and the index READ-ONLY.** Your brief names the task file (`tasks/NN-<slug>.md`) and the plan index (`plan.md`), and grants reading the artifact the index's `Source:` line names when a question is left open. The plan folder is immutable — open all of these for reading only. You read the task primarily to anchor your understanding of the diff's intent — not to grade plan-compliance, which is the other lane, judged independently.
+1. **Read the task file and the index READ-ONLY.** Your brief names the task file (`plan-tasks/NN-<slug>.md`) and the plan index (`plan.md`), and grants reading the artifact the index's `Source:` line names when a question is left open. The plan is immutable — open all of these for reading only. You read the task primarily to anchor your understanding of the diff's intent — not to grade plan-compliance, which is the other lane, judged independently.
 2. **Inspect the diff.** Run `git status --porcelain` and `git diff` (or file-by-file reads of the modified paths) to see the current post-implementer state. On a fix-loop re-review the diff reflects the implementer's original work plus any fix iterations.
 3. **Read surrounding code as needed.** Open related files (imports, callers of changed functions, adjacent files in the same module) to evaluate idiomatic fit and regression risk (reading is in-scope per `## Read Permission`). Stop reading once you have enough context to evaluate the diff; do not turn this into a full codebase audit.
 4. **Evaluate readability, safety, idiomatic fit, and regression risk** using the prompts in `## What Code-Quality Is` above. Each evaluation produces zero or more findings.
 5. **Identify code-quality gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific file + lines in the diff, the specific concern, and a suggested fix), not vague ("the code feels off"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to change. Label any finding that traces to the plan's own text `[plan-mandated]`; record any criterion you cannot verify from within the run as an unverified concern; note any discovery beyond the current task in the out-of-task section. Assess any implementer-supplied assumptions that fall within this lane's lens per `## Verdict`.
 6. **Classify each finding and determine the verdict.** Mark each finding BLOCKING or non-blocking (default to blocking when uncertain) per `## Verdict`. The verdict is `ISSUES` iff at least one blocking finding exists; otherwise `PASS` (carrying any non-blocking concerns in a `Concerns:` section). Reserve `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
-7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a `.wip/` scratch file under the active thread) — see the write condition below. Do NOT modify code, do NOT modify the plan folder.
+7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a scratch file under the run's workspace directory) — see the write condition below. Do NOT modify code, do NOT modify the plan.
 
 ## Output Template
 
@@ -102,8 +102,8 @@ Out-of-task observations:
 Reason: <BLOCKED / NEEDS_CONTEXT only — the hard impossibility that blocks assessment, or the judgment call you cannot make alone>.
 
 References:
-- Plan index: plans/NNN[-<desc>]/plan.md
-- Task file: plans/NNN[-<desc>]/tasks/NN-<slug>.md
+- Plan index: plan.md
+- Task file: plan-tasks/NN-<slug>.md
 - Modified files:
   - <path>
 ```
