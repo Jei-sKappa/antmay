@@ -1,30 +1,28 @@
 ---
 name: implement
-description: Implement a less-structured input end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when an input that does not enumerate its tasks needs to be carried to working code.
+description: Implement a brief plan or a less-structured input (`plan.md`, a seed with its decisions, a code or issue reference, or a raw prompt) end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when the input needs to be carried to working code in a single agent.
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 4.0.0
 ---
 
 # Implement
 
-Execute a less-structured input end-to-end on the current working tree. Read the input, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, report a four-state status per implicit task, and emit a single immutable **implementation report** record on the way out. By default, do not pause for clarifying questions at each step or ask before committing — but honor an invocation that asks you to check in or work through the tasks interactively; do not rewrite history.
+Execute an input end-to-end on the current working tree. Read the input, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, report a four-state status per implicit task, and update the thread's singleton implementation report on the way out. By default, do not pause for clarifying questions at each step or ask before committing — but honor an invocation that asks you to check in or work through the tasks interactively; do not rewrite history.
 
 This skill is single-agent: the current session is the implementer and runs the self-review pass after each implicit task. No subagents are spawned.
 
 ## Inputs
 
-This skill accepts ONE of the following SEVEN input forms. Detect which form was passed before deriving implicit tasks:
+This skill accepts ONE of the following input forms. Detect which form was passed before deriving implicit tasks:
 
-1. **A spec artifact path** under a thread's `specs/` folder. The spec's semantic-contract elements (intended outcome, expected behavior, constraints, acceptance guidance) drive the implicit task list directly. If the spec has acceptance guidance, every implicit task should trace to a piece of it; if a piece of acceptance has no implicit task covering it, that is a coverage gap to surface.
-2. **A proposal artifact path** under a thread's `proposals/` folder. The proposal's rough shape becomes the implicit task list; the proposal's open questions become either tasks the implementation resolves or `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` flags in the four-state report.
-3. **A decision-log artifact path** under a spine node's `discussions/` folder. The log carries one or more settled decisions. Each settled decision may map to an implicit task (or constrain one); cite the source log by path and decision identifier in the task report where the decision is operative.
-4. **A GitHub issue URL or identifier**. Accepted forms include a full URL (`https://github.com/<owner>/<repo>/issues/<NNN>`) or the short `owner/repo#NNN` form. The issue body becomes the input; treat the issue title and labels as additional framing.
-5. **A seed artifact path** under a thread's `seed/` folder (`seed/seed.md`). The seed is the thread's genesis record; its trigger narrative names the intended outcome and the body sketches the work. A seed input typically means tier-1 work — read the thread's `ledger.md` to confirm the tier before deriving tasks.
-6. **A code context reference** — a file path, directory, or git ref. The implementer reads the referenced context and derives implicit tasks from the observed state (e.g., "remove dead code in `src/legacy/`", "fix the import order in `src/foo.ts`"). This input form fits requests where the user's intent is "look at this and do the obvious thing" rather than a written input.
-7. **A raw user prompt**. When no artifact or code reference is passed, the user's prompt is itself the input. Derive implicit tasks directly from the prompt's stated intent.
+1. **The thread-root `plan.md`** — a brief plan whose numbered steps ARE the implementation steps. Treat each numbered step as an implicit task, in order; you have the freedom to derive the obvious substeps a step implies. This is the most structured input this skill takes.
+2. **The thread's `seed.md` plus `decisions.md`** — when no plan exists, the seed's trigger narrative names the intended outcome and `decisions.md` carries the settled decisions that constrain it. Derive the implicit task list from the two together; a settled decision may map to an implicit task or constrain one.
+3. **An explicit code or issue reference** — a file path, directory, or git ref, or a GitHub issue (full URL, or the short `owner/repo#NNN` form). For a code reference, read the referenced context and derive implicit tasks from the observed state ("look at this and do the obvious thing"). For an issue, the body becomes the input and the title and labels are additional framing.
+4. **A raw user prompt** — when no artifact or reference is passed, the user's prompt is itself the input; derive implicit tasks directly from its stated intent.
 
-If the input is ambiguous — a thread contains multiple lineages of the named type (e.g. `specs/001-api/` and `specs/002-cli/`) and "the spec" has no clear referent, the issue identifier is incomplete, the prompt references an artifact with no clear referent, the code context reference points at a directory containing multiple in-progress changes — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency, and do not pick "highest `NNN`".
+If the input is ambiguous — an incomplete issue identifier, a code reference pointing at a directory with multiple in-progress changes, a prompt naming an artifact with no clear referent, or several plausible active threads — ASK the user which input is intended. There is no global "latest input" algorithm. Do not silently pick by recency.
 
 ## Four-State Status Protocol
 
@@ -65,11 +63,11 @@ This skill does not use `git worktree` isolation — every implementation runs o
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. If the worktree is clean, proceed. If dirty, ASK; on abort, stop.
 
-2. **Resolve the thread and read the ledger.** If the input is a path under a thread folder, the thread root (`docs/threads/<YYMMDDHHMMSSZ-slug>/`) is implicit. If the input is a raw prompt or a code context reference and the run will produce thread-scoped artifacts (it will — the implementation report lands in the thread), identify the active thread root. If multiple thread roots exist and which is "active" is ambiguous, ASK the user — do not silently pick the most recent. Once the thread root is known, read its `ledger.md` (append-only; the current value of each key is its last matching line) to learn the **tier** and **disposition**. The implementation report is part of the tier-1-and-up Definition of Done, so it is emitted regardless of tier here. If the ledger's disposition is `closed: …`, the thread is sealed — stop and tell the user; do not write into a closed thread.
+2. **Identify the active thread root.** If the input is a path under a thread folder, the thread root (`docs/threads/<thread>/`) is implicit. If the input is a raw prompt or a code reference, identify the active thread root the run's workspace and report will live under. If several thread roots plausibly apply and which is active is ambiguous, ASK the user — do not silently pick the most recent.
 
-3. **Resolve and read the input.** Detect which of the seven `## Inputs` forms was passed. For a path input, read the file READ-ONLY (input artifacts are immutable — see `## Immutability`). For a GitHub issue, fetch the body and title. For a seed, read its trigger narrative. For a code context reference, read the referenced files. For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ASK which is intended. Do not pick by recency.
+3. **Resolve and read the input.** Detect which `## Inputs` form was passed and read it READ-ONLY. For a GitHub issue, fetch the body and title. For a code reference, read the referenced files. For a raw prompt, the prompt itself is the input. If several plausible inputs match a reference, ASK which is intended; do not pick by recency.
 
-4. **Derive implicit tasks from the input.** Translate the input into an ordered list of implicit tasks. Each implicit task should be implementable in one sitting, observable on completion (a file written, a test passing, a behavior visible), and small enough that the self-review pass after it is meaningful. If the input is fully resolved (e.g., "do X to file Y, then add a test"), the implicit task list may be one or two tasks. If the input is broader (e.g., a spec with multiple acceptance items), the implicit task list will have one entry per acceptance item or per cohesive implementation unit. Avoid both under-splitting (a single "do the spec" task) and over-splitting (a separate task for every line touched). Keep a running task list of the tasks you derive and their state as you work, so progress stays legible.
+4. **Derive implicit tasks from the input.** Translate the input into an ordered list of implicit tasks. Each implicit task should be implementable in one sitting, observable on completion (a file written, a test passing, a behavior visible), and small enough that the self-review pass after it is meaningful. If the input is fully resolved (e.g., "do X to file Y, then add a test"), the implicit task list may be one or two tasks. If the input is broader, the implicit task list will have one entry per cohesive implementation unit. Avoid both under-splitting (a single "do the whole thing" task) and over-splitting (a separate task for every line touched). Keep a running task list of the tasks you derive and their state as you work, recording it in the run workspace's `progress.md` (see `## Run workspace`) so progress stays legible.
 
 5. **For each implicit task, in order:**
    a. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the task report per `## Plan Deviation Policy`.
@@ -77,39 +75,36 @@ This skill does not use `git worktree` isolation — every implementation runs o
    c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, report `BLOCKED` for this implicit task and stop the entire run.
    d. **Write the task report.** Use the four-state status block from `## Four-State Status Protocol`. The state goes in chat output and/or the commit message body.
 
-6. **Emit the implementation report.** Once all implicit tasks have run (or the run was halted at a `BLOCKED` task), write the implementation report per `## Implementation Report`. This is the run's durable record and is part of the Definition of Done.
+6. **Update the implementation report.** Once all implicit tasks have run (or the run halted at a `BLOCKED` task), update the thread's singleton implementation report per `## Implementation report`, then remove the run workspace.
 
-7. **Final out-message.** Emit a final summary listing every implicit task by its four-state status, the commit SHA + subject for each commit made, and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation Report`.
+7. **Final out-message.** Emit a final summary listing every implicit task by its four-state status and the commit SHA + subject for each commit made, and name the implementation report that was written or updated. If a discovery with parent-level impact was routed to the parent roadmap, name that too.
 
-## Implementation Report
+## Run workspace
 
-Every run emits exactly one **implementation report** — a record, immutable from the moment it is written (the industry analog is a PR description). It is the durable artifact this run produces; the four-state task blocks and the git history are the in-flight trail, the report is the summary that survives.
-
-**Where it lands.** Write it to the active thread's flat `implementation/` folder:
+Keep all operational progress for a run inside an invocation-scoped directory in the active thread:
 
 ```text
-implementation/<YYMMDDHHMMSSZ>-<kebab-desc>-implementation-report.md
+.implementation-runs/<UTC>-<ref>/
 ```
 
-`implementation/` is FLAT — records sit directly inside it, with no lineage (`NNN/`) subfolders and no `v<N>` folders. The filename uses the 12-character UTC stamp (no separators, trailing `Z`), a short kebab description, and the mandatory `implementation-report` artifact-type token. Reference the report path thread-relative (relative to the thread root), never absolute; reference anything in another thread repo-relative (`docs/threads/<other>/…`).
+`<UTC>` is the run's start timestamp; `<ref>` is a short slug for the input. Allocate a fresh directory unique to THIS invocation — never silently adopt or reuse an existing run directory. Recovery within an invocation reads only this run's own directory. If a previous run was interrupted, its directory survives so it can be resumed later, but only when the user explicitly identifies it; you never adopt it on your own. Name any progress file `progress.md`. This directory is transient scratch: no durable artifact — not the implementation report, not a commit message, nothing — ever references a path inside it. When the run reaches a normal terminal outcome, the directory is removed (see `## Implementation report`).
 
-**It carries no frontmatter.** The report is a record with no lifecycle status of its own — so no YAML frontmatter at all. Its body is frozen at emission: never edit it after writing. If something needs correcting later, that is a NEW record, not an edit to this one.
+## Implementation report
 
-**What it captures** — four content categories, all four present (write "none" where a category is empty):
+On EVERY normal terminal outcome — success, partial completion, a `BLOCKED` halt, or a no-op where the requested state already existed — update the thread's singleton `implementation-report.md` at the thread root by invoking `/update-implementation-report` with the verified current outcome: what was completed, partially completed, blocked, or found already satisfied; the resulting code, test, and configuration changes; the checks you actually ran and their results, including failures and justified skips; and any deviations, remaining concerns, and follow-ups. The report reflects only the CURRENT outcome — the primitive merges in place, replacing stale content and dropping now-resolved concerns — so pass it the run's end state, not a running log of earlier passes. After the report is written, remove this run's `.implementation-runs/<UTC>-<ref>/` directory.
 
-1. **Deviations from the plan/input, with justification.** Every place the implementation diverged from what the input called for, each with a one-or-two-sentence reason. Pull these from the `DONE_WITH_CONCERNS` and `NEEDS_CONTEXT` task blocks where deviations were surfaced.
-2. **Surprises.** Things the codebase or the task turned out to be that the input did not anticipate.
-3. **Problems hit.** Blockers, failures, and anything that forced a `BLOCKED` status or a mid-run course change.
-4. **Follow-ups.** Work this run discovered but intentionally did not do.
+The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this outcome: assumptions and forced judgment calls into the deviations content, each with its justification; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
 
-The assumptions, forced judgment calls, and known risks the per-task self-review surfaced fold into these existing categories rather than a new section: assumptions and forced judgment calls into Deviations (1), each with its justification; known risks into Follow-ups (4), or Problems hit (3) where the risk was already realized during the run.
+## Blocked and AFK
 
-**Follow-up routing.** Follow-ups discovered during implementation are NOT parked in any inbox — there is no inbox in this workflow. Route them one of two ways:
+When completing an implicit task requires a genuine human decision you cannot settle on your own:
 
-- **Default — seeds of future threads.** Capture each follow-up as a seed for a new thread (its own genesis record), or surface it in the report as a clearly-labelled candidate seed for the user to open later. This is the default for any standalone follow-up.
-- **Tier-3 phased work — the next phase's discussion.** If the active thread is tier-3 phased work with a living roadmap, a follow-up that belongs to a later phase routes to that next phase's `discussions/` folder (the roadmap is a living list, not a frozen contract — a phase may welcome or defer the follow-ups appended to it). Confirm the thread is tier-3 phased work (per the ledger) before routing this way.
+- **Attended run** — ask the user. Once the answer settles intent (anything beyond a trivial input clarification), append it to the thread's `decisions.md` before you act on it, then continue.
+- **Explicit AFK invocation** — do NOT invent the intent. First finish everything the run can safely derive without that decision. Then bundle the indispensable open decision(s) via `/emit-pending-decisions` — supplying the producer, the target, the supporting evidence, the open decision(s), and a suggested follow-up — update the implementation report per `## Implementation report` to reflect the blocked outcome, and end the run with a concise notification pointing at the bundle.
 
-Name the routing decision for each follow-up in the report so the trail is explicit.
+## Roadmap-descendant feedback
+
+When the run's thread carries a `Parent:` roadmap reference in its seed AND you discover something with parent- or sibling-level impact — a shared constraint that no longer holds, a direction that a sibling or future child brief must change, a needed additional child — append it to the parent's roadmap feedback via `/append-roadmap-feedback`, supplying the parent roadmap reference, this child as the source, what it affects, self-contained evidence, the impact, and an advisory recommendation. A discovery that is only a local surprise or a local implementation note is NOT roadmap feedback; it stays in this run's implementation report.
 
 ## Commit Policy
 
@@ -117,7 +112,7 @@ This skill auto-commits.
 
 - **Default cadence:** ONE commit per implicit task. The boundary is the implicit task; after the implement → self-review pair for a task succeeds, commit the diff that constitutes the task. Do not bundle multiple implicit tasks into one commit. Do not split one implicit task across multiple commits.
 - **Override cadence:** When the user's invocation contains an EXPLICIT Git instruction — for example, "commit at the end as one commit", "make one commit per file touched", "do not commit, just leave the changes staged" — honor the explicit instruction over the default cadence. The user's explicit instruction wins.
-- **Judgment:** When the implicit task list is one task (a fully-resolved input), the default cadence and "one commit at the end" produce the same outcome — one commit. When the implicit task list is many tasks (e.g., spec with several acceptance items), the default cadence is many commits.
+- **Judgment:** When the implicit task list is one task (a fully-resolved input), the default cadence and "one commit at the end" produce the same outcome — one commit. When the implicit task list is many tasks, the default cadence is many commits.
 - **Baseline gate (before each commit):** A task's self-review confirms THAT task's objective; it does not necessarily capture the project's *standing* required gates: the bar a project enforces on any code allowed to land (discoverable from the project's tooling or conventions — for example a `check` / `lint` / `format` / `typecheck` script, a documented pre-commit command, or a CI gate). **A project may define no such gate**, in which case there is nothing to run beyond the self-review and this clause is a no-op. When the project DOES define standing gates, run them on the changed code and resolve any failure BEFORE committing the task — even when the task's own verification omits it. Scope the gate to the changed code where the project's tooling allows it, so an unrelated pre-existing failure elsewhere does not block this task. Only genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) are legitimately deferred to a closing task — a cheap standing commit-gate is not one of those and is not deferred.
 
 Commits use the project's conventional-commit shape where applicable. Stage only the files the implicit task touched; never run `git add -A` blindly. Commit subjects are descriptive of the implicit task's objective, not its substeps. Commit message bodies MAY include the four-state task report block from `## Four-State Status Protocol` so the audit trail lives in git history as well as chat output.
@@ -142,11 +137,4 @@ The policy is judgment-based and surfaced via task report — not pre-clearance,
 - **Use judgment when warranted.** If the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the input's intent. A blocked import path, a missing helper the input assumed existed, a renamed dependency the input did not know about: fix and continue.
 - **Surface deviations in the task report.** Every deviation goes into the four-state status block. Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the input did not specify) are `DONE_WITH_CONCERNS` with a one-sentence note. Major deviations (the implementer made a structural choice the input did not anticipate, the implementer skipped a sub-step because it was unsafe to apply blindly) are `NEEDS_CONTEXT` with a clear "user clarification on X" next-action.
 - **Do not pre-clear minor deviations.** This run is autonomous; it does not stop for every judgment call. The four-state report is where the user reads the trail.
-
-## Immutability
-
-Input artifacts are IMMUTABLE. The implementer reads them READ-ONLY. An approved spec, a proposal, a decision log, a seed, a plan artifact, and any other emitted record or latched versioned artifact under a thread's folders are not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not for any reason. (A spec that is still `approved` but not yet `implemented` may be amended only through a separate owner-approved, record-backed amendment pass — never as a side effect of this run.)
-
-If during implementation the implementer discovers that the input is wrong (a spec acceptance criterion contradicts the observed code state, a seed names a fix that has already been applied), the correct move is to surface the finding in the four-state task report with a `DONE_WITH_CONCERNS` or `NEEDS_CONTEXT` status, capture it in the implementation report, and let the surrounding session decide what to do. The input artifact stays as it was. The implementer does not perform that revision as part of this run.
-
-What the implementer DOES modify is SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository. The implementer also writes exactly one implementation report per `## Implementation Report` (the only thread artifact this run emits) and MAY capture a discovered follow-up as a seed for a future thread (or, in tier-3 phased work, append it to the next phase's `discussions/`) per the follow-up-routing rule. There is no inbox in this workflow — its residual job is served by the implementation report and by seeds of future threads. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.
+- **Never edit the input to justify the run.** If you discover the input itself is wrong — a step contradicts the observed code, a decision names a change already applied — surface it in the task report and in the implementation report and let the surrounding session decide. The implementer modifies source code, configuration, tests, and build files; it does not edit the spec, plan, seed, decision log, or issue it was handed, and it does not author new such artifacts inside this run.
