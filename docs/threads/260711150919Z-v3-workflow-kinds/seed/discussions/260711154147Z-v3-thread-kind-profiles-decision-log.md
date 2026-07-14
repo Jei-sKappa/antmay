@@ -1954,3 +1954,148 @@ Decision: Explicitly defer all archival-link repair or rewrite behavior to a fut
 The V3 specification names the limitation only so an implementer does not accidentally expand scope to solve it. It contains no archival-link acceptance criteria beyond not pretending the problem has been handled. A future thread owns the complete behavior and may revise `archive-thread`, reference syntax, or both.
 
 Rationale: Archival-link integrity has its own backlog item and is not necessary to validate the core V3 workflow redesign. Treating it as a dependency would delay a specification that is otherwise ready, while implementing a guessed partial solution would create conflicting behavior. The trade-off is knowingly allowing broken links after archival until the dedicated future work is completed.
+
+## P53: Day-one cross-thread reference syntax
+
+Point: Decide the concrete syntax for the cross-thread references V3 must write at materialization time — parent → child (`Materialized thread:` in `roadmap.md`) and child → parent (`Parent:` and `Roadmap brief:` in the child seed) — resolving the contradiction between P26 (syntax deferred to the archival-link thread), P52 (V3 does not wait for that thread), and P41 (the materializer needs a syntax on day one).
+
+What you need to know: P41 already uses the phrase "repo-relative thread reference" informally, and P26 says the "precise reference syntax" is deferred. P52 accepts that references may break when a referenced thread moves into `docs/threads/archive/`. Whatever syntax is chosen here, the archival-link thread retains ownership of repair and rewrite behavior and may supersede this syntax later. The only question is what the materializer and thread-creation operations literally write now.
+
+Decision: Cross-thread references use plain repo-relative thread-root directory paths, for example `Materialized thread: docs/threads/260714093000Z-auth-boundary/`. `Parent:` in a materialized child seed uses the same repo-relative path form. `Roadmap brief:` uses the parent Roadmap's stable `C<N>` identifier. References always point at the thread folder, never at a file inside it, so a thread's internal contents can change without invalidating references to it. No link-repair mechanism, indirection scheme, or stable-ID registry is introduced. This narrows P26's deferral: the minimal day-one reference syntax is decided here, while archival-time link behavior — repair, rewrite, or tolerated breakage policy beyond P52's acceptance — remains deferred to the dedicated archival-link thread, which may supersede this syntax.
+
+Rationale: This is the least-decision resolution: it writes down what P41 already informally said, keeps references navigable while threads are active, and leaves the archival thread's design space untouched. The timestamp-slug embedded in the path makes post-archival recovery a trivial search even when the literal path breaks, matching the breakage already accepted by P52. The rejected alternative — a bare thread identifier resolved by search — gives up day-to-day navigability while merely hiding the same limitation P11 already named, and would pre-empt part of the archival thread's design space by inventing an ID-resolution convention now.
+
+## P54: Supersession of pre-P35 review semantics
+
+Point: Decide how to mark as superseded the pre-P35 "review" semantics that survive unmarked in P8, P19, P29, and P31, so a spec author performing a lossless mapping cannot inherit the obsolete behavior.
+
+What you need to know: P35 split the old auto-fixing "review" concept into mutating reconciliation and read-only review, but four earlier records still carry the old semantics with no supersession marker. P8 says reviews "fix automatically and recheck without asking," behavior that now belongs exclusively to reconciliation operations (P35/P39) while read-only reviews never fix (P36); P8's retention clause ("only when an explicitly audit-oriented kind profile requires them") references a concept retired by P17/P18, leaving it dead text with no surviving mechanism. P29 says review operations "use `/discussion-point` to emit only irreducible human questions" into pending decisions, contradicted by P36 (reviews never write `.pending-decisions/` and do no routing); P49's consumer list already silently dropped reviews. P31 says reviews are "expected to be the most common producer" of `.pending-decisions/`, while under P36 they produce none. P19's diagrams and finish enumeration are stale (`[spec review / lossless review]`, `.wip/`); P42 and P43 are the authoritative refinements but never say so. The log's own convention (P9) is that a change appends a superseding record naming what it supersedes, as P10 did for P4/P5/P6.
+
+Decision: The following clauses of earlier records are explicitly superseded. (a) P8's automatic-fix language is superseded by P35, P36, and P39: automatic correction from existing decisions belongs to reconciliation operations only, and read-only reviews never mutate their target. (b) P8's audit-oriented-kind-profile retention clause is void because kind profiles were retired by P17 and P18; the only review output in V3 is P36's temporary `.pending-reviews/` bundle. (c) The review-related clauses of P29 and P31 are superseded by P36: read-only reviews route nothing into `.pending-decisions/`, and reconciliation operations are the expected common producer of that queue. (d) P42 is authoritative over P19's finish enumeration and P43 over P19's workflow sequences; P19's `.wip/` and `[spec review / lossless review]` mentions are stale. The four affected records are not edited in place; this record is the sole supersession marker, consistent with the log's append-only convention.
+
+Rationale: The trap existed only because P35/P36's supersession of these clauses was partial and unnamed; one consolidated record naming each superseded clause restores the same traceability P10 established for the evaluator-era decisions. Editing four emitted records in place was rejected because it would break the log's immutability convention for a problem a named-supersession record solves identically; stamping forward pointers on the affected records was rejected as inconsistent, since no other superseded record in the log carries one.
+
+## P55: Workflow templates are duplicated per consuming skill; no cross-skill reference reads
+
+Point: Decide where the canonical `## Suggested workflow` templates live and how Roadmap authoring may access them, resolving the conflict between P25 (templates live in `open-thread`'s `references/`, single source of truth), P25's own requirement that Roadmap authoring expands built-in names into complete sequences before the roadmap is emitted, and P29 (no cross-folder Markdown imports; dependencies flow only through `/skill-name` invocation).
+
+What you need to know: Two operations need the template text: `open-thread` at opening time, and `roadmap` at authoring time (to embed expanded sequences in child briefs). P24/P25 forbid resolving a name at materialization time, so the expansion must happen during authoring — materialization always receives complete text. `create-thread` (P49) has a single-mode contract: the caller supplies the complete suggestion. P30 assumes the suite is installed coherently, so a missing dependency is an installation error. P25 was decided before the `create-thread` primitive existed.
+
+Decision: A skill may never read another skill's `references/`; invocation through `/skill-name` is the only permitted cross-skill coupling. This hardens P29 rather than adding an exception to it. Consequently, the built-in workflow templates are duplicated: `open-thread` and `roadmap` each carry their own copy of the seed-ready `## Suggested workflow` reference set in their local `references/` folders. `open-thread`'s copy remains the canonical one; `roadmap`'s copy mirrors it, and any change to the canonical templates updates both copies in the same change. This supersedes P25's claim that no other copy of the exact sequences exists, while preserving P25's intent that the sequences are authored once conceptually and copied verbatim into seeds and child briefs. `create-thread`'s caller-supplies-complete-text contract is unchanged. A possible future template-generation system for skill folders may later automate the duplication; that system is a separate future discussion and is not a commitment of this record.
+
+Rationale: Reference-reading is a different and stronger kind of coupling than invocation: invoking a skill goes through its declared contract, while reading its `references/` reaches into its internals and couples the reader to another skill's folder layout. Keeping the boundary absolute is worth the cost of one duplicated file set, which is small, changes rarely, and may later be automated by a generation step. The trade-off is hand-synchronized duplication until such tooling exists, knowingly accepted by the owner.
+
+## P56: Review authority anchors when no specification exists
+
+Point: Define what `review-implementation` and `review-code` anchor to as the definition of intended behavior when the reviewed thread has no `spec.md` — which is the normal case in Quick, where both are offered as optional operations (P43).
+
+What you need to know: The current V2 skills are spec-anchored: `review-implementation` verifies "against its spec's acceptance criteria," and `review-code` treats "the spec's acceptance criteria as the definition of right." P51 rewrites both as strictly read-only P36 reviewers but says nothing about their authority source. A Quick thread may have, at most, `seed.md`, `decisions.md`, a brief `plan.md`, and `implementation-report.md` — or as little as a seed alone (P44 allows implementing straight from the seed or the user's prompt). The two skills differ: `review-code`'s quality/safety/idioms/testability axes are largely intrinsic to the code and only need an intent anchor at the margin, while `review-implementation` is fundamentally a fidelity check and cannot run without some definition of intended behavior.
+
+Decision: Both read-only reviews share a fixed authority-anchor precedence: the definition of intended behavior is the most specific durable intent available in the thread — `spec.md` if present; otherwise `plan.md` (brief, or strict index plus tasks); otherwise `seed.md`. `decisions.md` always applies as a binding constraint source at every level. `review-implementation` additionally treats `implementation-report.md` as the claim under test: it checks both that the delivered work matches durable intent and that the report's stated outcome, changes, and verification honestly describe what exists. When the resolved anchor is coarse (seed-only), the reviewer states its anchor explicitly in the bundle's `## Context` section and scopes findings accordingly rather than inventing acceptance criteria the thread never recorded. `review-code`'s intrinsic quality axes apply regardless of anchor depth. This precedence is a shared convention stated once, inherited by both skill rewrites.
+
+Rationale: A fidelity review is meaningless without a stated definition of intended behavior, and Quick threads legitimately lack a spec, so the reviewers need a deterministic fallback rather than per-run improvisation. Anchoring to the most specific durable intent keeps findings honest at every process depth, and requiring the anchor to be named in the bundle prevents a coarse anchor from silently masquerading as a rigorous acceptance check. The trade-off is that seed-anchored reviews are necessarily shallower, which is inherent to Quick's reduced ceremony rather than a defect of the review.
+
+## P57: Every elicited human decision is recorded before it is used
+
+Point: Decide whether a completion-oriented skill that legitimately asks the user a question mid-run (attended execution, per P13's "indispensable human judgment" allowance) must append the resulting answer to `decisions.md` as a durable Decision Record — and confirm it has the write authority to do so.
+
+What you need to know: The AFK path is fully specified: a blocked AFK operation emits a `.pending-decisions/` bundle, and `resolve-pending-decisions` appends the settled records (P31/P47). But the attended path is not: P13 lets `spec`, `plan-strict`, implementation, and materialization ask directly when judgment is indispensable, and P12 grants decision-append authority only to "interactive decision-making operations," which naturally reads as the dialogue-driven skills. If an attended `spec` run asks a product question, gets an answer in chat, and embeds it in the spec without a record, two things break: the P9 invariant that seed plus `decisions.md` suffice to author the next artifact without the chat, and `reconcile-spec` itself, whose contract (P37/P39) is to strip spec content not backed by `decisions.md`. A legitimately user-approved choice would be indistinguishable from an invented one and would be flagged or removed by the very safeguard designed to protect it.
+
+Decision: Any skill, regardless of interaction posture, that obtains a new human decision during execution appends it to the current thread's `decisions.md` as a normal Decision Record before acting on it. P12's decision-append authority is clarified to attach to the act of eliciting a human decision, not to a fixed class of skills. A genuine decision is an answer that settles product or workflow intent; trivial input clarifications (such as which file was meant) need no record. The attended and AFK paths therefore converge on one invariant: every human decision that shapes an artifact exists in `decisions.md` before the artifact depends on it. No new primitive is mandated; skills may use the discussion-point discipline for presentation when the fork warrants it.
+
+Rationale: The reconciliation operations assume `decisions.md` is the complete registry of human intent; an unrecorded attended answer silently violates that assumption and turns the lossless safeguard against its own user. Attaching append authority to the eliciting act closes the gap with no new machinery and keeps the P9 invariant true regardless of how a decision happened to be obtained. The trade-off is a small recording obligation on completion-oriented skills for what should already be exceptional questioning.
+
+## P58: Escalated threads adopt the complete Standard tail
+
+Point: Decide whether the Quick→Standard escalation sequence in P44 (create `spec.md` → `reconcile-spec` → `plan-strict` → replace `plan.md` → create `plan-tasks/` atomically) should include `reconcile-plan`, which P43 makes an unbracketed normal step after `plan-strict` in Standard.
+
+What you need to know: P44 was decided one point after P43, and its escalation list reads as artifact-replacement mechanics rather than a workflow definition — but it is phrased as "the normal escalation is," so a literal spec author could reasonably conclude that escalated threads skip plan reconciliation. There is no apparent reason an escalated thread should get a weaker plan-fidelity guarantee than a thread that started as Standard.
+
+Decision: Escalation adopts the Standard tail in full: after escalating, the thread continues `plan-strict` → `reconcile-plan` → `implement-plan` → optional reviews → `finish`, exactly as P43 defines Standard. P44's five-step list describes the planning-artifact replacement mechanics, not a reduced workflow; an escalated Quick thread and a born-Standard thread are indistinguishable from the specification stage onward.
+
+Rationale: The omission was an oversight created by P44 focusing on artifact mechanics immediately after P43 defined the sequences; leaving it unclarified would give escalated threads a silently weaker plan-fidelity guarantee than born-Standard threads for no reason. Appending a clarification was preferred over editing P44 in place, consistent with the log's append-only convention.
+
+## P59: Complete group placement for new V3 skills
+
+Point: Assign every new user-invoked skill from P51 to a group in the P51 layout, closing the gap for `resolve-pending-decisions` and `plan-brief`, which P51's inventory adds but never places.
+
+What you need to know: P51's group layout adds `roadmap/`, `reconcile/`, and `primitives/`, and its marketplace note covers those three. Most new skills have an obvious home by name, but two are genuinely unplaced: `plan-brief`, and `resolve-pending-decisions` — which is the successor of `seeded-discussion` (P28), a skill that lived in `capture-discussion/`.
+
+Decision: The complete placement map is: `plan-brief` → `plan/` (sibling of `plan-strict`; both are planning capabilities per P16's capability-oriented naming); `resolve-pending-decisions` → `capture-discussion/` (an interactive decision-settling operation that appends to `decisions.md`, the direct successor of `seeded-discussion` which lived there); `roadmap` and `materialize-roadmap-threads` → `roadmap/`; `reconcile-proposal`, `reconcile-spec`, `reconcile-plan`, and `reconcile-roadmap` → `reconcile/`; `review-roadmap` → `review/`; the six P49 primitives → `primitives/`. Every other skill stays in its current group. No marketplace entries are needed beyond the three P51 already names.
+
+Rationale: An explicit placement map removes the last inventory discretion from the spec author. Each placement follows the group's existing capability meaning; in particular, `resolve-pending-decisions` inherits its predecessor's home because its purpose — settling decisions interactively into the thread log — is unchanged even though its input source moved from a seeded list to the pending-decision queue.
+
+## P60: Archival warns about live pending state but deletes nothing
+
+Point: Define how `archive-thread` behaves when the thread still contains live temporary state — `.pending-decisions/` bundles, `.pending-reviews/` bundles, or interrupted `.implementation-runs/` — given that archival is the explicit terminal act (P11) and can be invoked without going through `finish`.
+
+What you need to know: `finish` surfaces all three signals (P42), but nothing requires finish before archival, and P51 only says `archive-thread` "archives by explicit user intent." The three folders are gitignored workspace state, so archiving quietly strands them: locally they move with the folder into the archive; in Git and on any other machine they never existed. A pending bundle may contain an unresolved question the user forgot about, and archival is the last natural moment to notice it.
+
+Decision: Before moving the thread, `archive-thread` inspects the three temporary workspaces and, if any are non-empty, names their contents (bundle titles or headers, interrupted run identifiers) and asks the user to confirm archival anyway — an advisory signal and a single meaningful confirmation, not a gate. On confirmed archival, the folders are carried along untouched; `archive-thread` never deletes them or their contents. Pending-state semantics (P28's "absence means no pending human decisions" and the resumability of interrupted runs) are explicitly scoped to active threads: in an archived thread these folders are inert local residue with no workflow meaning, and no operation reads them as a queue. The user may manually delete them at any time.
+
+Rationale: The warning is what matters — it gives the user the last chance to resolve or record forgotten pending material before the thread goes terminal. Deletion was deliberately excluded: the documents may still be useful to the user later, granting skills a "free to delete" authority is an unsafe precedent that conflicts with V3's narrow-write-authority philosophy, and safety harnesses often block deletion anyway, which would make the behavior unreliable in practice. Scoping pending-state semantics to active threads resolves the apparent contradiction of an archived thread containing a "pending" queue without destroying anything.
+
+## P61: Project V3 is branch-agnostic
+
+Point: Decide whether V3 defines a thread-to-branch relationship, or explicitly declares the workflow branch-agnostic — so the spec records the position deliberately instead of inheriting it as an accident.
+
+What you need to know: P42 and P50 assume branch-based delivery vocabulary ("the current branch," merge targets, PR creation), but no V3 record says whether a thread maps to a branch. The existing practice is already branch-agnostic: the V2 workflow docs define no branch convention, and the current `finish` skill operates strictly on the current branch as found — it detects the branch name, asks the user for any merge target, and its own rationale explains that no autonomous default is safe across users, repos, and branch contexts. `open-thread` creates no branch.
+
+Decision: Project V3 is branch-agnostic by design. No thread-to-branch mapping is defined, assumed, or recorded; no workflow skill creates, switches, or names a branch on its own initiative. Implementation commits land on the current branch per P50, and `finish`'s branch dispositions are user-selected per P42. The user may work directly on the default branch, use one branch per thread, or share a branch across threads — the workflow neither knows nor cares. Thread identity lives entirely in the thread folder, never in a branch name.
+
+Rationale: The de facto convention already works and matches the conventions-first philosophy: branching strategy is a repository and user concern, not workflow state. Stating it explicitly prevents a spec author from inventing a branch protocol to fill the apparent gap left by P42's and P50's branch vocabulary. The trade-off is that V3 offers no branch hygiene guidance, which is intentional — that guidance would be project-specific policy, not workflow methodology.
+
+## P62: Consolidated authoritative V3 thread layout
+
+Point: Decide whether to append one record stating the complete final V3 thread layout, since P23's tree — the only full layout in the log — still shows `.wip/`, which P28 retired and P40 replaced with three purpose-specific folders.
+
+What you need to know: The final layout is mechanically derivable (P23 minus `.wip/`, plus `.pending-decisions/` from P31–P34/P47, `.pending-reviews/` from P36, and `.implementation-runs/` from P40), but no single record shows it. A spec author who copies P23's tree verbatim ships a layout with a folder V3 explicitly retired. This is pure consolidation with no new semantics.
+
+Decision: The authoritative V3 thread layout is:
+
+```text
+docs/threads/<YYMMDDHHMMSSZ-slug>/        (archive: docs/threads/archive/<...>/, P11)
+├── seed.md                       eager (P23, P26)
+├── decisions.md                  eager (P9, P23)
+├── proposal.md                   optional (P23)
+├── spec.md                       optional (P23)
+├── plan.md                       optional; brief plan or strict-plan index (P23, P44)
+├── plan-tasks/                   strict plan only (P23)
+├── implementation-report.md      singleton current outcome (P23, P45)
+├── roadmap.md                    Roadmap only (P41)
+├── roadmap-feedback.md           Roadmap only, eager at roadmap authoring (P21)
+├── .pending-decisions/           gitignored; AFK→human decision bundles (P31–P34, P47)
+├── .pending-reviews/             gitignored; review findings bundles (P36)
+└── .implementation-runs/         gitignored; invocation-scoped implementation state (P40)
+```
+
+This record supersedes P23's tree as depiction only — `.wip/` no longer exists per P28 and P40. Where any prose conflicts with this tree, the owning records cited per line remain authoritative; this record decides nothing new.
+
+Rationale: One copyable, citation-annotated tree removes the risk of a spec author reproducing P23's stale depiction while keeping semantic ownership with the records that actually decided each element. The per-line citations make it self-evident that this is consolidation rather than a new decision surface.
+
+## P63: No V2-awareness in V3 skills; mismatched inputs fall through to agent judgment
+
+Point: Define what a V3 workflow skill does when pointed at a pre-V3 thread, since P14 declares old threads unsupported but not what "unsupported" means operationally — refuse, warn, or undefined behavior.
+
+What you need to know: After the cutover, V2 and V3 threads coexist under `docs/threads/` (P14: old threads "may remain untouched and be ignored or archived separately"). A V2 thread is structurally distinguishable (`ledger.md` and a `seed/` directory versus root `seed.md` plus `decisions.md`), so an explicit detection-and-refusal rule was possible. The risk without any stated rule is a skill half-interpreting a V2 layout and writing V3 artifacts into it.
+
+Decision: V3 skills carry no V2-thread detection heuristic, refusal protocol, or any mention of earlier thread layouts. Pre-V3 threads are treated as if they do not exist. A V3 skill pointed at a V2 thread is the same situation as a skill pointed at any unrelated file — a spreadsheet, a Word document — and is handled the same way: the skill's instructions precisely describe the V3 inputs and thread structure it expects, and when what the agent finds does not match, the agent autonomously notices the mismatch and asks the user for clarification, exercising ordinary judgment rather than following a special-case rule. The safeguard is the precision of each skill's stated input contract, not legacy awareness.
+
+Rationale: Encoding V2 detection into every V3 skill would leak exactly the obsolete layout knowledge P14's clean cutover was designed to shed, and would special-case one kind of mismatched input among many that agents already handle through general judgment. In the current sole-user experimental stage, the residual risk — an agent "helpfully" adapting to an unrecognized layout instead of asking — is knowingly accepted; precise input contracts in each skill keep that risk small. The trade-off is that nothing mechanically guarantees refusal on V2 threads, which is consistent with the conventions-first reliance on agent interpretation.
+
+## P64: Shared-reference sync script replaces manual template duplication
+
+Point: Define the mechanism that automates P55's template duplication — a script that copies canonical shared reference files into the `references/` folders of the skills that declare them.
+
+What you need to know: P55 established the constraint set this must satisfy: no cross-skill reference reads at runtime (each installed skill ships its own physical copy), single conceptual authorship, and hand-sync until tooling exists. The repository already has a generator precedent (`raycast-extension/scripts/sync-skills-to-raycast.mjs` — plain Node, no dependencies). One property differs from the Raycast case: the Raycast manifest is gitignored and regenerated on demand, but these copies must be committed, because `npx skills add` distributes whatever is in the repository — so the script produces committed artifacts, and drift becomes "forgot to run the script" instead of "forgot to hand-edit the second copy."
+
+Decision: Adopt a copy-based sync system:
+
+1. Canonical source: `shared/references/` at the repository root holds the canonical files (for example `shared/references/workflows/quick.md`). This supersedes P55's clause naming `open-thread`'s copy canonical — all skill-local copies become generated mirrors of the shared source.
+2. Declaration: one central manifest, `shared/manifest.yaml`, keyed skill-path → list of shared files. YAML is chosen over JSON for hand-editing readability. The manifest shape is deliberately restricted to a flat map of skill paths to string lists so the sync script can parse it itself in a few lines without a YAML dependency; if the manifest ever needs anchors, nesting, or multiline strings, the design has grown past its purpose and must be revisited.
+3. Destination: copies land in `references/shared/` inside each declaring skill (for example `references/shared/workflows/quick.md`), visibly separate from hand-authored references. The script wipes and re-creates each skill's `references/shared/` on every run, so stale copies disappear mechanically; its deletion authority is confined to a folder that is generated by definition and never touches hand-written material.
+4. Script: `scripts/sync-shared-references.mjs`, dependency-free Node in the style of the Raycast generator, run manually after editing shared sources. The authoring rule — never hand-edit `references/shared/`; edit `shared/references/` and re-run the script — is documented in `AGENTS.md`.
+
+Generated copies are committed, flow into distribution and the Raycast manifest unchanged, and keep every installed skill self-contained per P55's runtime rule.
+
+Rationale: Plain file copying satisfies the actual requirement — single-source authorship with per-skill physical copies — without the complexity of a templating engine, which would solve an interpolation problem V3 does not have. A committed-output sync converts editorial drift into a mechanical, scriptable step, the `references/shared/` subfolder makes generated material self-evident and safely regenerable, and the restricted YAML manifest keeps the config readable for its sole human editor without adding a parser dependency. The trade-off is one more repository convention and the residual risk of forgetting to run the script after editing shared sources, mitigated by the AGENTS.md rule and cheap to automate later if it proves error-prone.
