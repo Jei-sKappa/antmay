@@ -1,0 +1,20 @@
+# Shared-reference sync manifest.
+#
+# Flat map: each key is a skill path (repo-root-relative, a folder containing a
+# SKILL.md); each value is a list of source files relative to shared/references/.
+# `scripts/sync-shared-references.mjs` copies every listed source into the
+# skill's generated references/shared/ folder, preserving relative subpaths.
+#
+# Strictly flat: skill-path keys, string-list values, one list level, no
+# anchors, no nested keys, no multiline strings. Edit shared/references/ and
+# rerun the script; never hand-edit the generated references/shared/ copies.
+
+skills/workflow/capture-discussion/open-thread:
+  - workflows/quick.md
+  - workflows/standard.md
+  - workflows/roadmap.md
+
+skills/workflow/roadmap/roadmap:
+  - workflows/quick.md
+  - workflows/standard.md
+  - workflows/roadmap.md
