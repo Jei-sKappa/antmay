@@ -1,12 +1,12 @@
 ---
-name: create-thread
-description: Use only when an invoking user-facing operation supplies a complete caller-authorization block — the operation's name plus every normalized field (thread slug and title, the full genesis narrative, the verbatim `## Suggested workflow` text, and any conditional metadata) — and a normalized thread folder must be allocated: create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from those fields, and eagerly create a header-only `decisions.md`.
+name: allocate-thread
+description: Use only when an invoking caller supplies a complete caller-authorization block for a new thread and a normalized thread folder must be allocated — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decisions.md`.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0
 ---
 
-# Create Thread
+# Allocate Thread
 
 Perform normalized thread-folder creation on behalf of a user-facing operation. You allocate the thread folder, write `seed.md` from fields the caller hands you, and eagerly create a header-only `decisions.md`. You own only this bounded filesystem side effect and the refusal below.
 

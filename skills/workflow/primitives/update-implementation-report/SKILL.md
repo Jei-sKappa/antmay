@@ -1,6 +1,6 @@
 ---
 name: update-implementation-report
-description: Use only when an implementation caller supplies a verified current outcome — the changes made, the checks actually performed, and any deviations, remaining concerns, and follow-ups — and the thread's singleton `implementation-report.md` must be created or merged in place to describe that current outcome.
+description: Use only when an invoking caller supplies a verified current implementation outcome and the thread's singleton `implementation-report.md` must be created or merged in place to describe that outcome.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0

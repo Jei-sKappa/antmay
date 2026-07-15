@@ -1,6 +1,6 @@
 ---
 name: emit-pending-decisions
-description: Use when a producing caller supplies a producer, a target, the originating user request, supporting evidence, one or more genuine open human decisions, and a suggested follow-up, and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder, write its routing header and advisory follow-up, and normalize each decision into a canonical discussion point.
+description: Use only when an invoking caller supplies open human decisions with their producing context and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder and write its routing header, advisory follow-up, and canonical discussion points; never for defects, observations, or report material — only genuine open human decisions.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0

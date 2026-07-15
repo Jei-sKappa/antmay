@@ -9,7 +9,7 @@ metadata:
 
 # Open Thread
 
-Turn a user's starting point into a durable thread on disk. You interpret the raw input, resolve the workflow the thread starts from, compose the seed's fields, and delegate the actual folder-and-file creation to `/create-thread`. You do the judgment; the primitive does the normalized write.
+Turn a user's starting point into a durable thread on disk. You interpret the raw input, resolve the workflow the thread starts from, compose the seed's fields, and delegate the actual folder-and-file creation to `/allocate-thread`. You do the judgment; the primitive does the normalized write.
 
 ## Inputs you accept
 
@@ -35,7 +35,7 @@ The workflow name is invocation input only. A thread is opened *from* a workflow
 
 ## Compose the seed fields
 
-From the user's input (and, when a ticket is linked, its content), assemble the fields `/create-thread` needs:
+From the user's input (and, when a ticket is linked, its content), assemble the fields `/allocate-thread` needs:
 
 - **Slug** — a short kebab-case description of the subject (`auth-boundary`, `rate-limit-fix`).
 - **Title** — a human-readable one-line title for the thread.
@@ -47,9 +47,9 @@ From the user's input (and, when a ticket is linked, its content), assemble the 
 
   Add no owner field and no empty or placeholder fields. Absent metadata is simply absent.
 
-## Delegate creation to `/create-thread`
+## Delegate creation to `/allocate-thread`
 
-Invoke `/create-thread` with a complete **caller-authorization block** so it can allocate the thread. The block names the invoking operation and every normalized field:
+Invoke `/allocate-thread` with a complete **caller-authorization block** so it can allocate the thread. The block names the invoking operation and every normalized field:
 
 - **Operation** — `/open-thread`.
 - **Slug** and **Title** — as composed above.
@@ -59,7 +59,7 @@ Invoke `/create-thread` with a complete **caller-authorization block** so it can
 
 Before delegating, show the user the composed slug, title, `## Suggested workflow`, and any `External:`/`Supersedes:` values, and invite a single round of corrections. Fold any adjustment into the field values, then delegate. This is a brief confirmation, not a drawn-out dialogue — one pass is enough.
 
-`/create-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decisions.md`. Supply the whole block in exactly one invocation; do not fabricate the folder path or write the files yourself. `/create-thread` has no update path — a second invocation would mint a separate thread folder, so all corrections must land before this single call.
+`/allocate-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decisions.md`. Supply the whole block in exactly one invocation; do not fabricate the folder path or write the files yourself. `/allocate-thread` has no update path — a second invocation would mint a separate thread folder, so all corrections must land before this single call.
 
 ## External references are passive
 
@@ -67,6 +67,6 @@ A linked ticket is read for context only, and its URL is recorded in `External:`
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After `/create-thread` returns, report the created thread's folder path to the user. Corrections are gathered before delegation, not after — do not re-run the delegation.
+This is a completion-oriented operation, not a dialogue. After `/allocate-thread` returns, report the created thread's folder path to the user. Corrections are gathered before delegation, not after — do not re-run the delegation.
 
 No preamble, no closing remark.

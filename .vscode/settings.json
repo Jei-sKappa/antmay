@@ -4,12 +4,12 @@
   "conventionalCommits.scopes": [
     "adjust-plan-granularity",
     "afk-exploration",
+    "allocate-thread",
     "append-roadmap-feedback",
     "archive-thread",
     "brief-the-recipient",
     "capture-inbox",
     "consult-the-expert",
-    "create-thread",
     "discussion",
     "discussion-loop",
     "emit-pending-decisions",

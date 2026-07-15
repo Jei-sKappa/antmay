@@ -1,6 +1,6 @@
 ---
 name: append-roadmap-feedback
-description: Use only when a descendant-thread caller supplies the parent roadmap reference and a discovery with parent- or sibling-level impact — the affected briefs or direction, self-contained evidence, the impact, and a recommendation — and that discovery must be recorded as the next append-only record in the parent thread's `roadmap-feedback.md`.
+description: Use only when an invoking caller supplies a descendant-thread discovery carrying parent- or sibling-level impact together with its parent roadmap reference, and that discovery must be appended as the next record in the parent thread's `roadmap-feedback.md`.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0

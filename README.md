@@ -330,12 +330,12 @@ Record a read-only reviewer's already-validated, evidenced, categorized findings
 npx skills add Jei-sKappa/skills --skill emit-pending-review
 ```
 
-#### [`create-thread`](./skills/workflow/primitives/create-thread/SKILL.md)
+#### [`allocate-thread`](./skills/workflow/primitives/allocate-thread/SKILL.md)
 
 Allocate a normalized thread folder from a caller's complete authorization block — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decisions.md`.
 
 ```sh
-npx skills add Jei-sKappa/skills --skill create-thread
+npx skills add Jei-sKappa/skills --skill allocate-thread
 ```
 
 #### [`update-implementation-report`](./skills/workflow/primitives/update-implementation-report/SKILL.md)

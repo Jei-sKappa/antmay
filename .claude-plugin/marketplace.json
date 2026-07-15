@@ -63,8 +63,8 @@
       "name": "JeisKappa-primitives",
       "source": "./",
       "skills": [
+        "./skills/workflow/primitives/allocate-thread",
         "./skills/workflow/primitives/append-roadmap-feedback",
-        "./skills/workflow/primitives/create-thread",
         "./skills/workflow/primitives/emit-pending-decisions",
         "./skills/workflow/primitives/emit-pending-review",
         "./skills/workflow/primitives/update-implementation-report"

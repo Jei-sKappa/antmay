@@ -9,7 +9,7 @@ metadata:
 
 # Materialize Roadmap Threads
 
-Read a parent thread's `roadmap.md` child briefs and open the child threads they describe. You create one thread per brief that has no thread yet, delegate the normalized folder-and-file creation to `/create-thread`, and record each created thread's reference back into its brief. This is a repeatable operation: running it again after a partial run finishes the remaining briefs and touches nothing already done.
+Read a parent thread's `roadmap.md` child briefs and open the child threads they describe. You create one thread per brief that has no thread yet, delegate the normalized folder-and-file creation to `/allocate-thread`, and record each created thread's reference back into its brief. This is a repeatable operation: running it again after a partial run finishes the remaining briefs and touches nothing already done.
 
 ## Inputs
 
@@ -26,7 +26,7 @@ Process each `C<N>` brief in turn:
 
 ## Create a child thread
 
-Delegate creation to `/create-thread`, supplying a complete **caller-authorization block** with every normalized field:
+Delegate creation to `/allocate-thread`, supplying a complete **caller-authorization block** with every normalized field:
 
 - **Operation** — `/materialize-roadmap-threads`.
 - **Slug** — a short kebab-case slug derived from the child title.
@@ -35,11 +35,11 @@ Delegate creation to `/create-thread`, supplying a complete **caller-authorizati
 - **Suggested workflow** — the brief's `Suggested workflow` text copied **verbatim**. Copy it exactly as written; never re-resolve it against a workflow template, even when the text reads like the expansion of a built-in workflow name. The brief already holds the complete sequence — reproduce it, do not regenerate it.
 - **Conditional metadata** — `Parent:` set to the parent thread's repo-relative thread-root directory path (the folder, for example `docs/threads/260714093000Z-auth-boundary/`, never a file inside it) and `Roadmap brief:` set to this brief's `C<N>` identifier. State explicitly that `External:` and `Supersedes:` do not apply.
 
-`/create-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decisions.md`, then returns the created thread's folder path. Do not fabricate that path or write the files yourself.
+`/allocate-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decisions.md`, then returns the created thread's folder path. Do not fabricate that path or write the files yourself.
 
 ## Stamp the reference back into the brief
 
-Immediately after `/create-thread` returns a folder path, add a `Materialized thread:` line to the brief just created, directly under its `### C<N>:` heading, with the value set to the returned repo-relative thread-root directory path (the folder, e.g. `docs/threads/260714093000Z-auth-boundary/`).
+Immediately after `/allocate-thread` returns a folder path, add a `Materialized thread:` line to the brief just created, directly under its `### C<N>:` heading, with the value set to the returned repo-relative thread-root directory path (the folder, e.g. `docs/threads/260714093000Z-auth-boundary/`).
 
 Adding this line is the only edit this operation ever makes to `roadmap.md`. It is factual evidence that the child was created — never a status, progress, or completion marker. Add it the moment creation succeeds, so an interrupted run leaves every already-created child correctly referenced.
 

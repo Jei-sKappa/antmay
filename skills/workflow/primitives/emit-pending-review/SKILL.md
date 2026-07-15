@@ -1,6 +1,6 @@
 ---
 name: emit-pending-review
-description: Use when a read-only reviewing caller supplies a target and one or more findings it has already validated, evidenced, and categorized, and needs them recorded for later attention — allocate a uniquely named bundle under the active thread's `.pending-reviews/` folder and write its routing header and severity-ordered findings.
+description: Use only when an invoking caller supplies already-validated, evidenced review findings for a target and needs them recorded for later attention — allocate a uniquely named bundle under the active thread's `.pending-reviews/` folder and write its routing header and severity-ordered findings.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0
