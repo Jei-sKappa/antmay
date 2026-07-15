@@ -1,67 +1,49 @@
 ---
 name: archive-thread
-description: Relocate finished or intentionally-abandoned workflow threads into docs/threads/archive/ (or move one back out) as a pure git mv that keeps cross-thread references resolvable; use when the docs/threads/ listing is cluttered with closed threads and you want to declutter it without breaking links.
+description: Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 2.0.0
+disable-model-invocation: true
 ---
 
 # Archive Thread
 
-Move a closed workflow thread out of the crowded active `docs/threads/` listing into `docs/threads/archive/`, so active threads are easy to tell apart from finished or abandoned ones. Archiving is nothing more than **relocating the thread's folder** — one `git mv`. The inverse (moving a thread back out of the archive) is the same move reversed.
+Archive a workflow thread by relocating its folder from the active `docs/threads/` listing into `docs/threads/archive/`. This is the act that ends a thread's active lifecycle: once its folder sits under `archive/`, the thread is no longer live work.
 
-This skill restates the rules it relies on inline; it does not depend on any document outside its own folder.
+Archiving happens on **explicit user intent only**. Never scan for archivable threads on your own initiative, and run **no completion checks of any kind** — you do not inspect any status or report to decide whether the thread "deserves" archival. If the user asks to archive a thread, that intent is the whole authorization.
 
-## What "closed" means
+## Resolve the target thread
 
-A thread's disposition is the **last disposition line** in its `ledger.md` (the append-only file at the thread root). The line grammar is `<event> @ <YYMMDDHHMMSSZ> — <justification>`; the disposition events are `deferred`, `resumed`, `closed: done`, `closed: dropped`. A thread is **closed** iff its last disposition line is `closed: done` or `closed: dropped`.
+The user names the thread to archive (by slug or by path). A thread root is a folder directly under `docs/threads/` named with a UTC-timestamp slug (e.g. `docs/threads/250522143000Z-my-feature/`). If which thread the user means is ambiguous, ASK — never silently pick one. `docs/threads/archive/` is the archive container, not a thread; ignore it when resolving a target.
 
-A thread whose last disposition is `deferred` is **not** closed — `deferred` is a reversible pause, not a finished state. A thread with **no** disposition line at all is **active** (the resting default). Only `closed: done` / `closed: dropped` threads are archival candidates.
+## Pre-move inspection
 
-## Two input modes
+Before moving, look inside the target thread for three workspace folders that hold unfinished state:
 
-- **Explicit-target mode** — the user names one thread or a list of threads (by slug or by path). Archive each named thread. A list is how you archive several at once (e.g. "all of this week's closed threads" is just the list of their slugs) — there is no separate date-range selector.
-- **No-input mode** — no thread is named. Scan every thread under `docs/threads/`, collect the ones that are closed (per "What 'closed' means"), present that list to the user, and archive only the ones the user confirms.
+- **`.pending-decisions/`** — bundles of decisions awaiting a human.
+- **`.pending-reviews/`** — recorded review findings not yet acted on.
+- **`.implementation-runs/`** — interrupted or abandoned run state.
 
-When scanning, **skip the reserved `docs/threads/archive/` folder and everything beneath it** — those threads are already archived, and `archive/` is not itself a thread. Real thread folders always begin with a digit (their UTC stamp), so `archive/` is easy to exclude.
+If any of these is non-empty, **name what it contains** — the bundle titles or headers in `.pending-decisions/` and `.pending-reviews/`, the interrupted run identifiers in `.implementation-runs/` — and ask the user for **one** confirmation to archive anyway. This is an advisory signal so the user archives with eyes open, not a gate: a single confirmation is enough, and the user may always proceed.
 
-## The confirm-on-non-closed guard
+On confirmed archival these folders move along with the thread, **untouched**. Never delete them or anything inside them, and never empty them "to tidy up" — inside an archived thread they are inert residue with no remaining workflow meaning, and removing them destroys durable record for no benefit.
 
-In explicit-target mode, if a named thread is **not** closed (it is active, or `deferred`), do **not** archive it silently and do **not** flatly refuse. **Warn** the user that the thread is not closed and **require explicit confirmation** before moving it. A deliberate override is legitimate (e.g. shelving a thread you have abandoned but never marked `closed: dropped`) — but it must be a seen, confirmed choice.
+## Recording an abandonment first
+
+When the user is archiving work that was never finished, suggest they first record the abandonment as a decision in the thread's `decisions.md` — what was abandoned and why. This is guidance, not a requirement: the user may decline and you archive regardless. Its purpose is that the thread's own durable content then distinguishes a completed thread from an abandoned one, rather than leaving the reason to memory.
 
 ## The move
 
-Archiving is a pure folder move that git records as a rename:
+Relocate the thread folder into the archive container, creating the container on demand:
 
 ```sh
-# create the archive container once, if it does not exist yet
 mkdir -p docs/threads/archive
-git mv docs/threads/<slug> docs/threads/archive/<slug>
+git mv docs/threads/<thread-folder> docs/threads/archive/<thread-folder>
 ```
 
-The archive is **flat** — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only a prefix.
+The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path.
 
-Un-archiving is the same move reversed:
+## Accepted limitation: references may break
 
-```sh
-git mv docs/threads/archive/<slug> docs/threads/<slug>
-```
-
-## What this skill does NOT do
-
-- **No link rewriting.** Do **not** scan for, edit, or rewrite any inbound `docs/threads/<slug>/…` reference, and do **not** edit any file inside any other thread. Link integrity is preserved by **resolvability**, not by literal-path validity: because a thread's slug is globally unique and travels with its folder (archiving only *prefixes* the path with `archive/`, it never renames the slug), any now-stale `docs/threads/<slug>/…` reference still contains that unique slug and is found in a single grep under `archive/`. Rewriting inbound links would mean editing frozen records inside closed threads — which this skill deliberately never touches. Do not "helpfully" re-add rewriting.
-- **No writes into the thread.** Archiving is a location change, not a lifecycle transition. Write **nothing** into the moved thread: no "archived" ledger event (the ledger grammar has no such event), no marker file, no frontmatter change. Git's rename tracking is the only record needed.
-- **No commit.** Perform the `git mv` (leaving the rename staged) and stop. Do **not** stage-and-commit, push, or branch — committing the move is the surrounding session's decision. Never rewrite history and never force-push.
-
-## Judgment over machinery
-
-Keep the operation simple and trust your own judgment for the obvious mistakes rather than expecting elaborate guards: don't re-archive a thread that is already under `archive/`, and don't un-archive a thread that is not in `archive/`. If something looks wrong (a slug that matches nothing, a thread that is already where it would be moved), say so and stop rather than moving blindly. The essential job is one `git mv`.
-
-## Workflow
-
-1. **Determine the targets.** If the user named thread(s), use explicit-target mode. If not, scan `docs/threads/` (skipping `archive/`), collect the closed threads, present the list, and let the user pick.
-2. **Apply the confirm-on-non-closed guard** for any explicitly-named thread that is not closed.
-3. **Move each confirmed target** with `git mv` into (or, for un-archiving, out of) `docs/threads/archive/<slug>/`, creating `docs/threads/archive/` first if needed. Write nothing else.
-4. **Report** what was moved (and to where), and note that the moves are staged but not committed.
-
-No closing remark.
+Any repo-relative reference that points *at* this thread — a parent/child thread link, a decision reference from elsewhere — embeds the old `docs/threads/<thread-folder>/…` path and will no longer resolve once the folder moves under `docs/threads/archive/`. Tell the user this may happen; it is an accepted cost of archival. Do **not** attempt to discover, rewrite, redirect, or repair those references, and do not edit any file inside another thread to fix them.
