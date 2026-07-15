@@ -1,2 +1,5 @@
+interface:
+  display_name: Archive Thread
+  short_description: Archive a finished workflow thread
 policy:
   allow_implicit_invocation: false

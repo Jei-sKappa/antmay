@@ -1,2 +1,5 @@
+interface:
+  display_name: The Librarian
+  short_description: Manage and consult reference repositories
 policy:
   allow_implicit_invocation: false

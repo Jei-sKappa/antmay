@@ -4,7 +4,7 @@ description: Make a thread-root spec.md a lossless, additive-free expression of 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Reconcile Spec
@@ -13,7 +13,7 @@ Make the thread-root `spec.md` a faithful, complete expression of the decisions 
 
 The one question you answer throughout: **is this specification a lossless, additive-free expression of the decisions that govern it?** A lossless spec carries every governing decision and adds none of its own.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

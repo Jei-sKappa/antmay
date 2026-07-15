@@ -4,7 +4,7 @@ description: Read a thread-root roadmap.md as a decomposition handoff and judge 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Review Roadmap
@@ -13,7 +13,7 @@ Assess a thread-root `roadmap.md` as a decomposition handoff, strictly read-only
 
 This is a handoff-quality review: whether the decomposition, briefs, and dependencies are safe to hand off as written. You do not re-decide how the work should divide, and you do not confirm the roadmap faithfully carries each governing decision — that fidelity check is a separate operation.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

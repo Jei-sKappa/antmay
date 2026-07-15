@@ -1,2 +1,5 @@
+interface:
+  display_name: Plan Strict
+  short_description: Draft a strict multi-file plan
 policy:
   allow_implicit_invocation: false

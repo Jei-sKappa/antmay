@@ -1,2 +1,5 @@
+interface:
+  display_name: Reconcile Spec
+  short_description: Align a spec to its decisions
 policy:
   allow_implicit_invocation: false

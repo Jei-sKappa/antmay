@@ -4,7 +4,7 @@ description: Turn a thread's durable inputs or a referenced artifact into a one-
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Plan Brief
@@ -66,7 +66,7 @@ When safe planning requires detailed substeps, per-task verification, explicit f
 
 If `plan-tasks/` already exists alongside `plan.md`, a fuller plan is in force. Do NOT silently downgrade it or delete those tasks. Require an explicit instruction from the user to replace the fuller plan with a brief one; without that explicit instruction, write nothing and end with `Outcome: REFUSED — a fuller plan is in force; an explicit instruction is required to replace it`. Only after that explicit instruction: write the brief `plan.md` and remove the now-obsolete `plan-tasks/`.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a plan can be written), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 2. **Load context.** Read `seed.md` and `decisions.md`, and whatever code or issue reference the invocation points you at. If `plan-tasks/` already exists, apply the reverse-transition guard above before writing anything.

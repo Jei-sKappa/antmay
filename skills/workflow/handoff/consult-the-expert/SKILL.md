@@ -4,7 +4,7 @@ description: Draft a casual, context-rich message to consult a more experienced 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.3
+  version: 1.3.0
 ---
 
 # Consult the Expert
@@ -40,7 +40,7 @@ Transform a raw problem description into a ready-to-send message that gives a ze
 - No artificial length cap — let the content determine the length
 - No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
 
-## Workflow
+## Procedure
 
 1. Read the user's problem description.
 2. Draft the message following the structure and guidelines above.

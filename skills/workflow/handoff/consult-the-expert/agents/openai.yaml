@@ -1,2 +1,5 @@
+interface:
+  display_name: Consult The Expert
+  short_description: Draft a question for an expert
 policy:
   allow_implicit_invocation: false

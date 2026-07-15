@@ -1,2 +1,5 @@
+interface:
+  display_name: Review Implementation
+  short_description: Check implementation against its spec
 policy:
   allow_implicit_invocation: false

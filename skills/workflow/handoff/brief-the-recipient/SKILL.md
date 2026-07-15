@@ -4,7 +4,7 @@ description: Draft a self-contained outcome briefing — verdict, rationale, cav
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.1
+  version: 2.1.0
 ---
 
 # Brief the Recipient
@@ -52,7 +52,7 @@ The output is a markdown document with explicit headings. Use the section names 
 - No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff. The artifact is a document, not a message.
 - No artificial length cap — let the content determine the length. A simple verdict can fit in 10 lines; a subtle one might need 50.
 
-## Workflow
+## Procedure
 
 1. Identify the conclusion the current session has reached and the question it was answering. If the user passed an argument, treat it as the focus the recipient cares about, and weight the briefing accordingly.
 2. Draft the briefing following the structure and guidelines above.

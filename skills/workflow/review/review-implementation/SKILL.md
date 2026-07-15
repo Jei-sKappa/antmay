@@ -4,7 +4,7 @@ description: Check delivered work against the thread's durable intent and confir
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Review Implementation
@@ -29,7 +29,7 @@ When the resolved anchor is coarse — `seed.md` only, with no acceptance criter
 
 `implementation-report.md` at the thread root is the implementer's account of the work — its `## Outcome`, `## Changes`, and `## Verification`, plus any deviations, remaining concerns, and follow-ups. You test that account against the actual delivered work: a report that claims an outcome the code does not show, describes changes that are not there, or records a verification check the diff gives no sign was run is itself a finding. Read the report to learn what the implementer claims, then judge the claim, not just the code. When no report exists, note its absence and judge the code against the anchor directly.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

@@ -1,2 +1,5 @@
+interface:
+  display_name: Discussion
+  short_description: Interview to settle open decisions
 policy:
   allow_implicit_invocation: false

@@ -4,7 +4,7 @@ description: Draft a casual, context-rich message to a code owner when the user 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.3
+  version: 1.4.0
 ---
 
 # Report to the Owner
@@ -46,7 +46,7 @@ Transform a blocker — a bug, a missing capability, or a design that doesn't ex
 - No artificial length cap — let the content determine the length.
 - No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
 
-## Workflow
+## Procedure
 
 1. Read the user's description of the blocker and proposed change.
 2. Draft the report following the structure and guidelines above.

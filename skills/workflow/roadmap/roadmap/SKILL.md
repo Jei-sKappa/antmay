@@ -4,7 +4,7 @@ description: Decompose a settled larger initiative into self-contained child-thr
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Roadmap

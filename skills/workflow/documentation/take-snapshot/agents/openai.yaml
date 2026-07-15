@@ -1,2 +1,5 @@
+interface:
+  display_name: Take Snapshot
+  short_description: Snapshot a codebase for rebuild
 policy:
   allow_implicit_invocation: false

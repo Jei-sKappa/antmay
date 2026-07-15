@@ -4,7 +4,7 @@ description: Create a remote tracker ticket (GitHub Issues, Jira, Linear, ClickU
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Open Ticket
@@ -77,7 +77,7 @@ Either way, this skill's output is the same: one ticket in the owning tracker an
 
 If you reference a timestamp anywhere (e.g. in the ticket body), use the 12-character UTC stamp `YYMMDDHHMMSSZ` — two-digit year, month, day, hour (24h), minute, second, then a literal trailing `Z`, no separators (e.g. `260612174045Z`). This skill writes no thread files, so it has no filenames to stamp; the stamp grammar is noted only for any timestamp you surface.
 
-## Workflow
+## Procedure
 
 1. **Preflight the tracker FIRST.** Determine which single tracker owns work-item status. Verify its CLI/API is installed and authenticated (or its token/credentials are present and valid). If the tracker is unclear, ask the user. If the prerequisite is missing, STOP and fail the whole instruction with a clear warning naming what is missing and how to provide it — do not begin creating the ticket. End with exactly one terminal line: `Outcome: REFUSED — <what is missing>`.
 

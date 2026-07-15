@@ -37,7 +37,7 @@ skills/
     ├── implement/               implement, implement-plan, implement-plan-with-subagents
     ├── merge/                   merge-artifacts
     ├── plan/                    plan-brief, plan-strict
-    ├── primitives/              append-roadmap-feedback, create-thread, discussion-point, emit-pending-decisions, emit-pending-review, update-implementation-report
+    ├── primitives/              allocate-thread, append-roadmap-feedback, emit-pending-decisions, emit-pending-review, update-implementation-report
     ├── propose/                 propose
     ├── reconcile/               reconcile-plan, reconcile-proposal, reconcile-roadmap, reconcile-spec
     ├── research/                afk-exploration, the-librarian
@@ -47,7 +47,7 @@ skills/
     └── support/                 meta-prompting
 ```
 
-The six skills under `primitives/` are the model-invoked building blocks; every other active skill is a user-invoked entry point.
+The five skills under `primitives/` are the model-invoked building blocks; every other active skill is a user-invoked entry point.
 
 Canonical shared references and the sync tooling that mirrors them into individual skills live at the repo root:
 
@@ -97,10 +97,10 @@ The `disable-model-invocation` key encodes the skill's invocation role — see "
 
 ## Invocation roles
 
-Every active skill is either a user-invoked entry point or a model-invoked primitive, and the role is declared identically across both harnesses:
+Every active skill is either a user-invoked entry point or a model-invoked primitive, and the role is declared identically across both harnesses. Every active skill — both roles — ships an `agents/openai.yaml` carrying a universal `interface:` block of Codex-style picker metadata: `display_name` (the skill name in title case) and `short_description` (a terse 4–7-word human-facing picker line, written fresh — never a copy of the `SKILL.md` `description`). The interface block is universal and never encodes the role; the `policy` block is what encodes it, in lockstep with `disable-model-invocation`:
 
-- **User-invoked entry points** carry `disable-model-invocation: true` in `SKILL.md` frontmatter AND ship an `agents/openai.yaml` containing `policy.allow_implicit_invocation: false`. Their descriptions are concise, human-facing summaries.
-- **Model-invoked primitives** (the six under `primitives/`) omit both — omission IS the model-invocable configuration. Their descriptions open with a bounded precondition (the exact situation in which a caller should invoke them), because the model routes to them on that description.
+- **User-invoked entry points** carry `disable-model-invocation: true` in `SKILL.md` frontmatter AND carry `policy.allow_implicit_invocation: false` beneath the interface block in their `agents/openai.yaml`. Their descriptions are concise, human-facing summaries.
+- **Model-invoked primitives** (the five under `primitives/`) omit both role restrictions — the `disable-model-invocation` key and the `policy` block — carrying the interface block alone; that omission IS the model-invocable configuration. Their descriptions open with a bounded precondition (the exact situation in which a caller should invoke them), because the model routes to them on that description.
 
 The two harness declarations must never diverge: a skill must never be user-only in one harness and implicitly invocable in the other. Whenever you flip a skill's role or add a new one, set the `SKILL.md` key and the `agents/openai.yaml` policy together.
 
@@ -135,7 +135,7 @@ Skills whose job is to produce a deliverable for the user to copy, paste, or han
 
 1. Decide which bucket the skill belongs to — `workflow/` (active) or `deprecated/` (retired). For `workflow/`, also decide which group: `capture-discussion`, `documentation`, `finish-navigate`, `handoff`, `implement`, `merge`, `plan`, `primitives`, `propose`, `reconcile`, `research`, `review`, `roadmap`, `spec`, or `support`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
 2. Decide the invocation role. If the skill is a capability a person deliberately reaches for, it is a user-invoked entry point. Only add it under `primitives/` when it is a bounded building block an entry point composes into AND it clears the extraction bar — it is genuinely reused by more than one entry point (or is the single well-defined mechanism an entry point delegates to) rather than inlined logic. Do not create a primitive for a one-off.
-3. Create `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`). For a user-invoked entry point, set `disable-model-invocation: true` AND add `agents/openai.yaml` with `policy.allow_implicit_invocation: false`. For a primitive, omit both and open the description with a bounded precondition. The two harness declarations must never diverge.
+3. Create `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`). Every skill ships `agents/openai.yaml` with a universal `interface:` block (`display_name` in title case, a fresh terse `short_description`). For a user-invoked entry point, set `disable-model-invocation: true` in `SKILL.md` AND add `policy.allow_implicit_invocation: false` beneath the interface block. For a primitive, omit both role restrictions (carry the interface block alone) and open the description with a bounded precondition. The two harness declarations must never diverge.
 4. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet, linking to the full nested path.
 5. Register the skill folder in `.claude-plugin/marketplace.json` under the plugin matching its group's `skills` array as `./skills/<bucket>/[<group>/]<skill-name>` — there is one plugin per workflow group (e.g. `JeisKappa-primitives`, `JeisKappa-reconcile`, `JeisKappa-roadmap`) plus `JeisKappa-deprecated`. Keep `plugins` sorted alphabetically by `name` with `JeisKappa-deprecated` last. If the group is new, also add a new plugin entry named `JeisKappa-<folder-name>` in the same change.
 6. Add the skill's folder name (the leaf, not the full path) to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.

@@ -1,2 +1,5 @@
+interface:
+  display_name: Reconcile Plan
+  short_description: Make a plan satisfy its spec
 policy:
   allow_implicit_invocation: false

@@ -1,2 +1,5 @@
+interface:
+  display_name: Propose
+  short_description: Sketch a direction-setting proposal
 policy:
   allow_implicit_invocation: false

@@ -1,2 +1,5 @@
+interface:
+  display_name: Open Ticket
+  short_description: Create a remote tracker ticket
 policy:
   allow_implicit_invocation: false

@@ -4,7 +4,7 @@ description: Refine a draft prompt for a fresh AI session only when the user exp
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.2
+  version: 1.4.0
 ---
 
 # Meta-Prompting
@@ -24,7 +24,7 @@ A single block of plain markdown delivered directly in chat. Headings and lists 
 
 No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
 
-## Workflow
+## Procedure
 
 1. Read the user's raw draft.
 2. Decide: clarify or rewrite.

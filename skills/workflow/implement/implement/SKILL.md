@@ -4,7 +4,7 @@ description: Implement a brief plan or a less-structured input (`plan.md`, a see
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Implement
@@ -59,7 +59,7 @@ If the user says continue, the pre-existing dirty changes WILL be folded into th
 
 This skill does not use `git worktree` isolation — every implementation runs on the current working tree, so the dirty-worktree check is non-skippable.
 
-## Workflow
+## Procedure
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. If the worktree is clean, proceed. If dirty, ASK; on abort, stop.
 

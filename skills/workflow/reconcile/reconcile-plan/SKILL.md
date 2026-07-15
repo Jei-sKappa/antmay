@@ -4,7 +4,7 @@ description: Make a thread's strict plan — its plan.md index and plan-tasks/ b
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.0.0
+  version: 5.1.0
 ---
 
 # Reconcile Plan
@@ -17,7 +17,7 @@ The one question you answer throughout: **executed end to end, does this plan de
 
 The plan is a multi-file artifact: the index `plan.md` at the thread root plus one brief per task at `plan-tasks/NN-<kebab-slug>.md` (two-digit zero-padded ordinal, one file per task). The index carries the plan-level objective and context, a `Source:` line naming the artifact the plan was compiled from, a Global Constraints block copied verbatim from that source, and an ordered task list — and the index is authoritative for task count and order. Each brief carries its objective, input/context, steps, files modified, verification, acceptance criteria, and the `Consumes:` / `Produces:` hand-off lines. Your editable target is this whole artifact: you may edit the index, any brief, or both.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

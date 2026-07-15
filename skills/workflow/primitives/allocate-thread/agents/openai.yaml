@@ -1,0 +1,3 @@
+interface:
+  display_name: Allocate Thread
+  short_description: Allocate a normalized thread folder

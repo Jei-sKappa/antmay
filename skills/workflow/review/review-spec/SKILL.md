@@ -4,7 +4,7 @@ description: Read a thread-root spec.md as a downstream handoff and judge whethe
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Review Spec
@@ -13,7 +13,7 @@ Assess a thread-root `spec.md` as a downstream handoff, strictly read-only. The 
 
 This is a quality-of-handoff and planning-readiness review, not a fidelity audit. You do NOT walk the thread's decisions one by one to confirm the spec faithfully carries each — that exhaustive source-to-spec mapping is a separate operation. Your concern is whether the document, as written, is fit for someone else to act on safely.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

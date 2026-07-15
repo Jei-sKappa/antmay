@@ -4,7 +4,7 @@ description: Open a durable workflow thread on disk — interpret the user's ide
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 ---
 
 # Open Thread
@@ -69,4 +69,4 @@ A linked ticket is read for context only, and its URL is recorded in `External:`
 
 This is a completion-oriented operation, not a dialogue. After `/allocate-thread` returns, report the created thread's folder path to the user. Corrections are gathered before delegation, not after — do not re-run the delegation.
 
-No preamble, no closing remark.
+End with exactly this line, nothing before it — no preamble, no closing remark: `Outcome: DONE — Thread opened: <folder path>`.

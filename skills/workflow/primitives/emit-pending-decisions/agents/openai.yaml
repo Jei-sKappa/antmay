@@ -1,0 +1,3 @@
+interface:
+  display_name: Emit Pending Decisions
+  short_description: Queue open decisions for later

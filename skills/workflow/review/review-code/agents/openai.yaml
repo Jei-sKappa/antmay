@@ -1,2 +1,5 @@
+interface:
+  display_name: Review Code
+  short_description: Review code quality and safety
 policy:
   allow_implicit_invocation: false

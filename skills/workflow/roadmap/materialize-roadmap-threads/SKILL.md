@@ -4,7 +4,7 @@ description: Turn a roadmap's child briefs into child threads idempotently — c
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Materialize Roadmap Threads

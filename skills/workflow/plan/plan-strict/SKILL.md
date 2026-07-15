@@ -4,7 +4,7 @@ description: Turn a spec, proposal, decisions, GitHub issue, or raw prompt into 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.0.0
+  version: 5.1.0
 ---
 
 # Plan Strict
@@ -114,7 +114,7 @@ If a `plan.md` already exists at the thread root, determine its shape before wri
 - **A brief plan being escalated.** When the existing `plan.md` is a one-screen brief plan and the user is escalating to strict granularity, replace the entire planning artifact atomically: write the strict index over `plan.md` and create the `plan-tasks/` briefs together, in one pass. Never mix strict tasks with the stale brief's steps, and never leave a `plan.md` describing strict tasks while `plan-tasks/` is missing or half-written.
 - **An existing strict plan being refined.** Edit the index and the affected task briefs in place (see the Invariants above).
 
-## Workflow
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a plan can be written), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, route the clarification per `## Blocked` rather than picking by recency.

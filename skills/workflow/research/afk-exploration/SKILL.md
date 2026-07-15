@@ -4,7 +4,7 @@ description: Start AFK exploration on a topic only when the user explicitly asks
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.4
+  version: 1.5.0
 ---
 
 # AFK Exploration
@@ -64,7 +64,7 @@ Why this shape:
 
 Slug the topic from 2–4 keywords in the user's prompt, lowercase, hyphenated (e.g. "Add OAuth login to admin panel" → `oauth-admin-login`).
 
-## Workflow
+## Procedure
 
 Run the process as numbered steps. **Steps run in order**; *inside a step*, every subagent the step dispatches runs in parallel and the orchestrator waits for them all to return before advancing to the next step. If a single tool call would dispatch too many subagents to run reliably in parallel, fall back to smaller batches **inside the same step** (e.g. split Step 3's angles into two batches, waiting for the first to return before issuing the second) — never collapse steps into each other or change their order.
 

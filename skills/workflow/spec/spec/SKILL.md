@@ -4,7 +4,7 @@ description: Forward-design a thread's durable inputs (seed, decisions, an optio
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Spec
@@ -68,7 +68,7 @@ Context worth flagging that is neither intent nor freedom lives in the spec body
 
 Pinning an undiscussed decision into expected behavior or a constraint as if it were settled is the failure this prevents.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a spec can be written; do not create the thread or its seed yourself), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

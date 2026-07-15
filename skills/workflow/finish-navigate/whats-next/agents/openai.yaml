@@ -1,2 +1,5 @@
+interface:
+  display_name: Whats Next
+  short_description: Read thread state, suggest next steps
 policy:
   allow_implicit_invocation: false

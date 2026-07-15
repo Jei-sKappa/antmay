@@ -1,2 +1,5 @@
+interface:
+  display_name: Reconcile Proposal
+  short_description: Align a proposal to its decisions
 policy:
   allow_implicit_invocation: false

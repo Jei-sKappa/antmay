@@ -1,2 +1,5 @@
+interface:
+  display_name: Review Roadmap
+  short_description: Check a roadmap's handoff readiness
 policy:
   allow_implicit_invocation: false

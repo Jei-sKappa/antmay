@@ -1,2 +1,5 @@
+interface:
+  display_name: Report To The Owner
+  short_description: Draft a blocker handoff to owner
 policy:
   allow_implicit_invocation: false

@@ -1,2 +1,5 @@
+interface:
+  display_name: Materialize Roadmap Threads
+  short_description: Open child threads from a roadmap
 policy:
   allow_implicit_invocation: false

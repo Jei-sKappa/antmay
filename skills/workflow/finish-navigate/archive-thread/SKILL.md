@@ -3,7 +3,7 @@ name: archive-thread
 description: Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.1.0
 disable-model-invocation: true
 ---
 
@@ -42,7 +42,7 @@ mkdir -p docs/threads/archive
 git mv docs/threads/<thread-folder> docs/threads/archive/<thread-folder>
 ```
 
-The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path.
+The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path, and end the run's final chat message with exactly this line, nothing after it — no closing remark: `Outcome: DONE — Thread archived: <new path>`.
 
 ## Accepted limitation: references may break
 

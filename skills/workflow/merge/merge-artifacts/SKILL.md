@@ -3,7 +3,7 @@ name: merge-artifacts
 description: Reconcile two or more competing candidate drafts of one artifact into a single canonical thread-root artifact, folding every candidate's unique content and queueing any genuine design divergence that needs a human decision; use when a multi-draft bake-off must be collapsed into one artifact.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 disable-model-invocation: true
 ---
 
@@ -54,7 +54,7 @@ A genuine design divergence — two candidates making mutually-exclusive claims 
 
 This one path also carries the pre-run clarifications that reach it from `## Inputs` — a vague candidate set, or mixed-type candidates with no stated target — as their own pending-decisions bundle, since a bundle is possible once the thread is resolved. A trivial input clarification (which file a phrase meant) settles nothing and needs no bundle.
 
-## Workflow
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 2. **Resolve the candidate paths.** Take the explicit paths from the invocation; if they are vague and ambiguous, route the clarification per `## Blocked` rather than picking a set. Confirm the resolved set before reading.

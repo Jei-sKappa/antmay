@@ -1,2 +1,5 @@
+interface:
+  display_name: Implement Plan With Subagents
+  short_description: Implement a plan via reviewer subagents
 policy:
   allow_implicit_invocation: false

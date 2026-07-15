@@ -3,7 +3,7 @@ name: update-implementation-report
 description: Use only when an invoking caller supplies a verified current implementation outcome and the thread's singleton `implementation-report.md` must be created or merged in place to describe that outcome.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Update Implementation Report

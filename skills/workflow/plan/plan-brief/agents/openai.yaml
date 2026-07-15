@@ -1,2 +1,5 @@
+interface:
+  display_name: Plan Brief
+  short_description: Draft a one-screen implementation plan
 policy:
   allow_implicit_invocation: false

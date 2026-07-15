@@ -4,7 +4,7 @@ description: Execute a strict multi-file plan artifact — a thread-root `plan.m
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.0.0
+  version: 5.1.0
 ---
 
 # Implement Plan
@@ -32,7 +32,7 @@ The index plus its `plan-tasks/` folder together are the plan artifact. `plan.md
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the skill executes only the named task(s); when omitted, the skill executes every task in the index in order. Even when only one task is named, the rule still applies — read the plan READ-ONLY, run the task, self-review, commit per `## Commit Policy`, and record the four-state status.
 
-A plan that does not match this shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a task file missing its mandatory fields — fails the mechanical pre-flight (`## Workflow`). The remedy is to recompile the plan from its source, not to tolerate the mismatched shape.
+A plan that does not match this shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a task file missing its mandatory fields — fails the mechanical pre-flight (`## Procedure`). The remedy is to recompile the plan from its source, not to tolerate the mismatched shape.
 
 ## Four-State Status Protocol
 
@@ -101,7 +101,7 @@ Every implementation runs on the current working tree, so the dirty-worktree che
 
 This skill is SINGLE-AGENT. The current session reads the plan, executes each plan task in order, and self-reviews after each task. NO subagents are spawned. There is no `Task` tool invocation, no implementer/reviewer separation, no orchestrator role distinct from the implementer role — the single session IS both, and the self-review pass after each task is the only review layer in this topology.
 
-## Workflow
+## Procedure
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. If the worktree is clean, proceed. If dirty, ASK; on abort, stop.
 

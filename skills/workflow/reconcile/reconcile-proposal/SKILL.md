@@ -4,14 +4,14 @@ description: Align a thread-root proposal.md with the decisions that govern it �
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Reconcile Proposal
 
 Make the thread-root `proposal.md` faithfully reflect the decisions that govern it. You read the thread's authoritative inputs and the proposal, correct the proposal wherever the fix follows from those inputs, recheck what you changed, and hand any discrepancy that needs a fresh human decision to `/emit-pending-decisions`. You edit only the proposal; you never touch its authority sources, and you produce no separate report. Writing the corrected proposal is where you stop — do not stage, commit, or push.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

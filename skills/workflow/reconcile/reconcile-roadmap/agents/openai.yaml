@@ -1,2 +1,5 @@
+interface:
+  display_name: Reconcile Roadmap
+  short_description: Align a roadmap to its decisions
 policy:
   allow_implicit_invocation: false

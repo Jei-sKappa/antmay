@@ -3,7 +3,7 @@ name: emit-pending-decisions
 description: Use only when an invoking caller supplies open human decisions with their producing context and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder and write its routing header, advisory follow-up, and canonical discussion points; never for defects, observations, or report material — only genuine open human decisions.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Emit Pending Decisions

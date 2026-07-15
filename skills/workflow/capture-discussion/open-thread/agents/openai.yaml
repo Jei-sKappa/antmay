@@ -1,2 +1,5 @@
+interface:
+  display_name: Open Thread
+  short_description: Open a durable workflow thread
 policy:
   allow_implicit_invocation: false

@@ -4,7 +4,7 @@ description: Judge code on its own intrinsic merits — quality, safety, idioms,
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Review Code
@@ -23,7 +23,7 @@ Quality does not require intent to exist, but where a finding turns on what the 
 
 `decisions.md` at the thread root always applies on top of the resolved anchor as a binding constraint source. The anchor matters only at this margin where intent determines what "right" means; the four axes otherwise stand on their own. When the resolved anchor is coarse — `seed.md` only, with no acceptance criteria the thread ever recorded — name it explicitly in the bundle's `## Context` and scope any intent-dependent finding to what that anchor actually says. Never invent acceptance criteria the thread never recorded and then fault the code for missing them. When the thread records no anchor at all, run a pure quality pass and say so.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

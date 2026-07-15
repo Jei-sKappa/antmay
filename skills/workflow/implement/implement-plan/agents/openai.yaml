@@ -1,2 +1,5 @@
+interface:
+  display_name: Implement Plan
+  short_description: Implement a structured plan artifact
 policy:
   allow_implicit_invocation: false

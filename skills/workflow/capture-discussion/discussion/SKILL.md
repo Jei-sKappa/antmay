@@ -4,7 +4,7 @@ description: Conduct an open-ended interview that discovers decision points live
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.1.0
 ---
 
 # Discussion
@@ -26,7 +26,7 @@ Hold these together:
 - **Refuse to record a decision you believe is wrong without flagging it.** If the user insists, record it, but include the dissent in the `Rationale`. Example: `Rationale: <user's reason>. Note: recommended <other resolution> because <why>; user accepted the trade-off.`
 - **Keep the decision owned by the evidence.** The goal is not for either side to win. The goal is to record a decision that survives later scrutiny because the relevant context, objections, and trade-offs were actually considered.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp. If no thread exists yet, tell the user a thread must be opened before decisions can be recorded, and stop; do not create the thread or its seed yourself.
 

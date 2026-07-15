@@ -4,14 +4,14 @@ description: Turn a rough prompt or referenced artifact into a freeform, directi
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.0.0
+  version: 4.1.0
 ---
 
 # Propose
 
 Turn a rough prompt or a referenced input into a freeform proposal that answers "should we do this, and in which direction?" You read the thread's context, write the proposal end-to-end as a single thread-root `proposal.md`, and confirm its path. You work straight from the durable inputs without interviewing the user point by point. Writing the file is where you stop — do not stage, commit, or push.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a proposal can be written; do not create the thread or its seed yourself), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

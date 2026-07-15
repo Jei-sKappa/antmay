@@ -1,2 +1,5 @@
+interface:
+  display_name: Resolve Pending Decisions
+  short_description: Resolve the thread's pending decisions
 policy:
   allow_implicit_invocation: false

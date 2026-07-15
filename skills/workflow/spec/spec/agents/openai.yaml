@@ -1,2 +1,5 @@
+interface:
+  display_name: Spec
+  short_description: Design a handoff-grade specification
 policy:
   allow_implicit_invocation: false

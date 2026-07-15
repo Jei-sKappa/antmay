@@ -4,7 +4,7 @@ description: Execute a strict multi-file plan artifact — a thread-root `plan.m
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.0.0
+  version: 5.1.0
 ---
 
 # Implement Plan With Subagents
@@ -19,7 +19,7 @@ Orchestrate the autonomous, plan-driven, multi-subagent implementation of a plan
 
 ## No Worktree Isolation
 
-The subagents this skill dispatches run sequentially on the SAME working tree as the orchestrator. This skill does NOT use `git worktree add` isolation, parallel-worktree topology, or separate per-subagent working directories. Each subagent's writes to the working tree are observable to the next subagent — the merged reviewer reads what the implementer just wrote; the next implementer (on a fix iteration) reads the previous implementer's diff and the reviewer's findings; the re-review reads the same post-fix state. Subagents run sequentially, on the same tree, in the order this skill's `## Workflow` defines.
+The subagents this skill dispatches run sequentially on the SAME working tree as the orchestrator. This skill does NOT use `git worktree add` isolation, parallel-worktree topology, or separate per-subagent working directories. Each subagent's writes to the working tree are observable to the next subagent — the merged reviewer reads what the implementer just wrote; the next implementer (on a fix iteration) reads the previous implementer's diff and the reviewer's findings; the re-review reads the same post-fix state. Subagents run sequentially, on the same tree, in the order this skill's `## Procedure` defines.
 
 No parallel implementer dispatch. No per-task worktree branch. The orchestration cycle (one task) ends with one commit on the current working tree; the next cycle starts from that committed state on the same tree.
 
@@ -40,7 +40,7 @@ The index plus its `plan-tasks/` folder together are the plan artifact. `plan.md
 
 `NN` is a two-digit task ordinal matching the index's task list. The index is named exactly `plan.md` at the thread root, and neither it nor the task files carry a UTC stamp or `v<N>`. Every task in the plan is sequential, isolated, independently implementable, and independently reviewable, and the tasks are executed in index order. The user MAY pass either the thread root or the index path — both resolve to the same artifact.
 
-A plan that does not match this multi-file shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a task file missing its mandatory fields — fails the mechanical pre-flight (see `## Workflow`); the remedy is recompiling the plan from its source, not tolerating a mismatched shape. The orchestrator does not infer missing structure.
+A plan that does not match this multi-file shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a task file missing its mandatory fields — fails the mechanical pre-flight (see `## Procedure`); the remedy is recompiling the plan from its source, not tolerating a mismatched shape. The orchestrator does not infer missing structure.
 
 The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the orchestrator runs the dispatch loop only for the named task(s); when omitted, it runs every task the index lists, in order.
 
@@ -89,7 +89,7 @@ If the user says continue, the pre-existing dirty changes WILL be folded into th
 
 This skill does not use `git worktree` isolation — every implementation runs on the current working tree — so the orchestrator-owned dirty-worktree check is non-skippable. Subagents share that working tree per the no-worktree-isolation rule above.
 
-## Workflow
+## Procedure
 
 1. **Run the dirty-worktree check.** Per `## Dirty Worktree Handling`. The orchestrator runs the dirty-worktree check at the very start. If clean, proceed. If dirty, ASK; on abort, stop. Do not dispatch any subagent until the check is satisfied.
 

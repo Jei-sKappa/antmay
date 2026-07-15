@@ -4,7 +4,7 @@ description: Derive a comprehensive, stack-agnostic snapshot document of an exis
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.2
+  version: 1.3.0
 ---
 
 # Take Snapshot
@@ -186,7 +186,7 @@ Default catalog:
 
 Each angle's notes feed sections of the document; the same finding may inform multiple sections (e.g. an API client integration shows up in both External integrations and FRs about features consuming it). The orchestrator handles cross-referencing during writing.
 
-## Workflow
+## Procedure
 
 Run the process as numbered steps. Steps run in order; **inside a step**, subagents run in parallel and the orchestrator waits for them all to return before advancing.
 

@@ -1,2 +1,5 @@
+interface:
+  display_name: Review Spec
+  short_description: Check a spec's planning readiness
 policy:
   allow_implicit_invocation: false

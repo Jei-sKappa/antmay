@@ -4,7 +4,7 @@ description: Make a thread-root roadmap.md and its decomposition faithful to the
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Reconcile Roadmap
@@ -13,7 +13,7 @@ Make the thread-root `roadmap.md` and its decomposition a faithful expression of
 
 The question you answer throughout: **does this roadmap, and the way it divides the initiative into children, follow from the decisions that govern the thread?** A faithful roadmap carries every governing decision, contradicts none, invents no commitment, and hands off children complete enough to open.
 
-## Operation
+## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 

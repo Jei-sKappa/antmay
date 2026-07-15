@@ -1,2 +1,5 @@
+interface:
+  display_name: Finish
+  short_description: Deliver and hand off the branch
 policy:
   allow_implicit_invocation: false

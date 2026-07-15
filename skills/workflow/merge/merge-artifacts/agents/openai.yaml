@@ -1,2 +1,5 @@
+interface:
+  display_name: Merge Artifacts
+  short_description: Merge competing drafts into one
 policy:
   allow_implicit_invocation: false
