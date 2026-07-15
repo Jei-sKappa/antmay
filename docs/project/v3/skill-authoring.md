@@ -8,15 +8,17 @@ Interaction posture is an authoring principle, not a runtime schema. Skills carr
 
 Three natural postures exist:
 
-- **Dialogue-driven** skills, such as discussion, exist to obtain human input and settle decisions. Questions are expected output, multiple turns are normal, and needing another response is not failure.
+- **Dialogue-driven** skills, such as discussion and the `open-thread` and `archive-thread` thread handshakes, exist to obtain human input and settle decisions. Questions are expected output, multiple turns are normal, and needing another response is not failure.
 - **Completion-oriented** skills — specification, planning, artifact reviews and reconciliations, implementation, reporting — consume supplied and durable inputs and produce an outcome without ongoing conversation. They finish autonomously whenever safely possible. Asking is exceptional and justified only when the inputs are insufficient and proceeding would invent intent, exceed authority, or choose outside a granted freedom. A completion-oriented skill remains completion-oriented even when it occasionally discovers a missing human decision.
 - **One-shot deliverable** skills consume an input and return a finished message or handoff. Reading, copying, or forwarding the result afterward does not turn the operation into a dialogue; their shape is input → finished message.
 
-Completion-oriented skills carry no attended-ask branch and perform no runtime attended/AFK detection: their behavior is identical whether a person or a tool invokes them. When one is blocked on genuinely indispensable human judgment, it finishes everything safely derivable, emits a pending-decision bundle via `/emit-pending-decisions` to the thread's `.pending-decisions/`, returns a concise terminal notification, and stops. It never asks a question in chat and never invents the answer. If the user happens to be present they invoke the resolve operation in the same chat right after the notification; otherwise the bundle waits and is resolved later. This one protocol replaces the older dual-branch model that keyed behavior on whether a run was invoked to finish without a human present.
+Completion-oriented skills carry no attended-ask branch and do not detect whether a person or a tool invoked them: their behavior is identical either way. Every such skill runs a mandatory preflight before any substantive execution — it resolves which thread and target it operates on and validates its invocation input, its required artifacts, and the tooling, credentials, and safety gates the run depends on. Any failure caught at that stage — a missing or ambiguous thread or target, a malformed or garbled invocation, a trivial request repair, an ambiguous artifact or review reference, unclear tracker ownership, an unmet prerequisite, missing tooling or credentials, or a dirty worktree without valid advance authorization — writes no workflow artifact and ends the run `REFUSED` with a precise instruction for how to re-invoke or remediate. A preflight refusal is never a pending decision: because the run never started, the machine-readable terminal outcome carries the whole state and no bundle is emitted.
 
-The single case that cannot follow the bundle protocol is when a bundle is physically impossible — no thread exists, or which thread is meant is ambiguous — because `.pending-decisions/` lives inside the very thread folder that failed to resolve. Only then does a completion-oriented skill refuse in chat: it writes nothing, returns a concise message naming the failure, and stops. Every other pre-run input ambiguity inside a resolved thread — which artifact, which lineage, a garbled request — is a clarification, not a refusal: it follows the bundle protocol above, exactly as a missing human decision discovered mid-run does. The bundle's routing header carries the originating user request so a clarification is answerable from the file alone.
+Advance authorization to work in a dirty worktree is usable only when it acknowledges that the existing changes will be preserved and may enter implementation commits; a bare instruction to ignore the dirty tree does not satisfy the gate, and the preflight still refuses.
 
-Clarification versus decision is distinguished at resolution time, not at emission time: the operation that resolves the bundle records genuine new intent as a decision, while a mere request-repair answer that only clarifies which input was meant settles the point without being recorded. Dialogue-driven skills, by contrast, keep asking as their normal output, and one-shot deliverable skills are unchanged — they return their finished message directly.
+Once substantive execution has begun, two paths stop the run and both end `BLOCKED`. Missing human intent discovered during the work — a genuine product or workflow decision the run cannot safely derive — is queued through `/emit-pending-decisions` to the thread's `.pending-decisions/` after the skill finishes everything else safely derivable; the skill then returns a concise terminal notification and stops, never asking in chat and never inventing the answer. An unfixable operational defect — a failure the run cannot repair on its own — ends the run with a diagnosis and no decision bundle. If the user happens to be present they invoke the resolve operation in the same chat right after a decision-bundle notification; otherwise the bundle waits and is resolved later.
+
+Clarification versus decision is distinguished at resolution time, not at emission time: the operation that resolves a bundle records genuine new intent as a decision, while an answer that merely clarifies which input was meant settles the point without being recorded. Dialogue-driven skills, by contrast, keep asking as their normal output, and one-shot deliverable skills are unchanged — they return their finished message directly.
 
 ## Terminal outcome
 
@@ -28,13 +30,19 @@ Outcome: <TOKEN> — <one-line reason or pointer>
 
 The vocabulary is closed to three tokens; no other token exists:
 
-- `DONE` — the skill completed its job. A review that emitted a findings bundle is DONE.
-- `BLOCKED` — the run started work and stopped: it queued decisions in `.pending-decisions/`, or it hit an unfixable in-run failure.
-- `REFUSED` — the run never started: a precondition was unmet, or a bundle was physically impossible (the case above where no thread exists or which thread is meant is ambiguous).
+- `DONE` — the skill completed its requested job, including when it completed with non-blocking concerns. A review that emitted a findings bundle is DONE.
+- `BLOCKED` — substantive execution started and then stopped: it queued missing human intent in `.pending-decisions/`, or it hit an unfixable operational defect.
+- `REFUSED` — preflight prevented the run from starting: an unresolved thread or target, an unmet precondition, a failed safety gate, or any other invocation-input failure caught before substantive execution.
 
 The line composes with the skill's exact confirmation message — the confirmation becomes the reason part, for example `Outcome: DONE — Spec written: spec.md`.
 
 The standard applies to completion-oriented entry points only. Dialogue-driven skills have no terminal outcome; one-shot deliverable skills return the deliverable unframed and add no outcome line; and primitives never emit it, because the calling skill owns the run's terminal message.
+
+## Internal progress and local return contracts
+
+The three-token terminal outcome is the only project-wide status protocol. A single agent executing sequential internal tasks has no caller at each task boundary, so it defines no formal per-task status vocabulary: its internal progress is recorded as factual prose or ordinary structured fields — the task attempted, the changes made, the verification performed, any concerns, the commit, and the next action — in its progress file and implementation report, never as formal status tokens. Such a run still ends `DONE` when the requested operation completed, even with non-blocking concerns, `BLOCKED` when substantive execution started but could not finish, and `REFUSED` when preflight prevented execution.
+
+A skill defines skill-local return tokens only where its own caller/callee topology genuinely consumes them — as when an orchestrator dispatches subagents and must quickly classify each untrusted reply. Those return contracts stay inside the owning skill: they are not promoted into these canonical conventions and are not restated as a second project-wide status protocol.
 
 ## Composition
 
