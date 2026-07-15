@@ -65,7 +65,6 @@
       "skills": [
         "./skills/workflow/primitives/append-roadmap-feedback",
         "./skills/workflow/primitives/create-thread",
-        "./skills/workflow/primitives/discussion-point",
         "./skills/workflow/primitives/emit-pending-decisions",
         "./skills/workflow/primitives/emit-pending-review",
         "./skills/workflow/primitives/update-implementation-report"

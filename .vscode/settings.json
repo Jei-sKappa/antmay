@@ -12,7 +12,6 @@
     "create-thread",
     "discussion",
     "discussion-loop",
-    "discussion-point",
     "emit-pending-decisions",
     "emit-pending-review",
     "finish",

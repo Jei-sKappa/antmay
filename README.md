@@ -314,14 +314,6 @@ npx skills add Jei-sKappa/skills --skill meta-prompting
 
 Primitives are **model-invoked**, not user-invoked: another skill or the model itself calls them to perform one narrow, shared operation — you never reach for them directly. They ship as dependencies of the suite, so installing the skills that call them installs these too; the snippets below are here only for completeness.
 
-#### [`discussion-point`](./skills/workflow/primitives/discussion-point/SKILL.md)
-
-Frame exactly one concrete decision fork or finding — a title, the point, what you need to know, options or a proposed solution, and a recommendation — and either present it interactively in chat or emit it into a caller-provided file, one point at a time.
-
-```sh
-npx skills add Jei-sKappa/skills --skill discussion-point
-```
-
 #### [`emit-pending-decisions`](./skills/workflow/primitives/emit-pending-decisions/SKILL.md)
 
 Queue a producing caller's genuine open human decisions for later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder, write its routing header and advisory follow-up, and normalize each decision into a canonical discussion point.
@@ -368,11 +360,11 @@ These skills have left the active suite. Each legacy folder remains on disk unde
 
 - **`adjust-plan-granularity`** — a plan that no longer fits is now edited alive in place or recompiled from its inputs, so there is no separate granularity-adjustment step. Kept at `skills/deprecated/adjust-plan-granularity`.
 - **`capture-inbox`** — there is no inbox concept: a unit of work gets its durable home by opening a thread directly with `open-thread` (local) or a tracker work-item with `open-ticket` (remote). Kept at `skills/deprecated/capture-inbox`.
-- **`discussion-loop`** — split into `discussion` (open-ended interviews) and the `discussion-point` primitive (framing a single point). Kept at `skills/deprecated/discussion-loop`.
+- **`discussion-loop`** — split into `discussion` (open-ended interviews) and the canonical discussion point format, a shared reference for framing a single point. Kept at `skills/deprecated/discussion-loop`.
 - **`record-verdict`** — human decisions and verdicts are now recorded directly as records in the thread's `decisions.md`; there is no separate status latch to stamp. Kept at `skills/deprecated/record-verdict`.
 - **`review-decision-document`** — evolved into `review-spec`, which checks a spec's planning readiness. Kept at `skills/deprecated/review-decision-document`.
 - **`review-lossless-mapping`** — its lossless, additive-free fidelity check folded into the reconcile skills (`reconcile-spec` makes a spec a lossless, additive-free expression of its decisions). Kept at `skills/deprecated/review-lossless-mapping`.
-- **`seeded-discussion`** — superseded by `discussion` composed with the `discussion-point` primitive for walking a predetermined list of points. Kept at `skills/deprecated/seeded-discussion`.
+- **`seeded-discussion`** — superseded by `discussion` using the shared discussion point format to walk a predetermined list of points. Kept at `skills/deprecated/seeded-discussion`.
 
 ## Installation
 

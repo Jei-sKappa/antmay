@@ -1,6 +1,6 @@
 ---
 name: emit-pending-decisions
-description: Use when a producing caller supplies a producer, a target, supporting evidence, one or more genuine open human decisions, and a suggested follow-up, and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder, write its routing header and advisory follow-up, and normalize each decision into a canonical discussion point.
+description: Use when a producing caller supplies a producer, a target, the originating user request, supporting evidence, one or more genuine open human decisions, and a suggested follow-up, and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder, write its routing header and advisory follow-up, and normalize each decision into a canonical discussion point.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 1.0.0
@@ -16,6 +16,7 @@ Act only when the caller supplies all of:
 
 - **Producer** — the invoking operation, named as `/<skill-name>`.
 - **Target** — the thread-relative artifact or operation the decisions serve.
+- **Originating request** — the user request that triggered the producing run, so a later clarification is answerable from the bundle file alone.
 - **Evidence** — the source references or context behind the decisions.
 - **Points** — one or more genuine open human decisions.
 - **Suggested follow-up** — the advisory action the caller recommends once the decisions are settled.
@@ -24,7 +25,7 @@ Refuse, naming exactly what is missing or wrong, and write no file, when:
 
 - the caller supplies no decision at all — an empty bundle is never written;
 - any supplied point is not a genuine human decision. A plain defect, an observation, or material meant for a report is not a decision merely because the caller lacks authority to act on it; do not disguise such content as a decision point;
-- the producer, target, points, or suggested follow-up is absent.
+- the producer, target, originating request, points, or suggested follow-up is absent.
 
 You do not fabricate a missing field or invent a decision to fill a bundle.
 
@@ -45,6 +46,7 @@ The routing header contains exactly these fields:
 
 Producer: /<skill-name>
 Target: <thread-relative artifact or operation>
+Request: <the originating user request that triggered the producing run, quoted or tightly summarized so a clarification is answerable from this file alone>
 Created: <UTC>
 Points: <count>
 Summary: <one-line description of the contained questions>
@@ -60,7 +62,7 @@ Immediately after the header, write:
 
 The follow-up is a natural-language paragraph, built from the caller's supplied suggestion, describing a useful next step such as applying the resulting decisions to the target and rechecking it. It is advice a human reads and chooses to act on — never an executable command, never workflow state, and never a promise that a named skill can be invoked automatically. Write it so it stands on its own without the originating chat.
 
-Then, for each unresolved human decision, write one canonical discussion point using `/discussion-point`'s emission mode, giving that skill the bundle file as its target path. Every point in the bundle shares the header's producer, target, and follow-up boundary.
+Then, for each unresolved human decision, write one canonical discussion point into the bundle file per the `discussion-point.md` format under `references/shared/formats/`, normalizing the caller's raw material into that structure without changing which decision is being made or inventing evidence the caller did not supply. Every point in the bundle shares the header's producer, target, and follow-up boundary.
 
 ## Bundle invariant
 
@@ -68,4 +70,4 @@ One bundle holds one producer, one coherent target, and one follow-up action. Wh
 
 ## Ownership boundary
 
-The caller owns domain judgment: whether a question genuinely requires human intent, the correctness of the evidence, and how the questions are grouped into bundles. You own the bounded side effect: unique file allocation, the header and section shape, correct point formatting through `/discussion-point`, and the refusals above.
+The caller owns domain judgment: whether a question genuinely requires human intent, the correctness of the evidence, and how the questions are grouped into bundles. You own the bounded side effect: unique file allocation, the header and section shape, correct point formatting per the discussion-point format, and the refusals above.

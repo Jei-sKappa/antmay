@@ -9,7 +9,7 @@ metadata:
 
 # Discussion
 
-Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges; then present that one fork through `/discussion-point` and, once the user settles it, append a self-contained `D<N>` record to the thread's `decisions.md`. The seed plus `decisions.md` are the durable artifact: they must let a later agent author the next piece of work without this conversation.
+Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges; then present that one fork framed per the `discussion-point.md` format under `references/shared/formats/` and, once the user settles it, append a self-contained `D<N>` record to the thread's `decisions.md`. The seed plus `decisions.md` are the durable artifact: they must let a later agent author the next piece of work without this conversation.
 
 ## Peer framing
 
@@ -34,7 +34,7 @@ Hold these together:
 
 3. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
 
-4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, hand exactly that one fork to `/discussion-point` for interactive presentation — one point at a time, established facts separated from the genuine choice, framed as lettered creative options or a single practical proposed solution, with a clear recommendation. Otherwise stay conversational; do not force a decision point onto every exchange.
+4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per the `discussion-point.md` format under `references/shared/formats/` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
 5. **Record once the user settles the point.** Append a `D<N>` record to `decisions.md` per `## Recording decisions`, then tell the user: `Decision saved: <short summary>.` The discussion point itself is transient framing — its options menu, recommendation, and deliberation are not carried into the record.
 
@@ -42,37 +42,13 @@ Hold these together:
 
 ## Recording decisions
 
-There is exactly one decision store: the thread-root `decisions.md`. Append every settled point to it as a self-contained `D<N>` record. Do not create per-artifact or per-topic logs, and do not keep decisions anywhere else.
+The thread-root `decisions.md` is the single decision store: append every settled point to it as a self-contained `D<N>` record, following the shape, sequential numbering, and append-only rules in the `decision-record.md` format under `references/shared/formats/`. Do not keep decisions anywhere else.
 
-Number records sequentially across the whole thread: scan `decisions.md` for the highest existing `D<N>` and use the next integer. If `decisions.md` is header-only, the first record is `D1`. (`decisions.md` already exists at the thread root; if it is somehow absent, create it with a short heading before appending.)
-
-Each record is a durable projection of the outcome, not a transcript of how it was reached. Write it so a fresh agent understands what was decided, why, and where it applies without the chat or the discussion point's options menu:
-
-```markdown
-## D<N>: <Title>
-
-Scope: <optional — omit this line entirely when the whole thread is the scope; otherwise name the stage, relationship, or thread-relative artifact path the decision applies to>
-
-Context: <one short self-contained paragraph, written from the thread's perspective, stating the question and only the surrounding facts needed to understand the decision>
-
-Decision: <the complete substantive resolution, written out in full>
-
-Rationale: <why this resolution, its principal trade-off, and any facts that materially condition it>
-```
-
-Field rules:
-
-- **Title** — a short line naming the decision.
-- **Scope** — omit the line when the decision applies to the whole thread; otherwise name a stage, relationship, or thread-relative artifact path (e.g. `specs/001/spec.md`).
-- **Context** — mandatory; normally one short paragraph. It states the question and only the facts necessary to understand it. Write it from the thread's perspective: never "in this chat", "as you said", or "the user chose B", and never rely on conversational memory. It may reference an earlier record by ID (e.g. `D3`) when that reference resolves within `decisions.md`, and may reference thread artifacts by thread-relative path. It must not introduce a new decision or assumption — normative choices belong in `Decision`. Include a rejected alternative only when the trade-off is needed to understand the rationale.
-- **Decision** — states the complete substantive resolution. Never a bare option letter like "A"; write the substance of what was chosen.
-- **Rationale** — records why the choice was made, its principal trade-off, and any materially conditioning facts. Flag any dissent here per the peer stance.
-
-Do not copy the options menu, your recommendation, or general deliberation into the record.
+What stays your judgment, not the format's: recognizing what was actually decided and whether it is decision-grade, writing the outcome as a durable projection a fresh agent can act on rather than a transcript, and flagging any dissent in the `Rationale` per the peer stance above. The discussion point itself is transient framing — its options menu, recommendation, and deliberation are never copied into the record.
 
 ## Supersession
 
-Records are append-only. Never rewrite or delete an existing record. When a settled decision later changes, append a new `D<N>` record that names the record it supersedes (e.g. `Context: supersedes D4 …`) and states the new resolution. An interrupted session leaves a usable partial `decisions.md`: every record written up to the interruption is durable.
+When a settled decision later changes, append a new record that supersedes the earlier one per the decision-record format — never rewrite or delete what is already recorded; recognizing that a decision has genuinely changed is your call. An interrupted session leaves a usable partial `decisions.md`: every record written up to the interruption is durable.
 
 ## Scope drift
 

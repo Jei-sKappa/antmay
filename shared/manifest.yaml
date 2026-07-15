@@ -18,3 +18,14 @@ skills/workflow/roadmap/roadmap:
   - workflows/quick.md
   - workflows/standard.md
   - workflows/roadmap.md
+
+skills/workflow/capture-discussion/discussion:
+  - formats/discussion-point.md
+  - formats/decision-record.md
+
+skills/workflow/capture-discussion/resolve-pending-decisions:
+  - formats/discussion-point.md
+  - formats/decision-record.md
+
+skills/workflow/primitives/emit-pending-decisions:
+  - formats/discussion-point.md

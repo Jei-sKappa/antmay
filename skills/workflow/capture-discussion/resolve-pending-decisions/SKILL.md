@@ -18,7 +18,7 @@ Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` al
 ## Select a bundle
 
 - **With an explicit bundle path argument**, load only that bundle and go straight to the resolution loop.
-- **Without a path**, list the files under the active thread's `.pending-decisions/` folder and read ONLY each file's routing header (`Producer`, `Target`, `Created`, `Points`, `Summary`). Never open a bundle's discussion-point bodies just to build the queue.
+- **Without a path**, list the files under the active thread's `.pending-decisions/` folder and read ONLY each file's routing header (`Producer`, `Target`, `Request`, `Created`, `Points`, `Summary`). Never open a bundle's point bodies just to build the queue.
   - If the folder is empty or absent, tell the user there are no pending decisions and stop.
   - If exactly one bundle exists, select it directly.
   - If several exist, present a compact queue — one row per bundle showing its title, producer, target, summary, and point count — and let the user choose which to resolve. Add a recommended order only when a dependency between bundles or genuine urgency makes one order materially preferable; otherwise present the queue without steering.
@@ -29,40 +29,16 @@ Load a single selected bundle's full body only once it is chosen. Resolve one bu
 
 For the selected bundle, work its points one at a time:
 
-1. Present the next unresolved point through `/discussion-point`'s interactive presentation, then let the user settle it. Take one point per turn; do not batch.
-2. Once the user settles the point, append a `D<N>` decision record to the thread-root `decisions.md`, using the record shape in `## Recording decisions`.
+1. Present the next unresolved point in chat, framed per the `discussion-point.md` format under `references/shared/formats/`, then let the user settle it. Take one point per turn; do not batch.
+2. Once the user settles the point, record the outcome per `## Recording decisions` — which routes an answer carrying genuine new intent into a `D<N>` record and leaves a mere request-repair clarification unrecorded.
 3. Remove that settled point from the bundle file so the file always holds only unresolved points — the remaining body is the complete resumption state if the user pauses.
 4. Repeat until no unresolved points remain, then delete the exhausted bundle file.
 
 ## Recording decisions
 
-Append every settled point to the thread-root `decisions.md` as a self-contained `D<N>` record. There is exactly one decision store; do not create per-bundle or per-topic logs.
+Route each settled point at resolution time. An answer that settles genuine new intent becomes a durable record: append it to the thread-root `decisions.md` as a self-contained `D<N>` record, following the shape, sequential numbering, and append-only rules in the `decision-record.md` format under `references/shared/formats/`. There is exactly one decision store; do not keep decisions anywhere else. An answer that merely repairs which input the producer originally meant is a clarification, not new intent — it settles the point (so the point is still consumed from the queue) but is not recorded as a decision.
 
-Number records sequentially across the whole thread: scan `decisions.md` for the highest existing `D<N>` and use the next integer. If `decisions.md` is header-only, the first record is `D1`. (`decisions.md` already exists at the thread root; if it is somehow absent, create it with a short heading before appending.)
-
-Each record is a durable projection of the outcome, not a transcript of the deliberation. Write it so a fresh agent understands what was decided, why, and where it applies without the chat or the bundle's discussion point:
-
-```markdown
-## D<N>: <Title>
-
-Scope: <optional — omit this line entirely when the whole thread is the scope; otherwise name the stage, relationship, or thread-relative artifact path the decision applies to>
-
-Context: <one short self-contained paragraph, written from the thread's perspective, stating the question and only the surrounding facts needed to understand the decision>
-
-Decision: <the complete substantive resolution, written out in full>
-
-Rationale: <why this resolution, its principal trade-off, and any facts that materially condition it>
-```
-
-Field rules:
-
-- **Title** — a short line naming the decision.
-- **Scope** — omit the line when the decision applies to the whole thread; otherwise name a stage, relationship, or thread-relative artifact path (e.g. `specs/001/spec.md`).
-- **Context** — mandatory; normally one short paragraph stating the question and only the facts needed to understand it. Write it from the thread's perspective: never "in this chat", "as you said", or "the user chose B". It may reference an earlier record by ID (e.g. `D3`) when that reference resolves within `decisions.md`, and may reference thread artifacts by thread-relative path. It must not introduce a new decision or assumption.
-- **Decision** — states the complete substantive resolution. Never a bare option letter like "A"; write the substance of what was chosen.
-- **Rationale** — records why the choice was made, its principal trade-off, and any materially conditioning facts.
-
-Do not copy the point's options menu, the recommendation, or general deliberation into the record. Records are append-only: never rewrite or delete an existing one. When a settled decision later changes, append a new record that names the record it supersedes and states the new resolution.
+What stays your judgment, not the format's: distinguishing genuine new intent from a request-repair clarification, and writing a recorded outcome as a durable projection a fresh agent can act on rather than a transcript of the deliberation. Do not copy the point's options menu, the recommendation, or general deliberation into the record.
 
 ## Follow-through
 
