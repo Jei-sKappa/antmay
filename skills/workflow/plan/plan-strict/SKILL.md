@@ -4,7 +4,7 @@ description: Turn a spec, proposal, decisions, GitHub issue, or raw prompt into 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.1.0
+  version: 5.2.0
 ---
 
 # Plan Strict
@@ -25,7 +25,7 @@ Accept ONE of the following input forms. Detect which form was passed before dra
 
 The emitted plan must be self-contained: a fresh implementer with only the plan and the thread's durable inputs can execute it, with no dependency on the originating chat.
 
-If the input is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — this is a clarification inside a resolved thread, not a free choice: route it per `## Blocked` as a pending-decisions bundle rather than silently picking by recency.
+If the input is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — that is a preflight failure, not an in-run decision: refuse before drafting, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency.
 
 ## Plan Artifact Contract
 
@@ -116,8 +116,8 @@ If a `plan.md` already exists at the thread root, determine its shape before wri
 
 ## Procedure
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a plan can be written), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
-2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, route the clarification per `## Blocked` rather than picking by recency.
+1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a plan can be written), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
+2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, that is a preflight failure — refuse per step 1 rather than picking by recency.
 3. **Check for an existing plan.** If a `plan.md` already exists at the thread root, apply `## Replacing an existing plan` before writing anything.
 4. **Draft the index and task files.** Compose the plan per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `plan-tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields plus the `Consumes:`/`Produces:` hand-off lines. Before writing the first task file, look at `references/worked-example.md` for the complete shape of a task file and the matching index excerpt. Cite settled decisions as `decisions.md D<N>` in the relevant task's input/context field. No parallelization markers and no frontmatter anywhere.
 5. **Run self-review.** Execute the four checks from `## Self-Review` across the whole drafted plan (index + task files) until all four pass. The emitted files do not contain self-review notes.
@@ -126,7 +126,7 @@ If a `plan.md` already exists at the thread root, determine its shape before wri
 
 ## Blocked
 
-This path applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/plan-strict` as the producer, `plan.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation, thread-resolution, and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/plan-strict` as the producer, `plan.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 A blocked run still writes the plan — the index and every task file — as complete as the settled inputs allow, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.
 

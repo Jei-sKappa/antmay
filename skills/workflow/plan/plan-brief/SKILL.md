@@ -4,7 +4,7 @@ description: Turn a thread's durable inputs or a referenced artifact into a one-
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.0
+  version: 4.2.0
 ---
 
 # Plan Brief
@@ -23,7 +23,7 @@ Draft the plan from the thread's durable inputs plus whatever the invocation poi
 
 The emitted `plan.md` must be self-contained: a fresh reader with only the plan and the thread's durable inputs can execute it. It must not depend on the originating chat.
 
-If which input is meant is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — this is a clarification inside a resolved thread, not a free choice: route it per `## Blocked` as a pending-decisions bundle rather than silently picking by recency.
+If which input is meant is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — that is a preflight failure, not an in-run decision: refuse before drafting, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency.
 
 ## Plan shape
 
@@ -68,7 +68,7 @@ If `plan-tasks/` already exists alongside `plan.md`, a fuller plan is in force. 
 
 ## Procedure
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a plan can be written), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
+1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a plan can be written), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
 2. **Load context.** Read `seed.md` and `decisions.md`, and whatever code or issue reference the invocation points you at. If `plan-tasks/` already exists, apply the reverse-transition guard above before writing anything.
 3. **Draft the body.** Compose the plan per `## Plan shape`: a title, `Source`, `## Outcome`, a small ordered `## Steps` list, `## Verification`, and `## Notes` only when needed. Keep it to roughly one screen. If the work warrants more rigor, recommend `plan-strict` instead.
 4. **Write the artifact.** Write the single file `docs/threads/<thread>/plan.md` — literally that name at the thread root, no frontmatter. If a brief `plan.md` already exists, revise it in place. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `spec.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`).
@@ -76,6 +76,6 @@ If `plan-tasks/` already exists alongside `plan.md`, a fuller plan is in force. 
 
 ## Blocked
 
-This path applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/plan-brief` as the producer, `plan.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation, thread-resolution, and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/plan-brief` as the producer, `plan.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 A blocked run still writes `plan.md` as complete as the settled inputs allow — every derivable step and the overall verification in place, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.

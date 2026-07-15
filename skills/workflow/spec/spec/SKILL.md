@@ -4,7 +4,7 @@ description: Forward-design a thread's durable inputs (seed, decisions, an optio
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.0
+  version: 4.2.0
 ---
 
 # Spec
@@ -22,7 +22,7 @@ The spec is forward-designed from the thread's durable inputs plus whatever the 
 - **`proposal.md`** (when present) — the direction-setting sketch the spec elaborates into expected behavior, constraints, and acceptance guidance.
 - **A referenced artifact or the user's prompt** — an explicit path, a GitHub issue, or the prompt itself when nothing else is referenced. Treat an issue's title and labels as additional context.
 
-If which input is meant is ambiguous — a reference names "the proposal" or "the spec" with no clear referent, or several artifacts could be intended — this is a clarification inside a resolved thread, not a free choice: route it per `## Blocked` as a pending-decisions bundle rather than silently picking by recency.
+If which input is meant is ambiguous — a reference names "the proposal" or "the spec" with no clear referent, or several artifacts could be intended — that is a preflight failure, not an in-run decision: refuse before drafting, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency.
 
 ## Semantic contract
 
@@ -70,11 +70,11 @@ Pinning an undiscussed decision into expected behavior or a constraint as if it 
 
 ## Procedure
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a spec can be written; do not create the thread or its seed yourself), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
+1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a spec can be written; do not create the thread or its seed yourself), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
 
 2. **Load context.** Read the thread's `seed.md` and `decisions.md`, any `proposal.md`, and whatever artifact or prompt the invocation points you at. `decisions.md` says what has already been settled, so the spec neither re-litigates a closed decision nor contradicts one without noticing.
 
-3. **Draft the body.** Cover all seven semantic-contract elements, inline settled decisions where operative and cite their `D<N>` records, and add the two obligations. Honor the lossless constraint: for any specific the input did not settle, either mark it a degree of freedom if it clears the eligibility bar or route it per `## Blocked`; never bake it in silently. Keep the spec readable end-to-end by a stranger with no prior context. Adapt length to what the input warrants — a tight spec is better than a padded one.
+3. **Draft the body.** Cover all seven semantic-contract elements, inline settled decisions where operative and cite their `D<N>` records, and add the two obligations. Honor the lossless constraint: for any specific the input did not settle, either mark it a degree of freedom if it clears the eligibility bar or queue it as a pending decision per `## Blocked`; never bake it in silently. Keep the spec readable end-to-end by a stranger with no prior context. Adapt length to what the input warrants — a tight spec is better than a padded one.
 
 4. **Write the artifact.** Write the single file `docs/threads/<thread>/spec.md` — literally that name at the thread root, with no frontmatter. If `spec.md` already exists, revise it in place: the same file is the stable reference through any review-and-revise cycles. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `proposal.md`), never repo-rooted or absolute; cross-thread references are repo-relative (`docs/threads/<other>/…`).
 
@@ -82,6 +82,6 @@ Pinning an undiscussed decision into expected behavior or a constraint as if it 
 
 ## Blocked
 
-This path applies whenever a human decision is genuinely indispensable to a sound spec — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/spec` as the producer, `spec.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the spec. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+This path is reachable only after preflight has passed and forward-designing from otherwise-valid inputs has begun — substantive execution. Invocation, thread-resolution, and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound spec — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/spec` as the producer, `spec.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the spec. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 A blocked run still writes `spec.md` as complete as the settled inputs allow — every section fully elaborated, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.

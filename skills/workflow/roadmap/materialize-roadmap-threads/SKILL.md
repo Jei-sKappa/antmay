@@ -4,7 +4,7 @@ description: Turn a roadmap's child briefs into child threads idempotently — c
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Materialize Roadmap Threads
@@ -13,13 +13,28 @@ Read a parent thread's `roadmap.md` child briefs and open the child threads they
 
 ## Inputs
 
-Work inside one parent thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` that contains a `roadmap.md`. If `cwd` already sits inside such a thread, that is the parent. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no such thread exists, or several exist and which is active is ambiguous (never silently pick the most recent stamp). If the resolved thread has no `roadmap.md`, there is nothing to materialize: end with `Outcome: REFUSED — no roadmap.md to materialize`.
+This operation runs a complete read-only preflight before any substantive execution — before it allocates any child thread or writes anything. Every preflight failure writes nothing, creates no child, emits no bundle, and ends `Outcome: REFUSED — <reason and how to re-invoke>`. Resolving the parent is the first preflight gate: work inside one parent thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` that contains a `roadmap.md`. If `cwd` already sits inside such a thread, that is the parent. Refuse when no such thread exists, or several exist and which is active is ambiguous (never silently pick the most recent stamp). If the resolved thread has no `roadmap.md`, there is nothing to materialize: end with `Outcome: REFUSED — no roadmap.md to materialize`.
 
 Read the parent's `roadmap.md` and locate its `### C<N>:` child briefs. Each brief carries a title, `Outcome`, `Context`, `Scope and boundaries`, `Dependencies`, `Relevant shared constraints`, and a `Suggested workflow`, and may carry a `Materialized thread:` line.
 
+## Preflight every brief before allocating any child
+
+After the parent and its `roadmap.md` resolve, validate the whole run read-only before the first `/allocate-thread` call — read the roadmap and every child brief the run will materialize, and check each one. This is a single up-front gate: no child thread is allocated and nothing is written until every selected brief passes.
+
+For each `C<N>` brief the run will materialize, validate:
+
+- **Brief identity** — a well-formed `### C<N>:` heading with a title.
+- **Required fields** — `Outcome`, `Context`, `Scope and boundaries`, `Dependencies`, and `Relevant shared constraints` are present and usable.
+- **A usable expanded `Suggested workflow`** — the complete expanded sequence is present and usable as written, never a bare workflow name. An absent or unusable `Suggested workflow` is a preflight defect.
+- **Existing materialization references** — read each brief's `Materialized thread:` line where present, so the run knows which briefs to create and which to verify.
+
+If any selected brief fails any check, refuse the entire run: write nothing, allocate no child, emit no bundle, and end with `Outcome: REFUSED — <which brief failed which check and how to fix it>`. Refusing up front is what prevents creating an early child and only then discovering a later malformed brief.
+
+`/allocate-thread` is assumed present as part of the installed suite; do not add availability detection or a fallback implementation for it.
+
 ## Idempotent loop over the child briefs
 
-Process each `C<N>` brief in turn:
+Only after preflight passes (`## Preflight every brief before allocating any child`), process each `C<N>` brief in turn:
 
 - **Brief without a `Materialized thread:` line** — create its child thread (below), then stamp the reference back into the brief.
 - **Brief with a `Materialized thread:` line** — skip creation and verify that the referenced thread-root folder exists on disk. If it exists, leave the brief untouched. If it does not, this is a dangling reference: report it to the user and move on. Never recreate the child silently and never overwrite an existing `Materialized thread:` value.
@@ -45,13 +60,17 @@ Adding this line is the only edit this operation ever makes to `roadmap.md`. It 
 
 ## Missing or unusable suggested workflow
 
-A brief whose `Suggested workflow` is absent or unusable cannot be materialized as written. Do not ask the user in chat and do not invent a workflow — behavior is identical however the skill is invoked: record the unresolved brief, skip it, continue with the remaining briefs, and include every skipped brief in the final report.
+A brief whose `Suggested workflow` is absent or unusable cannot be materialized as written. This is caught in preflight (`## Preflight every brief before allocating any child`): it refuses the entire run before any child is allocated, naming the offending brief and what is wrong. Do not ask the user in chat, do not invent a workflow, and do not skip the brief and continue.
 
 Never substitute a default workflow, infer one from the child's subject, or resolve a bare name against a workflow template.
 
 ## Blocked
 
-When materializing is blocked on a genuine human decision only a person can settle — an answer that settles product or workflow intent — do not invent the intent and do not stall waiting in chat. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/materialize-roadmap-threads` as the producer, `roadmap.md` as the target, the evidence you weighed, the originating user request, the open decision(s), and a suggested follow-up (settle the decisions, then materialize again). Because this operation is an idempotent loop, continue with any briefs that are not blocked; a later run finishes the ones that were. Trivial input clarifications (which brief, which name was meant) settle nothing and need no bundle.
+Both blocked paths are reachable only after preflight has passed and materialization has begun — substantive execution. Preflight defects (an unresolved parent, a missing `roadmap.md`, or any malformed selected brief) are refusals, not this path.
+
+When materializing is blocked on a genuine human decision only a person can settle — an answer that settles product or workflow intent discovered after materialization begins — do not invent the intent and do not stall waiting in chat. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/materialize-roadmap-threads` as the producer, `roadmap.md` as the target, the evidence you weighed, the originating user request, the open decision(s), and a suggested follow-up (settle the decisions, then materialize again). Because this operation is an idempotent loop, continue with any briefs that are not blocked; a later run finishes the ones that were. End with `Outcome: BLOCKED — pending decisions at <bundle path>`.
+
+An unfixable operational defect encountered after preflight — an allocation or runtime failure the run cannot repair on its own — ends the run `BLOCKED` with a diagnosis of what failed and no decision bundle.
 
 ## Boundaries
 
@@ -62,4 +81,4 @@ When materializing is blocked on a genuine human decision only a person can sett
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After the loop, report concisely which children you created (with their thread paths), which briefs you skipped and why (already materialized, dangling reference, or unresolved workflow), and any pending-decision bundle you emitted. End with the standard terminal line: `Outcome: BLOCKED — pending decisions at <bundle path>` when you emitted a bundle for a blocked brief, otherwise `Outcome: DONE — <children created and briefs skipped summary>`. No preamble, no closing remark.
+This is a completion-oriented operation, not a dialogue. A preflight defect ends the run before this point with `Outcome: REFUSED — <the defect and how to fix it>`. Otherwise, after the loop, report concisely which children you created (with their thread paths), which briefs you skipped and why (already materialized, or a dangling reference), and any pending-decision bundle you emitted. End with the standard terminal line: `Outcome: BLOCKED — <pointer>` when a decision bundle was emitted for a blocked brief (pending decisions at its path) or an unfixable operational defect halted the run (with a diagnosis), otherwise `Outcome: DONE — <children created and briefs skipped summary>`. No preamble, no closing remark.

@@ -4,7 +4,7 @@ description: Create a remote tracker ticket (GitHub Issues, Jira, Linear, ClickU
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.3.0
 ---
 
 # Open Ticket
@@ -39,19 +39,18 @@ Work-item / PM status — priority, assignee, In Progress / Blocked / Done — i
 - **Solo / personal / OSS:** GitHub Issues — adjacent to the code, auto-links commits and PRs, zero process cost.
 - **Company contexts with PM/stakeholder visibility:** the company tracker (Jira, Linear, ClickUp, …) — because that is where non-engineers look.
 
-**Never mirror into a second tracker.** Do not create the same ticket in GitHub Issues *and* a company tracker; do not duplicate a ticket across trackers "for visibility." One idea, one ticket, in the one system that owns work-item status. The repo holds the truth, the tracker holds the PM state, and threads hold the thinking — these are different facts, not the same fact stored twice. If which tracker owns status is unclear, ask the user before creating anything.
+**Never mirror into a second tracker.** Do not create the same ticket in GitHub Issues *and* a company tracker; do not duplicate a ticket across trackers "for visibility." One idea, one ticket, in the one system that owns work-item status. The repo holds the truth, the tracker holds the PM state, and threads hold the thinking — these are different facts, not the same fact stored twice. If which tracker owns status is unclear, resolving it is part of preflight: refuse, name the missing ownership choice, and create nothing (see `## Prerequisite Preflight`).
 
 ## Prerequisite Preflight (The Defining Behavior)
 
-This skill **requires the tracker's CLI or API** to do its one job, so it follows the prerequisite-preflight rule: **check the prerequisite is available FIRST, before any side-effecting step, and fail the whole instruction cleanly with a clear warning if it is missing.** Never begin creating the ticket and break partway.
+This skill runs a mandatory preflight before any substantive execution — before it drafts or creates anything. Ticket drafting and creation start **only** after the complete preflight passes; a clean up-front failure is always preferable to a partial creation that leaves the tracker in an inconsistent state.
 
-Concretely, before drafting or creating anything:
+The preflight has two gates, both checked before any side-effecting step:
 
-1. **Confirm the tracker tool is reachable.** Determine which tracker owns status, then verify its CLI is installed and authenticated, or its API token / credentials are present and valid (for example: the relevant CLI responds to an auth/whoami check, or the configured token is set in the environment).
-2. **If it is available**, proceed to draft the ticket and create it.
-3. **If it is missing or unauthenticated**, STOP immediately. Emit a clear warning that names **exactly what is missing** (which CLI/binary, which credential or token, which tracker) and **how to provide it** (install the CLI, run its auth/login command, set the token env var). Do **not** start composing the ticket, do **not** create a partial ticket, do **not** leave half-built state behind.
+1. **Resolve the owning tracker.** Determine which single tracker owns work-item status (see `## Single Ownership of Work-Item Status`). If which tracker owns status is unclear, that is a preflight failure — do not ask and wait: refuse, naming the missing ownership choice and how to supply it, and create nothing.
+2. **Confirm the tracker tool is reachable.** Verify the owning tracker's CLI is installed and authenticated, or its API token / credentials are present and valid (for example: the relevant CLI responds to an auth/whoami check, or the configured token is set in the environment).
 
-Preflight comes before any side-effecting step — the failure mode this prevents is running until something breaks mid-flight and leaving the tracker in an inconsistent state. A clean up-front failure is always preferable to a partial creation.
+If either gate fails, STOP immediately and refuse: emit a clear message naming **exactly what is missing** (the ownership choice, or which CLI/binary, credential, or token) and **how to provide it** (choose the owning tracker, install the CLI, run its auth/login command, set the token env var), write nothing, and end with exactly one terminal line: `Outcome: REFUSED — <what is missing and how to supply it>`. Do **not** start composing the ticket, do **not** create a partial ticket, do **not** leave half-built state behind. A preflight refusal is never a pending decision — the run never started, so no bundle is emitted.
 
 ## Drafting the Ticket From the Idea
 
@@ -79,7 +78,7 @@ If you reference a timestamp anywhere (e.g. in the ticket body), use the 12-char
 
 ## Procedure
 
-1. **Preflight the tracker FIRST.** Determine which single tracker owns work-item status. Verify its CLI/API is installed and authenticated (or its token/credentials are present and valid). If the tracker is unclear, ask the user. If the prerequisite is missing, STOP and fail the whole instruction with a clear warning naming what is missing and how to provide it — do not begin creating the ticket. End with exactly one terminal line: `Outcome: REFUSED — <what is missing>`.
+1. **Preflight FIRST, before any substantive execution.** Run both preflight gates from `## Prerequisite Preflight`: resolve which single tracker owns work-item status, and verify its CLI/API is installed and authenticated (or its token/credentials are present and valid). If the owning tracker is unclear, or the prerequisite is missing, STOP and refuse — do not begin drafting or creating the ticket. End with exactly one terminal line: `Outcome: REFUSED — <what is missing and how to supply it>`.
 
 2. **Draft the ticket from the idea.** Compose a concise title and a short body/description capturing the user's brand-new idea. Do not invent scope or decisions the user did not state.
 

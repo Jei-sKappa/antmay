@@ -4,7 +4,7 @@ description: Decompose a settled larger initiative into self-contained child-thr
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.2.0
 ---
 
 # Roadmap
@@ -15,7 +15,7 @@ The roadmap is a thinking and handoff artifact, not a project tracker. It carrie
 
 ## Inputs
 
-Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
+Run a mandatory preflight before any substantive execution (authoring the artifacts). Every preflight failure writes nothing, emits no bundle, and ends `Outcome: REFUSED — <reason and how to re-invoke>`. Resolve the thread first: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. Refuse when no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp). Then validate the inputs: refuse when a required authoritative input is missing, or when which input is meant is ambiguous — name the missing or ambiguous input and how to supply it rather than guessing or picking by recency.
 
 Read the thread's authoritative inputs and let them drive the decomposition:
 
@@ -125,7 +125,7 @@ You write only the header. Records accrue later, appended by descendants for dis
 
 ## Blocked
 
-This path applies whenever a human decision is genuinely indispensable to a sound decomposition — an answer that settles product or workflow intent, such as where a scope boundary falls or how the work should divide, that you cannot settle yourself from the authoritative inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/roadmap` as the producer, `roadmap.md` as the target, the evidence you weighed, the originating user request, the open decision(s), and a suggested follow-up (settle the decisions, then author the roadmap again). Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`. Trivial input clarifications (which file, which name was meant) settle nothing and need no bundle.
+This path is reachable only after preflight has passed and authoring the decomposition from otherwise-valid inputs has begun — substantive execution. Ambiguous inputs and missing required artifacts are preflight refusals (`## Inputs`), not this path. It applies to a genuine decomposition choice discovered during authoring that existing durable intent does not settle — an answer that settles product or workflow intent, such as where a scope boundary falls or how the work should divide, that you cannot settle yourself from the authoritative inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/roadmap` as the producer, `roadmap.md` as the target, the evidence you weighed, the originating user request, the open decision(s), and a suggested follow-up (settle the decisions, then author the roadmap again). Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 ## Report
 
