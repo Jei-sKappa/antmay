@@ -24,24 +24,39 @@ There is no build, test, or lint pipeline — this is a content repository. Vali
 
 ## Layout
 
-Skills live under one of two top-level buckets, and within `skills/workflow/` are grouped by spine phase / overlay module:
+Skills live under one of two top-level buckets, and within `skills/workflow/` are grouped into fifteen capability groups. Each active skill is either a **user-invoked** entry point (a capability a person deliberately reaches for) or a **model-invoked primitive** (a bounded building block an entry point composes into):
 
 ```
 skills/
-├── deprecated/                  retired skills kept on disk: adjust-plan-granularity, capture-inbox, discussion-loop, plan-loose, review-decision-document
-└── workflow/                    all active skills, grouped by spine phase / overlay module
-    ├── capture-discussion/      open-thread, open-ticket, discussion, seeded-discussion
-    ├── propose/                 propose
-    ├── spec/                    spec
-    ├── plan/                    plan-strict
-    ├── implement/               implement, implement-plan, implement-plan-with-subagents
-    ├── review/                  review-{proposal,spec,plan,implementation,code}, review-lossless-mapping
-    ├── merge/                   merge-artifacts
-    ├── finish-navigate/         archive-thread, finish, record-verdict, whats-next
-    ├── research/                afk-exploration, the-librarian
+├── deprecated/                  retired skills kept on disk: adjust-plan-granularity, capture-inbox, discussion-loop, record-verdict, review-decision-document, review-lossless-mapping, seeded-discussion
+└── workflow/                    all active skills, grouped into fifteen capability groups
+    ├── capture-discussion/      discussion, open-thread, open-ticket, resolve-pending-decisions
     ├── documentation/           take-snapshot
+    ├── finish-navigate/         archive-thread, finish, whats-next
     ├── handoff/                 brief-the-recipient, consult-the-expert, report-to-the-owner
+    ├── implement/               implement, implement-plan, implement-plan-with-subagents
+    ├── merge/                   merge-artifacts
+    ├── plan/                    plan-brief, plan-strict
+    ├── primitives/              append-roadmap-feedback, create-thread, discussion-point, emit-pending-decisions, emit-pending-review, update-implementation-report
+    ├── propose/                 propose
+    ├── reconcile/               reconcile-plan, reconcile-proposal, reconcile-roadmap, reconcile-spec
+    ├── research/                afk-exploration, the-librarian
+    ├── review/                  review-code, review-implementation, review-roadmap, review-spec
+    ├── roadmap/                 materialize-roadmap-threads, roadmap
+    ├── spec/                    spec
     └── support/                 meta-prompting
+```
+
+The six skills under `primitives/` are the model-invoked building blocks; every other active skill is a user-invoked entry point.
+
+Canonical shared references and the sync tooling that mirrors them into individual skills live at the repo root:
+
+```
+shared/
+├── references/                 canonical shared reference sources (e.g. workflows/{quick,standard,roadmap}.md)
+└── manifest.yaml               flat map: skill path → list of shared/references/ sources to mirror into it
+scripts/
+└── sync-shared-references.mjs  regenerates each declaring skill's references/shared/ from the canonical sources
 ```
 
 The repo also contains a Raycast extension that re-uses the same skills:
@@ -67,6 +82,7 @@ Every skill file starts with YAML frontmatter, then the skill body. Mirror the s
 ---
 name: <kebab-case, matches directory name>
 description: <one sentence: what it does + when to use it. The "use when…" trigger is what the harness matches against, so make it concrete.>
+disable-model-invocation: true   # user-invoked entry points ONLY — omit on primitives
 metadata:
   author: https://github.com/Jei-sKappa
   version: <semver>
@@ -75,18 +91,41 @@ metadata:
 
 There is no specific format for the skill body: every skill is different.
 
-Bump `version` in the frontmatter on any meaningful change to a skill's behavior.
+Bump `version` in the frontmatter on any meaningful change to a skill's behavior. New skills start at `1.0.0`.
 
-## Skill self-containment
+The `disable-model-invocation` key encodes the skill's invocation role — see "Invocation roles" below.
 
-Every `SKILL.md` is a standalone instruction set handed to an agent that can only rely on the skill's own folder. When creating or editing a skill:
+## Invocation roles
 
-- Keep `description` to one sentence that says what the skill does and when a routing agent should trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
-- Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections, because routing belongs in the frontmatter description.
-- Do not mention project-internal planning labels, project decision IDs, phase numbers, V1/V2 naming, "the spine", or similar repo-maintenance context. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `DP<N>` are allowed when they are part of the skill's emitted artifact format.
-- Do not couple one skill to another by explicit skill name, command, path, or invocation condition. Natural-language awareness is fine, such as saying the document may later be reviewed.
-- Do not link to or require instructional/reference files outside the skill's own directory. If supporting material is genuinely needed, inline the necessary guidance or place a copy under that skill's local `references/` folder and link to it with a path relative to the skill directory. This does not prohibit describing project artifacts the skill reads or writes as part of its actual job, such as `docs/threads/<thread>/...` inputs and outputs.
-- Avoid body content that explains how this repository is organized unless the invoked agent needs that fact to perform the skill's own job.
+Every active skill is either a user-invoked entry point or a model-invoked primitive, and the role is declared identically across both harnesses:
+
+- **User-invoked entry points** carry `disable-model-invocation: true` in `SKILL.md` frontmatter AND ship an `agents/openai.yaml` containing `policy.allow_implicit_invocation: false`. Their descriptions are concise, human-facing summaries.
+- **Model-invoked primitives** (the six under `primitives/`) omit both — omission IS the model-invocable configuration. Their descriptions open with a bounded precondition (the exact situation in which a caller should invoke them), because the model routes to them on that description.
+
+The two harness declarations must never diverge: a skill must never be user-only in one harness and implicitly invocable in the other. Whenever you flip a skill's role or add a new one, set the `SKILL.md` key and the `agents/openai.yaml` policy together.
+
+## Skill composition
+
+Active skills form a coherently installed suite, not isolated files. They compose through invocation and nothing else:
+
+- A user-invoked entry point MAY invoke a model-invoked primitive by naming it in prose as `/skill-name`.
+- Primitives never invoke entry points. Invocation is one-way; there are no dependency cycles.
+- A skill never reads another skill's `references/` folder (or any other file inside another skill's directory). Invocation is the ONLY permitted cross-skill coupling.
+- The suite is designed and tested as a set installed together. A skill referenced by an entry point that is not installed is an installation error, not a runtime fallback the invoking skill must handle.
+
+Still-valid authoring guidance for every skill body:
+
+- Keep `description` to one sentence (entry points) or one bounded-precondition sentence (primitives) that says what the skill does and when to trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
+- Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections — routing belongs in the frontmatter description.
+- Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, V1/V2/V3 naming, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `D<N>` are allowed when they are part of the skill's emitted artifact format.
+
+## Shared references
+
+Some skills ship copies of the same canonical reference (currently the `## Suggested workflow` templates that `open-thread` and `roadmap` both use). These are NOT hand-maintained per skill:
+
+- Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
+- Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script wipes and re-creates each declaring skill's `references/shared/` folder from the canonical sources.
+- NEVER hand-edit any `references/shared/` folder inside a skill. Those copies are generated, committed, and flow into distribution and the Raycast manifest unchanged. Change the canonical source and re-run the script instead.
 
 ## Deliverable skills — no preamble
 
@@ -94,11 +133,12 @@ Skills whose job is to produce a deliverable for the user to copy, paste, or han
 
 ## When adding a new skill
 
-1. Decide which bucket the skill belongs to — `workflow/` (active) or `deprecated/` (retired). For `workflow/`, also decide which group: `capture-discussion`, `propose`, `spec`, `plan`, `implement`, `review`, `merge`, `finish-navigate`, `research`, `documentation`, `handoff`, or `support`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
-2. Create `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`).
-3. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet, linking to the full nested path.
-4. Register the skill folder in `.claude-plugin/marketplace.json` under the plugin matching its group's `skills` array as `./skills/<bucket>/[<group>/]<skill-name>` — there is one plugin per workflow group (e.g. `JeisKappa-plan`, `JeisKappa-handoff`) plus `JeisKappa-deprecated`. If the group is new, also add a new plugin entry named `JeisKappa-<folder-name>` in the same change.
-5. Add the skill's folder name (the leaf, not the full path) to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
+1. Decide which bucket the skill belongs to — `workflow/` (active) or `deprecated/` (retired). For `workflow/`, also decide which group: `capture-discussion`, `documentation`, `finish-navigate`, `handoff`, `implement`, `merge`, `plan`, `primitives`, `propose`, `reconcile`, `research`, `review`, `roadmap`, `spec`, or `support`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
+2. Decide the invocation role. If the skill is a capability a person deliberately reaches for, it is a user-invoked entry point. Only add it under `primitives/` when it is a bounded building block an entry point composes into AND it clears the extraction bar — it is genuinely reused by more than one entry point (or is the single well-defined mechanism an entry point delegates to) rather than inlined logic. Do not create a primitive for a one-off.
+3. Create `skills/<bucket>/[<group>/]<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`). For a user-invoked entry point, set `disable-model-invocation: true` AND add `agents/openai.yaml` with `policy.allow_implicit_invocation: false`. For a primitive, omit both and open the description with a bounded precondition. The two harness declarations must never diverge.
+4. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet, linking to the full nested path.
+5. Register the skill folder in `.claude-plugin/marketplace.json` under the plugin matching its group's `skills` array as `./skills/<bucket>/[<group>/]<skill-name>` — there is one plugin per workflow group (e.g. `JeisKappa-primitives`, `JeisKappa-reconcile`, `JeisKappa-roadmap`) plus `JeisKappa-deprecated`. Keep `plugins` sorted alphabetically by `name` with `JeisKappa-deprecated` last. If the group is new, also add a new plugin entry named `JeisKappa-<folder-name>` in the same change.
+6. Add the skill's folder name (the leaf, not the full path) to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
 
 ## Raycast extension
 
@@ -120,11 +160,19 @@ This repo follows [Conventional Commits](https://www.conventionalcommits.org/). 
 
 Repo-wide changes (touching multiple skills, `README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
 
+## V3 Workflow Conventions
+
+This repo is the home of the Modular Agentic Workflow V3 — the **active ruleset for all newly opened threads**. The canonical reference for V3 workflow rules — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/project/v3/README.md`, which links the companion documents `thread-model.md`, `skill-authoring.md`, and the three workflow docs under `docs/project/v3/workflows/`. Read it before opening a thread or writing/editing any workflow artifact under `docs/threads/<thread>/`.
+
+V1 (`docs/workflow/v1/`) and V2 (`docs/workflow/v2/`) remain the grandfathered references for their own pre-V3 threads only — never edited, never migrated, never mixed with V3 (see the sections below).
+
+This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/project/v3/` for any rule change; this section only changes if the V3 reference doc set itself moves or splits.
+
 ## V2 Workflow Conventions
 
-This repo is the home of the Modular Agentic Workflow V2 — the **active ruleset for all new threads**. The canonical reference for V2 workflow rules — thread layout, filename grammar, lifecycle and immutability, tiers, the spine, discussions, reviews, and tracker integration — lives at `docs/workflow/v2/README.md`, which links the eight companion rule docs under `docs/workflow/v2/`. Read it before opening a thread or writing/editing any workflow artifact under `docs/threads/<thread>/`.
+This repo was the home of the Modular Agentic Workflow V2. The canonical reference for V2 workflow rules — thread layout, filename grammar, lifecycle and immutability, tiers, the spine, discussions, reviews, and tracker integration — lives at `docs/workflow/v2/README.md`, which links the eight companion rule docs under `docs/workflow/v2/`. Read it before writing or editing any workflow artifact belonging to a V2 thread.
 
-V1 (`docs/workflow/v1/`) remains the grandfathered reference for pre-V2 threads only — never edited, never migrated, never mixed with V2 (see "V1 Workflow Conventions" below).
+V2 is now grandfathered: it applies to pre-V3 threads only — never edited, never migrated, never mixed with V3. New threads use V3 (see "V3 Workflow Conventions" above).
 
 This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/workflow/v2/` for any rule change; this section only changes if the V2 reference doc set itself moves or splits.
 
