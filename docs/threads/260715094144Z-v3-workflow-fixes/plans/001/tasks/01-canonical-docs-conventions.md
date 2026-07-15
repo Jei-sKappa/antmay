@@ -1,0 +1,37 @@
+# Task 1: Update the canonical V3 convention docs
+
+**Objective:** Encode every convention-level decision from the log into `docs/project/v3/` so the later skill edits implement against written, canonical rules.
+
+**Input / context:** Settled decisions per `seed/discussions/260715102305Z-v3-skill-review-notes-decision-log.md` P1, P7, P8, P11, P12, P13, P14, P15, P17. The two files to edit are `docs/project/v3/skill-authoring.md` and `docs/project/v3/thread-model.md`. Read both fully before editing.
+
+**Steps:**
+
+1. In `skill-authoring.md`, rewrite the "Interaction posture" section's AFK-override paragraph (currently "An explicit AFK invocation … overrides the normal posture") into the unified blocked protocol per P1:
+   - The three postures stay exactly as defined.
+   - Completion-oriented skills have NO attended-ask branch and perform no runtime attended/AFK detection; behavior is identical regardless of invoker. When blocked on genuinely indispensable human judgment: finish everything safely derivable, emit a bundle via `/emit-pending-decisions`, return a concise terminal notification, stop.
+   - Two-case rule for missing input: (a) pre-run resolution ambiguity (which thread, which artifact is meant) → concise refusal in chat naming the ambiguity, stop, no bundle; (b) mid-run missing human intent → the bundle protocol above.
+   - Clarification-vs-decision is distinguished at resolution time, not emission time: the resolver records genuine new intent as a decision; a mere request-repair answer is not recorded.
+   - Dialogue-driven skills keep asking as their normal output; one-shot deliverables are unchanged.
+2. In `skill-authoring.md`, extend the extraction guidance with the P7 razor: a reused FORMAT (passive material constraining what a skill writes) lives as a shared reference under `shared/references/` + manifest; a reused side-effecting DISCIPLINE (edge cases, refusals, invariants that must execute identically regardless of caller) is a model-invoked primitive. Name the razor's no-creep boundary: the five behavioral primitives stay skills.
+3. In `skill-authoring.md`, add the P8 naming convention: primitive names are verb-first, the verb naming the bounded side effect performed on behalf of a caller; entry-point names use the user's intent language.
+4. In `skill-authoring.md`, add the P11 conditional-extraction bar: a body block moves to a reference when (a) it executes only under a condition most runs don't meet — not merely "optional" — AND (b) it is substantial enough that inlining costs real context (more than a couple of sentences). The trigger condition always stays inline; the pointer is naturally worded prose, never a mechanical "IF X READ Y" construction. Shared mechanism when reused by several skills, the skill's own `references/` when unique.
+5. In `skill-authoring.md`, add the P12 worked-example convention: worked examples live in `references/` (shared only if reused), are pointed at from the step where they are consumed, and never carry a rule that exists nowhere else — anything normative stated only inside an example is hoisted into the body first.
+6. In `skill-authoring.md`, add the P13 section-name convention: the end-to-end execution sequence lives under `## Procedure`; `## Workflow` is never used as a section heading — the word is reserved for the workflow-model concept.
+7. In `skill-authoring.md`, add the P14 authoring rule verbatim in intent: skills never carry instructions that delete, empty, or erase user filesystem content unless the user explicitly asks; the sole exception is pending-queue consumption, where removing a settled point or an exhausted bundle completes the communication. Runtime bodies stay silent about deletion in both directions (no permission, no prohibition).
+8. In `skill-authoring.md`, extend the invocation-role metadata section per P17: every skill ships `agents/openai.yaml` with an `interface:` block (`display_name` title-case; `short_description` a terse 4–7-word picker line, deliberately not a copy of the SKILL.md description); entry points additionally carry `policy.allow_implicit_invocation: false`; the policy block encodes the role in lockstep with `disable-model-invocation`.
+9. In `thread-model.md`, update the `.pending-decisions/` section per P1: the bundle's routing header gains the originating user request (so a clarification is answerable from the file alone); note the resolution-time clarification/decision distinction; the absence-means-nothing-pending semantic stays.
+10. In `thread-model.md`, update the `.implementation-runs/` description per P14 and P15: run directories persist after terminal outcomes as the run's operational trace (no removal language anywhere), and the directory naming is `<UTC>[-<desc>]` with `<desc>` an optional short kebab descriptor — no `<ref>`, no "descriptor", no `001`, no `plan-` infix.
+11. Re-read both edited files end-to-end and check that no remaining sentence contradicts the new paragraphs (in particular: leftover "explicitly AFK" phrasing, leftover run-directory removal language).
+
+**Files modified:** `docs/project/v3/skill-authoring.md`, `docs/project/v3/thread-model.md`
+
+**Verification:** `grep -n "explicitly AFK\|attended" docs/project/v3/skill-authoring.md` shows no dual-branch protocol language (posture names may remain); `grep -n "Procedure" docs/project/v3/skill-authoring.md` shows the section-name convention; `grep -n "removed\|remove" docs/project/v3/thread-model.md` shows no run-directory removal instruction; `grep -n "interface" docs/project/v3/skill-authoring.md` shows the openai.yaml convention.
+
+**Acceptance criteria:**
+- `skill-authoring.md` states the unified blocked protocol with the two-case rule and no attended-ask branch.
+- `skill-authoring.md` carries the format-vs-discipline razor, the verb-first naming convention, the conditional-extraction bar, the worked-example convention, the `## Procedure` convention, the no-deletion authoring rule, and the universal `agents/openai.yaml` interface convention.
+- `thread-model.md` describes the bundle header including the originating user request, and describes persistent `<UTC>[-<desc>]` run directories.
+
+**Consumes:** none
+
+**Produces:** canonical convention text in `docs/project/v3/skill-authoring.md` and `docs/project/v3/thread-model.md` that tasks 2–7 implement against.
