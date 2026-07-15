@@ -25,6 +25,6 @@
 - All five primitive descriptions open with the exclusive gate, name inputs collectively, and name the side effect in one clause.
 - `emit-pending-decisions` carries the negative gate.
 
-**Consumes:** the five-primitive set left by Task 2 (discussion-point removed); the P8/P9 conventions written by Task 1.
+**Consumes:** the five-primitive set left by Task 2 (discussion-point removed); the P8 verb-first naming convention written by Task 1 (the P9 description template comes straight from the decision log, not from Task 1).
 
 **Produces:** the `/allocate-thread` name that later tasks and docs reference; final `description:` lines for all five primitives.
