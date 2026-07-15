@@ -7,7 +7,7 @@
         "./skills/workflow/capture-discussion/discussion",
         "./skills/workflow/capture-discussion/open-thread",
         "./skills/workflow/capture-discussion/open-ticket",
-        "./skills/workflow/capture-discussion/seeded-discussion"
+        "./skills/workflow/capture-discussion/resolve-pending-decisions"
       ]
     },
     {
@@ -23,7 +23,6 @@
       "skills": [
         "./skills/workflow/finish-navigate/archive-thread",
         "./skills/workflow/finish-navigate/finish",
-        "./skills/workflow/finish-navigate/record-verdict",
         "./skills/workflow/finish-navigate/whats-next"
       ]
     },
@@ -56,7 +55,20 @@
       "name": "JeisKappa-plan",
       "source": "./",
       "skills": [
+        "./skills/workflow/plan/plan-brief",
         "./skills/workflow/plan/plan-strict"
+      ]
+    },
+    {
+      "name": "JeisKappa-primitives",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/primitives/append-roadmap-feedback",
+        "./skills/workflow/primitives/create-thread",
+        "./skills/workflow/primitives/discussion-point",
+        "./skills/workflow/primitives/emit-pending-decisions",
+        "./skills/workflow/primitives/emit-pending-review",
+        "./skills/workflow/primitives/update-implementation-report"
       ]
     },
     {
@@ -64,6 +76,16 @@
       "source": "./",
       "skills": [
         "./skills/workflow/propose/propose"
+      ]
+    },
+    {
+      "name": "JeisKappa-reconcile",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/reconcile/reconcile-plan",
+        "./skills/workflow/reconcile/reconcile-proposal",
+        "./skills/workflow/reconcile/reconcile-roadmap",
+        "./skills/workflow/reconcile/reconcile-spec"
       ]
     },
     {
@@ -78,12 +100,18 @@
       "name": "JeisKappa-review",
       "source": "./",
       "skills": [
-        "./skills/workflow/review/review-proposal",
-        "./skills/workflow/review/review-spec",
-        "./skills/workflow/review/review-plan",
-        "./skills/workflow/review/review-implementation",
         "./skills/workflow/review/review-code",
-        "./skills/workflow/review/review-lossless-mapping"
+        "./skills/workflow/review/review-implementation",
+        "./skills/workflow/review/review-roadmap",
+        "./skills/workflow/review/review-spec"
+      ]
+    },
+    {
+      "name": "JeisKappa-roadmap",
+      "source": "./",
+      "skills": [
+        "./skills/workflow/roadmap/materialize-roadmap-threads",
+        "./skills/workflow/roadmap/roadmap"
       ]
     },
     {
@@ -107,8 +135,10 @@
         "./skills/deprecated/adjust-plan-granularity",
         "./skills/deprecated/capture-inbox",
         "./skills/deprecated/discussion-loop",
-        "./skills/deprecated/plan-loose",
-        "./skills/deprecated/review-decision-document"
+        "./skills/deprecated/record-verdict",
+        "./skills/deprecated/review-decision-document",
+        "./skills/deprecated/review-lossless-mapping",
+        "./skills/deprecated/seeded-discussion"
       ]
     }
   ]

@@ -12,3 +12,8 @@ temp/
 
 # Thread-local WIP scratch (per docs/workflow/v1/thread-layout.md)
 docs/threads/**/.wip/
+
+# Thread-local workspaces (pending-decision bundles, pending-review bundles, implementation runs)
+docs/threads/**/.pending-decisions/
+docs/threads/**/.pending-reviews/
+docs/threads/**/.implementation-runs/
