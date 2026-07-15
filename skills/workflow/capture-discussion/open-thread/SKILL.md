@@ -4,7 +4,7 @@ description: Open a durable workflow thread on disk — interpret the user's ide
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.1.0
+  version: 2.2.0
 ---
 
 # Open Thread
@@ -67,6 +67,6 @@ A linked ticket is read for context only, and its URL is recorded in `External:`
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After `/allocate-thread` returns, report the created thread's folder path to the user. Corrections are gathered before delegation, not after — do not re-run the delegation.
+This is a dialogue-driven handshake: obtaining human input is part of its normal job, so questions are expected output rather than a stalled or failed run. Asking which workflow to start from when none was supplied, inviting one round of field corrections before delegation, and asking the user to paste a linked ticket's title and body when read access is unavailable are all ordinary execution of this handshake — none of them is a blocked or refused completion path. After `/allocate-thread` returns, report the created thread's folder path to the user; corrections are gathered before delegation, not after, so do not re-run the delegation.
 
-End with exactly this line, nothing before it — no preamble, no closing remark: `Outcome: DONE — Thread opened: <folder path>`.
+Keep the successful response focused on the created thread path. Emit no terminal run-status line and no other run-status token — this dialogue-driven handshake has no completion-run outcome.

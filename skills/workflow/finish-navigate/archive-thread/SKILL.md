@@ -3,7 +3,7 @@ name: archive-thread
 description: Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.1.0
+  version: 2.2.0
 disable-model-invocation: true
 ---
 
@@ -12,6 +12,8 @@ disable-model-invocation: true
 Archive a workflow thread by relocating its folder from the active `docs/threads/` listing into `docs/threads/archive/`. This is the act that ends a thread's active lifecycle: once its folder sits under `archive/`, the thread is no longer live work.
 
 Archiving happens on **explicit user intent only**. Never scan for archivable threads on your own initiative, and run **no completion checks of any kind** — you do not inspect any status or report to decide whether the thread "deserves" archival. If the user asks to archive a thread, that intent is the whole authorization.
+
+This is a dialogue-driven handshake: obtaining human input is part of its normal job, so its questions and confirmations are expected output rather than a stalled or failed run. Disambiguating which thread the user means, asking for one confirmation before archiving over a non-empty workspace folder, and suggesting the user first record an abandonment are all ordinary execution of this handshake — none of them is a blocked or refused path.
 
 ## Resolve the target thread
 
@@ -42,7 +44,7 @@ mkdir -p docs/threads/archive
 git mv docs/threads/<thread-folder> docs/threads/archive/<thread-folder>
 ```
 
-The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path, and end the run's final chat message with exactly this line, nothing after it — no closing remark: `Outcome: DONE — Thread archived: <new path>`.
+The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path together with the accepted warning that references pointing at the thread may break (see the limitation below). Keep the successful response focused on those two facts; emit no terminal run-status line and no other run-status token — this dialogue-driven handshake has no completion-run outcome.
 
 ## Accepted limitation: references may break
 
