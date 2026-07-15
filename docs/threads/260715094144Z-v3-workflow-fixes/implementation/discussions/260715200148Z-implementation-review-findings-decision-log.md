@@ -1,0 +1,25 @@
+# Decision log — V3 workflow-fixes implementation review findings (implementation)
+
+Thread: docs/threads/260715094144Z-v3-workflow-fixes/
+Target: implementation
+Subject: deciding how to act on the blocker and issue raised by `implementation/reviews/260715193051Z-v3-workflow-fixes-implementation-review.md`.
+
+## P1: Close the unified blocked-protocol gaps
+
+Point: Decide which operations must use durable clarification bundles and which skills legitimately remain conversational.
+
+What you need to know: P1/P18 intended every open question from a completion-oriented skill to become durable whenever a thread exists. The current implementation still pauses for dirty-worktree consent, refuses ambiguous review targets, skips bundles for “trivial” clarifications, and asks which tracker to use. Separately, `open-thread` and `archive-thread` ask questions as part of their normal purpose, making their posture materially different from autonomous implementation, planning, and review skills.
+
+Decision: Classify `open-thread` and `archive-thread` as dialogue-driven handshake skills. Completion-oriented skills perform thread resolution, target resolution, and mechanical and safety preflight before substantive execution. Any missing or ambiguous invocation input, unmet prerequisite, or safety gate detected during that preflight ends `REFUSED`, writes no workflow artifact, and tells the user precisely how to re-invoke; this includes a dirty worktree without advance authorization, an ambiguous or missing review target, an ambiguous artifact reference, a malformed invocation or trivial request repair, unclear tracker ownership, and missing required tooling or credentials. Advance authorization to work in a dirty tree must acknowledge that existing changes will be preserved and may enter implementation commits; a bare instruction to ignore the dirty tree is insufficient. Once substantive execution has begun, missing human intent is emitted to `.pending-decisions/` and ends `BLOCKED`, while an unfixable operational defect ends `BLOCKED` with a diagnosis and no decision bundle. Successful completion ends `DONE`.
+
+Rationale: P19 already makes a preflight refusal machine-readable, so a pending-decision file adds ceremony without improving the state model when the run never started. The durable queue remains necessary after substantive work begins, when the agent has discovered genuinely missing intent that must survive the run. Defining the boundary as precondition/input repair versus missing intent discovered during actual work prevents agents from relabeling product decisions as preflight failures merely because they surfaced early.
+
+## P2: Normalize `NEEDS_CONTEXT` terminal behavior
+
+Point: Decide whether `NEEDS_CONTEXT` remains an internal implementation status and how it maps to the three run-level terminal outcomes.
+
+What you need to know: `DONE`, `BLOCKED`, and `REFUSED` describe the whole run for the orchestrator. The implement skills separately use four task-level audit statuses, where `NEEDS_CONTEXT` distinguishes a task missing authoritative context from one stopped by an operational failure. The defect is not necessarily the extra internal status; it is that the skills do not map it consistently to a terminal outcome.
+
+Decision: The three-token terminal run outcome — `DONE`, `BLOCKED`, and `REFUSED` — is the only project-wide status protocol. Remove the Four-State Status Protocol and formal per-task status tokens from the single-agent `implement` and `implement-plan` skills. Their progress records instead capture facts in prose or ordinary structured fields: the task attempted, changes made, verification performed, concerns, commit, and next action. Partial progress lives in `progress.md` and `implementation-report.md`; the run ends `DONE` when the requested operation completed even with non-blocking concerns, `BLOCKED` when substantive execution started but could not finish, and `REFUSED` when preflight prevented execution. `implement-plan-with-subagents` defines only the subagent return contracts its own topology needs — implementer reply tokens, reviewer-lane reply tokens, and the orchestrator's rules for validating and acting on those untrusted replies. Those contracts remain local to that skill, are not promoted into canonical V3 conventions, and are not translated into a second formal verified-cycle status protocol. Other skills define local return protocols only when their own caller/callee topology genuinely requires one.
+
+Rationale: A status protocol exists for a caller to consume. A deterministic workflow tool calls the whole skill and therefore needs only the universal terminal outcome; a single agent executing sequential internal tasks has no caller at each task boundary, so formal task-status tokens add ceremony without an API consumer. Progress files, commit history, and the implementation report preserve the useful audit facts. Agent subcalls are the genuine exception because their orchestrator must quickly classify a returned result, and those contracts are best defined beside the topology that consumes them rather than as a project-wide rule.
