@@ -33,4 +33,4 @@
 
 **Consumes:** the format-vs-discipline razor and unified-protocol text written by Task 1 (`docs/project/v3/skill-authoring.md`).
 
-**Produces:** `shared/references/formats/discussion-point.md` and `shared/references/formats/decision-record.md` (canonical), plus generated `references/shared/formats/` copies inside `discussion`, `resolve-pending-decisions`, and `emit-pending-decisions`.
+**Produces:** `shared/references/formats/discussion-point.md` and `shared/references/formats/decision-record.md` (canonical), plus generated `references/shared/formats/` copies inside `discussion`, `resolve-pending-decisions`, and `emit-pending-decisions`; the five-primitive set (the `discussion-point` primitive dissolved from folder, registries, and prose invocations); the updated `emit-pending-decisions` bundle header carrying the originating user request.

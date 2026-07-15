@@ -4,7 +4,7 @@ Source: seed/discussions/260715102305Z-v3-skill-review-notes-decision-log.md
 
 ## Objective and context
 
-Apply the seventeen settled decisions (P1–P17) from the seed decision log to the V3 skill suite in this repository. The log is the contract: every task below cites the decisions it implements. Two decisions require no change (P6 — `create-thread` stays a primitive; P16 — the implementation report stays a singleton) beyond the rename P8 applies. P5 was revised by P7 and is implemented in its P7 form (formats as shared references, no `record-decision` primitive).
+Apply the nineteen settled decisions (P1–P19) from the seed decision log to the V3 skill suite in this repository. The log is the contract: every task below cites the decisions it implements. Two decisions require no change (P6 — `create-thread` stays a primitive; P16 — the implementation report stays a singleton) beyond the rename P8 applies. P5 was revised by P7 and is implemented in its P7 form (formats as shared references, no `record-decision` primitive). P18 (input-resolution rule) and P19 (`Outcome:` terminal-outcome standard) were appended after the plan adherence review `reviews/260715155532Z-two-case-rule-spec-fault-review.md` surfaced pre-run ambiguity handling as unsettled; tasks 1, 4, 5, 6, and 7 encode them.
 
 Plan-level facts the implementer needs before opening any task file:
 
@@ -15,14 +15,14 @@ Plan-level facts the implementer needs before opening any task file:
 
 ## Global Constraints
 
-- "never write instructions that delete, empty, or erase user filesystem content into a skill unless the user explicitly asks, with the sole exception of pending-queue consumption" (P14)
+- "never write instructions that delete, empty, or erase user filesystem content into a skill unless the user explicitly asks, with the sole exception of pending-queue consumption, where removing a settled point or an exhausted bundle completes the communication" (P14)
 - "The razor must not creep: the remaining five primitives (`allocate-thread`, `emit-pending-decisions`, `emit-pending-review`, `update-implementation-report`, `append-roadmap-feedback`) are genuinely behavioral and stay skills." (P7)
-- "Runtime bodies stay SILENT about deletion — no 'never delete' clause and no 'you may delete' clause" (P14)
+- "Runtime bodies stay SILENT about deletion — no 'never delete' clause and no 'you may delete' clause; at most one positively-framed sentence stating the run directory remains in place as the run's operational trace, worded without delete/remove tokens" (P14)
 - The source states no further plan-wide constraints; per-decision constraints are cited inside each task.
 
 ## Tasks
 
-1. **Update the canonical V3 convention docs** — encode P1, P7, P8, P11, P12, P13, P14, P15, P17 in `docs/project/v3/` so every later task implements against written convention. → `tasks/01-canonical-docs-conventions.md`
+1. **Update the canonical V3 convention docs** — encode P1, P7, P8, P11–P15, P17, P18, P19 in `docs/project/v3/` so every later task implements against written convention. → `tasks/01-canonical-docs-conventions.md`
 2. **Create the format shared references and dissolve `discussion-point`** — `formats/discussion-point.md` (with P10 amendments) and `formats/decision-record.md`; rewire `discussion`, `resolve-pending-decisions`, `emit-pending-decisions`; remove the primitive. → `tasks/02-format-shared-references.md`
 3. **Rename `create-thread` → `allocate-thread` and rewrite all primitive descriptions** — folder, frontmatter, callers, registries; P9 description template on all five primitives. → `tasks/03-allocate-thread-and-primitive-descriptions.md`
 4. **Overhaul the `spec` skill's contract** — seven elements, degrees-of-freedom bar, unified blocked protocol with fullest-derivable emission, section removals. → `tasks/04-spec-skill-contract.md`
