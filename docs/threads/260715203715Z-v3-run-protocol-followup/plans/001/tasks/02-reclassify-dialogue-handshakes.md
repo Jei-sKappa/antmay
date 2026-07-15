@@ -31,6 +31,6 @@
 - `archive-thread` still performs one user-authorized move and preserves the existing advisory checks.
 - Both skill versions are `2.2.0`.
 
-**Consumes:** The canonical interaction-posture and terminal-outcome rules produced by Task 1.
+**Consumes:** Canonical run-protocol baseline — the preflight/refusal, in-run blocking, terminal-outcome, interaction-posture, and internal-progress rules in `docs/project/v3/skill-authoring.md`, `docs/project/v3/thread-model.md`, and the Quick, Standard, and Roadmap workflow documents.
 
-**Produces:** Dialogue-driven thread-opening and thread-archival entry points that are excluded from later completion-oriented sweeps.
+**Produces:** Dialogue-handshake exclusions — the dialogue-driven, no-`Outcome:` contracts in `skills/workflow/capture-discussion/open-thread/SKILL.md` and `skills/workflow/finish-navigate/archive-thread/SKILL.md`.

@@ -37,6 +37,6 @@
 - No active implementation skill defines a formal four-state task-status protocol, and the suite uses only the three universal run outcomes.
 - `implement-plan-with-subagents` is version `5.2.0`.
 
-**Consumes:** The canonical skill-local contract rule from Task 1, the preflight semantics from Task 3, and the factual progress vocabulary from Task 4.
+**Consumes:** Canonical run-protocol baseline — the preflight/refusal, in-run blocking, terminal-outcome, interaction-posture, and internal-progress rules in `docs/project/v3/skill-authoring.md`, `docs/project/v3/thread-model.md`, and the Quick, Standard, and Roadmap workflow documents; Completion-skill preflight baseline — refusal-versus-blocking behavior in `open-ticket`, `plan-brief`, `plan-strict`, `spec`, `merge-artifacts`, `roadmap`, and `materialize-roadmap-threads`, with atomic child-materialization preflight; Single-agent factual-progress baseline — preflight ordering, factual progress fields, and universal run-outcome mapping in `skills/workflow/implement/implement/SKILL.md` and `skills/workflow/implement/implement-plan/SKILL.md`.
 
 **Produces:** none

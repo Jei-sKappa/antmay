@@ -38,4 +38,4 @@
 
 **Consumes:** none
 
-**Produces:** The canonical run-protocol contract that Tasks 2–05 apply to the skill suite.
+**Produces:** Canonical run-protocol baseline — the preflight/refusal, in-run blocking, terminal-outcome, interaction-posture, and internal-progress rules in `docs/project/v3/skill-authoring.md`, `docs/project/v3/thread-model.md`, and the Quick, Standard, and Roadmap workflow documents.
