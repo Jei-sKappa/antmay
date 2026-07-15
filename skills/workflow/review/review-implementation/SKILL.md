@@ -31,15 +31,15 @@ When the resolved anchor is coarse — `seed.md` only, with no acceptance criter
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Resolve the delivered work read-only.** The reviewed target is the code the user names — a git ref (commit SHA, branch, tag), a commit range, a saved or inline diff, or a file or directory path. If the reference is unsupplied, vague ("my changes", "the branch" with no name), or matches multiple plausible candidates, ASK which is intended; never pick by recency or sort order. Read the diff or the files, but do not check out a branch, run tests, modify the working tree, or mutate any git state.
+2. **Resolve the delivered work read-only.** The reviewed target is the code the user names — a git ref (commit SHA, branch, tag), a commit range, a saved or inline diff, or a file or directory path. If the reference is unsupplied, vague ("my changes", "the branch" with no name), or matches multiple plausible candidates, the review has no resolvable target: say so, write nothing, and end with `Outcome: REFUSED — <the ambiguity>`; never pick by recency or sort order. Read the diff or the files, but do not check out a branch, run tests, modify the working tree, or mutate any git state.
 
 3. **Resolve the anchor and read the report.** Resolve the authority anchor (`## The authority anchor`) and read it read-only. Read `implementation-report.md` at the thread root, and `decisions.md`. Read everything read-only — you edit none of it and propose no edits into it.
 
 4. **Judge against the categories.** Walk the delivered work against each category below (`## What you judge`). For every real gap, form a finding: what is wrong, where in the code or report it shows, why it would harm whoever picks up the work next, and a severity — `blocker` (the work does not deliver the intent, or the report materially misstates what exists), `issue` (a real gap that will cause rework or a wrong assumption), or `nit` (minor and survivable). Tether every finding to concrete downstream impact.
 
-5. **Report.** A clean review returns a concise fidelity judgment in chat and writes no file. A review with findings emits exactly one bundle (`## Recording findings`) and reports its path. No preamble, no closing remark.
+5. **Report.** A clean review returns a concise fidelity judgment in chat and writes no file, ending `Outcome: DONE — <the fidelity judgment>`. A review with findings emits exactly one bundle (`## Recording findings`), reports its path, and ends `Outcome: DONE — findings at <bundle path>`. No preamble, no closing remark.
 
 ## What you judge
 

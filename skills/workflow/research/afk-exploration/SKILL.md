@@ -129,6 +129,8 @@ Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
 Send a message to the user (under 10 lines): the run folder path, the list of angles explored (flag prototype angles inline, e.g. `02 oauth-flow [prototype]`), a one-line note that each angle has pre-mortem / red-team / Socratic passes plus a per-angle synthesis, a pointer to `NN-<angle>/synthesis.md` as the entry point per angle (the four source files in the same folder remain for drill-down; prototype angles also have `prototype-pointer.md` recording the temp-directory location while it still exists in `/tmp`), a pointer to `00-brief.md` for the assumptions and any missing pieces, and a pointer to `workflow-notes.md` for the orchestrator's decision log. No whole-run synthesis — the per-angle notes are the deliverable.
 
+End with exactly one terminal line: `Outcome: DONE — Exploration written: <run-folder path>`.
+
 ## Choosing research angles
 
 The catalog below is a starting point, not a checklist. Pick the angles that earn their slot for *this* request — choose from the catalog, invent fresh angles the catalog doesn't list, or mix both. Never run an angle just because it appears here, and never feel limited to what's listed when the request calls for something else.

@@ -79,13 +79,13 @@ If you reference a timestamp anywhere (e.g. in the ticket body), use the 12-char
 
 ## Workflow
 
-1. **Preflight the tracker FIRST.** Determine which single tracker owns work-item status. Verify its CLI/API is installed and authenticated (or its token/credentials are present and valid). If the tracker is unclear, ask the user. If the prerequisite is missing, STOP and fail the whole instruction with a clear warning naming what is missing and how to provide it — do not begin creating the ticket.
+1. **Preflight the tracker FIRST.** Determine which single tracker owns work-item status. Verify its CLI/API is installed and authenticated (or its token/credentials are present and valid). If the tracker is unclear, ask the user. If the prerequisite is missing, STOP and fail the whole instruction with a clear warning naming what is missing and how to provide it — do not begin creating the ticket. End with exactly one terminal line: `Outcome: REFUSED — <what is missing>`.
 
 2. **Draft the ticket from the idea.** Compose a concise title and a short body/description capturing the user's brand-new idea. Do not invent scope or decisions the user did not state.
 
 3. **Create the ticket — once — in the single owning tracker.** Use the tracker's CLI/API to create exactly one ticket. Do not duplicate it into any second tracker. Do not poll, re-sync, or write status back; creation is the whole job.
 
-4. **Surface the result.** Return the created ticket's URL/identifier to the user plainly, noting that it can seed a thread's `External:` line. No preamble, no closing remark.
+4. **Surface the result.** Return the created ticket's URL/identifier to the user plainly, noting that it can seed a thread's `External:` line. No preamble, no closing remark. End with exactly one terminal line: `Outcome: DONE — Ticket created: <URL/identifier>`.
 
 ## Commit Policy
 

@@ -15,9 +15,9 @@ The one question you answer throughout: **is this specification a lossless, addi
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority.** Read the thread's `decisions.md` (what has been settled), `seed.md` (why the thread exists), and the relevant upstream artifacts the spec was built from (for example `proposal.md`), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the spec is measured against. Then read the thread-root `spec.md`, your one editable target. If no `spec.md` exists at the thread root, tell the user there is nothing to reconcile and stop.
+2. **Load the authority.** Read the thread's `decisions.md` (what has been settled), `seed.md` (why the thread exists), and the relevant upstream artifacts the spec was built from (for example `proposal.md`), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the spec is measured against. Then read the thread-root `spec.md`, your one editable target. If no `spec.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no spec.md to reconcile`.
 
 3. **Inventory the decisions the spec should carry.** Walk the authoritative inputs and list every decision the spec is obligated to express. Then read the spec against that inventory once, end to end, and locate three kinds of discrepancy:
    - **Omissions** — a governing decision the inventory holds that the spec fails to express.
@@ -30,7 +30,7 @@ The one question you answer throughout: **is this specification a lossless, addi
 
 6. **Queue irreducible intent.** Where resolving a discrepancy would require a NEW human decision — the authority does not settle it, and inventing an answer would smuggle in intent the user never made — do not edit the spec to paper over it. Hand the open decision(s) to `/emit-pending-decisions` (see `## Queueing decisions`), and never guess. A genuinely unresolved risk or ambiguity in the spec is itself such a decision, never a silent edit.
 
-7. **Confirm.** Report concisely in chat what you checked, what you corrected, and whether any decisions were queued and where. If the spec already expressed its governing decisions losslessly and added nothing, say so — a clean pass writes no file. No preamble, no closing remark.
+7. **Confirm.** Report concisely in chat what you checked, what you corrected, and whether any decisions were queued and where. If the spec already expressed its governing decisions losslessly and added nothing, say so — a clean pass writes no file. No preamble, no closing remark. End with the standard terminal line: `Outcome: BLOCKED — pending decisions at <bundle path>` when a decision was queued per `## Queueing decisions`, otherwise `Outcome: DONE — <one-line summary of what was reconciled>`.
 
 ## Authority boundary
 
@@ -38,7 +38,7 @@ The spec is the only artifact you may edit. Never edit `decisions.md`, `seed.md`
 
 ## Queueing decisions
 
-Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-spec` as the producer, `spec.md` as the target, the discrepancy and the inputs you weighed as evidence, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the spec again). One invocation queues one bundle; the primitive writes the file and reports its path.
+Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-spec` as the producer, `spec.md` as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the spec again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 ## Nothing else is produced
 

@@ -13,9 +13,9 @@ Make the thread-root `proposal.md` faithfully reflect the decisions that govern 
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority.** Read the thread's `seed.md` (why the thread exists) and `decisions.md` (what has been settled), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the proposal is measured against. Then read the thread-root `proposal.md`, your one editable target. If no `proposal.md` exists at the thread root, tell the user there is nothing to reconcile and stop.
+2. **Load the authority.** Read the thread's `seed.md` (why the thread exists) and `decisions.md` (what has been settled), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the proposal is measured against. Then read the thread-root `proposal.md`, your one editable target. If no `proposal.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no proposal.md to reconcile`.
 
 3. **Find the discrepancies.** Read the proposal against the authority once, end to end, and identify where they disagree:
    - **Omissions** — a settled decision the proposal should reflect but does not.
@@ -28,7 +28,7 @@ Make the thread-root `proposal.md` faithfully reflect the decisions that govern 
 
 6. **Queue irreducible intent.** Where resolving a discrepancy would require a NEW human decision — the authority does not settle it, and inventing an answer would smuggle in intent the user never made — do not edit the proposal to paper over it. Hand the open decision(s) to `/emit-pending-decisions` (see `## Queueing decisions`). A genuinely unresolved risk or ambiguity in the proposal is itself such a decision, never a silent edit.
 
-7. **Confirm.** Report concisely in chat what you checked, what you corrected, and whether any decisions were queued and where. If the proposal already agreed with the authority, say so — a clean pass writes no file. No preamble, no closing remark.
+7. **Confirm.** Report concisely in chat what you checked, what you corrected, and whether any decisions were queued and where. If the proposal already agreed with the authority, say so — a clean pass writes no file. No preamble, no closing remark. End with the standard terminal line: `Outcome: BLOCKED — pending decisions at <bundle path>` when a decision was queued per `## Queueing decisions`, otherwise `Outcome: DONE — <one-line summary of what was reconciled>`.
 
 ## Authority boundary
 
@@ -36,7 +36,7 @@ The proposal is the only artifact you may edit. Never edit `decisions.md` or `se
 
 ## Queueing decisions
 
-Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-proposal` as the producer, `proposal.md` as the target, the discrepancy and the inputs you weighed as evidence, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the proposal again). One invocation queues one bundle; the primitive writes the file and reports its path.
+Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-proposal` as the producer, `proposal.md` as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the proposal again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 ## Nothing else is produced
 

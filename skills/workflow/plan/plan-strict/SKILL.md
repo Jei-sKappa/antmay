@@ -9,7 +9,7 @@ metadata:
 
 # Plan Strict
 
-Forward-design a strict-granularity plan for the active thread from a single upstream input. Read the input, draft an index plus one dispatchable brief per task — each brief carrying explicit substeps, files modified, verification, and acceptance criteria — self-review before emission, write the index `plan.md` at the thread root and the task briefs under `plan-tasks/`, then confirm the path. By default, run end-to-end without walking the user task-by-task, but honor an invocation that asks you to check in or work through the plan interactively. Writing the files is where you stop — do not stage, commit, or push.
+Forward-design a strict-granularity plan for the active thread from a single upstream input. Read the input, draft an index plus one dispatchable brief per task — each brief carrying explicit substeps, files modified, verification, and acceptance criteria — self-review before emission, write the index `plan.md` at the thread root and the task briefs under `plan-tasks/`, then confirm the path. Run end-to-end without walking the user task-by-task. Writing the files is where you stop — do not stage, commit, or push.
 
 The spec plus its acceptance criteria are the contract a reviewer and the implementation are judged against; the plan is downstream scaffolding compiled from that contract. This is why an implementer or reviewer works from the plan while the human normally reads only the spec and the delivered work: when the spec carries machine-checkable acceptance criteria and a Degrees-of-freedom section, this skill can produce a prescriptive plan a downstream adherence review can clear without the human reading it.
 
@@ -25,7 +25,7 @@ Accept ONE of the following input forms. Detect which form was passed before dra
 
 The emitted plan must be self-contained: a fresh implementer with only the plan and the thread's durable inputs can execute it, with no dependency on the originating chat.
 
-If the input is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — ASK the user which is intended. Do not silently pick by recency.
+If the input is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — this is a clarification inside a resolved thread, not a free choice: route it per `## Blocked` as a pending-decisions bundle rather than silently picking by recency.
 
 ## Plan Artifact Contract
 
@@ -96,57 +96,6 @@ The index and task files use freeform markdown. Use section headings that help t
 - **Edited in place.** When the plan needs to change (a self-review fix, an adherence-review auto-fix, a refinement during implementation), edit the affected files — the index `plan.md`, any `plan-tasks/NN-<slug>.md` brief, or both — directly. Git holds the evolution; there are no per-revision files.
 - **No parallelization**, index and task files alike — the sequential contract of `## No Parallelization` binds every file.
 
-### Worked Example
-
-A complete task file, then a short index excerpt. Note: only sequential numbered tasks — no wave numbers, no `depends_on` array, no bracketed wave prefixes, no fork/join syntax anywhere.
-
-A task file `plan-tasks/01-add-jwt-helper.md`:
-
-```markdown
-### Task 1: Add JWT verification helper
-
-**Objective:** Provide a reusable verification function that the auth middleware will call.
-
-**Input / context:** Settled decision per `decisions.md D2` — use the `jose` library, not `jsonwebtoken`.
-
-**Steps:**
-1. Add `jose` to `package.json` dependencies and run install.
-2. Create `src/lib/jwt.ts` exporting `verifyToken(token: string): Promise<UserClaims | null>`.
-3. Implement: import `jwtVerify` from `jose`, read `JWT_SECRET` from env, return the verified payload typed as `UserClaims`, return `null` on any failure.
-4. Add unit tests at `src/lib/jwt.test.ts` covering a valid token, an expired token, a malformed token.
-
-**Files modified:** `package.json`, `src/lib/jwt.ts` (NEW), `src/lib/jwt.test.ts` (NEW)
-
-**Verification:** `npm test src/lib/jwt.test.ts` exits 0; `grep -q "jose" package.json` returns success.
-
-**Acceptance criteria:**
-- `verifyToken` exported from `src/lib/jwt.ts` with the signature above.
-- Three unit tests pass: valid token, expired token, malformed token.
-- `package.json` declares `jose` as a runtime dependency.
-
-**Consumes:** none
-
-**Produces:** `verifyToken(token: string): Promise<UserClaims | null>` exported from `src/lib/jwt.ts`.
-```
-
-The matching index excerpt in `plan.md`:
-
-```markdown
-Source: spec.md
-
-## Global Constraints
-
-- Use the `jose` library for all JWT work; `jsonwebtoken` is banned.
-- All new code ships with unit tests.
-
-## Tasks
-
-1. **Add JWT verification helper** — provide the reusable `verifyToken` the middleware will call. → `plan-tasks/01-add-jwt-helper.md`
-2. **Wire the auth middleware** — call `verifyToken` on every protected route. → `plan-tasks/02-wire-auth-middleware.md`
-```
-
-That is what a strict plan looks like: an index carrying the `Source:` line, the verbatim Global Constraints block, and the ordered task list; and one task file per task with eight labeled elements — prescriptive substeps, mechanical verification, observable acceptance, and the `Consumes:`/`Produces:` hand-off. An agent-leaning implementer handed a single task file can execute it without inferring anything beyond what is written. The absence of any wave number, `depends_on` array, or fork/join construct is observable throughout — the plan is sequential.
-
 ## Self-Review
 
 Before writing the plan to disk, run the following four-check self-review pass in-session. The emitted plan does NOT contain a "self-review notes" section — the artifact stays clean. Self-review is a quality discipline, not output.
@@ -167,37 +116,19 @@ If a `plan.md` already exists at the thread root, determine its shape before wri
 
 ## Workflow
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp. If no thread exists yet, tell the user a thread must be opened before a plan can be written, and stop.
-2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, ASK which is intended; do not pick by recency.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a plan can be written), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
+2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, route the clarification per `## Blocked` rather than picking by recency.
 3. **Check for an existing plan.** If a `plan.md` already exists at the thread root, apply `## Replacing an existing plan` before writing anything.
-4. **Draft the index and task files.** Compose the plan per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `plan-tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields plus the `Consumes:`/`Produces:` hand-off lines. Cite settled decisions as `decisions.md D<N>` in the relevant task's input/context field. No parallelization markers and no frontmatter anywhere.
+4. **Draft the index and task files.** Compose the plan per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `plan-tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields plus the `Consumes:`/`Produces:` hand-off lines. Before writing the first task file, look at `references/worked-example.md` for the complete shape of a task file and the matching index excerpt. Cite settled decisions as `decisions.md D<N>` in the relevant task's input/context field. No parallelization markers and no frontmatter anywhere.
 5. **Run self-review.** Execute the four checks from `## Self-Review` across the whole drafted plan (index + task files) until all four pass. The emitted files do not contain self-review notes.
 6. **Write the plan.** Write `docs/threads/<thread>/plan.md` (the index) and the `plan-tasks/NN-<kebab-slug>.md` files together in one pass. The index is named exactly `plan.md` at the thread root; each task file is `NN-<kebab-slug>.md` under `plan-tasks/` — no UTC stamp, no `v<N>`, and no YAML frontmatter anywhere. The `plan-tasks/` folder is created on demand on the first task file written; do not pre-create it empty. Within-thread references in the body are thread-relative (`plan.md`, `plan-tasks/01-…md`, `spec.md`, `decisions.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`).
-7. **Confirm.** Tell the user exactly: `Plan written: plan.md`. Nothing else — no preamble, no summary, no closing remark.
+7. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Plan written: plan.md`.
 
-## Recording elicited decisions
+## Blocked
 
-If drafting the plan requires asking the user a question that settles product or workflow intent — a direction the plan will then depend on — append the answer to the thread-root `decisions.md` as a `D<N>` record **before** the plan relies on it. Trivial clarifications about the input (what a phrase meant, which file was intended) settle nothing and need no record.
+This path applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/plan-strict` as the producer, `plan.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
-Number records sequentially across the thread: scan `decisions.md` for the highest existing `D<N>` and use the next integer. Write each record self-contained so a fresh agent understands it without the chat:
-
-```markdown
-## D<N>: <Title>
-
-Scope: <optional — omit when the whole thread is the scope; otherwise name the stage or thread-relative artifact the decision applies to>
-
-Context: <one short paragraph stating the question and the surrounding facts, written from the thread's perspective — never "as you said" or "the user chose">
-
-Decision: <the complete substantive resolution, written out in full>
-
-Rationale: <why this resolution and its principal trade-off>
-```
-
-Records are append-only: never rewrite or delete one. When a settled decision later changes, append a new record naming the one it supersedes.
-
-## Blocked under an AFK invocation
-
-When the invocation is explicitly AFK (no human is available to answer) and a human decision is genuinely indispensable to write a sound plan — one you cannot settle yourself from the durable inputs — do not invent the intent and do not stall waiting in chat. Hand the open decision to `/emit-pending-decisions`, giving it `/plan-strict` as the producer, `plan.md` as the target, the context you gathered as evidence, the open decision(s), and a suggested follow-up (settle the decision, then resume the plan). Then stop and report concisely that the run is blocked on a queued decision and where the bundle was written.
+A blocked run still writes the plan — the index and every task file — as complete as the settled inputs allow, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.
 
 ## Commit Policy
 

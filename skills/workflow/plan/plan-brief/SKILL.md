@@ -23,7 +23,7 @@ Draft the plan from the thread's durable inputs plus whatever the invocation poi
 
 The emitted `plan.md` must be self-contained: a fresh reader with only the plan and the thread's durable inputs can execute it. It must not depend on the originating chat.
 
-If which input is meant is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — ask the user which is intended. Do not silently pick by recency.
+If which input is meant is ambiguous — a reference names "the spec" or "the decisions" with no clear referent, or several artifacts could be intended — this is a clarification inside a resolved thread, not a free choice: route it per `## Blocked` as a pending-decisions bundle rather than silently picking by recency.
 
 ## Plan shape
 
@@ -60,40 +60,22 @@ Source: <thread-relative source>
 
 ## When to recommend plan-strict
 
-When safe planning requires detailed substeps, per-task verification, explicit file ownership, or acceptance criteria, do not stretch the brief plan to carry them. Tell the user that the work warrants `plan-strict` and stop, rather than emitting an over-inflated brief plan.
+When safe planning requires detailed substeps, per-task verification, explicit file ownership, or acceptance criteria, do not stretch the brief plan to carry them. Tell the user that the work warrants `plan-strict`, write nothing, and end with `Outcome: REFUSED — work warrants plan-strict; no brief plan written`, rather than emitting an over-inflated brief plan.
 
 ## Reverse-transition guard
 
-If `plan-tasks/` already exists alongside `plan.md`, a fuller plan is in force. Do NOT silently downgrade it or delete those tasks. Require an explicit instruction from the user to replace the fuller plan with a brief one. Only after that explicit instruction: write the brief `plan.md` and remove the now-obsolete `plan-tasks/`.
+If `plan-tasks/` already exists alongside `plan.md`, a fuller plan is in force. Do NOT silently downgrade it or delete those tasks. Require an explicit instruction from the user to replace the fuller plan with a brief one; without that explicit instruction, write nothing and end with `Outcome: REFUSED — a fuller plan is in force; an explicit instruction is required to replace it`. Only after that explicit instruction: write the brief `plan.md` and remove the now-obsolete `plan-tasks/`.
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ask — never silently pick the most recent stamp. If no thread exists yet, tell the user a thread must be opened before a plan can be written, and stop.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a plan can be written), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 2. **Load context.** Read `seed.md` and `decisions.md`, and whatever code or issue reference the invocation points you at. If `plan-tasks/` already exists, apply the reverse-transition guard above before writing anything.
 3. **Draft the body.** Compose the plan per `## Plan shape`: a title, `Source`, `## Outcome`, a small ordered `## Steps` list, `## Verification`, and `## Notes` only when needed. Keep it to roughly one screen. If the work warrants more rigor, recommend `plan-strict` instead.
 4. **Write the artifact.** Write the single file `docs/threads/<thread>/plan.md` — literally that name at the thread root, no frontmatter. If a brief `plan.md` already exists, revise it in place. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `spec.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`).
-5. **Confirm.** Tell the user exactly: `Plan written: plan.md`. Nothing else — no preamble, no summary, no closing remark.
+5. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Plan written: plan.md`.
 
-## Recording elicited decisions
+## Blocked
 
-If drafting the plan requires asking the user a question that settles product or workflow intent — a direction the plan will then depend on — append the answer to the thread-root `decisions.md` as a `D<N>` record **before** the plan relies on it. Trivial clarifications about the input (what a phrase meant, which file was intended) settle nothing and need no record.
+This path applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the durable inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it `/plan-brief` as the producer, `plan.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
-Number records sequentially across the thread: scan `decisions.md` for the highest existing `D<N>` and use the next integer. Write each record self-contained so a fresh agent understands it without the chat:
-
-```markdown
-## D<N>: <Title>
-
-Scope: <optional — omit when the whole thread is the scope; otherwise name the stage or thread-relative artifact the decision applies to>
-
-Context: <one short paragraph stating the question and the surrounding facts, written from the thread's perspective — never "as you said" or "the user chose">
-
-Decision: <the complete substantive resolution, written out in full>
-
-Rationale: <why this resolution and its principal trade-off>
-```
-
-Records are append-only: never rewrite or delete one. When a settled decision later changes, append a new record naming the one it supersedes.
-
-## Blocked under an AFK invocation
-
-When the invocation is explicitly AFK (no human is available to answer) and a human decision is genuinely indispensable to write a sound plan — one you cannot settle yourself from the durable inputs — do not invent the intent and do not stall waiting in chat. Hand the open decision to `/emit-pending-decisions`, giving it `/plan-brief` as the producer, `plan.md` as the target, the context you gathered as evidence, the open decision(s), and a suggested follow-up (settle the decision, then resume the plan). Then stop and report concisely that the run is blocked on a queued decision and where the bundle was written.
+A blocked run still writes `plan.md` as complete as the settled inputs allow — every derivable step and the overall verification in place, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.

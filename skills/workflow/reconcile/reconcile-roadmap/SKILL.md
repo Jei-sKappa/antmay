@@ -15,9 +15,9 @@ The question you answer throughout: **does this roadmap, and the way it divides 
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority.** Read the thread's `decisions.md` (what has been settled), `seed.md` (why the thread exists and its intended outcome), and `proposal.md` when present (the sketched direction the roadmap refines). These are your authoritative inputs — the standard the roadmap is measured against. Then read the thread-root `roadmap.md`, your one editable target. If no `roadmap.md` exists at the thread root, tell the user there is nothing to reconcile and stop.
+2. **Load the authority.** Read the thread's `decisions.md` (what has been settled), `seed.md` (why the thread exists and its intended outcome), and `proposal.md` when present (the sketched direction the roadmap refines). These are your authoritative inputs — the standard the roadmap is measured against. Then read the thread-root `roadmap.md`, your one editable target. If no `roadmap.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no roadmap.md to reconcile`.
 
 3. **Inventory what the roadmap must reflect.** Walk the authoritative inputs and list every decision the roadmap and its briefs are obligated to express — the intended outcome, the settled direction, the scope boundaries, the shared constraints. Then read the roadmap against that inventory once, end to end.
 
@@ -33,7 +33,7 @@ The question you answer throughout: **does this roadmap, and the way it divides 
 
 6. **Queue irreducible intent.** A decomposition change that would alter human intent — splitting or merging children, adding or dropping a child, changing an outcome or boundary the user settled — is not yours to make silently. Where the authority does not settle how the initiative should divide, inventing the answer would smuggle in intent the user never made. Hand the open decision(s) to `/emit-pending-decisions` (see `## Queueing decisions`), and never guess. A genuinely unresolved question about how the work divides is itself such a decision, never a silent edit.
 
-7. **Confirm.** Report concisely in chat what you checked, what you corrected, and whether any decisions were queued and where. If the roadmap already followed its governing decisions and every brief was complete, say so — a clean pass writes no file. No preamble, no closing remark.
+7. **Confirm.** Report concisely in chat what you checked, what you corrected, and whether any decisions were queued and where. If the roadmap already followed its governing decisions and every brief was complete, say so — a clean pass writes no file. No preamble, no closing remark. End with the standard terminal line: `Outcome: BLOCKED — pending decisions at <bundle path>` when a decision was queued per `## Queueing decisions`, otherwise `Outcome: DONE — <one-line summary of what was reconciled>`.
 
 ## Authority boundary
 
@@ -43,7 +43,7 @@ You do not open, seed, or otherwise materialize the child threads the briefs des
 
 ## Queueing decisions
 
-Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-roadmap` as the producer, `roadmap.md` as the target, the discrepancy and the inputs you weighed as evidence, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the roadmap again). One invocation queues one bundle; the primitive writes the file and reports its path.
+Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-roadmap` as the producer, `roadmap.md` as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the roadmap again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 ## Nothing else is produced
 

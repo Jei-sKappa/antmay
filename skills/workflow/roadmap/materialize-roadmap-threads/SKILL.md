@@ -13,7 +13,7 @@ Read a parent thread's `roadmap.md` child briefs and open the child threads they
 
 ## Inputs
 
-Work inside one parent thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` that contains a `roadmap.md`. If `cwd` already sits inside such a thread, that is the parent; if several exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+Work inside one parent thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` that contains a `roadmap.md`. If `cwd` already sits inside such a thread, that is the parent. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no such thread exists, or several exist and which is active is ambiguous (never silently pick the most recent stamp). If the resolved thread has no `roadmap.md`, there is nothing to materialize: end with `Outcome: REFUSED — no roadmap.md to materialize`.
 
 Read the parent's `roadmap.md` and locate its `### C<N>:` child briefs. Each brief carries a title, `Outcome`, `Context`, `Scope and boundaries`, `Dependencies`, `Relevant shared constraints`, and a `Suggested workflow`, and may carry a `Materialized thread:` line.
 
@@ -45,18 +45,13 @@ Adding this line is the only edit this operation ever makes to `roadmap.md`. It 
 
 ## Missing or unusable suggested workflow
 
-A brief whose `Suggested workflow` is absent or unusable cannot be materialized as written.
-
-- **Interactively**, ask the user for the workflow text to use for that child, then proceed.
-- **Under an explicit AFK invocation**, do not invent a workflow: record the unresolved brief, skip it, continue with the remaining briefs, and include every skipped brief in the final report.
+A brief whose `Suggested workflow` is absent or unusable cannot be materialized as written. Do not ask the user in chat and do not invent a workflow — behavior is identical however the skill is invoked: record the unresolved brief, skip it, continue with the remaining briefs, and include every skipped brief in the final report.
 
 Never substitute a default workflow, infer one from the child's subject, or resolve a bare name against a workflow template.
 
-## Recording decisions and blocking
+## Blocked
 
-Any genuine human decision you obtain while materializing — an answer that settles product or workflow intent — is appended to the parent thread's `decisions.md` as a normal Decision Record **before** you rely on it. Trivial input clarifications (which brief, which name was meant) need no record.
-
-Under an explicit AFK invocation, do not invent intent to fill a gap. When materialization is blocked on a decision only a human can settle, hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/materialize-roadmap-threads` as the producer, `roadmap.md` as the target, the evidence you weighed, the open decision(s), and a suggested follow-up (settle the decisions, then materialize again) — and continue with any briefs that are not blocked.
+When materializing is blocked on a genuine human decision only a person can settle — an answer that settles product or workflow intent — do not invent the intent and do not stall waiting in chat. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/materialize-roadmap-threads` as the producer, `roadmap.md` as the target, the evidence you weighed, the originating user request, the open decision(s), and a suggested follow-up (settle the decisions, then materialize again). Because this operation is an idempotent loop, continue with any briefs that are not blocked; a later run finishes the ones that were. Trivial input clarifications (which brief, which name was meant) settle nothing and need no bundle.
 
 ## Boundaries
 
@@ -67,4 +62,4 @@ Under an explicit AFK invocation, do not invent intent to fill a gap. When mater
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After the loop, report concisely which children you created (with their thread paths), which briefs you skipped and why (already materialized, dangling reference, or unresolved workflow), and any pending-decision bundle you emitted. No preamble, no closing remark.
+This is a completion-oriented operation, not a dialogue. After the loop, report concisely which children you created (with their thread paths), which briefs you skipped and why (already materialized, dangling reference, or unresolved workflow), and any pending-decision bundle you emitted. End with the standard terminal line: `Outcome: BLOCKED — pending decisions at <bundle path>` when you emitted a bundle for a blocked brief, otherwise `Outcome: DONE — <children created and briefs skipped summary>`. No preamble, no closing remark.

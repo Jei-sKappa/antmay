@@ -253,6 +253,8 @@ A short message to the user, under 10 lines:
 - One sentence reminding the user that Open Questions is the next thing to triage with PMs/backend engineers, and that visual flows / screenshots must be attached by a human (the skill cannot produce them from code).
 - Skill version that produced this run.
 
+End the message with exactly one terminal line: `Outcome: DONE — Snapshot written: <output_path>`.
+
 ## Subagent briefs
 
 The orchestrator never inherits a subagent's session and never loads a subagent's notes back into its own context (it reads the notes from disk in Step 4).

@@ -19,9 +19,9 @@ The plan is a multi-file artifact: the index `plan.md` at the thread root plus o
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority and the target.** Read the thread-root `spec.md` (the contract the plan must satisfy) and `decisions.md` (the settled decisions), plus any artifact the invocation explicitly points you at. Then read the plan end to end — the index first, then each brief in index order — your one editable target. Also resolve and read the artifact named by the index's `Source:` line; you need it to check the Global Constraints block. If no plan exists at the thread root, tell the user there is nothing to reconcile and stop.
+2. **Load the authority and the target.** Read the thread-root `spec.md` (the contract the plan must satisfy) and `decisions.md` (the settled decisions), plus any artifact the invocation explicitly points you at. Then read the plan end to end — the index first, then each brief in index order — your one editable target. Also resolve and read the artifact named by the index's `Source:` line; you need it to check the Global Constraints block. If no plan exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no plan to reconcile`.
 
 3. **Check adherence.** Run the check in `## The adherence check` to locate every discrepancy between the plan and its authority, and to decide, for each, whether the fault lies in the plan or in the source.
 
@@ -31,7 +31,7 @@ The plan is a multi-file artifact: the index `plan.md` at the thread root plus o
 
 6. **Queue irreducible intent.** Where resolving a discrepancy would require a NEW human decision — the spec does not settle the point, and inventing an answer would smuggle in intent the user never made — do not edit the plan to paper over it. Hand the open decision(s) to `/emit-pending-decisions` (see `## Queueing decisions`), and never guess.
 
-7. **Confirm.** Report concisely in chat what you checked, what you repaired, and whether any decisions were queued and where. If the plan already satisfied the spec, say so — a clean pass writes no file. No preamble, no closing remark.
+7. **Confirm.** Report concisely in chat what you checked, what you repaired, and whether any decisions were queued and where. If the plan already satisfied the spec, say so — a clean pass writes no file. No preamble, no closing remark. End with the standard terminal line: `Outcome: BLOCKED — pending decisions at <bundle path>` when a decision was queued per `## Queueing decisions`, otherwise `Outcome: DONE — <one-line summary of what was reconciled>`.
 
 ## The adherence check
 
@@ -62,7 +62,7 @@ The plan is the only artifact you may edit. Never edit `spec.md` or `decisions.m
 
 ## Queueing decisions
 
-Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-plan` as the producer, the plan as the target, the discrepancy and the inputs you weighed as evidence, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the plan again). One invocation queues one bundle; the primitive writes the file and reports its path.
+Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-plan` as the producer, the plan as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the plan again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 ## Nothing else is produced
 

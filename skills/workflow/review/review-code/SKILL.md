@@ -25,15 +25,15 @@ Quality does not require intent to exist, but where a finding turns on what the 
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Resolve the code read-only.** The reviewed target is the code the user names — a git ref (commit SHA, branch, tag), a commit range, a saved or inline diff, or a file or directory path. If the reference is unsupplied, vague ("my changes", "the branch" with no name), or matches multiple plausible candidates, ASK which is intended; never pick by recency or sort order. Read the diff or the files, but do not check out a branch, run tests, modify the working tree, or mutate any git state.
+2. **Resolve the code read-only.** The reviewed target is the code the user names — a git ref (commit SHA, branch, tag), a commit range, a saved or inline diff, or a file or directory path. If the reference is unsupplied, vague ("my changes", "the branch" with no name), or matches multiple plausible candidates, the review has no resolvable target: say so, write nothing, and end with `Outcome: REFUSED — <the ambiguity>`; never pick by recency or sort order. Read the diff or the files, but do not check out a branch, run tests, modify the working tree, or mutate any git state.
 
 3. **Resolve the anchor and any focus areas.** Resolve the authority anchor (`## The authority anchor`) and read it and `decisions.md` read-only, to anchor intent-dependent findings. Record any focus areas the user named ("look for race conditions in the caching layer", "check error handling in the auth endpoints") for emphasis. Do not block on a missing anchor or missing focus.
 
 4. **Walk the code once, then judge.** Read every file or hunk end to end and build a picture of what the code does and what the surrounding code expects before tagging findings — a premature finding from a partial read is a worse signal than a slower review. Then judge against each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where it shows, why it matters for whoever maintains the code next, and a severity — `blocker` (the code is unsafe or broken enough that it should not land as-is), `issue` (a real weakness that will cause bugs or maintenance pain), or `nit` (minor and survivable). Tether every finding to concrete downstream impact.
 
-5. **Report.** A clean review returns a concise quality judgment in chat and writes no file. A review with findings emits exactly one bundle (`## Recording findings`) and reports its path. No preamble, no closing remark.
+5. **Report.** A clean review returns a concise quality judgment in chat and writes no file, ending `Outcome: DONE — <the quality judgment>`. A review with findings emits exactly one bundle (`## Recording findings`), reports its path, and ends `Outcome: DONE — findings at <bundle path>`. No preamble, no closing remark.
 
 ## What you judge
 

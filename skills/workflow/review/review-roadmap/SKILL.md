@@ -15,15 +15,15 @@ This is a handoff-quality review: whether the decomposition, briefs, and depende
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Read the roadmap read-only.** The target is the thread-root `roadmap.md`. Read it end to end at least once, as the agent who will materialize and execute each child with no memory of the conversation that produced it. If no `roadmap.md` exists at the thread root, tell the user there is nothing to review and stop. You do not edit it, rewrite it, or propose edits into it — your output is a judgment, never a changed roadmap.
+2. **Read the roadmap read-only.** The target is the thread-root `roadmap.md`. Read it end to end at least once, as the agent who will materialize and execute each child with no memory of the conversation that produced it. If no `roadmap.md` exists at the thread root, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no roadmap.md to review`. You do not edit it, rewrite it, or propose edits into it — your output is a judgment, never a changed roadmap.
 
 3. **Judge against the readiness axes.** Assess the roadmap on each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where in the roadmap it shows, why it would force whoever opens a child to invent intent or hit a wall, and a severity — `blocker` (a child cannot be opened or run safely as briefed), `issue` (a real gap that will cause rework or a wrong guess), or `nit` (soft or imprecise, but survivable). Tether every finding to that downstream impact: "this brief is thin" is not a finding; "this brief omits its outcome, so whoever opens the child must guess what result it should produce" is.
 
 4. **Decide the outcome.** If the roadmap passes the bar — every child could be opened and run as an independent thread without inventing intent — the review is clean. Otherwise you hold one or more findings to record.
 
-5. **Report.** A clean review returns a concise readiness judgment in chat and writes no file. A review with findings emits exactly one bundle (`## Recording findings`) and reports its path. No preamble, no closing remark.
+5. **Report.** A clean review returns a concise readiness judgment in chat and writes no file, ending `Outcome: DONE — <the readiness judgment>`. A review with findings emits exactly one bundle (`## Recording findings`), reports its path, and ends `Outcome: DONE — findings at <bundle path>`. No preamble, no closing remark.
 
 ## What you judge
 

@@ -15,15 +15,15 @@ This is a quality-of-handoff and planning-readiness review, not a fidelity audit
 
 ## Operation
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Read the spec read-only.** The target is the thread-root `spec.md`. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. If no `spec.md` exists at the thread root, tell the user there is nothing to review and stop. You do not edit it, rewrite it, alter its frontmatter, or propose edits into it — your output is a judgment, never a changed spec.
+2. **Read the spec read-only.** The target is the thread-root `spec.md`. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. If no `spec.md` exists at the thread root, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no spec.md to review`. You do not edit it, rewrite it, alter its frontmatter, or propose edits into it — your output is a judgment, never a changed spec.
 
 3. **Judge against the readiness axes.** Assess the spec on each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where in the spec it shows, why it would leave a downstream agent guessing or blocked, and a severity — `blocker` (planning cannot proceed safely), `issue` (a real gap that will cause rework or a wrong guess), or `nit` (soft or imprecise, but survivable). Tether every finding to downstream impact: "this is vague" is not a finding; "this is vague, so a planner must guess whether X means A or B" is.
 
 4. **Decide the outcome.** If the spec passes the bar — a downstream agent could plan and implement from it without hidden context — the review is clean. Otherwise you hold one or more findings to record.
 
-5. **Report.** A clean review returns a concise readiness judgment in chat and writes no file. A review with findings emits exactly one bundle (`## Recording findings`) and reports its path. No preamble, no closing remark.
+5. **Report.** A clean review returns a concise readiness judgment in chat and writes no file, ending `Outcome: DONE — <the readiness judgment>`. A review with findings emits exactly one bundle (`## Recording findings`), reports its path, and ends `Outcome: DONE — findings at <bundle path>`. No preamble, no closing remark.
 
 ## What you judge
 

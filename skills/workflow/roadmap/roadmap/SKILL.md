@@ -15,7 +15,7 @@ The roadmap is a thinking and handoff artifact, not a project tracker. It carrie
 
 ## Inputs
 
-Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread; if several exist and which is active is ambiguous, ASK — never silently pick the most recent stamp.
+Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
 Read the thread's authoritative inputs and let them drive the decomposition:
 
@@ -123,12 +123,10 @@ You write only the header. Records accrue later, appended by descendants for dis
 - **No tracking machinery.** The roadmap and its briefs carry no checkboxes, status fields, progress percentages, owners, completion markers, or approval state. You do not become a long-lived coordinator that watches children after authoring.
 - **No cycles.** A child may itself warrant further decomposition and may follow the Roadmap workflow when that is genuinely required, but a child is never made to point back at an ancestor — parent–child cycles are not meaningful and must not be created.
 
-## Recording decisions and blocking
+## Blocked
 
-Any genuine human decision you obtain while authoring — an answer that settles product or workflow intent, such as where a scope boundary falls or how the work should divide — is appended to the thread's `decisions.md` as a normal Decision Record **before** you rely on it in the roadmap. Trivial input clarifications (which file, which name was meant) need no record.
-
-Under an explicit AFK invocation, do not invent intent to fill a gap. When authoring is blocked on a decision only a human can settle, hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/roadmap` as the producer, `roadmap.md` as the target, the evidence you weighed, the open decision(s), and a suggested follow-up (settle the decisions, then author the roadmap again) — and stop rather than guessing.
+This path applies whenever a human decision is genuinely indispensable to a sound decomposition — an answer that settles product or workflow intent, such as where a scope boundary falls or how the work should divide, that you cannot settle yourself from the authoritative inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions` as one bundle — giving it `/roadmap` as the producer, `roadmap.md` as the target, the evidence you weighed, the originating user request, the open decision(s), and a suggested follow-up (settle the decisions, then author the roadmap again). Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`. Trivial input clarifications (which file, which name was meant) settle nothing and need no bundle.
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After writing the two artifacts, report concisely what you decomposed and the paths you wrote. No preamble, no closing remark.
+This is a completion-oriented operation, not a dialogue. After writing the two artifacts, report concisely what you decomposed and the paths you wrote, ending with `Outcome: DONE — Roadmap written: roadmap.md, roadmap-feedback.md`. No preamble, no closing remark.
