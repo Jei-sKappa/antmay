@@ -162,9 +162,11 @@ Repo-wide changes (touching multiple skills, `README.md`, `.claude-plugin/`, `AG
 
 ## V3 Workflow Conventions
 
-This repo is the home of the Modular Agentic Workflow V3 — the **active ruleset for all newly opened threads**. The canonical reference for V3 workflow rules — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/project/v3/README.md`, which links the companion documents `thread-model.md`, `skill-authoring.md`, and the three workflow docs under `docs/project/v3/workflows/`. Read it before opening a thread or writing/editing any workflow artifact under `docs/threads/<thread>/`.
+This repo is the home of the Modular Agentic Workflow V3, which is currently under active repair. **Temporary owner rule:** until the owner explicitly confirms that V3 is fully fixed, newly opened threads and their workflow artifacts use the V2 skills and conventions. Do not use the in-repo V3 workflow skills to operate those new threads during this interval.
 
-V1 (`docs/workflow/v1/`) and V2 (`docs/workflow/v2/`) remain the grandfathered references for their own pre-V3 threads only — never edited, never migrated, never mixed with V3 (see the sections below).
+The canonical reference for the V3 target ruleset — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/project/v3/README.md`, which links the companion documents `thread-model.md`, `skill-authoring.md`, and the three workflow docs under `docs/project/v3/workflows/`. Read it before editing V3 itself or writing/editing an artifact that belongs to an existing V3 thread.
+
+V1 remains grandfathered for its own threads. V2 is temporarily active for new work under the rule above as well as remaining authoritative for its existing threads. Never migrate or mix workflow versions inside a thread.
 
 This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/project/v3/` for any rule change; this section only changes if the V3 reference doc set itself moves or splits.
 
@@ -172,7 +174,7 @@ This section is a POINTER — it intentionally does NOT duplicate the rules. Edi
 
 This repo was the home of the Modular Agentic Workflow V2. The canonical reference for V2 workflow rules — thread layout, filename grammar, lifecycle and immutability, tiers, the spine, discussions, reviews, and tracker integration — lives at `docs/workflow/v2/README.md`, which links the eight companion rule docs under `docs/workflow/v2/`. Read it before writing or editing any workflow artifact belonging to a V2 thread.
 
-V2 is now grandfathered: it applies to pre-V3 threads only — never edited, never migrated, never mixed with V3. New threads use V3 (see "V3 Workflow Conventions" above).
+V2 is the temporary active ruleset for newly opened threads until the owner explicitly confirms that V3 is fully fixed. It also remains authoritative for pre-V3 V2 threads. Never migrate a thread between versions or mix V2 and V3 artifacts inside one thread.
 
 This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/workflow/v2/` for any rule change; this section only changes if the V2 reference doc set itself moves or splits.
 
