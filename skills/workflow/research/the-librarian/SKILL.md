@@ -1,9 +1,10 @@
 ---
 name: the-librarian
 description: Route local reference-repository work to stock, consult, or research flows when the user wants to clone repos into the library, consult stocked repos, or produce in-depth reports from them.
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.1
+  version: 1.4.2
 ---
 
 # The Librarian

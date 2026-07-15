@@ -47,7 +47,7 @@ Generic "attackers" produce generic findings. Specific personas produce actionab
 | Domain | Key Adversary | Focus |
 |--------|--------------|-------|
 | E-commerce | Fraudster | Payment bypass, coupon abuse, fake returns |
-| SaaS | Free-tier abuser | Rate limit evasion, multi-accounting, resource hoarding |
+| SaaS | Free-plan abuser | Rate limit evasion, multi-accounting, resource hoarding |
 | Marketplace | Bad-faith seller | Fake listings, review manipulation, escrow games |
 | API Platform | Scraper | Rate limit bypass, data harvesting, reverse engineering |
 | Social Platform | Troll/bot farm | Spam, manipulation, fake engagement |

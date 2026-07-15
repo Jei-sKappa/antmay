@@ -1,9 +1,10 @@
 ---
 name: afk-exploration
 description: Start AFK exploration on a topic only when the user explicitly asks for AFK research or exploration.
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.3
+  version: 1.4.4
 ---
 
 # AFK Exploration

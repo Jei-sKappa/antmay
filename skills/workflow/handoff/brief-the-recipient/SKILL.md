@@ -1,9 +1,10 @@
 ---
 name: brief-the-recipient
 description: Draft a self-contained outcome briefing — verdict, rationale, caveats, and pointers — when the user wants the conclusion of the current discussion packaged as a paste-ready handoff for a fresh AI session, a follow-up task, or a teammate (manager, reviewer, future-you, anyone receiving the conclusion).
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.0.0
+  version: 2.0.1
 ---
 
 # Brief the Recipient

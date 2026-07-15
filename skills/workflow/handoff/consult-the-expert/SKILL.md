@@ -1,9 +1,10 @@
 ---
 name: consult-the-expert
 description: Draft a casual, context-rich message to consult a more experienced developer when the user needs help framing a technical problem, decision, or blocker for someone with no prior context.
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.2
+  version: 1.2.3
 ---
 
 # Consult the Expert

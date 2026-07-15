@@ -1,9 +1,10 @@
 ---
 name: report-to-the-owner
 description: Draft a casual, context-rich message to a code owner when the user has hit a blocker in code owned elsewhere and wants to hand off the issue with a proposed change rather than ask for advice.
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.2
+  version: 1.3.3
 ---
 
 # Report to the Owner

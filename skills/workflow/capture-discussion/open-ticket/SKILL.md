@@ -1,9 +1,10 @@
 ---
 name: open-ticket
-description: Create a remote tracker ticket (GitHub Issues, Jira, Linear, ClickUp, …) from a brand-new idea — the only skill in the workflow that writes to the tracker — use when an idea needs a work-item home in the team's tracker before (or instead of) a local thread, so a later thread can link it from its seed.
+description: Create a remote tracker ticket (GitHub Issues, Jira, Linear, ClickUp, …) from a brand-new idea — use when an idea needs a work-item home in the team's tracker before (or instead of) a local thread, so a later thread can link it as read-context.
+disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # Open Ticket
@@ -14,19 +15,19 @@ This skill restates the rules it relies on inline; it does not depend on any doc
 
 ## This Is the Only Skill That Writes to the Tracker
 
-In this workflow, **exactly one skill writes to the tracker, and it is this one.** Every other skill reads the tracker at most, or links to it one-directionally — through a seed's `External:` line, a one-time backlink comment, or a commit/PR reference. Nothing else creates, updates, or closes a ticket on the agent's behalf.
+In this workflow, **exactly one skill writes to the tracker, and it is this one.** Being invoked here is the only thing that authorizes creating a ticket. Every other skill reads the tracker at most, or links to it one-directionally — a thread seed's `External:` field is a passive read-context pointer to the ticket, and a commit or PR may reference it. No workflow operation comments on, transitions, or closes a ticket on the agent's behalf; that happens only when the user explicitly asks for it.
 
-That makes the contract here narrow and strict: this skill performs **a single creation act** and stops. It does **not** poll the tracker, re-sync status, mirror the repo's state back onto the ticket, or update the ticket after creating it. The terminal close of the ticket happens once, much later, at finish — not here.
+That makes the contract here narrow and strict: this skill performs **a single creation act** and stops. It does **not** poll the tracker, re-sync status, mirror the repo's state back onto the ticket, or update the ticket after creating it. It never closes the ticket — no workflow operation transitions or closes it without an explicit user request.
 
 ## One-Time Creation, Never Ongoing Sync
 
-The repo and the tracker **link once and shake hands exactly once**, never continuously. The single link is a thread seed's `External:` line; the single handshake is at finish (the spec reaches implemented, the ticket is closed, the ledger gains its terminal disposition). Between those two points the two systems **do not mirror**, because continuous mirroring is the dual-tracking that always rots.
+The repo and the tracker **link once**, never continuously. The single link is a thread seed's `External:` field — a passive, read-only pointer to the ticket, not a live sync. The two systems **do not mirror**, because continuous mirroring is the dual-tracking that always rots.
 
 This skill lives entirely inside the first half of that picture: it **creates** the ticket. It is forbidden from doing any of the things continuous sync would do:
 
 - It does not keep the ticket and a local artifact in step.
 - It does not re-read the ticket to reconcile state.
-- It does not write status, progress, or spine position back onto the ticket.
+- It does not write status or progress back onto the ticket.
 - It does not re-run to "refresh" a ticket it already made.
 
 Create the ticket, hand back its URL, done.
@@ -63,14 +64,14 @@ Create the ticket in the owning tracker with that title and body, using the trac
 
 ## Clean Ticket-First Ordering
 
-The clean composition is **ticket-first**: create the ticket here so that when a local thread is opened afterward, the ticket's URL is already in hand and can be baked into the seed's `External:` line at the moment the thread is created. (A thread links its tracker ticket through that single `External:` line — the one join point between the repo and the tracker. The skill that opens the local thread is the one that writes the seed and its `External:` line and posts the one-time backlink comment on the ticket; this skill does none of that.)
+The clean composition is **ticket-first**: create the ticket here so that when a local thread is opened afterward, the ticket's URL is already in hand and can be recorded in the seed's `External:` field at the moment the thread is created. (A thread references its tracker ticket through that `External:` field — a passive read-context pointer, the one join point between the repo and the tracker. The skill that opens the local thread is the one that writes the seed and its `External:` field; this skill does none of that.)
 
 Two usage shapes are both valid:
 
 - **Standalone** — the user just wants a ticket created from an idea, with no local thread (yet or ever). Create the ticket, return its URL, stop.
 - **First step before a thread** — create the ticket here, hand back its URL, and the user (or a separate thread-opening step) opens the local thread next and links this ticket from the seed.
 
-Either way, this skill's output is the same: one ticket in the owning tracker and its URL returned to the user. It does **not** open a thread, write a seed, write a ledger, or write any thread file — those belong to the local-thread skill.
+Either way, this skill's output is the same: one ticket in the owning tracker and its URL returned to the user. It does **not** open a thread, write a seed, or write any thread file — those belong to the local-thread skill.
 
 ## UTC Stamp
 
@@ -92,7 +93,7 @@ This skill performs exactly one external action — creating the remote ticket �
 
 ## Discipline
 
-- **Tracker-write only.** The only write this skill performs is creating the one remote ticket. It writes no thread folder, no seed, no ledger, no proposal/spec/plan, and no repo file of any kind.
+- **Tracker-write only.** The only write this skill performs is creating the one remote ticket. It writes no thread folder, no seed, no proposal/spec/plan, and no repo file of any kind.
 - **One creation, no sync.** Create once; never poll, re-sync, mirror, or update the ticket afterward.
 - **One tracker.** Create in the single owning tracker; never mirror into a second one.
 - **Preflight before side effects.** Verify the tracker CLI/API up front; fail cleanly and completely if it is missing, rather than creating partial state.
