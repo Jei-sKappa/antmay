@@ -1,6 +1,6 @@
 # Skill authoring
 
-This document defines the cross-skill conventions every Project V3 skill follows: interaction posture, composition, invocation-role metadata, when a capability earns its own skill, how reconciliation differs from review, and the shared-reference authoring rule. Each skill remains a self-contained instruction set; these are the rules that keep the suite coherent.
+This document defines the cross-skill conventions every Project V3 skill follows: interaction posture, terminal outcomes, composition, invocation-role metadata, when a capability earns its own skill, naming, how reconciliation differs from review, section headings, progressive disclosure, the filesystem-deletion rule, and the shared-reference authoring rule. Each skill remains a self-contained instruction set; these are the rules that keep the suite coherent.
 
 ## Interaction posture
 
@@ -12,7 +12,29 @@ Three natural postures exist:
 - **Completion-oriented** skills — specification, planning, artifact reviews and reconciliations, implementation, reporting — consume supplied and durable inputs and produce an outcome without ongoing conversation. They finish autonomously whenever safely possible. Asking is exceptional and justified only when the inputs are insufficient and proceeding would invent intent, exceed authority, or choose outside a granted freedom. A completion-oriented skill remains completion-oriented even when it occasionally discovers a missing human decision.
 - **One-shot deliverable** skills consume an input and return a finished message or handoff. Reading, copying, or forwarding the result afterward does not turn the operation into a dialogue; their shape is input → finished message.
 
-An explicit AFK invocation — "run AFK," "do not ask questions," "finish without me" — overrides the normal posture: the skill must not wait for input. A completion-oriented skill has an obligation that follows from this: when it is blocked under an AFK invocation on genuinely indispensable human judgment, a repository-writing operation emits a pending-decision bundle to the thread's `.pending-decisions/` and returns a concise terminal notification, rather than asking a question in chat or inventing the answer. A one-shot chat deliverable under an AFK invocation simply returns its result and needs no repository handoff. Whenever a skill does obtain a new human decision — attended or through a resolved bundle — it records that decision before acting on it.
+Completion-oriented skills carry no attended-ask branch and perform no runtime attended/AFK detection: their behavior is identical whether a person or a tool invokes them. When one is blocked on genuinely indispensable human judgment, it finishes everything safely derivable, emits a pending-decision bundle via `/emit-pending-decisions` to the thread's `.pending-decisions/`, returns a concise terminal notification, and stops. It never asks a question in chat and never invents the answer. If the user happens to be present they invoke the resolve operation in the same chat right after the notification; otherwise the bundle waits and is resolved later. This one protocol replaces the older dual-branch model that keyed behavior on whether a run was invoked to finish without a human present.
+
+The single case that cannot follow the bundle protocol is when a bundle is physically impossible — no thread exists, or which thread is meant is ambiguous — because `.pending-decisions/` lives inside the very thread folder that failed to resolve. Only then does a completion-oriented skill refuse in chat: it writes nothing, returns a concise message naming the failure, and stops. Every other pre-run input ambiguity inside a resolved thread — which artifact, which lineage, a garbled request — is a clarification, not a refusal: it follows the bundle protocol above, exactly as a missing human decision discovered mid-run does. The bundle's routing header carries the originating user request so a clarification is answerable from the file alone.
+
+Clarification versus decision is distinguished at resolution time, not at emission time: the operation that resolves the bundle records genuine new intent as a decision, while a mere request-repair answer that only clarifies which input was meant settles the point without being recorded. Dialogue-driven skills, by contrast, keep asking as their normal output, and one-shot deliverable skills are unchanged — they return their finished message directly.
+
+## Terminal outcome
+
+Every completion-oriented user-invoked entry point ends its final chat message with exactly one line:
+
+```text
+Outcome: <TOKEN> — <one-line reason or pointer>
+```
+
+The vocabulary is closed to three tokens; no other token exists:
+
+- `DONE` — the skill completed its job. A review that emitted a findings bundle is DONE.
+- `BLOCKED` — the run started work and stopped: it queued decisions in `.pending-decisions/`, or it hit an unfixable in-run failure.
+- `REFUSED` — the run never started: a precondition was unmet, or a bundle was physically impossible (the case above where no thread exists or which thread is meant is ambiguous).
+
+The line composes with the skill's exact confirmation message — the confirmation becomes the reason part, for example `Outcome: DONE — Spec written: spec.md`.
+
+The standard applies to completion-oriented entry points only. Dialogue-driven skills have no terminal outcome; one-shot deliverable skills return the deliverable unframed and add no outcome line; and primitives never emit it, because the calling skill owns the run's terminal message.
 
 ## Composition
 
@@ -27,17 +49,25 @@ The suite is authored and used as one coherently installed set. A skill assumes 
 Two roles carry explicit metadata:
 
 - **User-invoked entry points** own a complete user-visible operation. Each sets `disable-model-invocation: true` in `SKILL.md` and carries the synchronized policy `allow_implicit_invocation: false` under `policy:` in its local `agents/openai.yaml`. Its description is a concise human-facing summary rather than an automatic-routing trigger list.
-- **Model-invoked primitives** omit both restrictions, remaining reachable by either the model or the user, and open their descriptions with the bounded caller precondition that must hold before the primitive acts.
+- **Model-invoked primitives** omit both role restrictions — the `disable-model-invocation` key and the `policy` block — remaining reachable by either the model or the user, and open their descriptions with the bounded caller precondition that must hold before the primitive acts.
 
 The Claude and Codex settings must always agree: a skill is never user-only in one harness while implicitly invocable in the other. Changing a skill's role later means changing the pair together — for a promotion to a primitive, removing both restrictions and rewriting the description for model routing.
+
+Every active skill — both roles — ships an `agents/openai.yaml` carrying an `interface:` block of picker metadata for Codex-style harnesses: `display_name` (the skill's name in title case) and `short_description` (a terse 4–7-word picker line). The `short_description` is deliberately not a copy of the `SKILL.md` `description`: a primitive's description is a routing gate written for the model, the wrong register for a human picker. Entry points carry `policy.allow_implicit_invocation: false` beneath the interface block; primitives carry the interface block alone. The interface block is universal — its presence never encodes the role — while the `policy` block is what encodes the role, in lockstep with `disable-model-invocation`.
 
 ## When a primitive is extracted
 
 A primitive is the exception, not the default. Extract one only when the behavior has at least two real consumers, or when it protects a particularly error-prone shared side effect that must be centralized to prevent drift. A primitive has a clear bounded contract, never starts a broad workflow by itself, and refuses to act without caller-supplied scope and authorization. The suite is not fragmented preemptively into micro-skills; speculative extraction that anticipates a second consumer instead of observing one is not justified.
 
+The razor that decides whether reused material becomes a shared reference or a primitive turns on format versus discipline. A reused **format** — passive material that constrains what an acting skill writes, such as a record shape or a point structure — lives as a shared reference under `shared/references/` declared in the manifest, never as a callable skill; a reference needs no verb because it performs no side effect. A reused side-effecting **discipline** — the edge cases, refusals, and invariants that must execute identically regardless of which caller drives them — is a model-invoked primitive. The razor must not creep: the five behavioral primitives — `allocate-thread`, `emit-pending-decisions`, `emit-pending-review`, `update-implementation-report`, and `append-roadmap-feedback` — own genuine side-effecting disciplines and stay skills.
+
 ## When a capability earns a separate skill
 
 A new user-invoked skill is created only when an operation's purpose, durable output, or execution contract materially differs from an existing skill — not merely because the same operation appears in another workflow. Shared capabilities keep workflow-neutral names and behavior and are reused across workflows through documentation, never duplicated into workflow-prefixed variants. Capability-oriented names that describe the produced artifact are preferred over workflow-prefixed names, because they remain reusable by future workflows. A materially distinct output contract — a different durable artifact or a different set of side effects — is what warrants a separate skill.
+
+## Naming
+
+A primitive's name is verb-first, the verb naming the bounded side effect it performs on behalf of a caller — `allocate-thread`, `emit-pending-decisions`, `update-implementation-report` — so the name reads as a mechanical building block rather than a user-facing capability. An entry point's name uses the user's intent language: the words a person reaches for when deliberately invoking the operation. Keeping the two registers distinct is what stops a primitive from being mistaken for the entry point it composes into.
 
 ## Reconciliation versus review
 
@@ -50,7 +80,23 @@ Naming makes the category clear: a `reconcile-*` skill mutates its target from d
 
 ## No legacy awareness
 
-A skill states its expected inputs and the thread structure it works with precisely, and contains no recognition logic for — and no mention of — superseded or foreign thread layouts. An input that does not match the skill's stated contract is the same situation as pointing the skill at any unrelated file: the agent notices the mismatch through ordinary judgment and asks the user for clarification, rather than following a special-case rule or half-adapting to an unfamiliar shape. The safeguard is the precision of each skill's stated input contract, not layout recognition.
+A skill states its expected inputs and the thread structure it works with precisely, and contains no recognition logic for — and no mention of — superseded or foreign thread layouts. An input that does not match the skill's stated contract is the same situation as pointing the skill at any unrelated file: the agent notices the mismatch through ordinary judgment and raises it as an ordinary input ambiguity — handled per the skill's interaction posture, not through a special-case rule or by half-adapting to an unfamiliar shape. The safeguard is the precision of each skill's stated input contract, not layout recognition.
+
+## Section headings
+
+A skill's end-to-end execution sequence lives under a single heading, `## Procedure`, in every skill. `## Workflow` is never used as a section heading: the word names the thread-level workflow-model concept — the seed's `## Suggested workflow`, the published workflow templates — and reusing it for a section heading would make prose cross-references and grepping ambiguous. Artifact-format headings that belong to an emitted artifact, such as the `**Steps:**` field inside a plan task brief, are not section headings and are untouched by this rule.
+
+## Progressive disclosure
+
+A `SKILL.md` body is loaded whole on every invocation, while a file under `references/` is read only on demand. Two conventions keep the common path lean without hiding rules.
+
+A conditional block moves out of the body into a reference when both conditions hold: (a) it executes only under a condition most runs do not meet — genuinely rare, not merely "optional" — and (b) it is substantial enough that inlining it costs real context, more than a couple of sentences. Main-path content and short conditionals stay inline. When a block does move, its trigger condition stays in the body, because it must be evaluated on every run, and the pointer to the reference is naturally worded prose — flowing instructions, never a mechanical "IF X READ Y" construction; only the what-to-do moves out. A block reused by several skills lives in `shared/references/`; a block unique to one skill lives in that skill's own `references/`.
+
+A worked example always lives in `references/` — shared only when more than one skill reuses it — and the step that consumes it points at it in natural prose from the place where the imitation happens. A worked example never carries a rule that exists nowhere else: anything normative stated only inside an example is hoisted into the body first, so the body stays the complete set of rules and the example stays purely illustrative.
+
+## Filesystem deletion
+
+A skill never carries an instruction that deletes, empties, or erases user filesystem content unless the user explicitly asks for it. The sole exception is pending-queue consumption: removing a settled point or an exhausted bundle from a pending folder is how that communication completes, so the operation that resolves the queue performs it. Everywhere else a runtime body stays silent about deletion in both directions — it carries neither a "never delete" clause nor a "you may delete" clause — because even mentioning deletion authority can prime a long-running agent to erase the wrong thing. Where a body needs to state that a workspace stays behind, it says so in a single positively-framed sentence — the directory remains in place as the run's operational trace — worded without any delete or remove token.
 
 ## Shared references
 
