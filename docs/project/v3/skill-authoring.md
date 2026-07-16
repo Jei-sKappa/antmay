@@ -40,6 +40,8 @@ The name is fixed. This protocol — the three-token vocabulary and the closing 
 
 The standard applies to completion-oriented entry points only. Dialogue-driven skills have no terminal outcome; one-shot deliverable skills return the deliverable unframed and add no outcome line; and primitives never emit it, because the calling skill owns the run's terminal message.
 
+That absence is enforced by authoring silence, never by runtime prohibition. A skill that emits no terminal outcome does not mention the protocol, the line, or the tokens in its body — not even to forbid them — and does not label its own interaction posture: an agent that is never told the vocabulary exists cannot emit it, while a negation ("emit no outcome line") would only teach it the concept, and asking or delivering is already an agent's default behavior needing no classification. What a body spells out is the completion-oriented behavior where it applies, never its absence elsewhere.
+
 ## Internal progress and local return contracts
 
 The three-token terminal outcome is the only project-wide status protocol. A single agent executing sequential internal tasks has no caller at each task boundary, so it defines no formal per-task status vocabulary: its internal progress is recorded as factual prose or ordinary structured fields — the task attempted, the changes made, the verification performed, any concerns, the commit, and the next action — in its progress file and implementation report, never as formal status tokens. Such a run still ends `DONE` when the requested operation completed, even with non-blocking concerns, `BLOCKED` when substantive execution started but could not finish, and `REFUSED` when preflight prevented execution.
