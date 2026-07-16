@@ -57,7 +57,7 @@ The user chooses the direction, answers what `discussion` surfaces, and settles 
 
 ## Terminal outcome
 
-A Roadmap thread completes at `finish` once the direction is set and the children are materialized; the roadmap and its materialized children stand as its terminal outcome. Archiving afterward is optional housekeeping. Because the parent tracks no child status, the children finishing their own work is unrelated to the Roadmap thread's own completion.
+A Roadmap thread completes at `finish` once the direction is set and the children are materialized; the roadmap and its materialized children stand as its final deliverable. Archiving afterward is optional housekeeping. Because the parent tracks no child status, the children finishing their own work is unrelated to the Roadmap thread's own completion.
 
 ## Template
 

@@ -18,6 +18,16 @@ The three workflows differ only by **process shape** — how much ceremony a cha
 
 The canonical methodology documentation — the thread model, the seed and decision-log contracts, the workflow paths, and the skill-authoring rules — lives under [`docs/project/v3/`](./docs/project/v3/README.md). That is the active reference for all new threads. Read it before opening a thread or writing any workflow artifact.
 
+## Terminal outcomes
+
+Every completion-oriented skill ends its final message with exactly one **terminal outcome** line, so a human or a calling harness can read a run's end state at a glance:
+
+```text
+Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
+```
+
+`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the suite's only shared status vocabulary. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills (such as `discussion`, `open-thread`, and `archive-thread`) and one-shot deliverable skills (such as the handoff drafts) emit no terminal outcome — their questions or their deliverable are the output.
+
 ## Skills
 
 Every skill below is **user-invoked**: you (or your harness, routing on the skill's description) start it directly. The [Primitives](#primitives) further down are a separate class — invoked by other skills or the model, never chosen directly.

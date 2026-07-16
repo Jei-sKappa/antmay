@@ -32,6 +32,6 @@ A new workflow is added only when actual use demonstrates all three of the follo
 
 1. a **distinct purpose** that the existing workflows do not already serve;
 2. a **durable artifact structure** genuinely different from the artifacts an existing workflow produces; and
-3. a **natural completion shape** — a terminal outcome that would be distorted if expressed as a variant of an existing workflow.
+3. a **natural completion shape** — a final deliverable that would be distorted if expressed as a variant of an existing workflow.
 
 A candidate that merely renames an existing process for a particular kind of subject does not qualify. Adding a workflow that meets the bar means writing its workflow document under `workflows/` and adding a row to the root `README.md` workflow table; workflows are never categorized by bug, feature, security, documentation, refactor, or any other subject matter.

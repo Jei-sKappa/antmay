@@ -36,13 +36,15 @@ The vocabulary is closed to three tokens; no other token exists:
 
 The line composes with the skill's exact confirmation message — the confirmation becomes the reason part, for example `Outcome: DONE — Spec written: spec.md`.
 
+The name is fixed. This protocol — the three-token vocabulary and the closing line together — is called the **terminal outcome** everywhere it is mentioned: in skill bodies, workflow documents, and reports alike. It is never renamed to run status, workflow status, completion status, or any other status phrase; prose that needs to name the closing line itself calls it the terminal outcome line. The term always refers to a *run's* end state — a completed *thread's* lasting artifact is its **final deliverable**, a different concept with its own name.
+
 The standard applies to completion-oriented entry points only. Dialogue-driven skills have no terminal outcome; one-shot deliverable skills return the deliverable unframed and add no outcome line; and primitives never emit it, because the calling skill owns the run's terminal message.
 
 ## Internal progress and local return contracts
 
 The three-token terminal outcome is the only project-wide status protocol. A single agent executing sequential internal tasks has no caller at each task boundary, so it defines no formal per-task status vocabulary: its internal progress is recorded as factual prose or ordinary structured fields — the task attempted, the changes made, the verification performed, any concerns, the commit, and the next action — in its progress file and implementation report, never as formal status tokens. Such a run still ends `DONE` when the requested operation completed, even with non-blocking concerns, `BLOCKED` when substantive execution started but could not finish, and `REFUSED` when preflight prevented execution.
 
-A skill defines skill-local return tokens only where its own caller/callee topology genuinely consumes them — as when an orchestrator dispatches subagents and must quickly classify each untrusted reply. Those return contracts stay inside the owning skill: they are not promoted into these canonical conventions and are not restated as a second project-wide status protocol.
+A skill defines skill-local return tokens only where its own caller/callee topology genuinely consumes them — as when an orchestrator dispatches subagents and must quickly classify each untrusted reply. Those return contracts stay inside the owning skill: they are not promoted into these canonical conventions and are not restated as a second project-wide status protocol. Their generic name is fixed as well: prose calls them **skill-local return tokens** — a skill may name each role more narrowly inside its own body (a reply token, a lane verdict) — and never calls them statuses or outcomes; a return token never appears in a terminal outcome.
 
 ## Composition
 

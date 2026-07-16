@@ -44,7 +44,7 @@ mkdir -p docs/threads/archive
 git mv docs/threads/<thread-folder> docs/threads/archive/<thread-folder>
 ```
 
-The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path together with the accepted warning that references pointing at the thread may break (see the limitation below). Keep the successful response focused on those two facts; emit no terminal run-status line and no other run-status token — this dialogue-driven handshake has no completion-run outcome.
+The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path together with the accepted warning that references pointing at the thread may break (see the limitation below). Keep the successful response focused on those two facts; emit no terminal outcome line and no outcome token — this dialogue-driven handshake has no terminal outcome.
 
 ## Accepted limitation: references may break
 

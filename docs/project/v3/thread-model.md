@@ -78,7 +78,7 @@ Archive location is the only terminal lifecycle signal. A thread directly under 
 
 Completed and abandoned threads are distinguished by their durable content:
 
-- **Completed** work carries its workflow's terminal outcome — the implementation report for Quick and Standard, or the roadmap and its materialized children for Roadmap.
+- **Completed** work carries its workflow's final deliverable — the implementation report for Quick and Standard, or the roadmap and its materialized children for Roadmap.
 - **Abandonment** is recorded as a decision in `decisions.md`, with its rationale.
 
 Archiving is the explicit act that ends a thread's active lifecycle. Before moving a thread, the archival operation inspects the three temporary workspaces and, if any are non-empty, names their contents — bundle titles or headers, interrupted run identifiers — and asks the user to confirm archival anyway. This is an advisory warning and a single meaningful confirmation, not a gate. On confirmed archival the workspaces are carried along untouched; archival never deletes them or their contents. In an archived thread these folders are inert local residue with no workflow meaning — the pending-state semantics below apply only to active threads. The user may delete the residue manually at any time.

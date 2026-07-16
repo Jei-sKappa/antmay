@@ -34,7 +34,7 @@ The user chooses the change and its direction, answers whatever `discussion` sur
 
 ## Terminal outcome
 
-A Quick thread completes at `finish`, with the implementation report standing as its terminal outcome. Archiving afterward is optional housekeeping that moves the thread out of active work; it is not required for the thread to be considered done.
+A Quick thread completes at `finish`, with the implementation report standing as its final deliverable. Archiving afterward is optional housekeeping that moves the thread out of active work; it is not required for the thread to be considered done.
 
 ## Escalating to Standard
 

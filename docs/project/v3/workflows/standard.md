@@ -41,7 +41,7 @@ The user chooses the change, answers what `discussion` surfaces, and settles any
 
 ## Terminal outcome
 
-A Standard thread completes at `finish`, with the implementation report standing as its terminal outcome. Archiving afterward is optional housekeeping that moves the thread out of active work; it is not required for the thread to be considered done.
+A Standard thread completes at `finish`, with the implementation report standing as its final deliverable. Archiving afterward is optional housekeeping that moves the thread out of active work; it is not required for the thread to be considered done.
 
 ## Threads that arrive by escalation
 
