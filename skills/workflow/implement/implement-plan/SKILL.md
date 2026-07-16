@@ -4,7 +4,7 @@ description: Execute a strict multi-file plan artifact — a thread-root `plan.m
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.2.0
+  version: 5.2.1
 ---
 
 # Implement Plan
@@ -36,12 +36,12 @@ A plan that does not match this shape — a missing index, a `plan-tasks/` folde
 
 This skill defines no formal per-task status token. The only status protocol is the run's terminal outcome (`## Procedure`, final step). Each attempted plan task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
 
-One append-only block per attempted plan task is **appended to the run progress file** (see `## Run workspace`), and — for a committed cycle — carried in that task's commit message body **minus its own SHA** (the commit body is composed before the commit lands, so the cycle's SHA is not yet known; it is present only in the progress file, appended post-commit). Chat output carries only a one-line summary per task; the full block lives in the progress file, not a per-task artifact file. The progress file and the git history together are the audit trail. Each block records:
+One append-only block per attempted plan task is **appended to the run progress file** (see `## Run workspace`), and — for a committed cycle — carried in that task's commit message body per `## Run workspace`. Chat output carries only a one-line summary per task; the full block lives in the progress file, not a per-task artifact file. The progress file and the git history together are the audit trail. Each block records:
 
 - **Task attempted** — which plan task (`NN`), named from the index.
 - **Changes made** — what the diff did.
 - **Verification** — the task file's verification block and any project gate actually run, and their results, including failures and justified skips.
-- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call on an ambiguous plan area, a possible-but-unverified edge case, a deviation applied per `## Plan Deviation Policy`), verbatim, or `none`.
+- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call on an ambiguous plan area, a possible-but-unverified edge case, a deviation applied per `## Plan Deviation Policy`), verbatim, or `none`; resolved findings are not restated.
 - **Commit** — the SHA + subject for a committed cycle, else `none`.
 - **Next action** — the suggested follow-up ("ready for next task", "ready for review", "stop and surface this finding", etc.).
 
@@ -52,7 +52,7 @@ Task <NN> — <short label>
 Changes made: <what the diff did>
 Verification: <checks run and their results>
 Concerns: <non-blocking concerns verbatim, or "none">
-Commit: <SHA + subject, or "none">   # committed cycles: SHA + subject present in the progress file, omitted from the commit body; non-committing cycles: none
+Commit: <SHA + subject for a committed cycle, else "none">
 Next action: <suggested follow-up>
 ```
 
@@ -69,11 +69,9 @@ docs/threads/<thread>/.implementation-runs/<UTC>[-<desc>]/
 
 `<UTC>` is the run's start timestamp and is a valid directory name on its own; `<desc>` is an optional short kebab slug of the run's objective, taken from the plan's title purely for human scannability. Allocate a fresh directory unique to THIS invocation — never silently adopt or reuse an existing run directory. `progress.md` is the only file in the directory. Recovery within an invocation reads only this run's own directory. If a previous run was interrupted, its directory survives so it can be resumed later, but only when the user explicitly identifies it; you never adopt it on your own. This directory is invocation-scoped in meaning: no durable artifact — not the implementation report, not a commit message, nothing — ever references a path inside it. The directory remains in place after the run as the run's operational trace.
 
-**The progress file.** Every attempted task appends exactly one block to `progress.md`. The progress file is the authoritative in-flight record; chat carries only a one-line summary per task, and the commit message body carries the same block for committed cycles — omitting the cycle's own SHA, which is not known until the commit lands, so that SHA is present only in the progress file.
+**The progress file.** `progress.md` is the authoritative in-flight record for the blocks defined in `## Factual progress records`; chat carries only a one-line summary per task. The commit message body carries the same block for committed cycles, minus the cycle's own SHA — the body is composed before the commit lands, so the cycle's SHA is not yet known and is present only in the progress file, appended post-commit.
 
-**Append discipline (cycle-gated, not commit-gated).** Here a cycle is the work of one plan task. The progress file is append-only: **one block per attempted task**. Every cycle that reaches an outcome appends exactly one block — a committed cycle appends its block once the commit lands (carrying that commit's SHA + subject); a cycle that produces no commit (an empty-diff completion, or a run stopped per `## Blocked`) appends its block with `Commit: none` before advancing or stopping. A preflight halt appends nothing — no cycle started.
-
-**Block content.** Each block records the facts named in `## Factual progress records`: the task attempted, the changes made, the verification run and its result, non-blocking concerns verbatim (resolved findings are not restated), and the commit SHA + subject for a committed cycle (else `Commit: none`), plus a next action.
+**Append discipline (cycle-gated, not commit-gated).** Here a cycle is the work of one plan task. The progress file is append-only. Every cycle that reaches an outcome appends its block — a committed cycle appends once the commit lands (carrying that commit's SHA + subject); a cycle that produces no commit (an empty-diff completion, or a run stopped per `## Blocked`) appends with `Commit: none` before advancing or stopping. A preflight halt appends nothing — no cycle started.
 
 **Compaction recovery.** The progress file plus `git log` are the resume state after a context compaction — never conversation recollection. The implementation report is folded from the progress file re-read from disk at the end of the run, not from memory.
 
@@ -126,7 +124,7 @@ Steps 1–4 are preflight. They complete in full — with no workflow artifact w
 
    c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, follow the failed-commit branch in `## Commit Policy` — diagnose and fix in-authority causes within the retry cap; only when it cannot be resolved does the run hit an operational defect: append this cycle's block to the run progress file with `Commit: none` (per `## Run workspace`) recording the diagnosis, and stop the entire run `BLOCKED` per `## Blocked`.
 
-   d. **Append the factual progress block.** Per `## Run workspace` and `## Factual progress records`, append exactly one block for this attempted task — after the commit for a committed cycle (carrying its SHA + subject), or with `Commit: none` for an empty-diff completion or a cycle stopped per `## Blocked` — then emit the one-line chat summary for the task. The commit message body carries the same block for committed cycles, minus the cycle's own SHA (present only in the progress file, appended post-commit).
+   d. **Append the factual progress block.** Per `## Run workspace` and `## Factual progress records`, append exactly one block for this attempted task — after the commit for a committed cycle (carrying its SHA + subject), or with `Commit: none` for an empty-diff completion or a cycle stopped per `## Blocked` — then emit the one-line chat summary for the task. The commit message body carries the same block for committed cycles per `## Run workspace`.
 
 7. **Update the implementation report.** Once every plan task has run (or the run stopped early per `## Blocked`), re-read `progress.md` from disk and fold it into the implementation report per `## Implementation report`.
 
@@ -144,7 +142,7 @@ Two situations stop the run once substantive execution has begun (step 5 onward)
 
 **Missing human intent.** This applies whenever completing a plan task requires a genuine human decision you cannot settle yourself from the plan and the observed code state. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. First finish everything the run can safely derive without that decision, then hand the indispensable open decision(s) to `/emit-pending-decisions`, giving it `/implement-plan` as the producer, the thread's `implementation-report.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Update the implementation report per `## Implementation report` to reflect the blocked outcome, then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
-**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed task detail not covered by the completed structural preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, update the implementation report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`. A structural plan mismatch that the mandatory preflight catches remains a preflight `REFUSED`, not this path.
+**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed task detail not covered by the completed structural preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, update the implementation report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`.
 
 ## Roadmap-descendant feedback
 
@@ -158,7 +156,7 @@ This skill auto-commits.
 - **Override:** If the user's invocation contains an EXPLICIT Git instruction (for example, "commit at the end as one commit", "do not commit, just leave the changes staged"), honor the explicit instruction over the default per-plan-task cadence. The user's explicit instruction wins.
 - **Baseline gate (before each commit):** A plan task's verification block is task-specific — it confirms THAT task's objective, and it does not necessarily capture the project's *standing* required gates: the bar a project enforces on any code allowed to land (discoverable from the project's tooling or conventions — for example a `check` / `lint` / `format` / `typecheck` script, a documented pre-commit command, or a CI gate). **A project may define no such gate**, in which case there is nothing to run beyond the plan's verification and this clause is a no-op. When the project DOES define standing gates, run them on the changed code and resolve any failure BEFORE committing the task — independent of, and even when omitted by, the plan task's verification block. Scope the gate to the changed code where the project's tooling allows it, so an unrelated pre-existing failure elsewhere does not block this task. Only genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) are legitimately deferred to a closing task — a cheap standing commit-gate is not one of those and is not deferred.
 
-Commits use the project's conventional-commit shape where applicable; follow the project's contribution guidelines for scope rules. Stage only the files the plan task touched — the task file's `Files modified` list is unconditionally authoritative; use it. Never run `git add -A` blindly. Commit subjects are descriptive of the plan task's objective, not its substeps. Commit message bodies carry the task's progress-file block (per `## Run workspace`), minus the commit's own SHA — the body is composed before the commit lands, so the cycle's SHA is present only in the progress file — so the audit trail lives in git history as well as the progress file.
+Commits use the project's conventional-commit shape where applicable; follow the project's contribution guidelines for scope rules. Stage only the files the plan task touched — the task file's `Files modified` list is unconditionally authoritative; use it. Never run `git add -A` blindly. Commit subjects are descriptive of the plan task's objective, not its substeps. Commit message bodies carry the task's progress-file block per `## Run workspace`, so the audit trail lives in git history as well as the progress file.
 
 ### Failed commit
 
