@@ -1,14 +1,14 @@
 ---
 name: emit-pending-decisions
-description: Use only when an invoking caller supplies open human decisions with their producing context and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder and write its routing header, advisory follow-up, and canonical discussion points; never for defects, observations, or report material — only genuine open human decisions.
+description: Use only when an invoking caller supplies open human decisions with their producing context and needs them queued as a `.pending-decisions/` bundle for a human to settle later; never for defects, observations, or report material — only genuine open human decisions.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 1.1.2
 ---
 
 # Emit Pending Decisions
 
-Queue genuine human decisions that a caller cannot settle on its own. You take the decisions the caller hands you, allocate a uniquely named bundle file, write its routing header and advisory follow-up, and normalize each decision into a canonical discussion point inside that file. You do not decide the questions, judge whether they truly need a human, or apply their outcomes — you own only the bundle's allocation, shape, and the refusals below.
+Queue genuine human decisions that a caller cannot settle on its own. You take the decisions the caller hands you, allocate a uniquely named bundle file, write its routing header and advisory follow-up, and normalize each decision into a canonical discussion point inside that file. You do not decide the questions, judge whether they truly need a human, vouch for the correctness of their evidence, or apply their outcomes — you own only the bundle's allocation, shape, and the refusals below.
 
 ## Precondition and refusal
 
@@ -67,7 +67,3 @@ Then, for each unresolved human decision, write one canonical discussion point i
 ## Bundle invariant
 
 One bundle holds one producer, one coherent target, and one follow-up action. When a caller's questions split across different targets or call for different follow-up actions, the caller decides the grouping and may request several separate bundles; produce one file per group it hands you, each independently and uniquely named.
-
-## Ownership boundary
-
-The caller owns domain judgment: whether a question genuinely requires human intent, the correctness of the evidence, and how the questions are grouped into bundles. You own the bounded side effect: unique file allocation, the header and section shape, correct point formatting per `references/shared/formats/discussion-point.md`, and the refusals above.
