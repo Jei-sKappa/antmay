@@ -9,12 +9,12 @@ Produce an in-depth report on a topic, using the local library of cloned repos a
 3. Restate the research objective in one sentence before working. If the scope is genuinely ambiguous (which angle, which audience, which version), ask one clarifying question. Otherwise proceed.
 4. Sketch the report outline before reading code: sections, key questions per section, what would make each section "in-depth" vs. surface-level. This outline is the contract for the explorers.
 5. Dispatch `explorer` subagents in parallel — one per repo or per outline section, whichever maps cleaner. Give each a bounded brief: which repo path(s) to read, which questions to answer, what evidence (file paths, line ranges, snippets) to return. Explorers must use only `rg`, file reads, and repo-local docs/source — no web fetches, no new clones.
-6. Synthesize the findings into the report. Every non-trivial claim cites a source path relative to `<library-root>/sources/`, with line numbers when pointing at code. Prefer concrete references over paraphrase. If a section is thin because no source covers it, say so — do not pad.
+6. Synthesize the findings into the report following the `## Report shape` section below.
 7. Save the report to `<library-root>/reports/<YYYY-MM-DD>_<topic_slug>.md`, where the date is today (use the system date) and `<topic_slug>` is a snake_case slug of the topic. If the file already exists, ask the user whether to overwrite or pick a new slug.
 
 ## Report shape
 
-Write a well-structured report. The shape is up to you — pick the headings, ordering, and level of detail that fit the topic. Favor structure (headings, lists, tables, code blocks) over long paragraphs, cite source paths (with line numbers for code) for every non-trivial claim, and call out anything the sources do not answer or contradict instead of papering over it. Length follows the topic — do not pad to look thorough.
+Write a well-structured report. The shape is up to you — pick the headings, ordering, and level of detail that fit the topic. Favor structure (headings, lists, tables, code blocks) over long paragraphs, cite source paths (with line numbers for code) for every non-trivial claim, preferring concrete references over paraphrase, and call out anything the sources do not answer or contradict instead of papering over it. Length follows the topic — do not pad to look thorough.
 
 ## Output
 

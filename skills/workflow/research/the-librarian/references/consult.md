@@ -10,7 +10,7 @@ Use the local library of cloned repositories as reference material during resear
 2. Read `<library-root>/sources/INDEX.md` first when it exists. Use it to choose the relevant repo(s).
 3. Inspect only the relevant clone(s). If the target is unclear and cannot be inferred from the task, ask one clarifying question.
 4. Default to an `explorer` subagent for library research to keep scans out of the main context. If subagents are unavailable, do a narrow inline search.
-5. Give the explorer a bounded task: instruct it to explore what's needed.
+5. Give the explorer a bounded brief: which clone(s) to read and the exact question to answer.
 6. Use `rg`, file reads, and repo-local docs/source. Do not browse or fetch new code unless the user asks.
 
 ## Output

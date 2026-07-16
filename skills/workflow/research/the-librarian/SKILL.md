@@ -4,7 +4,7 @@ description: Route local reference-repository work to stock, consult, or researc
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.2
+  version: 1.4.3
 ---
 
 # The Librarian
