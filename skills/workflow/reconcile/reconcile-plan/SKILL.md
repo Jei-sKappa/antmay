@@ -4,18 +4,18 @@ description: Make a thread's strict plan — its plan.md index and plan-tasks/ b
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.1.0
+  version: 5.1.1
 ---
 
 # Reconcile Plan
 
-Make the thread's plan a faithful, executable expression of the spec that governs it. You read the spec and the thread's settled decisions, read the plan, repair the plan wherever the fix follows from those authorities, recheck what you changed, and hand any discrepancy that needs a fresh human decision to `/emit-pending-decisions`. You edit only the plan — its index and its task briefs; you never touch the spec or the decisions, and you produce no separate report. Writing the corrected plan is where you stop — do not stage, commit, or push.
+Make the thread's plan a faithful, executable expression of the spec that governs it. You read the spec and the thread's settled decisions, read the plan, repair the plan wherever the fix follows from those authorities, recheck what you changed, and hand any discrepancy that needs a fresh human decision to `/emit-pending-decisions`. You edit only the plan — its index and its task briefs; you never touch the spec or the decisions, you produce no separate report, and you offer no report-only, check-only, or approval variant selectable at invocation. Writing the corrected plan is where you stop — do not stage, commit, or push.
 
 The one question you answer throughout: **executed end to end, does this plan deliver what the spec's acceptance criteria promise, within the degrees of freedom the spec grants?** A faithful plan covers every fixed point of the spec, invents no commitment the spec did not authorize, and is internally consistent enough to execute in order.
 
 ## The plan artifact
 
-The plan is a multi-file artifact: the index `plan.md` at the thread root plus one brief per task at `plan-tasks/NN-<kebab-slug>.md` (two-digit zero-padded ordinal, one file per task). The index carries the plan-level objective and context, a `Source:` line naming the artifact the plan was compiled from, a Global Constraints block copied verbatim from that source, and an ordered task list — and the index is authoritative for task count and order. Each brief carries its objective, input/context, steps, files modified, verification, acceptance criteria, and the `Consumes:` / `Produces:` hand-off lines. Your editable target is this whole artifact: you may edit the index, any brief, or both.
+The plan is a multi-file artifact: the index `plan.md` at the thread root plus one brief per task at `plan-tasks/NN-<kebab-slug>.md` (two-digit zero-padded ordinal, one file per task). The index carries the plan-level objective and context, a `Source:` line naming the artifact the plan was compiled from, a Global Constraints block copied verbatim from that source, and an ordered task list — and the index is authoritative for task count and order. Each brief carries its objective, input/context, steps, files modified, verification, acceptance criteria, and the `Consumes:` / `Produces:` hand-off lines.
 
 ## Procedure
 
@@ -58,12 +58,8 @@ Preserve legitimate elaboration: plan detail that extends the spec without contr
 
 ## Authority boundary
 
-The plan is the only artifact you may edit. Never edit `spec.md` or `decisions.md` to make the plan look consistent. If the plan is right and the spec is wrong, or the spec is silent on a fixed point the plan could only guess at, that mismatch is itself a decision a human must make — queue it; do not patch the source, and do not patch the plan around a source fault. You correct the plan toward its authority, never the authority toward the plan.
+Never edit `spec.md` or `decisions.md` to make the plan look consistent. If the plan is right and the spec is wrong, or the spec is silent on a fixed point the plan could only guess at, that mismatch is itself a decision a human must make — queue it; do not patch the source, and do not patch the plan around a source fault. You correct the plan toward its authority, never the authority toward the plan.
 
 ## Queueing decisions
 
 Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-plan` as the producer, the plan as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the plan again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
-
-## Nothing else is produced
-
-You have exactly one behavior: reconcile the plan against its authority. You do not emit a review report or a findings file, and you offer no report-only, check-only, or approval variant selectable at invocation. A clean pass leaves the working tree untouched and produces no file — the chat summary is the whole output.
