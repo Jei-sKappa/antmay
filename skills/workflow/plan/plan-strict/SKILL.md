@@ -11,8 +11,6 @@ metadata:
 
 Forward-design a strict-granularity plan for the active thread from a single upstream input. Read the input, draft an index plus one dispatchable brief per task — each brief carrying explicit substeps, files modified, verification, and acceptance criteria — self-review before emission, write the index `plan.md` at the thread root and the task briefs under `plan-tasks/`, then confirm the path. Run end-to-end without walking the user task-by-task. Writing the files is where you stop — do not stage, commit, or push.
 
-The spec plus its acceptance criteria are the contract a reviewer and the implementation are judged against; the plan is downstream scaffolding compiled from that contract. This is why an implementer or reviewer works from the plan while the human normally reads only the spec and the delivered work: when the spec carries machine-checkable acceptance criteria and a Degrees-of-freedom section, this skill can produce a prescriptive plan a downstream adherence review can clear without the human reading it.
-
 ## Inputs
 
 Accept ONE of the following input forms. Detect which form was passed before drafting:
