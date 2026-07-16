@@ -4,7 +4,7 @@ description: Draft a casual, context-rich message to consult a more experienced 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.0
+  version: 1.3.1
 ---
 
 # Consult the Expert
@@ -28,7 +28,7 @@ Transform a raw problem description into a ready-to-send message that gives a ze
 ## Guidelines
 
 - Prioritize clarity and completeness over brevity. Length is whatever the content needs — no padding, no aggressive trimming. An expert with zero project context needs real context to give useful input.
-- Don't lead with the question before establishing what the project is — that's disorienting.
+- Establish what the project is before posing the ask.
 - Strip background that isn't load-bearing; keep anything the reader needs to follow the reasoning.
 - Show respect for the expert's time by demonstrating the user has already thought about it — what they tried, what they ruled out, where they're leaning.
 - Include a short `Stack:` line (one line, comma-separated) only if the problem is stack-specific. Skip it for abstract, architectural, or language-agnostic problems where it would just be noise.
@@ -37,14 +37,7 @@ Transform a raw problem description into a ready-to-send message that gives a ze
 
 - A ready-to-send message (chat/DM style)
 - Plain prose, short paragraphs, no headers, no bullet lists in the message itself
-- No artificial length cap — let the content determine the length
 - No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
-
-## Procedure
-
-1. Read the user's problem description.
-2. Draft the message following the structure and guidelines above.
-3. Output the drafted message directly in chat. The response IS the deliverable — no preamble, no closing remark.
 
 ## When context is thin
 
