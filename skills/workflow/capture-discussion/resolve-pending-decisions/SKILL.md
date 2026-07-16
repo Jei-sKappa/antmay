@@ -4,7 +4,7 @@ description: Settle the thread's queued pending decisions interactively and reco
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 1.1.2
 ---
 
 # Resolve Pending Decisions
@@ -36,9 +36,7 @@ For the selected bundle, work its points one at a time:
 
 ## Recording decisions
 
-Route each settled point at resolution time. An answer that settles genuine new intent becomes a durable record: append it to the thread-root `decisions.md` as a self-contained `D<N>` record, following the shape, sequential numbering, and append-only rules in `references/shared/formats/decision-record.md`. There is exactly one decision store; do not keep decisions anywhere else. An answer that merely repairs which input the producer originally meant is a clarification, not new intent — it settles the point (so the point is still consumed from the queue) but is not recorded as a decision.
-
-What stays your judgment, not the format's: distinguishing genuine new intent from a request-repair clarification, and writing a recorded outcome as a durable projection a fresh agent can act on rather than a transcript of the deliberation. Do not copy the point's options menu, the recommendation, or general deliberation into the record.
+Route each settled point at resolution time. An answer that settles genuine new intent becomes a durable record: append it to the thread-root `decisions.md` as a self-contained `D<N>` record, following the shape, sequential numbering, and append-only rules in `references/shared/formats/decision-record.md`. An answer that merely repairs which input the producer originally meant is a clarification, not new intent — it settles the point (so the point is still consumed from the queue) but is not recorded as a decision.
 
 ## Follow-through
 
