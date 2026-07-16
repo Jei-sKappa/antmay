@@ -4,7 +4,7 @@ description: Conduct an open-ended interview that discovers decision points live
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.1.1
+  version: 3.1.2
 ---
 
 # Discussion
@@ -36,7 +36,7 @@ Hold these together:
 
 4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per the format in `references/shared/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
-5. **Record once the user settles the point.** Append a `D<N>` record to `decisions.md` per `## Recording decisions`, then tell the user: `Decision saved: <short summary>.` The discussion point itself is transient framing — its options menu, recommendation, and deliberation are not carried into the record.
+5. **Record once the user settles the point.** Append a `D<N>` record to `decisions.md` per `## Recording decisions`, then tell the user: `Decision saved: <short summary>.`
 
 6. **Continue until closure.** There is no fixed limit on questions or decisions. Ask "shall we keep going or finish here?" whenever you sense natural closure — the user's pace slows, the topic feels exhausted, or the conversation repeats itself. The choice to stop is the user's; the prompt is your job.
 
