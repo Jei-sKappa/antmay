@@ -284,7 +284,7 @@ export default function Command() {
                   ...skill.description.split(/\s+/),
                 ]}
                 accessories={buildAccessories(skill)}
-                icon={skill.group === "deprecated" ? Icon.Hourglass : Icon.Book}
+                icon={Icon.Book}
                 detail={
                   <List.Item.Detail
                     markdown={buildPreviewMarkdown(skill)}

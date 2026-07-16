@@ -9,37 +9,37 @@
 # anchors, no nested keys, no multiline strings. Edit shared/references/ and
 # rerun the script; never hand-edit the generated references/shared/ copies.
 
-skills/workflow/capture-discussion/open-thread:
+skills/capture-discussion/open-thread:
   - workflows/quick.md
   - workflows/standard.md
   - workflows/roadmap.md
 
-skills/workflow/roadmap/roadmap:
+skills/roadmap/roadmap:
   - workflows/quick.md
   - workflows/standard.md
   - workflows/roadmap.md
 
-skills/workflow/reconcile/reconcile-roadmap:
+skills/reconcile/reconcile-roadmap:
   - workflows/quick.md
   - workflows/standard.md
   - workflows/roadmap.md
 
-skills/workflow/capture-discussion/discussion:
+skills/capture-discussion/discussion:
   - formats/discussion-point.md
   - formats/decision-record.md
 
-skills/workflow/capture-discussion/resolve-pending-decisions:
+skills/capture-discussion/resolve-pending-decisions:
   - formats/discussion-point.md
   - formats/decision-record.md
 
-skills/workflow/primitives/emit-pending-decisions:
+skills/primitives/emit-pending-decisions:
   - formats/discussion-point.md
 
-skills/workflow/implement/implement:
+skills/implement/implement:
   - roadmap-descendant-feedback.md
 
-skills/workflow/implement/implement-plan:
+skills/implement/implement-plan:
   - roadmap-descendant-feedback.md
 
-skills/workflow/implement/implement-plan-with-subagents:
+skills/implement/implement-plan-with-subagents:
   - roadmap-descendant-feedback.md

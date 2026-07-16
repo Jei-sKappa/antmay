@@ -30,7 +30,6 @@ const GROUP_ORDER = [
   "documentation",
   "handoff",
   "support",
-  "deprecated",
 ];
 
 const titleCase = (kebab) =>
@@ -71,7 +70,6 @@ const parseFrontmatter = (raw) => {
 
 const groupForPath = (relPath) => {
   const segments = relPath.split("/");
-  if (segments[0] === "workflow") return segments[1];
   return segments[0];
 };
 

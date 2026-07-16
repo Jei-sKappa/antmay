@@ -4,141 +4,128 @@
       "name": "JeisKappa-capture-discussion",
       "source": "./",
       "skills": [
-        "./skills/workflow/capture-discussion/discussion",
-        "./skills/workflow/capture-discussion/open-thread",
-        "./skills/workflow/capture-discussion/open-ticket",
-        "./skills/workflow/capture-discussion/resolve-pending-decisions"
+        "./skills/capture-discussion/discussion",
+        "./skills/capture-discussion/open-thread",
+        "./skills/capture-discussion/open-ticket",
+        "./skills/capture-discussion/resolve-pending-decisions"
       ]
     },
     {
       "name": "JeisKappa-documentation",
       "source": "./",
       "skills": [
-        "./skills/workflow/documentation/take-snapshot"
+        "./skills/documentation/take-snapshot"
       ]
     },
     {
       "name": "JeisKappa-finish-navigate",
       "source": "./",
       "skills": [
-        "./skills/workflow/finish-navigate/archive-thread",
-        "./skills/workflow/finish-navigate/finish",
-        "./skills/workflow/finish-navigate/whats-next"
+        "./skills/finish-navigate/archive-thread",
+        "./skills/finish-navigate/finish",
+        "./skills/finish-navigate/whats-next"
       ]
     },
     {
       "name": "JeisKappa-handoff",
       "source": "./",
       "skills": [
-        "./skills/workflow/handoff/brief-the-recipient",
-        "./skills/workflow/handoff/consult-the-expert",
-        "./skills/workflow/handoff/report-to-the-owner"
+        "./skills/handoff/brief-the-recipient",
+        "./skills/handoff/consult-the-expert",
+        "./skills/handoff/report-to-the-owner"
       ]
     },
     {
       "name": "JeisKappa-implement",
       "source": "./",
       "skills": [
-        "./skills/workflow/implement/implement",
-        "./skills/workflow/implement/implement-plan",
-        "./skills/workflow/implement/implement-plan-with-subagents"
+        "./skills/implement/implement",
+        "./skills/implement/implement-plan",
+        "./skills/implement/implement-plan-with-subagents"
       ]
     },
     {
       "name": "JeisKappa-merge",
       "source": "./",
       "skills": [
-        "./skills/workflow/merge/merge-artifacts"
+        "./skills/merge/merge-artifacts"
       ]
     },
     {
       "name": "JeisKappa-plan",
       "source": "./",
       "skills": [
-        "./skills/workflow/plan/plan-brief",
-        "./skills/workflow/plan/plan-strict"
+        "./skills/plan/plan-brief",
+        "./skills/plan/plan-strict"
       ]
     },
     {
       "name": "JeisKappa-primitives",
       "source": "./",
       "skills": [
-        "./skills/workflow/primitives/allocate-thread",
-        "./skills/workflow/primitives/append-roadmap-feedback",
-        "./skills/workflow/primitives/emit-pending-decisions",
-        "./skills/workflow/primitives/emit-pending-review",
-        "./skills/workflow/primitives/update-implementation-report"
+        "./skills/primitives/allocate-thread",
+        "./skills/primitives/append-roadmap-feedback",
+        "./skills/primitives/emit-pending-decisions",
+        "./skills/primitives/emit-pending-review",
+        "./skills/primitives/update-implementation-report"
       ]
     },
     {
       "name": "JeisKappa-propose",
       "source": "./",
       "skills": [
-        "./skills/workflow/propose/propose"
+        "./skills/propose/propose"
       ]
     },
     {
       "name": "JeisKappa-reconcile",
       "source": "./",
       "skills": [
-        "./skills/workflow/reconcile/reconcile-plan",
-        "./skills/workflow/reconcile/reconcile-proposal",
-        "./skills/workflow/reconcile/reconcile-roadmap",
-        "./skills/workflow/reconcile/reconcile-spec"
+        "./skills/reconcile/reconcile-plan",
+        "./skills/reconcile/reconcile-proposal",
+        "./skills/reconcile/reconcile-roadmap",
+        "./skills/reconcile/reconcile-spec"
       ]
     },
     {
       "name": "JeisKappa-research",
       "source": "./",
       "skills": [
-        "./skills/workflow/research/afk-exploration",
-        "./skills/workflow/research/the-librarian"
+        "./skills/research/afk-exploration",
+        "./skills/research/the-librarian"
       ]
     },
     {
       "name": "JeisKappa-review",
       "source": "./",
       "skills": [
-        "./skills/workflow/review/review-code",
-        "./skills/workflow/review/review-implementation",
-        "./skills/workflow/review/review-roadmap",
-        "./skills/workflow/review/review-spec"
+        "./skills/review/review-code",
+        "./skills/review/review-implementation",
+        "./skills/review/review-roadmap",
+        "./skills/review/review-spec"
       ]
     },
     {
       "name": "JeisKappa-roadmap",
       "source": "./",
       "skills": [
-        "./skills/workflow/roadmap/materialize-roadmap-threads",
-        "./skills/workflow/roadmap/roadmap"
+        "./skills/roadmap/materialize-roadmap-threads",
+        "./skills/roadmap/roadmap"
       ]
     },
     {
       "name": "JeisKappa-spec",
       "source": "./",
       "skills": [
-        "./skills/workflow/spec/spec"
+        "./skills/spec/spec"
       ]
     },
     {
       "name": "JeisKappa-support",
       "source": "./",
       "skills": [
-        "./skills/workflow/support/meta-prompting",
-        "./skills/workflow/support/name-cracker"
-      ]
-    },
-    {
-      "name": "JeisKappa-deprecated",
-      "source": "./",
-      "skills": [
-        "./skills/deprecated/adjust-plan-granularity",
-        "./skills/deprecated/capture-inbox",
-        "./skills/deprecated/discussion-loop",
-        "./skills/deprecated/record-verdict",
-        "./skills/deprecated/review-decision-document",
-        "./skills/deprecated/review-lossless-mapping",
-        "./skills/deprecated/seeded-discussion"
+        "./skills/support/meta-prompting",
+        "./skills/support/name-cracker"
       ]
     }
   ]

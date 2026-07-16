@@ -14,7 +14,7 @@ It is not only for the obvious case (an agent harness that does not know how to 
 
 Run **Select Skill** to:
 
-1. Browse the searchable list of skills (sectioned by workflow group, deprecated at the bottom). Skills that have a `references/` folder are marked with a paperclip accessory showing the file count.
+1. Browse the searchable list of skills, sectioned by capability group. Skills that have a `references/` folder are marked with a paperclip accessory showing the file count.
 2. Preview the skill body in the Detail panel. If references exist, they are appended to the preview under an **Inlined references** heading.
 3. Hit `↵` to open a form, paste in the prompt you want to send the agent, and submit.
 4. The combined output lands on your clipboard, ready to paste into any chat-style agent:
