@@ -3,12 +3,12 @@ name: update-implementation-report
 description: Use only when an invoking caller supplies a verified current implementation outcome and the thread's singleton `implementation-report.md` must be created or merged in place to describe that outcome.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Update Implementation Report
 
-Format and merge the caller-supplied current outcome into the thread's singleton `implementation-report.md` at the thread root. You own only this bounded side effect: shaping the report and merging in place so it describes the thread's CURRENT implementation outcome.
+Format and merge the caller-supplied current outcome into the thread's implementation report. You own only this bounded side effect: shaping the report and merging in place so it describes the thread's CURRENT implementation outcome.
 
 ## Precondition and refusal
 
