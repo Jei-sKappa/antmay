@@ -19,6 +19,11 @@ skills/workflow/roadmap/roadmap:
   - workflows/standard.md
   - workflows/roadmap.md
 
+skills/workflow/reconcile/reconcile-roadmap:
+  - workflows/quick.md
+  - workflows/standard.md
+  - workflows/roadmap.md
+
 skills/workflow/capture-discussion/discussion:
   - formats/discussion-point.md
   - formats/decision-record.md

@@ -4,7 +4,7 @@ description: Make a thread-root roadmap.md and its decomposition faithful to the
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Reconcile Roadmap
@@ -25,7 +25,7 @@ The question you answer throughout: **does this roadmap, and the way it divides 
    - **Omitted decisions** — add the substance of a governing decision the roadmap fails to express.
    - **Contradictions** — resolve a roadmap statement that conflicts with the settled direction or a settled boundary toward the settled decision.
    - **Unsupported commitments** — remove a choice, constraint, or commitment the roadmap invented that no decision, seed, or proposal authorizes.
-   - **Incomplete or inconsistent child briefs** — repair a brief that fails the roadmap contract: a missing field; a dependency that names a child without describing the input consumed from it; a `Suggested workflow` left as a bare workflow name (for example `Quick` or `Standard`) where a complete expanded sequence is required. Fill these from what the authority already settles.
+   - **Incomplete or inconsistent child briefs** — repair a brief that fails the roadmap contract: a missing field, or a dependency that names a child without describing the input consumed from it — fill these from what the authority already settles. Expand a `Suggested workflow` left as a bare built-in name (`Quick`, `Standard`, or `Roadmap`) into the complete sequence the contract requires by copying the `## Suggested workflow` section verbatim from this skill's reference for that workflow — Quick → `references/shared/workflows/quick.md`, Standard → `references/shared/workflows/standard.md`, Roadmap → `references/shared/workflows/roadmap.md`. A bare name outside those three is not one you can expand deterministically; hand it to `/emit-pending-decisions` rather than inventing a sequence.
 
    Preserve legitimate elaboration — decomposition detail that extends the decisions without contradicting them is not an error and must survive untouched.
 
@@ -44,7 +44,3 @@ You do not open, seed, or otherwise materialize the child threads the briefs des
 ## Queueing decisions
 
 Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-roadmap` as the producer, `roadmap.md` as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the roadmap again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
-
-## Nothing else is produced
-
-You have exactly one behavior: reconcile the roadmap against its authority. You do not emit a review report or a findings file, and you offer no report-only, check-only, or approval variant selectable at invocation. A clean pass leaves the working tree untouched and produces no file — the chat summary is the whole output.
