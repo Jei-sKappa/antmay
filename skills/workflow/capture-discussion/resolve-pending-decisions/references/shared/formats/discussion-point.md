@@ -18,4 +18,3 @@ A discussion point has these parts, in this order:
 
 - **Separate established facts from open decisions.** Anything already settled, observed, or constrained is stated as a fact inside *What you need to know* — never dressed up as an option. Only genuine choices, where reasonable people could decide differently, are presented as options or a proposal. Do not manufacture alternatives around a fact to make the point look like a decision.
 - **One point at a time.** A discussion point frames a single decision. Several independent decisions are never batched into one point.
-- **Transient framing, not a durable record.** The point carries the options menu, recommendation, and deliberation needed to reach a choice — material with no lasting value once the choice is made. The settled decision's durable record is produced separately.

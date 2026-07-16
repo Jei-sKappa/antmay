@@ -8,7 +8,7 @@ Number records sequentially across the whole thread: scan `decisions.md` for the
 
 ## Record shape
 
-Each record is a durable projection of the outcome, not a transcript of how it was reached. Write it so a fresh agent understands what was decided, why, and where it applies without the chat or the discussion point's options menu:
+Each record is a durable projection of the outcome, not a transcript of how it was reached. Write it so a fresh agent understands what was decided, why, and where it applies without the chat:
 
 ```markdown
 ## D<N>: <Title>
