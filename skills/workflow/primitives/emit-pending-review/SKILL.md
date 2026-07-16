@@ -3,12 +3,12 @@ name: emit-pending-review
 description: Use only when an invoking caller supplies already-validated, evidenced review findings for a target and needs them recorded for later attention — allocate a uniquely named bundle under the active thread's `.pending-reviews/` folder and write its routing header and severity-ordered findings.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Emit Pending Review
 
-Record a review's findings in a single self-contained bundle. You take the findings the caller hands you — each already validated, evidenced, and assigned a severity and a review-specific category — allocate a uniquely named bundle file, write its routing header, and lay the findings out in the schema below. You own only the bundle's allocation, shape, ordering, and the refusals here. You do not judge whether a finding is valid, fixable, or worth raising, you do not correct the reviewed target, and you route nothing anywhere else.
+Record a review's findings in a single self-contained bundle. You take the findings the caller hands you, allocate a uniquely named bundle file, write its routing header, and lay the findings out in the schema below.
 
 ## Precondition and refusal
 
@@ -25,7 +25,7 @@ Otherwise refuse, naming exactly what is missing, and write no file, when the ta
 
 Write one bundle file per review run under the active thread's `.pending-reviews/` folder, creating the folder on demand. Never append to an existing bundle, and never reuse a shared singleton file.
 
-Each filename must be unique even when several reviewers finish within the same second, and must stay human-readable. Compose it from a UTC timestamp, a short unique suffix, and a kebab-case slug summarizing the review — for example `260712142301Z-a3f9-spec-handoff.md`. Concurrent reviewers therefore always allocate distinct files.
+Each filename must be unique even when several reviewers finish within the same second, and must stay human-readable. Compose it from a UTC timestamp, a short unique suffix, and a kebab-case slug summarizing the review — for example `260712142301Z-a3f9-spec-handoff.md`.
 
 ## Bundle shape
 
