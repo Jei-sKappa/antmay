@@ -117,6 +117,7 @@ Still-valid authoring guidance for every skill body:
 
 - Keep `description` to one sentence (entry points) or one bounded-precondition sentence (primitives) that says what the skill does and when to trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
 - Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections — routing belongs in the frontmatter description.
+- When a skill body points at one of its own reference files, cite the full direct skill-relative path (e.g. `references/shared/formats/discussion-point.md`) — never an indirect description like "the `discussion-point.md` format under `references/shared/formats/`", and never a bare folder.
 - Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, V1/V2/V3 naming, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `D<N>` are allowed when they are part of the skill's emitted artifact format.
 
 ## Shared references

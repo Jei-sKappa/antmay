@@ -3,7 +3,7 @@ name: emit-pending-decisions
 description: Use only when an invoking caller supplies open human decisions with their producing context and needs them queued for a human to settle later — allocate a uniquely named bundle under the active thread's `.pending-decisions/` folder and write its routing header, advisory follow-up, and canonical discussion points; never for defects, observations, or report material — only genuine open human decisions.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Emit Pending Decisions
@@ -62,7 +62,7 @@ Immediately after the header, write:
 
 The follow-up is a natural-language paragraph, built from the caller's supplied suggestion, describing a useful next step such as applying the resulting decisions to the target and rechecking it. It is advice a human reads and chooses to act on — never an executable command, never workflow state, and never a promise that a named skill can be invoked automatically. Write it so it stands on its own without the originating chat.
 
-Then, for each unresolved human decision, write one canonical discussion point into the bundle file per the `discussion-point.md` format under `references/shared/formats/`, normalizing the caller's raw material into that structure without changing which decision is being made or inventing evidence the caller did not supply. Every point in the bundle shares the header's producer, target, and follow-up boundary.
+Then, for each unresolved human decision, write one canonical discussion point into the bundle file per the format in `references/shared/formats/discussion-point.md`, normalizing the caller's raw material into that structure without changing which decision is being made or inventing evidence the caller did not supply. Every point in the bundle shares the header's producer, target, and follow-up boundary.
 
 ## Bundle invariant
 
@@ -70,4 +70,4 @@ One bundle holds one producer, one coherent target, and one follow-up action. Wh
 
 ## Ownership boundary
 
-The caller owns domain judgment: whether a question genuinely requires human intent, the correctness of the evidence, and how the questions are grouped into bundles. You own the bounded side effect: unique file allocation, the header and section shape, correct point formatting per the discussion-point format, and the refusals above.
+The caller owns domain judgment: whether a question genuinely requires human intent, the correctness of the evidence, and how the questions are grouped into bundles. You own the bounded side effect: unique file allocation, the header and section shape, correct point formatting per `references/shared/formats/discussion-point.md`, and the refusals above.
