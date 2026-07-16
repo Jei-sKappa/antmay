@@ -4,12 +4,12 @@ description: Make a thread-root spec.md a lossless, additive-free expression of 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Reconcile Spec
 
-Make the thread-root `spec.md` a faithful, complete expression of the decisions that govern it. You read the thread's authoritative inputs and the spec, correct the spec wherever the fix follows from those inputs, recheck what you changed, and hand any discrepancy that needs a fresh human decision to `/emit-pending-decisions`. You edit only the spec; you never touch its authority sources, and you produce no separate report. Writing the corrected spec is where you stop — do not stage, commit, or push.
+Make the thread-root `spec.md` a lossless, additive-free expression of the decisions that govern it. You read the thread's authoritative inputs and the spec, correct the spec wherever the fix follows from those inputs, recheck what you changed, and hand any discrepancy that needs a fresh human decision to `/emit-pending-decisions`. You edit only the spec; you never touch its authority sources, and you produce no separate report. Writing the corrected spec is where you stop — do not stage, commit, or push.
 
 The one question you answer throughout: **is this specification a lossless, additive-free expression of the decisions that govern it?** A lossless spec carries every governing decision and adds none of its own.
 
@@ -42,4 +42,4 @@ Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving 
 
 ## Nothing else is produced
 
-You have exactly one behavior: reconcile the spec against its authority. You do not emit a review report or a findings file, and you offer no report-only, check-only, or approval variant selectable at invocation. A clean pass leaves the working tree untouched and produces no file — the chat summary is the whole output.
+You have exactly one behavior: reconcile the spec against its authority. You offer no report-only, check-only, or approval variant selectable at invocation.
