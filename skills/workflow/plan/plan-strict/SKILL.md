@@ -4,12 +4,12 @@ description: Turn a spec, proposal, decisions, GitHub issue, or raw prompt into 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.2.0
+  version: 5.2.1
 ---
 
 # Plan Strict
 
-Forward-design a strict-granularity plan for the active thread from a single upstream input. Read the input, draft an index plus one dispatchable brief per task — each brief carrying explicit substeps, files modified, verification, and acceptance criteria — self-review before emission, write the index `plan.md` at the thread root and the task briefs under `plan-tasks/`, then confirm the path. Run end-to-end without walking the user task-by-task. Writing the files is where you stop — do not stage, commit, or push.
+Forward-design a strict-granularity plan for the active thread from a single upstream input. Read the input, draft an index plus one dispatchable brief per task — each brief carrying explicit substeps, files modified, verification, and acceptance criteria — self-review before emission, write the index `plan.md` at the thread root and the task briefs under `plan-tasks/`, then confirm the path. Run end-to-end without walking the user task-by-task. Writing the files is where you stop.
 
 ## Inputs
 
@@ -38,12 +38,7 @@ Each task satisfies this contract through its prescriptive substeps and per-task
 
 ## No Parallelization
 
-Plans produced by this skill are sequential. Neither the index nor any task file may contain wave numbers, dependency arrays, task-graph notation, fork/join syntax, `depends_on` fields, parallelization markers (bracketed wave prefixes on tasks, `parallel:` blocks), or any other construct that suggests tasks may run concurrently.
-
-- **Wave numbers**: do not emit. The implementer executes tasks in plan order. There are no waves.
-- **Dependency arrays / `depends_on` fields**: do not emit. The implicit dependency is "the previous numbered task ran first". Anything stronger is out of scope.
-- **Task graph notation**: do not emit. No DAG, no Mermaid graphs of task relationships, no arrows between tasks.
-- **Parallelization markers**: do not emit. No bracketed wave prefixes on tasks, no `parallel:` blocks, no fork/join indicators.
+Plans produced by this skill are sequential: tasks are numbered and the implementer executes them in plan order, the only dependency being that the previous numbered task ran first — anything stronger is out of scope. So the order stays the whole execution graph, neither the index nor any task file carries a concurrency construct: wave numbers, dependency arrays or `depends_on` fields, task-graph notation (DAGs, Mermaid graphs, arrows between tasks), fork/join syntax, or parallelization markers (bracketed wave prefixes on tasks, `parallel:` blocks).
 
 Strict granularity is especially tempting territory for parallelization markers because the per-task fields look graph-shaped — resist. If you find yourself wanting to express parallelism, loop back to the spec phase or open a separate discussion.
 
@@ -115,7 +110,7 @@ If a `plan.md` already exists at the thread root, determine its shape before wri
 ## Procedure
 
 1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a plan can be written), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
-2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input. If multiple plausible inputs match the reference, that is a preflight failure — refuse per step 1 rather than picking by recency.
+2. **Resolve and read the input.** Detect which of the five `## Inputs` forms was passed. For an artifact input, read the file. For a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials). For a raw prompt, the prompt itself is the input.
 3. **Check for an existing plan.** If a `plan.md` already exists at the thread root, apply `## Replacing an existing plan` before writing anything.
 4. **Draft the index and task files.** Compose the plan per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `plan-tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields plus the `Consumes:`/`Produces:` hand-off lines. Before writing the first task file, look at `references/worked-example.md` for the complete shape of a task file and the matching index excerpt. Cite settled decisions as `decisions.md D<N>` in the relevant task's input/context field. No parallelization markers and no frontmatter anywhere.
 5. **Run self-review.** Execute the four checks from `## Self-Review` across the whole drafted plan (index + task files) until all four pass. The emitted files do not contain self-review notes.
