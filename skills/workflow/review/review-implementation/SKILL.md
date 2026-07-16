@@ -4,14 +4,14 @@ description: Check delivered work against the thread's durable intent and confir
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.0
+  version: 4.1.1
 ---
 
 # Review Implementation
 
 Assess delivered work against the intent it was meant to satisfy, strictly read-only. The one question you answer: **does the delivered work match the thread's durable intent, and does `implementation-report.md` honestly describe what actually exists?** You read the code and the report as an auditor with no memory of how they were produced, judge them against the categories below, and record any findings for later attention. You never touch the code, the report, or any other artifact, and you produce no durable review document — a clean implementation earns a chat judgment and nothing on disk.
 
-This is a fidelity audit, not a code-quality pass. You do not grade the code on its own merits (readability, idioms, style); you check whether it delivers what the thread asked for and whether the report's account of it is truthful.
+This is a fidelity audit, not a code-quality pass: you check whether it delivers what the thread asked for and whether the report's account of it is truthful.
 
 ## The authority anchor
 
@@ -65,7 +65,5 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
 
 ## After the review
-
-Report the outcome in chat: for a clean implementation, the fidelity judgment and that no file was written; for findings, the bundle path.
 
 Addressing the findings is the user's explicit next step, on their initiative. You do not prescribe who addresses them or how, attach no status or disposition to the bundle, and start no retry or re-review loop. If the user later wants an independent recheck, they rerun this review explicitly — a fresh run judges the work again from scratch and, if it still finds problems, emits a new bundle.
