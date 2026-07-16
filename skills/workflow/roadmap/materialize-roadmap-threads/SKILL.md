@@ -4,7 +4,7 @@ description: Turn a roadmap's child briefs into child threads idempotently — c
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.2.1
 ---
 
 # Materialize Roadmap Threads
@@ -28,7 +28,7 @@ For each `C<N>` brief the run will materialize, validate:
 - **A usable expanded `Suggested workflow`** — the complete expanded sequence is present and usable as written, never a bare workflow name. An absent or unusable `Suggested workflow` is a preflight defect.
 - **Existing materialization references** — read each brief's `Materialized thread:` line where present, so the run knows which briefs to create and which to verify.
 
-If any selected brief fails any check, refuse the entire run: write nothing, allocate no child, emit no bundle, and end with `Outcome: REFUSED — <which brief failed which check and how to fix it>`. Refusing up front is what prevents creating an early child and only then discovering a later malformed brief.
+If any selected brief fails any check, refuse the entire run — the preflight-failure consequence from `## Inputs` — with a reason that names which brief failed which check and how to fix it. Refusing up front is what prevents creating an early child and only then discovering a later malformed brief.
 
 `/allocate-thread` is assumed present as part of the installed suite; do not add availability detection or a fallback implementation for it.
 
@@ -57,12 +57,6 @@ Delegate creation to `/allocate-thread`, supplying a complete **caller-authoriza
 Immediately after `/allocate-thread` returns a folder path, add a `Materialized thread:` line to the brief just created, directly under its `### C<N>:` heading, with the value set to the returned repo-relative thread-root directory path (the folder, e.g. `docs/threads/260714093000Z-auth-boundary/`).
 
 Adding this line is the only edit this operation ever makes to `roadmap.md`. It is factual evidence that the child was created — never a status, progress, or completion marker. Add it the moment creation succeeds, so an interrupted run leaves every already-created child correctly referenced.
-
-## Missing or unusable suggested workflow
-
-A brief whose `Suggested workflow` is absent or unusable cannot be materialized as written. This is caught in preflight (`## Preflight every brief before allocating any child`): it refuses the entire run before any child is allocated, naming the offending brief and what is wrong. Do not ask the user in chat, do not invent a workflow, and do not skip the brief and continue.
-
-Never substitute a default workflow, infer one from the child's subject, or resolve a bare name against a workflow template.
 
 ## Blocked
 
