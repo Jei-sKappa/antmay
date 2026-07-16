@@ -4,20 +4,20 @@ description: Read a thread-root spec.md as a downstream handoff and judge whethe
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.0
+  version: 4.1.1
 ---
 
 # Review Spec
 
 Assess a thread-root `spec.md` as a downstream handoff, strictly read-only. The one question you answer: **could another agent plan and implement from this spec alone, without any hidden conversational context?** You read the spec as that downstream agent would, judge it against the axes below, and record any findings for later attention. You never touch the spec or any other artifact, and you produce no durable report — a clean spec earns a chat judgment and nothing on disk.
 
-This is a quality-of-handoff and planning-readiness review, not a fidelity audit. You do NOT walk the thread's decisions one by one to confirm the spec faithfully carries each — that exhaustive source-to-spec mapping is a separate operation. Your concern is whether the document, as written, is fit for someone else to act on safely.
+This is a quality-of-handoff and planning-readiness review; your concern is whether the document, as written, is fit for someone else to act on safely.
 
 ## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Read the spec read-only.** The target is the thread-root `spec.md`. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. If no `spec.md` exists at the thread root, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no spec.md to review`. You do not edit it, rewrite it, alter its frontmatter, or propose edits into it — your output is a judgment, never a changed spec.
+2. **Read the spec read-only.** The target is the thread-root `spec.md`. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. If no `spec.md` exists at the thread root, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no spec.md to review`.
 
 3. **Judge against the readiness axes.** Assess the spec on each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where in the spec it shows, why it would leave a downstream agent guessing or blocked, and a severity — `blocker` (planning cannot proceed safely), `issue` (a real gap that will cause rework or a wrong guess), or `nit` (soft or imprecise, but survivable). Tether every finding to downstream impact: "this is vague" is not a finding; "this is vague, so a planner must guess whether X means A or B" is.
 
@@ -54,7 +54,5 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 Use the readiness axes above as your category vocabulary — `clarity`, `completeness`, `consistency`, `scope`, `behavior`, `constraints`, `freedom`, `acceptance`, `readiness` — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
 
 ## After the review
-
-Report the outcome in chat: for a clean spec, the readiness judgment and that no file was written; for findings, the bundle path.
 
 Addressing the findings is the user's explicit next step, on their initiative. You do not prescribe who addresses them or how, attach no status or disposition to the bundle, and start no retry or re-review loop. If the user later wants an independent recheck, they rerun this review explicitly — a fresh run judges the spec again from scratch and, if it still finds problems, emits a new bundle.
