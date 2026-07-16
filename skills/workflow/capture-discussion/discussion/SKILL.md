@@ -9,7 +9,7 @@ metadata:
 
 # Discussion
 
-Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges; then present that one fork framed per the format in `references/shared/formats/discussion-point.md` and, once the user settles it, append a self-contained `D<N>` record to the thread's `decisions.md`. The seed plus `decisions.md` are the durable artifact: they must let a later agent author the next piece of work without this conversation.
+Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges; then present that one fork framed per the format in `references/shared/formats/discussion-point.md` and, once the user settles it, append a self-contained `DR<N>` record to the thread's `decisions.md`. The seed plus `decisions.md` are the durable artifact: they must let a later agent author the next piece of work without this conversation.
 
 ## Peer framing
 
@@ -36,13 +36,13 @@ Hold these together:
 
 4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per the format in `references/shared/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
-5. **Record once the user settles the point.** Append a `D<N>` record to `decisions.md` per `## Recording decisions`, then tell the user: `Decision saved: <short summary>.`
+5. **Record once the user settles the point.** Append a `DR<N>` record to `decisions.md` per `## Recording decisions`, then tell the user: `Decision saved: <short summary>.`
 
 6. **Continue until closure.** There is no fixed limit on questions or decisions. Ask "shall we keep going or finish here?" whenever you sense natural closure — the user's pace slows, the topic feels exhausted, or the conversation repeats itself. The choice to stop is the user's; the prompt is your job.
 
 ## Recording decisions
 
-The thread-root `decisions.md` is the single decision store: append every settled point to it as a self-contained `D<N>` record, following the shape, sequential numbering, and append-only rules in `references/shared/formats/decision-record.md`. Do not keep decisions anywhere else.
+The thread-root `decisions.md` is the single decision store: append every settled point to it as a self-contained `DR<N>` record, following the shape, sequential numbering, and append-only rules in `references/shared/formats/decision-record.md`. Do not keep decisions anywhere else.
 
 What stays your judgment, not the format's: recognizing what was actually decided and whether it is decision-grade, writing the outcome as a durable projection a fresh agent can act on rather than a transcript, and flagging any dissent in the `Rationale` per the peer stance above. The discussion point itself is transient framing — its options menu, recommendation, and deliberation are never copied into the record.
 
@@ -59,7 +59,7 @@ When the user opens a branch outside the topic under discussion, do not silently
 When the user signals they want to stop:
 
 1. Say so plainly.
-2. Summarize what was settled this session by ID: `D<N>: <Title> → <decision>`, one per line.
+2. Summarize what was settled this session by ID: `DR<N>: <Title> → <decision>`, one per line.
 3. Name any deferred branches so they are not lost.
 4. Point the user at the decision store: `Decisions recorded in decisions.md` — or note that nothing was recorded if no point was settled.
 

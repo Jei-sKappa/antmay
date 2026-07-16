@@ -44,11 +44,11 @@ The folder timestamp records opening time, so the seed does not duplicate it. No
 
 ## Decisions
 
-`decisions.md` is the one thread-wide log of human decisions. It is created eagerly when the thread opens (header-only is fine) and appended to as decisions are settled. Each record uses sequential thread-local `D<N>` numbering and carries a Title, an optional Scope, a mandatory Context, the Decision, and its Rationale.
+`decisions.md` is the one thread-wide log of human decisions. It is created eagerly when the thread opens (header-only is fine) and appended to as decisions are settled. Each record uses sequential thread-local `DR<N>` numbering and carries a Title, an optional Scope, a mandatory Context, the Decision, and its Rationale.
 
 The log is append-only. A changed decision is recorded by appending a new superseding record that names the record it supersedes; prior records are never rewritten. `seed.md` plus `decisions.md` are designed to be sufficient on their own to author the next artifact without recovering the original chat.
 
-Any skill — regardless of its interaction posture — that obtains a new human decision during execution appends it to `decisions.md` as an ordinary `D<N>` record **before** acting on it. A genuine decision is an answer that settles product or workflow intent; trivial input clarifications (such as which file was meant) need no record. This holds equally whether the decision was elicited in an interactive dialogue or settled through a pending-decision bundle: every human decision that shapes an artifact exists in `decisions.md` before the artifact depends on it.
+Any skill — regardless of its interaction posture — that obtains a new human decision during execution appends it to `decisions.md` as an ordinary `DR<N>` record **before** acting on it. A genuine decision is an answer that settles product or workflow intent; trivial input clarifications (such as which file was meant) need no record. This holds equally whether the decision was elicited in an interactive dialogue or settled through a pending-decision bundle: every human decision that shapes an artifact exists in `decisions.md` before the artifact depends on it.
 
 ## Historical artifacts versus living documentation
 
@@ -89,7 +89,7 @@ External tracker references are passive. Supplying a ticket or other external so
 
 ## Cross-thread references
 
-Cross-thread references use plain repo-relative thread-root directory paths, for example `docs/threads/260714093000Z-auth-boundary/`. A materialized child seed's `Parent:` field uses the same repo-relative path form. `Roadmap brief:` uses the parent Roadmap's stable `C<N>` identifier. References always point at the thread folder, never at a file inside it, so a thread's internal contents can change without invalidating references to it. There is no link-repair mechanism, indirection scheme, or stable-ID registry.
+Cross-thread references use plain repo-relative thread-root directory paths, for example `docs/threads/260714093000Z-auth-boundary/`. A materialized child seed's `Parent:` field uses the same repo-relative path form. `Roadmap brief:` uses the parent Roadmap's stable `CB<N>` identifier. References always point at the thread folder, never at a file inside it, so a thread's internal contents can change without invalidating references to it. There is no link-repair mechanism, indirection scheme, or stable-ID registry.
 
 ### Accepted limitation
 
@@ -117,7 +117,7 @@ The absence of `.pending-decisions/` means there are no known pending human deci
 
 Read-only reviews write their findings here. A review that finds no actionable issue returns a concise pass in chat and creates no file. A review that finds one or more actionable issues writes exactly one uniquely named findings bundle for that run.
 
-A bundle names the reviewer, the reviewed target, the creation time, and the finding count, has an optional `## Context` section for a short overall assessment, and lists findings under sequential bundle-local `F<N>` numbering. Each finding carries a severity (blocker, issue, or nit), a review-specific category, a finding statement, evidence, an impact, and — only when useful and supported — a suggested action. Findings are ordered by severity and then by the reviewer's natural category order. A review never writes `.pending-decisions/` and never decides whether a finding is fixable, needs human intent, should be accepted, or should be rejected; its responsibility ends with an accurate bundle.
+A bundle names the reviewer, the reviewed target, the creation time, and the finding count, has an optional `## Context` section for a short overall assessment, and lists findings under sequential bundle-local `FND<N>` numbering. Each finding carries a severity (blocker, issue, or nit), a review-specific category, a finding statement, evidence, an impact, and — only when useful and supported — a suggested action. Findings are ordered by severity and then by the reviewer's natural category order. A review never writes `.pending-decisions/` and never decides whether a finding is fixable, needs human intent, should be accepted, or should be rejected; its responsibility ends with an accurate bundle.
 
 Consumption is manual composition. A pending-review bundle is an ordinary, self-contained input: the user may hand it to any capable agent with a direct instruction to read and address the findings, and no bundle prescribes a named addressing skill. The addressing agent assesses each finding rather than accepting it mechanically, applies supported corrections within its actual write authority, and routes genuine new human intent through `.pending-decisions/`. Re-review of the target is always an explicit user request, never an automatic loop; a re-review that still finds issues emits a fresh bundle, and a clean re-review emits no file. A bundle is removed once its findings are judged addressed, dismissed, or superseded by a newer bundle. There are no statuses, dispositions, or automatic retry loops.
 

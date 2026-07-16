@@ -61,7 +61,7 @@ sequencing or ownership boundaries>
 
 ## Child threads
 
-### C1: <child title>
+### CB1: <child title>
 
 Outcome: <the independently valuable result this child should produce>
 
@@ -72,7 +72,7 @@ Scope and boundaries:
 - Out of scope: ...
 
 Dependencies:
-- C<N> — <what outcome or information this child consumes from that one>
+- CB<N> — <what outcome or information this child consumes from that one>
 - or: None
 
 Relevant shared constraints:
@@ -81,16 +81,16 @@ Relevant shared constraints:
 Suggested workflow:
 <the complete expanded workflow sequence — see "Expand each suggested workflow">
 
-### C2: <child title>
+### CB2: <child title>
 
 ...
 ```
 
 Rules for the contents:
 
-- **Child IDs are stable local references.** `C1`, `C2`, … name children inside this roadmap; dependencies cite these IDs, never titles. Numeric order is organizational only — it is not sequencing state, lifecycle, or a guarantee of execution order — and an ID never changes once written.
+- **Child IDs are stable local references.** `CB1`, `CB2`, … name children inside this roadmap; dependencies cite these IDs, never titles. Numeric order is organizational only — it is not sequencing state, lifecycle, or a guarantee of execution order — and an ID never changes once written.
 - **Each brief is self-contained enough to become a seed.** It must stand on its own: a reader with only the brief can understand the child's outcome, context, boundaries, what it consumes from its dependencies, the shared constraints that apply, and the complete workflow to follow. The roadmap defines independently discussable outcomes; it does not pre-write each child's specification.
-- **Describe every dependency as a consumed input**, not a bare cross-reference — e.g. `C1 — consume the finalized authentication boundary and token-ownership rules`. When a child depends on nothing, write `None`.
+- **Describe every dependency as a consumed input**, not a bare cross-reference — e.g. `CB1 — consume the finalized authentication boundary and token-ownership rules`. When a child depends on nothing, write `None`.
 - **Do not write a `Materialized thread:` field.** At authoring time no child exists, so that factual reference is simply absent — never `none`, never `pending`. A separate materialization operation adds it later, after a child is created.
 
 ## Expand each suggested workflow

@@ -29,10 +29,10 @@ Append only a discovery that bears on one of the Affects categories above. Rejec
 
 ## Record shape
 
-`roadmap-feedback.md` starts with the header `# Roadmap Feedback` and accrues records in this shape, each under its own `### F<N>: <short title>` heading:
+`roadmap-feedback.md` starts with the header `# Roadmap Feedback` and accrues records in this shape, each under its own `### FBK<N>: <short title>` heading:
 
 ```markdown
-### F<N>: <short title>
+### FBK<N>: <short title>
 
 Source:
 
@@ -47,7 +47,7 @@ Recommendation:
 
 ## Numbering and append discipline
 
-Read the existing `roadmap-feedback.md` only to find the highest existing `F<N>`; the new record takes the next sequential number, starting at `F1` in an empty file. Append the new record at the end of the file.
+Read the existing `roadmap-feedback.md` only to find the highest existing `FBK<N>`; the new record takes the next sequential number, starting at `FBK1` in an empty file. Append the new record at the end of the file.
 
 Never rewrite, renumber, reorder, or edit any existing record, and never touch the `# Roadmap Feedback` header. Your single mutation is the appended record.
 

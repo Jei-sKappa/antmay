@@ -51,7 +51,7 @@ Reproduce the genesis narrative and the `## Suggested workflow` section exactly 
 
 - `External:` — write only when a real external URL was supplied; use that URL as the value.
 - `Parent:` — write the supplied reference as a repo-relative thread-root directory path pointing at the parent thread's folder, never at a file inside it (for example `Parent: docs/threads/260714093000Z-auth-boundary/`).
-- `Roadmap brief:` — write the supplied parent-roadmap brief identifier in its `C<N>` form.
+- `Roadmap brief:` — write the supplied parent-roadmap brief identifier in its `CB<N>` form.
 - `Supersedes:` — write only when the caller supplied a known supersession relationship worth recording; use the supplied reference as the value.
 
 Absent metadata is simply absent — no line, no `none`, no justification for its absence.

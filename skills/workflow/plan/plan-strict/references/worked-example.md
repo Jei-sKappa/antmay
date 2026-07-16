@@ -9,7 +9,7 @@ A task file `plan-tasks/01-add-jwt-helper.md`:
 
 **Objective:** Provide a reusable verification function that the auth middleware will call.
 
-**Input / context:** Settled decision per `decisions.md D2` — use the `jose` library, not `jsonwebtoken`.
+**Input / context:** Settled decision per `decisions.md DR2` — use the `jose` library, not `jsonwebtoken`.
 
 **Steps:**
 1. Add `jose` to `package.json` dependencies and run install.

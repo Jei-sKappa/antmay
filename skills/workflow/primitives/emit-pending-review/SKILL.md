@@ -55,7 +55,7 @@ Then write the findings under a single heading:
 ```markdown
 ## Findings
 
-### F1: <short title>
+### FND1: <short title>
 
 Severity: <blocker | issue | nit>
 Category: <review-specific category>
@@ -69,12 +69,12 @@ Impact: <why it matters>
 Suggested action: <a useful next action, when supportable>
 ```
 
-Give each finding its own `### F<N>: <short title>` section. `F<N>` numbering is sequential and local to this bundle, starting at `F1`. Every finding carries `Severity:` (`blocker`, `issue`, or `nit`), `Category:` (the review-specific category the caller assigned), `Finding:`, `Evidence:`, and `Impact:`. Include `Suggested action:` only when a useful next step is supported by the finding; omit it otherwise.
+Give each finding its own `### FND<N>: <short title>` section. `FND<N>` numbering is sequential and local to this bundle, starting at `FND1`. Every finding carries `Severity:` (`blocker`, `issue`, or `nit`), `Category:` (the review-specific category the caller assigned), `Finding:`, `Evidence:`, and `Impact:`. Include `Suggested action:` only when a useful next step is supported by the finding; omit it otherwise.
 
 Order the findings by severity — blockers first, then issues, then nits — and within one severity keep the caller's category order.
 
 ## Ownership boundary
 
-The caller owns every domain judgment: whether a finding is real, the correctness of the evidence, the severity, and the review-specific categories. You own the bounded side effect: unique file allocation, the header and finding schema, `F<N>` numbering, severity ordering, and the refusals above.
+The caller owns every domain judgment: whether a finding is real, the correctness of the evidence, the severity, and the review-specific categories. You own the bounded side effect: unique file allocation, the header and finding schema, `FND<N>` numbering, severity ordering, and the refusals above.
 
 The bundle records findings and nothing more. It carries no field naming how to address a finding, no status, disposition, or other lifecycle marker, and no instruction to rerun or auto-retry any operation. You never write to `.pending-decisions/` and never route a finding to another operation; how the recorded findings are addressed is decided elsewhere.
