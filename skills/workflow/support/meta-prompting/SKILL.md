@@ -4,7 +4,7 @@ description: Refine a draft prompt for a fresh AI session only when the user exp
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.4.0
+  version: 1.4.1
 ---
 
 # Meta-Prompting
@@ -24,14 +24,8 @@ A single block of plain markdown delivered directly in chat. Headings and lists 
 
 No preamble, no chat framing, no closing remark. No "Sure, here is…", no "Hope this helps." The response IS the deliverable — anything wrapped around it is fluff.
 
-## Procedure
-
-1. Read the user's raw draft.
-2. Decide: clarify or rewrite.
-3. Either ask the user about the missing pieces, or output the refined prompt directly in chat.
-
 ## Ask for context and clarification
 
-Stop and ask the user when the draft is missing required context, internally contradictory, or ambiguous enough that you'd have to guess what they meant. A typo that creates ambiguity (e.g. a misspelled library name that could be one of two packages) is a clarification trigger, not a silent fix. Never invent. Otherwise rewrite without asking.
+Stop and ask the user when the draft is missing required context, internally contradictory, or ambiguous enough that you'd have to guess what they meant. A typo that creates ambiguity (e.g. a misspelled library name that could be one of two packages) is a clarification trigger, not a silent fix. Otherwise rewrite without asking.
 
 When you do ask, list the missing pieces as a short bullet list and wait for the user to fill in before generating the refined version.
