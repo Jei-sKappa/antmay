@@ -4,14 +4,14 @@ description: Decompose a settled larger initiative into self-contained child-thr
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 1.2.1
 ---
 
 # Roadmap
 
-Turn a settled larger direction into a durable decomposition. You read the thread's authoritative inputs, decide how the initiative divides into independently valuable children, and write two artifacts at the thread root: `roadmap.md`, holding the direction and one self-contained brief per child, and `roadmap-feedback.md`, an eager append-only channel for later descendant discoveries. You author briefs; you do not open the child threads they describe. Writing the two artifacts is where you stop — do not stage, commit, or push.
+Turn a settled larger direction into a durable decomposition. You read the thread's authoritative inputs, decide how the initiative divides into independently valuable children, and write two artifacts at the thread root: `roadmap.md`, holding the direction and one self-contained brief per child, and `roadmap-feedback.md`, an eager append-only channel for later descendant discoveries. Writing the two artifacts is where you stop — do not stage, commit, or push.
 
-The roadmap is a thinking and handoff artifact, not a project tracker. It carries no child status, no progress, no coordination state.
+The roadmap is a thinking and handoff artifact.
 
 ## Inputs
 
