@@ -3,7 +3,7 @@ name: append-roadmap-feedback
 description: Use only when an invoking caller supplies a descendant-thread discovery carrying parent- or sibling-level impact together with its parent roadmap reference, and that discovery must be appended as the next record in the parent thread's `roadmap-feedback.md`.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Append Roadmap Feedback
@@ -25,7 +25,7 @@ If any field is missing, refuse, name exactly what is missing, and write nothing
 
 ## The impact gate
 
-Append only a discovery that may affect the Roadmap direction, the shared constraints, another child, or the need for an additional child. Reject content that is only a local implementation note, a local surprise, or report material with no such cross-child or direction-level bearing — tell the caller that material belongs in the child's own implementation report, and write nothing. A `Recommendation` is an advisory next action only; if the supplied recommendation asserts a new human decision, a parent-level commitment, or that another child is blocked or complete, reject it.
+Append only a discovery that bears on one of the Affects categories above. Reject content that is only a local implementation note, a local surprise, or report material with no such cross-child or direction-level bearing — tell the caller that material belongs in the child's own implementation report, and write nothing. A `Recommendation` is an advisory next action only; if the supplied recommendation asserts a new human decision, a parent-level commitment, or that another child is blocked or complete, reject it.
 
 ## Record shape
 
@@ -34,15 +34,15 @@ Append only a discovery that may affect the Roadmap direction, the shared constr
 ```markdown
 ### F<N>: <short title>
 
-Source: <the child thread that produced the discovery>
+Source:
 
-Affects: <named future child briefs, shared constraints, overall direction, or a possible new child>
+Affects:
 
-Context: <self-contained evidence and the assumption or boundary challenged>
+Context:
 
-Impact: <why later work may need to change>
+Impact:
 
-Recommendation: <advisory next action>
+Recommendation:
 ```
 
 ## Numbering and append discipline
