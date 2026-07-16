@@ -1,9 +1,9 @@
 ---
 name: archive-thread
-description: Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
+description: Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.2.0
+  version: 2.2.1
 disable-model-invocation: true
 ---
 
