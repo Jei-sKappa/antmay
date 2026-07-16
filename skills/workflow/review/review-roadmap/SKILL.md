@@ -4,7 +4,7 @@ description: Read a thread-root roadmap.md as a decomposition handoff and judge 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # Review Roadmap
@@ -50,7 +50,5 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 Use the readiness axes above as your category vocabulary — `decomposition`, `self-containment`, `dependencies`, `shared-constraints`, `workflow-completeness`, and `fidelity` for an obvious `decisions.md` contradiction — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
 
 ## After the review
-
-Report the outcome in chat: for a clean roadmap, the readiness judgment and that no file was written; for findings, the bundle path.
 
 Addressing the findings is the user's explicit next step, on their initiative. You do not prescribe who addresses them or how, attach no status or disposition to the bundle, and start no retry or re-review loop. If the user later wants an independent recheck, they rerun this review explicitly — a fresh run judges the roadmap again from scratch and, if it still finds problems, emits a new bundle.
