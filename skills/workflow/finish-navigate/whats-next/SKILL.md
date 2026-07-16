@@ -1,9 +1,9 @@
 ---
 name: whats-next
-description: Read a thread's observable state — its location, seed suggestion, decisions, canonical artifacts, pending bundles, run state, and branch — then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
+description: Read a thread's observable state, then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 disable-model-invocation: true
 ---
 
@@ -99,4 +99,4 @@ Alternatives:
 ...
 ```
 
-Omit any section that would be empty, and suggest at most two to four concrete actions. Each suggested action names what would execute it and ties to an observed signal. The reply may include a clarifying question when the evidence leaves something genuinely unresolvable. The skill writes nothing, changes nothing, and marks nothing complete — the chat reply is the entire result, with no closing remark.
+Omit any section that would be empty, and suggest at most two to four concrete actions. Each suggested action names what would execute it and ties to an observed signal. The reply may include a clarifying question when the evidence leaves something genuinely unresolvable. End on the last signal-oriented line, with no closing remark.
