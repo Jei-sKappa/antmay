@@ -124,7 +124,8 @@
       "name": "JeisKappa-support",
       "source": "./",
       "skills": [
-        "./skills/workflow/support/meta-prompting"
+        "./skills/workflow/support/meta-prompting",
+        "./skills/workflow/support/name-cracker"
       ]
     },
     {

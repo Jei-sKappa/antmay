@@ -1,0 +1,5 @@
+interface:
+  display_name: Name Cracker
+  short_description: Generate and shortlist project name candidates
+policy:
+  allow_implicit_invocation: false

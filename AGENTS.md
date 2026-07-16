@@ -44,7 +44,7 @@ skills/
     ├── review/                  review-code, review-implementation, review-roadmap, review-spec
     ├── roadmap/                 materialize-roadmap-threads, roadmap
     ├── spec/                    spec
-    └── support/                 meta-prompting
+    └── support/                 meta-prompting, name-cracker
 ```
 
 The five skills under `primitives/` are the model-invoked building blocks; every other active skill is a user-invoked entry point.

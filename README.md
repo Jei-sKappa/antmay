@@ -320,6 +320,14 @@ Refine a draft prompt for a fresh AI session only when the user explicitly menti
 npx skills add Jei-sKappa/skills --skill meta-prompting
 ```
 
+#### [`name-cracker`](./skills/workflow/support/name-cracker/SKILL.md)
+
+Generate name candidates for a project, product, or tool by fanning out one generator subagent per naming-strategy category and merging the results into a single shortlisted file; use when the user wants to explore names broadly and pick a favorite.
+
+```sh
+npx skills add Jei-sKappa/skills --skill name-cracker
+```
+
 ## Primitives
 
 Primitives are **model-invoked**, not user-invoked: another skill or the model itself calls them to perform one narrow, shared operation — you never reach for them directly. They ship as dependencies of the suite, so installing the skills that call them installs these too; the snippets below are here only for completeness.
