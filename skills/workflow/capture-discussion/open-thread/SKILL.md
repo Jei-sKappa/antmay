@@ -1,10 +1,10 @@
 ---
 name: open-thread
-description: Open a durable workflow thread on disk — interpret the user's idea, an optional tracker ticket, and a chosen workflow, then compose the seed and hand normalized creation to the thread-creation primitive — use when a unit of work needs a home before any proposal, spec, or plan exists.
+description: Open a durable workflow thread on disk from a rough idea, an optional tracker ticket, and a chosen workflow — use when a unit of work needs a home before any proposal, spec, or plan exists.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 2.2.0
+  version: 2.2.1
 ---
 
 # Open Thread
@@ -67,4 +67,4 @@ A linked ticket is read for context only, and its URL is recorded in `External:`
 
 ## Report
 
-After `/allocate-thread` returns, report the created thread's folder path to the user; corrections are gathered before delegation, not after, so do not re-run the delegation. Keep the successful response focused on the created thread path.
+After `/allocate-thread` returns, report the created thread's folder path to the user, and keep the successful response focused on that path. Do not re-run the delegation to fold in a change the user raises after the report.
