@@ -13,8 +13,6 @@ Archive a workflow thread by relocating its folder from the active `docs/threads
 
 Archiving happens on **explicit user intent only**. Never scan for archivable threads on your own initiative, and run **no completion checks of any kind** — you do not inspect any status or report to decide whether the thread "deserves" archival. If the user asks to archive a thread, that intent is the whole authorization.
 
-This is a dialogue-driven handshake: obtaining human input is part of its normal job, so its questions and confirmations are expected output rather than a stalled or failed run. Disambiguating which thread the user means, asking for one confirmation before archiving over a non-empty workspace folder, and suggesting the user first record an abandonment are all ordinary execution of this handshake — none of them is a blocked or refused path.
-
 ## Resolve the target thread
 
 The user names the thread to archive (by slug or by path). A thread root is a folder directly under `docs/threads/` named with a UTC-timestamp slug (e.g. `docs/threads/250522143000Z-my-feature/`). If which thread the user means is ambiguous, ASK — never silently pick one. `docs/threads/archive/` is the archive container, not a thread; ignore it when resolving a target.
@@ -44,7 +42,7 @@ mkdir -p docs/threads/archive
 git mv docs/threads/<thread-folder> docs/threads/archive/<thread-folder>
 ```
 
-The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path together with the accepted warning that references pointing at the thread may break (see the limitation below). Keep the successful response focused on those two facts; emit no terminal outcome line and no outcome token — this dialogue-driven handshake has no terminal outcome.
+The archive is flat — no year/month/day sub-buckets. The slug is preserved unchanged; `archive/` is only added as a path prefix. Report the thread's new path together with the accepted warning that references pointing at the thread may break (see the limitation below). Keep the successful response focused on those two facts.
 
 ## Accepted limitation: references may break
 
