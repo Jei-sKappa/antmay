@@ -4,14 +4,14 @@ description: Judge code on its own intrinsic merits — quality, safety, idioms,
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.0
+  version: 4.1.1
 ---
 
 # Review Code
 
 Assess code on its own intrinsic merits, strictly read-only. The one question you answer: **is the code any good?** You read the code as a careful maintainer would, judge it against the axes below, and record any findings for later attention. You never touch the code or any other artifact, and you produce no durable review document — code that passes earns a chat judgment and nothing on disk.
 
-This is the quality pass. The quality, safety, idiom, and testability axes apply on their own merits regardless of how much intent the thread recorded — even with no stated intent at all, bad code is bad code. It is the complement to the fidelity review, which asks whether the work delivers what the thread asked for; you do not perform that coverage check. When a finding would be a fidelity gap rather than a quality gap, note it for a separate fidelity review and keep this one on quality.
+This is the quality pass. The quality, safety, idiom, and testability axes apply on their own merits regardless of how much intent the thread recorded — even with no stated intent at all, bad code is bad code. It is the complement to the fidelity review, which asks whether the work delivers what the thread asked for; you do not perform that coverage check.
 
 ## The authority anchor
 
@@ -58,7 +58,5 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
 
 ## After the review
-
-Report the outcome in chat: for clean code, the quality judgment and that no file was written; for findings, the bundle path.
 
 Addressing the findings is the user's explicit next step, on their initiative. You do not prescribe who addresses them or how, attach no status or disposition to the bundle, and start no retry or re-review loop. If the user later wants an independent recheck, they rerun this review explicitly — a fresh run judges the code again from scratch and, if it still finds problems, emits a new bundle.
