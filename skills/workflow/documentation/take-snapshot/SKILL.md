@@ -4,7 +4,7 @@ description: Derive a comprehensive, stack-agnostic snapshot document of an exis
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.3.0
+  version: 1.3.1
 ---
 
 # Take Snapshot
@@ -19,11 +19,12 @@ The skill's value is **coverage and traceability**, not stylistic polish. Bugs o
 
 - **Do**: read the source, infer what the app currently does, write the snapshot, flag what cannot be determined from code as Open Questions.
 - **Don't**: write any code, edit any file outside the snapshot output path, refactor "while we're here", or run anything destructive. This skill is **read-only with respect to the source codebase**.
-- **Stack-agnostic on both sides**: never mention or assume the source technology (framework, language, build system) or any target rebuild technology. The document describes *what the app does*, not *how to port it*.
+- **Stack-agnostic on both sides**: never mention or assume the source technology (framework, language, build system) or any target rebuild technology. The document describes *what the app does*, not *how to port it*. The one exception: the methodology preamble's *what was inspected* list may name an artifact when the name itself is load-bearing context for the inspection (e.g. "iOS Info.plist parsed for declared capabilities") — and even then, lean toward describing the artifact, not the technology.
 - **No migration content**: never include sections titled "Migration Notes", "Implementation Hints", "Rebuild Considerations", "Source → Target Mapping", or any equivalent. That ground is explicitly out of scope. A source→target mapping would lock the document to one rebuild target and shorten its useful life — let the rebuild project produce its own mapping doc separately.
 - **No history, no deprecation**: the snapshot describes only what exists now. No "previously did X" notes, no `[DEPRECATED]` markers, no change logs versus a prior run. If a feature isn't in the code right now, it isn't in the snapshot.
 - **Single file**: always one Markdown file. No master index, no per-area splits, no companion files.
 - **Honest about fidelity**: a "1:1 rebuild" is bounded by what's observable in the code plus what humans answer in the Open Questions section. Say so in the methodology preamble; never paper over it.
+- **No screenshots or visual flows**: where the document needs one, leave a placeholder for a human to attach (e.g. "see attached screen flow for FR-0042 — to be added by author").
 
 ## Orchestrator role
 
@@ -61,99 +62,7 @@ If a snapshot already exists at the output path from a previous run, treat it as
 
 ## Document template
 
-The snapshot has these sections in this order. Skip a section if it would be genuinely empty; don't pad.
-
-### 1. Methodology preamble
-
-A short block at the very top, before any other section. It records:
-
-- Skill name and version that produced the run.
-- Date of generation.
-- Source root inspected (absolute or repo-relative path).
-- Scope filter applied, if any (subdirectory limit).
-- A one-line statement that the document is a frozen snapshot of the application at the time of generation, bounded by what's observable in code plus answers to Open Questions, and is **not** stack-specific guidance.
-- A bulleted list of *what was inspected* (the angles that ran) and *what was not* (anything the orchestrator deliberately did not look at — e.g. backend code in a frontend-only run, generated files, vendored dependencies).
-
-The preamble exists so reviewers can calibrate confidence without reading every requirement.
-
-### 2. Product overview
-
-Non-technical framing. What the application is, who uses it, what problems it solves, the high-level user journeys. Inferred from screens, routes, copy, README content, and feature folders.
-
-If the source is silent on intent (no README, no in-app copy, no obvious user-facing naming), state that explicitly and ask for product framing in Open Questions — do not invent positioning.
-
-### 3. Feature inventory
-
-A flat list of every user-facing feature the orchestrator could identify, grouped by area. One short paragraph per feature: what it does from the user's perspective. No requirements yet, no IDs yet — this section is the bridge between product framing and the formal FR list. PMs should be able to read this and confirm the feature map before engineers consume the FRs.
-
-### 4. Functional requirements
-
-Numbered list with stable IDs scoped to this document. Format per item:
-
-```
-#### FR-0042 — <short title>
-
-**Statement.** <One paragraph stating what the system must do. Active voice. Testable.>
-
-**Acceptance.** <Bulleted conditions a tester or downstream implementer could verify against.>
-
-**Trace.** <Source files, route paths, function names, or other evidence pointers. Multiple entries allowed.>
-
-**Notes.** <Optional. Edge cases, related FRs, dependencies.>
-```
-
-- **IDs are zero-padded to 4 digits** (`FR-0001`, `FR-0002`, …), assigned sequentially in document order during writing.
-- IDs are **unique within this document**. They do not need to match any IDs from a prior run on the same codebase — the prior document is a separate snapshot.
-- Group requirements by feature area with `###` subheadings. The grouping is presentation only; IDs are global and unique across the whole document.
-- Every FR must have at least one entry under **Trace**, or it must explicitly say `Trace: derived from <screen/route/observable behavior>, no single source file owns it`. Untraceable FRs are red flags — surface them in Open Questions if you suspect you're guessing.
-
-### 5. Non-functional requirements
-
-Same shape as FRs but `NFR-XXXX`. Cover only what is observable or strongly implied by code:
-
-- Performance budgets visible in code (timeouts, debounces, cache TTLs).
-- Security postures (auth scheme, password rules, session handling, transport).
-- Accessibility commitments visible in markup/semantics (ARIA roles, focus management, contrast tokens).
-- Internationalization (locales supported, translation pipeline, RTL handling).
-- Observability (logging levels, telemetry endpoints, error boundaries).
-- Offline / connectivity behavior (caching layers, retry policies, queueing).
-- Compatibility (minimum platform versions declared in manifests or build config).
-
-Do **not** invent NFRs the code is silent on ("the rebuild should be performant" is filler). If an NFR feels obviously required but isn't expressed anywhere in the source, put it in Open Questions, not in this section.
-
-### 6. Technical architecture
-
-A description of the *logical* architecture — components, modules, data flow, persistence boundaries, external integrations — **without naming the source stack**. Write as if explaining to a senior engineer who will pick the rebuild stack themselves: "a layer that owns user session state and persists it across app restarts", not "a Zustand store with persist middleware".
-
-Sub-sections to include when relevant:
-
-- **Components and responsibilities** — logical building blocks.
-- **Data model** — entities, relationships, key fields, identifiers. Use stack-neutral notation (a simple table or ER-style prose).
-- **External integrations** — APIs consumed, endpoints, payload shapes, authentication mode, webhooks, third-party SDKs (named by what they *do* where possible: "a transactional email provider" rather than "SendGrid", unless the provider identity is itself a requirement).
-- **Configuration surface** — environment variables, feature flags, runtime config keys. List names and what each controls. Never list secret values.
-- **Permissions and manifests** — device/platform permissions requested, declared capabilities, deep link / universal link routes, push notification channels.
-- **Build and deployment surface** — what gets built, what gets deployed where. Describe outputs, not toolchain.
-
-### 7. Business rules and edge cases
-
-The "if X then Y" rules the application encodes — validation rules, calculation formulas, state machines, eligibility checks, throttling and quota logic, retry behavior, conflict resolution. Each rule gets its own item; cross-reference the FRs it supports.
-
-This section often surfaces the highest-leverage gaps for a rebuild, because business rules are the most expensive to lose. Be exhaustive.
-
-### 8. Glossary
-
-Domain terms used in the document with one-line definitions. Helps PMs and engineers stay aligned. Skip if the domain language is trivially common.
-
-### 9. Open Questions
-
-Everything the code cannot answer, consolidated. One item per question. Each item should:
-
-- Pose the question precisely.
-- State why the code cannot answer it (server-side rule, design decision in Figma/Jira, A/B experiment config, push-notification payload semantics decided on the server, etc.).
-- Identify who is likely to know (backend team, PM, designer, etc.) when that's inferable.
-- Cross-reference the FRs/NFRs/rules that depend on the answer.
-
-This section is **never empty in practice**. If it appears empty, the orchestrator probably guessed somewhere — re-check.
+The snapshot's section-by-section template — section order, per-section content rules, and the FR/NFR item format — lives in `references/document-template.md`. The writer reads it at the start of Step 4 and follows it exactly.
 
 ## ID assignment
 
@@ -228,7 +137,7 @@ The orchestrator then reads `00-survey.md` from disk to extract the planned angl
 
 Dispatch one subagent per planned angle in a single tool call. Each subagent writes to `<run-folder>/NN-<angle-slug>/notes.md`.
 
-After every subagent in a batch has returned, the orchestrator **verifies each expected `notes.md` exists on disk** under its angle folder. If any file is missing — for any reason, including a subagent that reported success — re-spawn that subagent with the same brief. Re-spawn as many times as needed until every expected file is on disk. The subagent's reply is never trusted; the file is the only completion signal.
+After every subagent in a batch has returned, the orchestrator **verifies each expected `notes.md` exists on disk** under its angle folder. If any file is missing — for any reason, including a subagent that reported success — re-spawn that subagent with the same brief. Re-spawn as many times as needed until every expected file is on disk.
 
 If the number of angles is too large to dispatch in one parallel batch reliably, split into smaller batches — but never collapse Step 3 into Step 4. All exploration finishes before any writing starts.
 
@@ -239,7 +148,7 @@ Do **not** read the notes files during Step 3. Reading is deferred to Step 4 so 
 The orchestrator (writer is the orchestrator itself; **never delegated to a subagent**, because global ID consistency depends on a single writer) composes the document from the notes:
 
 1. **Read the notes files one at a time, in numerical order** of the angle folder prefix — `00-survey.md` first, then `01-<angle>/notes.md`, then `02-<angle>/notes.md`, and so on. Use a separate Read call per file; do not batch reads in parallel. This sequential intake gives the orchestrator a predictable, ordered build-up of context.
-2. Once **all** notes are read, write the methodology preamble first, then product overview, feature inventory, FRs, NFRs, technical architecture, business rules, glossary, open questions — assigning `FR-XXXX` / `NFR-XXXX` IDs sequentially as requirements are written.
+2. Once **all** notes are read, read `references/document-template.md` and write the document's sections in the order it defines — methodology preamble first, Open Questions last — assigning `FR-XXXX` / `NFR-XXXX` IDs sequentially as requirements are written.
 3. Cross-reference: every Trace pointer should be a real file path or route, ideally with a line number when it sharpens the reference. Every Open Question should cross-reference the FRs/NFRs/rules that depend on it.
 4. Write the final document in one pass to the `output_path`, overwriting any prior file there.
 
@@ -278,7 +187,7 @@ Dispatched on every run, regardless of repo size — the orchestrator never read
 - **Output shape** — markdown with these sections:
   - `## Findings` — what this angle reveals about the application. Bulleted, concrete, observable.
   - `## Evidence` — file paths (with line numbers when useful) backing each finding.
-  - `## Draft requirements` — proposed FR/NFR items in the format defined above, **without** final IDs (use `ID: TBD` as a placeholder). The writer will assign IDs in Step 4.
+  - `## Draft requirements` — proposed FR/NFR items in the item format from `references/document-template.md` (give the subagent that file's absolute path so it can read the format itself), **without** final IDs (use `ID: TBD` as a placeholder). The writer will assign IDs in Step 4.
   - `## Open questions` — anything this angle surfaces that code cannot answer. The writer will consolidate.
   - `## Cross-references` — pointers to other angles whose findings this likely overlaps with, so the writer can merge cleanly.
 - **Discipline** —
@@ -290,18 +199,6 @@ Dispatched on every run, regardless of repo size — the orchestrator never read
 - **Return contract** — write the file and reply with a single short acknowledgment (e.g. `done`). Do **not** include a summary, the file path, or any content from the notes. The orchestrator does not parse the reply — it reads the file from disk in Step 4.
 
 The orchestrator dispatches one of these per planned angle, in parallel.
-
-## Discipline (for the orchestrator)
-
-- **No inline reads of the source.** Every read, listing, search, or `grep` of the source codebase goes through a subagent — without exception. The orchestrator's tools touch only its own scratch outputs (the run folder) and the snapshot output path. Even a single inline `ls` or `cat` of a source file is a discipline violation: it bypasses the file-on-disk handoff that keeps the context clean.
-- **Trust the file, not the reply.** A subagent's reply is acknowledgment only. If the expected file is missing on disk, re-spawn the subagent with the same brief, however many times it takes. Never "stitch" a missing report from memory or from anything the reply said.
-- **Read-only on the source even via subagents.** Subagents never edit, refactor, or "clean up" source files. The snapshot is the only output.
-- **Stack-neutral language in the document.** Source-stack and target-stack names belong nowhere in the body. They may appear in the methodology preamble's *what was inspected* list only when the artifact name is itself load-bearing context for understanding the inspection (e.g. "iOS Info.plist parsed for declared capabilities") — and even then, lean toward describing the artifact, not the technology.
-- **No invented requirements.** Every FR/NFR/rule must trace to code or to an explicit Open Question. If you're tempted to add an NFR because "every app needs this", route it to Open Questions instead.
-- **No migration content.** No "Implementation Hints", no "Rebuild Considerations", no source→target mapping under any name. This is non-negotiable.
-- **No history.** The snapshot describes the present. No "previously did X", no `[DEPRECATED]` markers, no change logs.
-- **Honesty about gaps.** Open Questions is the single place gaps live. Don't sprinkle `TODO`s through the snapshot.
-- **No screenshots, no visual flows.** The skill cannot render them. Reference where they belong (e.g. "see attached screen flow for FR-0042 — to be added by author") and mention this in the final message.
 
 ## When the codebase is too thin
 
