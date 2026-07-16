@@ -3,7 +3,7 @@ name: finish
 description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 disable-model-invocation: true
 ---
 
@@ -36,7 +36,7 @@ The report is signal-only: report only the categories that are NON-EMPTY, and om
 
 The findings are recommendations, never gates. Finish may recommend pausing when a pending decision, an open review finding, an unmaterialized Roadmap child, a dirty worktree, a missing outcome artifact, or another consequential signal suggests delivery is premature — and when a chosen disposition would deliver or discard work against what the inspection surfaced, say so plainly before the git command runs; branch operations are hard to undo, so this is the cheap moment to raise it. But the user may explicitly accept the trade-off and continue, and once they do, proceed.
 
-Finish NEVER manufactures readiness. It does not approve or version documents, delete pending bundles, rewrite the spec or plan, create a missing implementation report, mark reviews resolved, or add any completion status. If the inspection surfaces a gap, the fix is a separate authoring pass by the user or another operation — never an in-place edit here. Finish sets no latches, appends no closures, and updates no living documentation itself.
+Finish NEVER manufactures readiness. It does not approve or version documents, delete pending bundles, rewrite the spec or plan, create a missing implementation report, mark reviews resolved, update living documentation, or add any completion status. If the inspection surfaces a gap, the fix is a separate authoring pass by the user or another operation — never an in-place edit here.
 
 ## Branch disposition
 
