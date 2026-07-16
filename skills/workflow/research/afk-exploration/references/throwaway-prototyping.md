@@ -80,14 +80,14 @@ After either approach, run the project's bootstrap (`npm install`, `pip install 
 
 ## Step 4 — Build the load-bearing thing
 
-Write the code that's load-bearing for the hypothesis — no more, no less. Resist scaffolding, error handling, configuration layers, or anything that isn't part of exercising the question. But don't artificially shrink the prototype either: a feel-check of one API call might be 50 lines, while an integration test that touches auth, storage, and a queue might be several hundred. Both are fine when the size matches the hypothesis. A prototype that mocks the boring parts and uses the real version of the part under test teaches more than a prototype that builds everything from scratch.
+Write the code that's load-bearing for the hypothesis — no more, no less. Resist scaffolding, error handling, configuration layers, or anything that isn't part of exercising the question, but don't artificially shrink the prototype either (see *Core principle*). A prototype that mocks the boring parts and uses the real version of the part under test teaches more than a prototype that builds everything from scratch.
 
 Some heuristics:
 
 - If the hypothesis is library ergonomics, use the real library and mock everything else.
 - If the hypothesis is performance, run against realistic data shapes and sizes (not the toy example from the library's README).
 - If the hypothesis is integration, use the real external service when possible; fall back to a recorded fixture when credentials aren't available.
-- If the hypothesis is genuinely large (multiple modules, several subsystems), reach for as much code as needed — the constraint is *unnecessary* code, not total code.
+- If the hypothesis is genuinely large (multiple modules, several subsystems), reach for as much code as needed — see *Core principle*.
 
 ## Step 5 — Run and capture evidence
 
@@ -162,7 +162,7 @@ The synthesiser does **not** read auxiliary files. It reads `findings.md` and th
 - **Credentials needed but unavailable.** Use mocks or recorded fixtures. Record the gap explicitly under *What I couldn't test*.
 - **External service needs to be exercised.** Make the calls; capture and verify the responses; tear down anything you created (test users, sample resources) if the service supports it.
 - **The prototype reveals the hypothesis is wrong.** That's a valid finding — don't try to rescue it. A "we built it, it doesn't fit, here's why" prototype is just as valuable as a "we built it, it fits beautifully" one.
-- **The prototype is bigger than expected.** Two questions: (a) is every part load-bearing for the hypothesis, or have I added scaffolding the question doesn't need? (b) is the hypothesis itself genuinely big? If (a), trim. If (b), keep going — a medium- or large-scope hypothesis honestly needs a medium- or large-scope prototype.
+- **The prototype is bigger than expected.** Two questions: (a) is every part load-bearing for the hypothesis, or have I added scaffolding the question doesn't need? (b) is the hypothesis itself genuinely big? If (a), trim. If (b), keep going — see *Core principle*.
 
 ## Return contract
 

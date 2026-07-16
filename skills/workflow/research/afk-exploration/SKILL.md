@@ -4,7 +4,7 @@ description: Start AFK exploration on a topic only when the user explicitly asks
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.5.0
+  version: 1.5.1
 ---
 
 # AFK Exploration
@@ -113,14 +113,7 @@ Dispatch one synthesiser subagent per angle in a single parallel tool call cover
 
 Re-read `.metadata.json`. Compute `elapsed = $(date +%s) - started_at`.
 
-- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves and **loop back to Step 3** with the new angles — they go through Step 4 (critiques) and Step 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. The moves below are a starting point, not a checklist — invented moves outside this list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
-  - An unpicked angle from the catalog above for the request's trigger shape.
-  - A deeper-dive subagent on a high-leverage finding, open question, or evidence pointer inside an existing `NN-<angle>/research.md` or `NN-<angle>/findings.md`.
-  - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
-  - A steelman of an option the initial angles discarded or argued against.
-  - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
-  - A prototype angle to test a sharp hypothesis the research has surfaced (see *When to spawn a prototype*). Usually the right move when an earlier synthesis flagged a load-bearing question better answered with code than more reading. Budget-aware: a prototype angle costs ~3–5× a research angle.
-  If you find yourself thinking "I'm done" while `elapsed < budget_seconds`, that thought is the signal to pick a move — not to wrap up.
+- **If a `budget_seconds` is set and `elapsed < budget_seconds`, the loop is not done.** Pick one or two concrete moves from *Time budget — a floor, not a ceiling* and **loop back to Step 3** with the new angles — they go through Step 4 (critiques) and Step 5 (synthesis) like the first wave. Existing angles already have their critiques and synthesis. Those moves are a starting point, not a checklist — invented moves outside the list are encouraged when the request calls for them, and especially when **plenty** of budget remains, step back and ask "what would the user most value next?" before defaulting to the catalog.
 - Otherwise: done. Proceed to Step 7.
 
 **Log every Step 6 outcome to `workflow-notes.md`** before continuing — what was decided (continue or wrap), which moves were picked or invented, and the rationale. No wave happens silently.
@@ -143,7 +136,7 @@ When the trigger is ambiguous, pick the closest category as a starting point and
 
 ## When to spawn a prototype
 
-A **prototype angle** builds a disposable codebase that exercises a hypothesis in actual code, in place of (not alongside) the standard research note. Its value is what it teaches — a research note can describe an API, but only running real code against it tells you whether the API actually feels right. Size the prototype to the hypothesis, not to a notion of "small": a feel-check of one API call might be 50 lines; a multi-subsystem integration check might reasonably be several hundred. The constraint is on *unnecessary* code (scaffolding, polish, error handling the question doesn't need), not on *total* code.
+A **prototype angle** builds a disposable codebase that exercises a hypothesis in actual code, in place of (not alongside) the standard research note. Its value is what it teaches — a research note can describe an API, but only running real code against it tells you whether the API actually feels right. The prototyper sizes the build to the hypothesis, so a larger hypothesis costs more wall-clock (see **Cost** below); the sizing method itself is the prototyper's concern.
 
 Spawn a prototype when the request involves any of:
 
@@ -242,7 +235,7 @@ The optional time budget exists only to prevent under-using the gap the user is 
   - A rerun of a high-stakes angle under an alternative assumption — pick an entry from `High-risk assumptions` in `00-brief.md`, flip it, and re-explore.
   - A steelman of an option the initial angles discarded or argued against.
   - An adjacent angle the request implies but didn't explicitly request (alternative design, observability story, migration plan, rollback strategy, etc.).
-  - A prototype angle to test a sharp hypothesis surfaced by earlier waves (see *When to spawn a prototype*). Budget-aware: a prototype angle costs ~3–5× a research angle.
+  - A prototype angle to test a sharp hypothesis surfaced by earlier waves — budget-aware; see *When to spawn a prototype* and its **Cost** note.
 - **Never abort a wave to come in under budget.** If `elapsed >= budget_seconds` mid-run with critique or synthesis subagents in flight, let them finish. It is forbidden to leave the exploration half-done — every dispatched initial angle gets all three of its critiques **and** its synthesis.
 - **Never start a new initial angle after the budget is reached.** Once the loop's clock check fails (after letting in-flight subagents finish), the next step is the final user message — not another wave.
 - **No budget given**: do the 3–5 planned angles plus their critiques and syntheses and stop. Cap at ~6 initial angles total to avoid drift even when generously paced.
