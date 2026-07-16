@@ -4,14 +4,14 @@ description: Turn a thread's durable inputs or a referenced artifact into a one-
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.2.0
+  version: 4.2.1
 ---
 
 # Plan Brief
 
 Turn the thread's durable inputs into a short, one-screen plan that gives implementation a sensible order and a way to check the result. You read the thread's context, draft the plan body, write the single thread-root `plan.md`, and confirm its path. Writing the file is where you stop — do not stage, commit, or push.
 
-A brief plan trades depth for speed: it orders the work and records overall verification, and it delegates the finer implementation judgment to whoever executes it. When the work genuinely needs more rigor than that, recommend `plan-strict` instead of inflating the brief plan (see `## When to recommend plan-strict`).
+A brief plan trades depth for speed: it orders the work and records overall verification. When the work genuinely needs more rigor than that, recommend `plan-strict` instead of inflating the brief plan (see `## When to recommend plan-strict`).
 
 ## Inputs
 
@@ -56,7 +56,7 @@ Source: <thread-relative source>
 - **`Source`** and the **`## Outcome`**, **`## Steps`**, and **`## Verification`** sections are required. **`## Notes`** is optional — include it only for constraints, assumptions, or cautions the implementer genuinely needs.
 - **Steps** are a small numbered list in execution order, each step one short paragraph. They order the work; the implementer derives the obvious substeps.
 - **Verification** records the overall checks that demonstrate the change works — not a separate verification contract for every step.
-- The plan should normally fit on one screen. It has no per-task files, no per-step acceptance criteria, no file inventories, no frontmatter, and no stored state.
+- The plan should normally fit on one screen: a single flat markdown file containing only the sections above.
 
 ## When to recommend plan-strict
 
