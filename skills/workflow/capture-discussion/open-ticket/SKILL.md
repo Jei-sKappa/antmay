@@ -11,8 +11,6 @@ metadata:
 
 Create **one remote tracker ticket** from a brand-new idea. Take the user's idea, turn it into a ticket title and a body that captures the idea, create the ticket in the single owning tracker, and surface the created ticket's URL/identifier back to the user. That URL is what a local thread later links from its seed's `External:` line.
 
-This skill restates the rules it relies on inline; it does not depend on any document outside its own folder.
-
 ## This Is the Only Skill That Writes to the Tracker
 
 In this workflow, **exactly one skill writes to the tracker, and it is this one.** Being invoked here is the only thing that authorizes creating a ticket. Every other skill reads the tracker at most, or links to it one-directionally — a thread seed's `External:` field is a passive read-context pointer to the ticket, and a commit or PR may reference it. No workflow operation comments on, transitions, or closes a ticket on the agent's behalf; that happens only when the user explicitly asks for it.
