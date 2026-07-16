@@ -4,7 +4,7 @@ description: Align a thread-root proposal.md with the decisions that govern it �
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.0
+  version: 4.1.1
 ---
 
 # Reconcile Proposal
@@ -36,8 +36,8 @@ The proposal is the only artifact you may edit. Never edit `decisions.md` or `se
 
 ## Queueing decisions
 
-Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-proposal` as the producer, `proposal.md` as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the proposal again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run ends `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Hand open decisions to `/emit-pending-decisions` as one coherent bundle, giving it: `/reconcile-proposal` as the producer, `proposal.md` as the target, the discrepancy and the inputs you weighed as evidence, the originating user request, the open decision(s) it must settle, and a suggested follow-up (settle the decisions, then reconcile the proposal again). One invocation queues one bundle; the primitive writes the file and reports its path, and the run then ends on the BLOCKED terminal line from step 7.
 
 ## Nothing else is produced
 
-You have exactly one behavior: reconcile the proposal against its authority. You do not emit a review report or a findings file, and you offer no report-only, check-only, or approval variant selectable at invocation. A clean pass leaves the working tree untouched and produces no file — the chat summary is the whole output.
+You have exactly one behavior: reconcile the proposal against its authority. You offer no report-only, check-only, or approval variant selectable at invocation.
