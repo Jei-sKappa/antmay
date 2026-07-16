@@ -4,7 +4,7 @@ description: Forward-design a thread's durable inputs (seed, decisions, an optio
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.2.0
+  version: 4.2.1
 ---
 
 # Spec
@@ -74,7 +74,7 @@ Pinning an undiscussed decision into expected behavior or a constraint as if it 
 
 2. **Load context.** Read the thread's `seed.md` and `decisions.md`, any `proposal.md`, and whatever artifact or prompt the invocation points you at. `decisions.md` says what has already been settled, so the spec neither re-litigates a closed decision nor contradicts one without noticing.
 
-3. **Draft the body.** Cover all seven semantic-contract elements, inline settled decisions where operative and cite their `D<N>` records, and add the two obligations. Honor the lossless constraint: for any specific the input did not settle, either mark it a degree of freedom if it clears the eligibility bar or queue it as a pending decision per `## Blocked`; never bake it in silently. Keep the spec readable end-to-end by a stranger with no prior context. Adapt length to what the input warrants — a tight spec is better than a padded one.
+3. **Draft the body.** Cover all seven semantic-contract elements, inline settled decisions where operative and cite their `D<N>` records, and add the two obligations. Honor the lossless constraint (`## Lossless authoring`) for any specific the input did not settle. Keep the spec readable end-to-end by a stranger with no prior context. Adapt length to what the input warrants — a tight spec is better than a padded one.
 
 4. **Write the artifact.** Write the single file `docs/threads/<thread>/spec.md` — literally that name at the thread root, with no frontmatter. If `spec.md` already exists, revise it in place: the same file is the stable reference through any review-and-revise cycles. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `proposal.md`), never repo-rooted or absolute; cross-thread references are repo-relative (`docs/threads/<other>/…`).
 
