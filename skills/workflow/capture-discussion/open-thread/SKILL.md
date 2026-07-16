@@ -67,6 +67,4 @@ A linked ticket is read for context only, and its URL is recorded in `External:`
 
 ## Report
 
-This is a dialogue-driven handshake: obtaining human input is part of its normal job, so questions are expected output rather than a stalled or failed run. Asking which workflow to start from when none was supplied, inviting one round of field corrections before delegation, and asking the user to paste a linked ticket's title and body when read access is unavailable are all ordinary execution of this handshake — none of them is a blocked or refused completion path. After `/allocate-thread` returns, report the created thread's folder path to the user; corrections are gathered before delegation, not after, so do not re-run the delegation.
-
-Keep the successful response focused on the created thread path. Emit no terminal outcome line and no outcome token — this dialogue-driven handshake has no terminal outcome.
+After `/allocate-thread` returns, report the created thread's folder path to the user; corrections are gathered before delegation, not after, so do not re-run the delegation. Keep the successful response focused on the created thread path.
