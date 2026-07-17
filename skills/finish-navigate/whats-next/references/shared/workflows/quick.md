@@ -1,4 +1,4 @@
-## Suggested workflow
+# Quick workflow
 
 1. Discuss the change with `discussion` if clarification is needed. *(optional)*
 2. Write a brief implementation plan with `plan-brief` if useful. *(optional)*

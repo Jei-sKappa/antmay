@@ -96,7 +96,7 @@ A skill states its expected inputs and the thread structure it works with precis
 
 ## Section headings
 
-When a skill has an end-to-end execution sequence, it lives under a single heading, `## Procedure`. This is a naming rule, not a presence mandate: an all-reference skill whose behavior is fully carried by its format and guideline sections (the one-shot deliverable skills, for example) carries no `## Procedure` section at all rather than a ritual read-draft-output sequence. `## Workflow` is never used as a section heading: the word names the thread-level workflow-model concept — the seed's `## Suggested workflow`, the published workflow templates — and reusing it for a section heading would make prose cross-references and grepping ambiguous. Artifact-format headings that belong to an emitted artifact, such as the `**Steps:**` field inside a plan task brief, are not section headings and are untouched by this rule.
+When a skill has an end-to-end execution sequence, it lives under a single heading, `## Procedure`. This is a naming rule, not a presence mandate: an all-reference skill whose behavior is fully carried by its format and guideline sections (the one-shot deliverable skills, for example) carries no `## Procedure` section at all rather than a ritual read-draft-output sequence. `## Workflow` is never used as a section heading: the word names the thread-level workflow-model concept — the published workflows and their templates — and reusing it for a section heading would make prose cross-references and grepping ambiguous. Artifact-format headings that belong to an emitted artifact, such as the `**Steps:**` field inside a plan task brief, are not section headings and are untouched by this rule.
 
 ## Progressive disclosure
 

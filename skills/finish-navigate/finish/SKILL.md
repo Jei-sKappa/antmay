@@ -3,7 +3,7 @@ name: finish
 description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.1
+  version: 3.0.2
 disable-model-invocation: true
 ---
 
@@ -19,7 +19,7 @@ The thread root is a folder under `docs/threads/` named with a UTC-timestamp slu
 
 ## Readiness inspection
 
-Run a lightweight, read-only inspection pass and report what it finds. The seed's suggested workflow is context for what "done" tends to look like for this thread — not a checklist to satisfy. Inspect:
+Run a lightweight, read-only inspection pass and report what it finds. Inspect:
 
 - **The apparent principal outcome.** For implemented work, whether `implementation-report.md` exists at the thread root. For Roadmap work, whether `roadmap.md` exists and whether its child threads show evidence of having been materialized.
 - **`.pending-decisions/`** — bundles of unresolved decisions awaiting a human.

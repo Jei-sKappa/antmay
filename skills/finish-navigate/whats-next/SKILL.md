@@ -3,15 +3,15 @@ name: whats-next
 description: Read a thread's observable state, then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.1
+  version: 3.1.0
 disable-model-invocation: true
 ---
 
 # What's Next
 
-What's Next is a read-only, evidence-based navigation advisor. It reports what can be observed in a thread, which unresolved signals exist, and which next actions are plausible given the workflow the seed suggested. The chat reply is the whole deliverable: this skill writes no file, edits nothing it reads, and marks nothing complete.
+What's Next is a read-only, evidence-based navigation advisor. It reports what can be observed in a thread, which unresolved signals exist, and which next actions are plausible given the artifacts observed and the published workflows. The chat reply is the whole deliverable: this skill writes no file, edits nothing it reads, and marks nothing complete.
 
-Advice is grounded only in what the filesystem and git actually show. Some normal operations — reconciliation above all — leave no success artifact, so their having run cannot be observed. Never invent that state: do not claim to know the last operation that executed, and never treat a thread that diverges from the suggested workflow as being in error.
+Advice is grounded only in what the filesystem and git actually show. Some normal operations — reconciliation above all — leave no success artifact, so their having run cannot be observed. Never invent that state: do not claim to know the last operation that executed, and never treat a thread that diverges from a published workflow as being in error — no thread carries a chosen workflow, and none is ever inferred as a fact about the thread.
 
 ## Resolve the thread
 
@@ -29,8 +29,9 @@ All within-thread paths below are thread-relative; branch and worktree state com
 Read all of the following read-only:
 
 - **Location** — active tree versus `docs/threads/archive/` (above).
-- **`seed.md`**, especially its `## Suggested workflow` section — the complete recommended sequence chosen when the thread opened, with optional activities labelled optional. It is advisory orientation, not a checklist and not a compliance standard.
+- **`seed.md`** — why the thread exists and its intended outcome.
 - **`decisions.md`** — the settled human decisions.
+- **The published workflows** — `references/shared/workflows/quick.md`, `references/shared/workflows/standard.md`, and `references/shared/workflows/roadmap.md` — the known-good progressions to orient advice against. They are advisory orientation, not a checklist and not a compliance standard.
 - **Existing canonical artifacts** — `proposal.md`, `spec.md`, `plan.md` (and `plan-tasks/` if present), `roadmap.md`. Each present artifact proves that its authoring step occurred; an absent one does not prove a step failed to run — it may simply not have been reached.
 - **Roadmap child briefs and their `Materialized thread:` references** — see `## Roadmap threads`.
 - **`.pending-decisions/` bundle headers** — each bundle records genuine human decisions queued for later resolution.
@@ -47,12 +48,12 @@ Weigh the observable signals in this order and let the highest-priority live sig
 1. **Pending human intent relevant to downstream work** — unresolved `.pending-decisions/` bundles that gate what comes next.
 2. **Explicitly resumable interrupted implementation runs** — a surviving `.implementation-runs/` directory the user can choose to resume.
 3. **Known pending-review findings** — `.pending-reviews/` bundles, presented as findings to address, dismiss, or supersede, not as automatic blockers.
-4. **Comparison of observable artifacts with the seed's complete suggested workflow** — where the thread sits along the sequence the seed spelled out.
-5. **Reasonable alternatives** — for example an optional review, escalating a lighter suggested path to a spec-driven one, direct implementation, finish, or archival.
+4. **Comparison of observable artifacts with the closest published workflow** — match what is present against the published progressions (`roadmap.md` → Roadmap, `spec.md` or `plan-tasks/` → Standard, lighter traces → Quick) and read where the thread sits along that sequence, always offered as generic guidance rather than a sequence the thread committed to.
+5. **Reasonable alternatives** — for example an optional review, escalating a lighter path to a spec-driven one, direct implementation, finish, or archival.
 
 ## Conditional advice for evidence-less operations
 
-When the next suggested step is an operation that leaves no success evidence — reconciliation is the clearest case — phrase the advice conditionally rather than asserting whether it ran:
+When the next plausible step is an operation that leaves no success evidence — reconciliation is the clearest case — phrase the advice conditionally rather than asserting whether it ran:
 
 ```text
 Observed:
@@ -69,7 +70,7 @@ Recommended next:
 - review-spec remains an optional second opinion before planning.
 ```
 
-Anchor each such recommendation to the seed's suggested workflow, and always leave both branches ("if X has not run…" / "if it has…") open so the user resolves which one is true.
+Anchor each such recommendation to the closest published workflow, presented as generic guidance, and always leave both branches ("if X has not run…" / "if it has…") open so the user resolves which one is true.
 
 ## Roadmap threads
 

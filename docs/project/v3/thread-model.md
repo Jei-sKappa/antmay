@@ -26,13 +26,12 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/        (archived: docs/threads/archive/<...>/
 
 ## Seed
 
-`seed.md` is written once, when the thread opens, by the thread-opening operation alone. It carries exactly three conceptual requirements:
+`seed.md` is written once, when the thread opens, by the thread-opening operation alone. It carries exactly two conceptual requirements:
 
-1. a **title**;
-2. a **self-contained genesis narrative** explaining what triggered the work and its intended outcome; and
-3. a `## Suggested workflow` section containing the complete recommended sequence in human-readable numbered prose, with optional activities explicitly labelled optional.
+1. a **title**; and
+2. a **self-contained genesis narrative** explaining what triggered the work and its intended outcome.
 
-A thread is opened **from** a workflow template; it does not **have** a workflow type. No workflow name is persisted. The `## Suggested workflow` section is the expanded sequence copied verbatim at opening time, never a workflow identifier resolved later against newer templates — so an existing thread stays understandable regardless of how a published workflow evolves afterward. It carries no progress checkboxes, completion markers, or lifecycle values; it is an opening-time recommendation, not a statement of current state.
+A thread does not **have** a workflow type: the seed records why the work exists, never a process to follow. The published workflows remain documentation the user and navigation advice draw on; no workflow name, recommended sequence, progress checkbox, completion marker, or lifecycle value is persisted in the seed.
 
 Metadata is sparse and contextual: a field appears only when it carries real information. Absent optional metadata means "not applicable" and is never represented by a placeholder `none` value.
 

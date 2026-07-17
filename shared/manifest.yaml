@@ -9,17 +9,7 @@
 # anchors, no nested keys, no multiline strings. Edit shared/references/ and
 # rerun the script; never hand-edit the generated references/shared/ copies.
 
-skills/capture-discussion/open-thread:
-  - workflows/quick.md
-  - workflows/standard.md
-  - workflows/roadmap.md
-
-skills/roadmap/roadmap:
-  - workflows/quick.md
-  - workflows/standard.md
-  - workflows/roadmap.md
-
-skills/reconcile/reconcile-roadmap:
+skills/finish-navigate/whats-next:
   - workflows/quick.md
   - workflows/standard.md
   - workflows/roadmap.md

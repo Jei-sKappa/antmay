@@ -36,7 +36,7 @@ Every skill below is **user-invoked**: you (or your harness, routing on the skil
 
 #### [`open-thread`](./skills/capture-discussion/open-thread/SKILL.md)
 
-Open a durable workflow thread on disk — interpret the user's idea, an optional tracker ticket, and a chosen workflow, then compose the seed and hand normalized creation to the thread-creation primitive — use when a unit of work needs a home before any proposal, spec, or plan exists.
+Open a durable workflow thread on disk — interpret the user's idea and an optional tracker ticket, then compose the seed and hand normalized creation to the thread-creation primitive — use when a unit of work needs a home before any proposal, spec, or plan exists.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill open-thread
@@ -242,7 +242,7 @@ npx skills add Jei-sKappa/skills --skill finish
 
 #### [`whats-next`](./skills/finish-navigate/whats-next/SKILL.md)
 
-Read a thread's observable state — its location, seed suggestion, decisions, canonical artifacts, pending bundles, run state, and branch — then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
+Read a thread's observable state — its location, seed, decisions, canonical artifacts, pending bundles, run state, and branch — then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
 
 ```sh
 npx skills add Jei-sKappa/skills --skill whats-next

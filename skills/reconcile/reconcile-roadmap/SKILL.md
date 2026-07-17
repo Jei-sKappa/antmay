@@ -4,7 +4,7 @@ description: Make a thread-root roadmap.md and its decomposition faithful to the
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 1.2.0
 ---
 
 # Reconcile Roadmap
@@ -25,7 +25,7 @@ The question you answer throughout: **does this roadmap, and the way it divides 
    - **Omitted decisions** — add the substance of a governing decision the roadmap fails to express.
    - **Contradictions** — resolve a roadmap statement that conflicts with the settled direction or a settled boundary toward the settled decision.
    - **Unsupported commitments** — remove a choice, constraint, or commitment the roadmap invented that no decision, seed, or proposal authorizes.
-   - **Incomplete or inconsistent child briefs** — repair a brief that fails the roadmap contract: a missing field, or a dependency that names a child without describing the input consumed from it — fill these from what the authority already settles. Expand a `Suggested workflow` left as a bare built-in name (`Quick`, `Standard`, or `Roadmap`) into the complete sequence the contract requires by copying the `## Suggested workflow` section verbatim from this skill's reference for that workflow — Quick → `references/shared/workflows/quick.md`, Standard → `references/shared/workflows/standard.md`, Roadmap → `references/shared/workflows/roadmap.md`. A bare name outside those three is not one you can expand deterministically; hand it to `/emit-pending-decisions` rather than inventing a sequence.
+   - **Incomplete or inconsistent child briefs** — repair a brief that fails the roadmap contract: a missing field, or a dependency that names a child without describing the input consumed from it — fill these from what the authority already settles.
 
    Preserve legitimate elaboration — decomposition detail that extends the decisions without contradicting them is not an error and must survive untouched.
 

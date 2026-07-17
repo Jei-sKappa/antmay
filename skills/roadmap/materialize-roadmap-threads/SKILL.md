@@ -4,7 +4,7 @@ description: Turn a roadmap's child briefs into child threads idempotently — c
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.1
+  version: 2.0.0
 ---
 
 # Materialize Roadmap Threads
@@ -15,7 +15,7 @@ Read a parent thread's `roadmap.md` child briefs and open the child threads they
 
 This operation runs a complete read-only preflight before any substantive execution — before it allocates any child thread or writes anything. Every preflight failure writes nothing, creates no child, emits no bundle, and ends `Outcome: REFUSED — <reason and how to re-invoke>`. Resolving the parent is the first preflight gate: work inside one parent thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/` that contains a `roadmap.md`. If `cwd` already sits inside such a thread, that is the parent. Refuse when no such thread exists, or several exist and which is active is ambiguous (never silently pick the most recent stamp). If the resolved thread has no `roadmap.md`, there is nothing to materialize: end with `Outcome: REFUSED — no roadmap.md to materialize`.
 
-Read the parent's `roadmap.md` and locate its `### CB<N>:` child briefs. Each brief carries a title, `Outcome`, `Context`, `Scope and boundaries`, `Dependencies`, `Relevant shared constraints`, and a `Suggested workflow`, and may carry a `Materialized thread:` line.
+Read the parent's `roadmap.md` and locate its `### CB<N>:` child briefs. Each brief carries a title, `Outcome`, `Context`, `Scope and boundaries`, `Dependencies`, and `Relevant shared constraints`, and may carry a `Materialized thread:` line.
 
 ## Preflight every brief before allocating any child
 
@@ -25,7 +25,6 @@ For each `CB<N>` brief the run will materialize, validate:
 
 - **Brief identity** — a well-formed `### CB<N>:` heading with a title.
 - **Required fields** — `Outcome`, `Context`, `Scope and boundaries`, `Dependencies`, and `Relevant shared constraints` are present and usable.
-- **A usable expanded `Suggested workflow`** — the complete expanded sequence is present and usable as written, never a bare workflow name. An absent or unusable `Suggested workflow` is a preflight defect.
 - **Existing materialization references** — read each brief's `Materialized thread:` line where present, so the run knows which briefs to create and which to verify.
 
 If any selected brief fails any check, refuse the entire run — the preflight-failure consequence from `## Inputs` — with a reason that names which brief failed which check and how to fix it. Refusing up front is what prevents creating an early child and only then discovering a later malformed brief.
@@ -47,7 +46,6 @@ Delegate creation to `/allocate-thread`, supplying a complete **caller-authoriza
 - **Slug** — a short kebab-case slug derived from the child title.
 - **Title** — the child title from the brief.
 - **Genesis narrative** — a self-contained account assembled from the brief's `Outcome`, `Context`, `Scope and boundaries`, `Dependencies` (stated as the inputs the child consumes), and `Relevant shared constraints`, written so a reader with no chat history understands why the child exists and what it must produce.
-- **Suggested workflow** — the brief's `Suggested workflow` text copied **verbatim**. Copy it exactly as written; never re-resolve it against a workflow template, even when the text reads like the expansion of a built-in workflow name. The brief already holds the complete sequence — reproduce it, do not regenerate it.
 - **Conditional metadata** — `Parent:` set to the parent thread's repo-relative thread-root directory path (the folder, for example `docs/threads/260714093000Z-auth-boundary/`, never a file inside it) and `Roadmap brief:` set to this brief's `CB<N>` identifier. State explicitly that `External:` and `Supersedes:` do not apply.
 
 `/allocate-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decisions.md`, then returns the created thread's folder path. Do not fabricate that path or write the files yourself.

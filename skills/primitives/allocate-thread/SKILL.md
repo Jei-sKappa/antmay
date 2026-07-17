@@ -3,7 +3,7 @@ name: allocate-thread
 description: Use only when an invoking caller supplies a complete caller-authorization block for a new thread and a normalized thread folder must be allocated — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decisions.md`.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 2.0.0
 ---
 
 # Allocate Thread
@@ -18,10 +18,9 @@ Act only when the caller supplies a complete **caller-authorization block** cont
 - **Slug** — a kebab-case slug for the folder name.
 - **Title** — the human-readable thread title.
 - **Genesis narrative** — the complete, self-contained text explaining what triggered the work and its intended outcome.
-- **Suggested workflow** — the complete `## Suggested workflow` section text, ready to copy verbatim.
 - **Conditional metadata** — zero or more of `External:`, `Parent:`, `Roadmap brief:`, `Supersedes:`, each with its value; the block states which apply and which do not.
 
-If any required field above is missing, refuse: create nothing, name what is absent, and direct the user to `/open-thread`. You never interpret a rough idea, choose or infer a workflow, or compose title, narrative, or workflow text yourself — a caller that cannot supply the complete block must route through `/open-thread` instead.
+If any required field above is missing, refuse: create nothing, name what is absent, and direct the user to `/open-thread`. You never interpret a rough idea or compose title or narrative text yourself — a caller that cannot supply the complete block must route through `/open-thread` instead.
 
 ## Thread allocation
 
@@ -39,13 +38,9 @@ Write `seed.md` in this order:
 <supplied genesis narrative, verbatim>
 
 <applicable conditional metadata lines, one per line>
-
-## Suggested workflow
-
-<supplied suggested-workflow text, verbatim>
 ```
 
-Reproduce the genesis narrative and the `## Suggested workflow` section exactly as supplied, including that heading; do not rewrite, summarize, or add to them. Include only the conditional metadata lines the block marks as applicable, each following the rules below; when none apply, omit the metadata region entirely. The seed carries nothing beyond the title heading, the genesis narrative, the applicable conditional metadata lines, and the suggested-workflow section — add no other fields and no empty placeholders.
+Reproduce the genesis narrative exactly as supplied; do not rewrite, summarize, or add to it. Include only the conditional metadata lines the block marks as applicable, each following the rules below; when none apply, omit the metadata region entirely. The seed carries nothing beyond the title heading, the genesis narrative, and the applicable conditional metadata lines — add no other fields and no empty placeholders.
 
 ### Conditional metadata rules
 

@@ -48,4 +48,4 @@ From that point the thread continues with the complete Standard tail: reconcile 
 
 ## Template
 
-The exact recommended sequence a Quick thread records at opening time comes from the canonical Quick template. See [`shared/references/workflows/quick.md`](../../../../shared/references/workflows/quick.md) for the seed text; this document describes the path rather than reproducing that section.
+The exact recommended sequence is also published at [`shared/references/workflows/quick.md`](../../../../shared/references/workflows/quick.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list. No thread records the sequence — it is documentation to orient by, not a per-thread commitment.

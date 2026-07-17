@@ -4,7 +4,7 @@ description: Read a thread-root roadmap.md as a decomposition handoff and judge 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 1.2.0
 ---
 
 # Review Roadmap
@@ -30,10 +30,9 @@ This is a handoff-quality review: whether the decomposition, briefs, and depende
 Read the roadmap against these axes; each weakness you find maps to the axis it concerns:
 
 - **Decomposition quality** — each child produces an independently valuable outcome, and the boundaries hold: no child's scope silently expands to swallow work another child owns or the roadmap left out, and no valuable outcome falls between the children unclaimed.
-- **Brief self-containment** — each child brief carries every field it needs and each field says enough: a reader with only that brief can understand the child's outcome, its self-contained context, its in- and out-of-scope boundaries, what it consumes from its dependencies, the shared constraints that bind it, and the workflow to follow. A present-but-empty field is not self-contained.
+- **Brief self-containment** — each child brief carries every field it needs and each field says enough: a reader with only that brief can understand the child's outcome, its self-contained context, its in- and out-of-scope boundaries, what it consumes from its dependencies, and the shared constraints that bind it. A present-but-empty field is not self-contained.
 - **Dependency soundness** — every dependency is described as a consumed input (what outcome or information the child takes from the one it names), not a bare cross-reference; dependencies form no cycle; and the stated dependencies imply no impossible ordering, such as a child needing an output that nothing produces.
 - **Shared-constraint placement** — constraints that bind multiple children sit in the roadmap's shared section, and a constraint that touches only one child sits in that child's brief. A misplaced constraint either gets lost or gets wrongly applied to children it should not bind.
-- **Workflow completeness** — each brief's suggested workflow is a complete, expanded sequence of steps a reader can follow directly, not a bare workflow name left for someone downstream to resolve.
 
 A roadmap's section names, ordering, and structure are the author's discretion; what you check is that the substance behind these axes is present and coherent.
 
@@ -47,7 +46,7 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 - `roadmap.md` as the target.
 - Each finding with its severity (`blocker` / `issue` / `nit`), a category, the finding statement, the evidence (the child ID or roadmap section and a short quote showing the weakness), and the downstream impact.
 
-Use the readiness axes above as your category vocabulary — `decomposition`, `self-containment`, `dependencies`, `shared-constraints`, `workflow-completeness`, and `fidelity` for an obvious `decisions.md` contradiction — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
+Use the readiness axes above as your category vocabulary — `decomposition`, `self-containment`, `dependencies`, `shared-constraints`, and `fidelity` for an obvious `decisions.md` contradiction — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
 
 ## After the review
 

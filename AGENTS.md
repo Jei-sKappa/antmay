@@ -122,7 +122,7 @@ Still-valid authoring guidance for every skill body:
 
 ## Shared references
 
-Some skills ship copies of the same canonical reference (currently the `## Suggested workflow` templates that `open-thread` and `roadmap` both use). These are NOT hand-maintained per skill:
+Some skills ship copies of the same canonical reference (for example the workflow templates under `workflows/` that `whats-next` uses, or the discussion formats). These are NOT hand-maintained per skill:
 
 - Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
 - Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script wipes and re-creates each declaring skill's `references/shared/` folder from the canonical sources.

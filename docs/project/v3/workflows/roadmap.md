@@ -22,7 +22,7 @@ The unbracketed steps — including `reconcile-roadmap` — are the documented n
 
 Roadmap authoring produces two artifacts:
 
-- **`roadmap.md`** is the decomposition contract. It carries the intended outcome, context, scope and boundaries, shared constraints that apply across children, the decomposition rationale, and one `CB<N>` brief per child. Each `CB<N>` brief carries the child's outcome, context, scope and boundaries, its dependencies described as consumed inputs, the relevant shared constraints, and a complete expanded suggested workflow — never a bare workflow name. It holds no checkboxes, statuses, owners, or progress. A `Materialized thread:` reference is absent from a brief until materialization adds it as factual evidence that the child was created.
+- **`roadmap.md`** is the decomposition contract. It carries the intended outcome, context, scope and boundaries, shared constraints that apply across children, the decomposition rationale, and one `CB<N>` brief per child. Each `CB<N>` brief carries the child's outcome, context, scope and boundaries, its dependencies described as consumed inputs, and the relevant shared constraints. It holds no checkboxes, statuses, owners, or progress. A `Materialized thread:` reference is absent from a brief until materialization adds it as factual evidence that the child was created.
 - **`roadmap-feedback.md`** is created eagerly at roadmap authoring, opens with a `# Roadmap Feedback` heading, and accrues append-only `FBK<N>` records — each with a title, source, the children or roadmap area it affects, context, impact, and recommendation.
 
 ## The descendant feedback loop
@@ -35,9 +35,9 @@ Feedback flows in both directions between a Roadmap and its descendants.
 
 ## Materialization
 
-`materialize-roadmap-threads` creates the child threads from the `CB<N>` briefs. It is idempotent: it creates a thread for each brief that has no materialized reference yet, skips and verifies each brief already materialized, and adds each `Materialized thread:` reference immediately after creating the corresponding child. It copies each brief's already-expanded suggested workflow into the child's seed verbatim, never re-resolving a workflow name against a newer template. A brief that lacks a usable suggested workflow is recorded as a gap and skipped rather than materialized from an invented workflow, and the gap is surfaced in the run's outcome.
+`materialize-roadmap-threads` creates the child threads from the `CB<N>` briefs. It is idempotent: it creates a thread for each brief that has no materialized reference yet, skips and verifies each brief already materialized, and adds each `Materialized thread:` reference immediately after creating the corresponding child.
 
-A materialized child is an ordinary thread. When a child itself proves to need further decomposition, it may in turn be opened from the Roadmap template — but parent–child cycles are not meaningful and must never be created; a descendant never becomes an ancestor of its own parent.
+A materialized child is an ordinary thread. When a child itself proves to need further decomposition, it may in turn follow the Roadmap workflow — but parent–child cycles are not meaningful and must never be created; a descendant never becomes an ancestor of its own parent.
 
 ## Resolving pending decisions
 
@@ -61,4 +61,4 @@ A Roadmap thread completes at `finish` once the direction is set and the childre
 
 ## Template
 
-The exact recommended sequence a Roadmap thread records at opening time comes from the canonical Roadmap template. See [`shared/references/workflows/roadmap.md`](../../../../shared/references/workflows/roadmap.md) for the seed text; this document describes the path rather than reproducing that section.
+The exact recommended sequence is also published at [`shared/references/workflows/roadmap.md`](../../../../shared/references/workflows/roadmap.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list. No thread records the sequence — it is documentation to orient by, not a per-thread commitment.
