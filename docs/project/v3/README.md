@@ -6,7 +6,7 @@ Project V3 is a suite of reusable, independently invokable capability skills tog
 
 The repository offers a catalog of self-contained capability skills — opening a thread, discussion, proposing, specifying, planning, implementing, reconciling artifacts, reviewing delivered work, roadmapping, materializing child threads, finishing, navigating, archiving, handoff, research, and support operations. Each skill owns one capability with a fixed output contract and does not inspect a workflow name to decide how to behave.
 
-A **workflow** is a documented composition over those skills: a named, human-readable path that arranges capabilities into a coherent process. Composition lives in documentation — the workflow documents and their published templates — not in per-thread state or orchestration hidden inside skills; no thread records which workflow it follows. The same skill is reused across workflows without renamed copies.
+A **workflow** is a documented composition over those skills: a named, human-readable path that arranges capabilities into a coherent process. Composition lives in documentation — the workflow documents and their published templates — not in orchestration hidden inside skills. The same skill is reused across workflows without renamed copies.
 
 Project V3 ships three workflows:
 

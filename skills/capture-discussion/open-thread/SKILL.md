@@ -4,7 +4,7 @@ description: Open a durable workflow thread on disk from a rough idea and an opt
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.0
+  version: 3.0.1
 ---
 
 # Open Thread
@@ -13,7 +13,7 @@ Turn a user's starting point into a durable thread on disk. You interpret the ra
 
 ## Inputs you accept
 
-A single invocation supplies a **rough idea** in prose, and/or an **external ticket reference** (a tracker URL or identifier), describing what the work is. How the work will proceed is not an input: the thread records why it exists, not a process to follow. Persist no workflow name, no progress markers, and no lifecycle values anywhere in the seed.
+A single invocation supplies a **rough idea** in prose, and/or an **external ticket reference** (a tracker URL or identifier), describing what the work is. The seed records why the work exists: persist no workflow name, no progress markers, and no lifecycle values anywhere in it.
 
 ## Compose the seed fields
 

@@ -3,7 +3,7 @@ name: whats-next
 description: Read a thread's observable state, then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.1.0
+  version: 3.1.1
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 What's Next is a read-only, evidence-based navigation advisor. It reports what can be observed in a thread, which unresolved signals exist, and which next actions are plausible given the artifacts observed and the published workflows. The chat reply is the whole deliverable: this skill writes no file, edits nothing it reads, and marks nothing complete.
 
-Advice is grounded only in what the filesystem and git actually show. Some normal operations — reconciliation above all — leave no success artifact, so their having run cannot be observed. Never invent that state: do not claim to know the last operation that executed, and never treat a thread that diverges from a published workflow as being in error — no thread carries a chosen workflow, and none is ever inferred as a fact about the thread.
+Advice is grounded only in what the filesystem and git actually show. Some normal operations — reconciliation above all — leave no success artifact, so their having run cannot be observed. Never invent that state: do not claim to know the last operation that executed, and never treat a thread that diverges from a published workflow as being in error.
 
 ## Resolve the thread
 
@@ -48,7 +48,7 @@ Weigh the observable signals in this order and let the highest-priority live sig
 1. **Pending human intent relevant to downstream work** — unresolved `.pending-decisions/` bundles that gate what comes next.
 2. **Explicitly resumable interrupted implementation runs** — a surviving `.implementation-runs/` directory the user can choose to resume.
 3. **Known pending-review findings** — `.pending-reviews/` bundles, presented as findings to address, dismiss, or supersede, not as automatic blockers.
-4. **Comparison of observable artifacts with the closest published workflow** — match what is present against the published progressions (`roadmap.md` → Roadmap, `spec.md` or `plan-tasks/` → Standard, lighter traces → Quick) and read where the thread sits along that sequence, always offered as generic guidance rather than a sequence the thread committed to.
+4. **Comparison of observable artifacts with the closest published workflow** — match what is present against the published progressions (`roadmap.md` → Roadmap, `spec.md` or `plan-tasks/` → Standard, lighter traces → Quick) and read where the thread sits along that sequence, always offered as generic guidance.
 5. **Reasonable alternatives** — for example an optional review, escalating a lighter path to a spec-driven one, direct implementation, finish, or archival.
 
 ## Conditional advice for evidence-less operations

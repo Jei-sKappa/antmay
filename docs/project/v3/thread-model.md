@@ -31,15 +31,13 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/        (archived: docs/threads/archive/<...>/
 1. a **title**; and
 2. a **self-contained genesis narrative** explaining what triggered the work and its intended outcome.
 
-A thread does not **have** a workflow type: the seed records why the work exists, never a process to follow. The published workflows remain documentation the user and navigation advice draw on; no workflow name, recommended sequence, progress checkbox, completion marker, or lifecycle value is persisted in the seed.
-
 Metadata is sparse and contextual: a field appears only when it carries real information. Absent optional metadata means "not applicable" and is never represented by a placeholder `none` value.
 
 - `External:` appears only when an actual tracker ticket or other external source is linked.
 - A materialized Roadmap child additionally carries a reference to its parent Roadmap and to the child brief it was created from.
 - `Supersedes:` appears only when a known supersession relationship is useful.
 
-The folder timestamp records opening time, so the seed does not duplicate it. No owner, workflow name, tier, disposition, or lifecycle status is added.
+The folder timestamp records opening time, so the seed does not duplicate it. No owner, workflow name, disposition, or lifecycle status is added.
 
 ## Decisions
 
@@ -122,6 +120,6 @@ Consumption is manual composition. A pending-review bundle is an ordinary, self-
 
 ### `.implementation-runs/`
 
-Implementation-owned, invocation-scoped run state used for progress tracking, context-compaction recovery, and (for the subagent executor) cross-agent handoff. Every invocation receives its own uniquely named run directory, named `<UTC>[-<desc>]` — the UTC stamp is mandatory and by itself guarantees uniqueness, and `<desc>` is an optional short kebab descriptor of the run's objective, carried purely for human readability. There is no `plan-` infix and no reference to a plan lineage. Because each invocation gets its own directory, a later run against the same plan never inherits stale progress, and a new invocation never silently adopts an existing directory — resumption must identify the run explicitly. A run directory's progress file is named `progress.md`. That file records factual run traces — the task attempted, the changes made, the verification performed, any concerns, the commit, and the next action — as prose or ordinary structured fields; it is not a second status layer and defines no formal task-status tokens beside the run's terminal outcome.
+Implementation-owned, invocation-scoped run state used for progress tracking, context-compaction recovery, and (for the subagent executor) cross-agent handoff. Every invocation receives its own uniquely named run directory, named `<UTC>[-<desc>]` — the UTC stamp is mandatory and by itself guarantees uniqueness, and `<desc>` is an optional short kebab descriptor of the run's objective, carried purely for human readability. Because each invocation gets its own directory, a later run against the same plan never inherits stale progress, and a new invocation never silently adopts an existing directory — resumption must identify the run explicitly. A run directory's progress file is named `progress.md`. That file records factual run traces — the task attempted, the changes made, the verification performed, any concerns, the commit, and the next action — as prose or ordinary structured fields; it is not a second status layer and defines no formal task-status tokens beside the run's terminal outcome.
 
 At a terminal outcome, successful or blocked, the implementation operation writes or updates `implementation-report.md`, and its run directory stays in place afterward as the run's operational trace. A directory left behind by an unexpectedly interrupted run is likewise available for explicit resumption. No durable artifact refers to a path inside `.implementation-runs/`; run directories stay invocation-scoped in meaning even though they persist on disk, and durable information is synthesized into the implementation report or another canonical output.
