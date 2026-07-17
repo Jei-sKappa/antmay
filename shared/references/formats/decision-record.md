@@ -4,7 +4,7 @@ There is exactly one decision store per thread: the thread-root `decisions.md`. 
 
 ## Numbering
 
-Number records sequentially across the whole thread: scan `decisions.md` for the highest existing `DR<N>` and use the next integer. If `decisions.md` is header-only, the first record is `DR1`. `decisions.md` already exists at the thread root; if it is somehow absent, create it with a short heading before appending.
+Number records sequentially across the whole thread. For your first record, take the next integer after the highest `DR<N>` already in `decisions.md` — `DR1` when the file is header-only. Each record you append after that continues the count. `decisions.md` already exists at the thread root; if it is somehow absent, create it with a short heading before appending.
 
 ## Record shape
 

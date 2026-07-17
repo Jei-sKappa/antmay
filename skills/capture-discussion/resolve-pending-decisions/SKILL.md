@@ -4,7 +4,7 @@ description: Settle the thread's queued pending decisions interactively and reco
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.2
+  version: 1.1.3
 ---
 
 # Resolve Pending Decisions

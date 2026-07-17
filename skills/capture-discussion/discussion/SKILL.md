@@ -4,7 +4,7 @@ description: Conduct an open-ended interview that discovers decision points live
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.1.2
+  version: 3.1.3
 ---
 
 # Discussion
@@ -30,7 +30,7 @@ Hold these together:
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp. If no thread exists yet, tell the user a thread must be opened before decisions can be recorded, and stop; do not create the thread or its seed yourself.
 
-2. **Load context.** Read the thread's `seed.md` and `decisions.md` before interviewing, and re-read `decisions.md` whenever you need the current state. They tell you why the thread exists and what has already been settled, so you neither re-litigate a closed decision nor contradict one without noticing.
+2. **Load context.** Read the thread's `seed.md` and `decisions.md` before interviewing. They tell you why the thread exists and what has already been settled, so you neither re-litigate a closed decision nor contradict one without noticing. Carry that picture through the session — each record you append keeps it current; if the context gets compacted, rebuild it by re-reading `decisions.md`.
 
 3. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
 
