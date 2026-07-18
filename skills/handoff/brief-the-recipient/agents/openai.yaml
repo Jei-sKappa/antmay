@@ -1,5 +1,0 @@
-interface:
-  display_name: Brief The Recipient
-  short_description: Package a conclusion as handoff briefing
-policy:
-  allow_implicit_invocation: false

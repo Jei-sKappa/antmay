@@ -4,7 +4,7 @@ description: Execute a strict multi-file plan artifact — a thread-root `plan.m
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.2.1
+  version: 0.1.0
 ---
 
 # Implement Plan With Subagents

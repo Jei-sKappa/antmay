@@ -3,7 +3,7 @@ name: append-roadmap-feedback
 description: Use only when an invoking caller supplies a descendant-thread discovery carrying parent- or sibling-level impact together with its parent roadmap reference, and that discovery must be appended as the next record in the parent thread's `roadmap-feedback.md`.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 0.1.0
 ---
 
 # Append Roadmap Feedback

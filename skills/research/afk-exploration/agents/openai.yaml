@@ -1,5 +1,0 @@
-interface:
-  display_name: AFK Exploration
-  short_description: Run AFK research on a topic
-policy:
-  allow_implicit_invocation: false

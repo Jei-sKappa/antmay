@@ -4,7 +4,7 @@ description: Make a thread's strict plan — its plan.md index and plan-tasks/ b
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.1.1
+  version: 0.1.0
 ---
 
 # Reconcile Plan

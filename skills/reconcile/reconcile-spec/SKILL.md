@@ -4,7 +4,7 @@ description: Make a thread-root spec.md a lossless, additive-free expression of 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 0.1.0
 ---
 
 # Reconcile Spec

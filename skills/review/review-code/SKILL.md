@@ -4,7 +4,7 @@ description: Judge code on its own intrinsic merits — quality, safety, idioms,
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.1.1
+  version: 0.1.0
 ---
 
 # Review Code

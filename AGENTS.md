@@ -15,34 +15,33 @@ Update `AGENTS.md` when:
 
 ## Repository purpose
 
-A personal collection of refined `SKILL.md` files authored by Jei-sKappa. Skills are distributed via [skills.sh](https://skills.sh) and installed by end users with:
+`antmay` is the reference repository for the Modular Agentic Workflow — a suite of refined `SKILL.md` files authored by Jei-sKappa that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Skills are distributed via [skills.sh](https://skills.sh) and installed by end users with:
 
 ```sh
-npx skills add Jei-sKappa/skills --skill <skill-name>
+npx skills add Jei-sKappa/antmay --skill <skill-name>
 ```
+
 There is no build, test, or lint pipeline — this is a content repository. Validation happens by reading the markdown and confirming the skill's instructions are coherent and progressively disclosed.
+
+General-purpose, context-agnostic skills (meta-prompting, handoff drafts, research helpers, and the like) live in the separate companion repository `Jei-sKappa/skills`, not here. This repository holds only the skills that serve the thread-based workflow.
 
 ## Layout
 
-Skills live directly under `skills/`, grouped into fifteen capability groups. Each skill is either a **user-invoked** entry point (a capability a person deliberately reaches for) or a **model-invoked primitive** (a bounded building block an entry point composes into):
+Skills live directly under `skills/`, grouped into eleven capability groups. Each skill is either a **user-invoked** entry point (a capability a person deliberately reaches for) or a **model-invoked primitive** (a bounded building block an entry point composes into):
 
 ```
 skills/
-├── capture-discussion/      discussion, open-thread, open-ticket, resolve-pending-decisions
-├── documentation/           take-snapshot
+├── capture-discussion/      discussion, open-thread, resolve-pending-decisions
 ├── finish-navigate/         archive-thread, finish, whats-next
-├── handoff/                 brief-the-recipient, consult-the-expert, report-to-the-owner
 ├── implement/               implement, implement-plan, implement-plan-with-subagents
 ├── merge/                   merge-artifacts
 ├── plan/                    plan-brief, plan-strict
 ├── primitives/              allocate-thread, append-roadmap-feedback, emit-pending-decisions, emit-pending-review, update-implementation-report
 ├── propose/                 propose
 ├── reconcile/               reconcile-plan, reconcile-proposal, reconcile-roadmap, reconcile-spec
-├── research/                afk-exploration, the-librarian
 ├── review/                  review-code, review-implementation, review-roadmap, review-spec
 ├── roadmap/                 materialize-roadmap-threads, roadmap
-├── spec/                    spec
-└── support/                 meta-prompting, name-cracker
+└── spec/                    spec
 ```
 
 The five skills under `primitives/` are the model-invoked building blocks; every other active skill is a user-invoked entry point.
@@ -57,24 +56,15 @@ scripts/
 └── sync-shared-references.mjs  regenerates each declaring skill's references/shared/ from the canonical sources
 ```
 
-The repo also contains a Raycast extension that re-uses the same skills:
-
-```
-raycast-extension/              local Raycast client (Select Skill command)
-├── assets/skills.json          generated — see "Raycast extension" below
-└── scripts/
-    └── sync-skills-to-raycast.mjs  rebuilds assets/skills.json from ../skills
-```
-
 Rules:
 
 - Every skill lives at `skills/<group>/<skill-name>/SKILL.md`. The leaf directory name MUST match the `name:` field in the frontmatter.
 - `README.md` — index of available skills; update when adding/removing a skill (use the full nested path in links).
-- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin per `skills/` group, so installs are grouped under a named heading (e.g. `JeisKappa Plan`, `JeisKappa Handoff`) instead of `General` in `npx skills list`. Every skill folder MUST be listed in the plugin matching its group's `skills` array as `./skills/<group>/<skill-name>`. To introduce a new group/heading, add a new folder under `skills/` AND add the matching plugin entry (`JeisKappa-<folder-name>`) to the `plugins` array. **Plugin order**: entries in `plugins` MUST be sorted alphabetically by `name`. Display rule: the CLI splits `name` on `-`, uppercases the first char of each segment, then joins with spaces — so `JeisKappa-handoff` renders as `JeisKappa Handoff`. Dashes cannot survive into the displayed title.
+- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin per `skills/` group, so installs are grouped under a named heading (e.g. `JeisKappa Plan`, `JeisKappa Reconcile`) instead of `General` in `npx skills list`. Every skill folder MUST be listed in the plugin matching its group's `skills` array as `./skills/<group>/<skill-name>`. To introduce a new group/heading, add a new folder under `skills/` AND add the matching plugin entry (`JeisKappa-<folder-name>`) to the `plugins` array. **Plugin order**: entries in `plugins` MUST be sorted alphabetically by `name`. Display rule: the CLI splits `name` on `-`, uppercases the first char of each segment, then joins with spaces — so `JeisKappa-plan` renders as `JeisKappa Plan`. Dashes cannot survive into the displayed title.
 
 ## SKILL.md format
 
-Every skill file starts with YAML frontmatter, then the skill body. Mirror the structure of `skills/handoff/consult-the-expert/SKILL.md`:
+Every skill file starts with YAML frontmatter, then the skill body. Mirror the structure of `skills/propose/propose/SKILL.md`:
 
 ```yaml
 ---
@@ -89,7 +79,7 @@ metadata:
 
 There is no specific format for the skill body: every skill is different.
 
-Bump `version` in the frontmatter on any meaningful change to a skill's behavior. New skills start at `1.0.0`.
+Bump `version` in the frontmatter on any meaningful change to a skill's behavior. New skills start at `0.1.0`.
 
 The `disable-model-invocation` key encodes the skill's invocation role — see "Invocation roles" below.
 
@@ -116,8 +106,8 @@ Still-valid authoring guidance for every skill body:
 - Keep `description` to one sentence (entry points) or one bounded-precondition sentence (primitives) that says what the skill does and when to trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
 - Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections — routing belongs in the frontmatter description.
 - When a skill body points at one of its own reference files, cite the full direct skill-relative path (e.g. `references/shared/formats/discussion-point.md`) — never an indirect description like "the `discussion-point.md` format under `references/shared/formats/`", and never a bare folder.
-- Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, V1/V2/V3 naming, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `DR<N>` are allowed when they are part of the skill's emitted artifact format.
-- Status naming is fixed suite-wide. The closing `Outcome: DONE | BLOCKED | REFUSED — <reason or pointer>` line a completion-oriented skill ends with is the **terminal outcome** — never call it a "run status", "workflow status", or any other status phrase. A vocabulary a skill defines for its own caller/callee topology (e.g. an orchestrator's subagent reply tokens and lane verdicts) is **skill-local return tokens** — never called a status or an outcome, never emitted in the terminal outcome, and never reused outside the owning skill. A completed *thread's* lasting artifact is its **final deliverable**, not its "terminal outcome". Canonical definition: `docs/project/v3/skill-authoring.md` (`## Terminal outcome` and `## Internal progress and local return contracts`).
+- Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, internal version labels, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `DR<N>` are allowed when they are part of the skill's emitted artifact format.
+- Status naming is fixed suite-wide. The closing `Outcome: DONE | BLOCKED | REFUSED — <reason or pointer>` line a completion-oriented skill ends with is the **terminal outcome** — never call it a "run status", "workflow status", or any other status phrase. A vocabulary a skill defines for its own caller/callee topology (e.g. an orchestrator's subagent reply tokens and lane verdicts) is **skill-local return tokens** — never called a status or an outcome, never emitted in the terminal outcome, and never reused outside the owning skill. A completed *thread's* lasting artifact is its **final deliverable**, not its "terminal outcome". Canonical definition: `docs/skill-authoring.md` (`## Terminal outcome` and `## Internal progress and local return contracts`).
 - Only skills that emit the terminal outcome mention it. A skill with none (dialogue-driven, one-shot deliverable, every primitive) stays silent about the protocol AND about its own posture label — no "emit no outcome line" negation, no "this is a dialogue-driven skill" framing: an agent never told the vocabulary exists cannot emit it, and a negation only teaches the concept it forbids.
 
 ## Describe the current state, never the diff
@@ -130,47 +120,29 @@ Some skills ship copies of the same canonical reference (for example the workflo
 
 - Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
 - Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script wipes and re-creates each declaring skill's `references/shared/` folder from the canonical sources.
-- NEVER hand-edit any `references/shared/` folder inside a skill. Those copies are generated, committed, and flow into distribution and the Raycast manifest unchanged. Change the canonical source and re-run the script instead.
-
-## Deliverable skills — no preamble
-
-Skills whose job is to produce a deliverable for the user to copy, paste, or hand off elsewhere (currently: `meta-prompting`, `consult-the-expert`, `report-to-the-owner`, `brief-the-recipient`) must enforce that the chat response IS the deliverable. No "Sure, here is…", no chat-style framing, no closing remark like "Hope this helps." Encode the rule explicitly in the skill's Tone or Output format section so a fresh model session honors it without relying on the harness picking up convention.
+- NEVER hand-edit any `references/shared/` folder inside a skill. Those copies are generated, committed, and flow into distribution unchanged. Change the canonical source and re-run the script instead.
 
 ## When adding a new skill
 
-1. Decide which group the skill belongs to: `capture-discussion`, `documentation`, `finish-navigate`, `handoff`, `implement`, `merge`, `plan`, `primitives`, `propose`, `reconcile`, `research`, `review`, `roadmap`, `spec`, or `support`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
+1. Decide which group the skill belongs to: `capture-discussion`, `finish-navigate`, `implement`, `merge`, `plan`, `primitives`, `propose`, `reconcile`, `review`, `roadmap`, or `spec`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
 2. Decide the invocation role. If the skill is a capability a person deliberately reaches for, it is a user-invoked entry point. Only add it under `primitives/` when it is a bounded building block an entry point composes into AND it clears the extraction bar — it is genuinely reused by more than one entry point (or is the single well-defined mechanism an entry point delegates to) rather than inlined logic. Do not create a primitive for a one-off.
-3. Create `skills/<group>/<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 1.0.0`). Every skill ships `agents/openai.yaml` with a universal `interface:` block (`display_name` in title case, a fresh terse `short_description`). For a user-invoked entry point, set `disable-model-invocation: true` in `SKILL.md` AND add `policy.allow_implicit_invocation: false` beneath the interface block. For a primitive, omit both role restrictions (carry the interface block alone) and open the description with a bounded precondition. The two harness declarations must never diverge.
+3. Create `skills/<group>/<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 0.1.0`). Every skill ships `agents/openai.yaml` with a universal `interface:` block (`display_name` in title case, a fresh terse `short_description`). For a user-invoked entry point, set `disable-model-invocation: true` in `SKILL.md` AND add `policy.allow_implicit_invocation: false` beneath the interface block. For a primitive, omit both role restrictions (carry the interface block alone) and open the description with a bounded precondition. The two harness declarations must never diverge.
 4. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet, linking to the full nested path.
 5. Register the skill folder in `.claude-plugin/marketplace.json` under the plugin matching its group's `skills` array as `./skills/<group>/<skill-name>` — there is one plugin per group (e.g. `JeisKappa-primitives`, `JeisKappa-reconcile`, `JeisKappa-roadmap`). Keep `plugins` sorted alphabetically by `name`. If the group is new, also add a new plugin entry named `JeisKappa-<folder-name>` in the same change.
 6. Add the skill's folder name (the leaf, not the full path) to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
-
-## Raycast extension
-
-`raycast-extension/` is a Raycast client over these skills. It is **derived**: nothing inside `raycast-extension/assets/skills.json` is hand-edited — the file is regenerated from `skills/**/SKILL.md` by `raycast-extension/scripts/sync-skills-to-raycast.mjs` (the sync runs automatically as part of `npm run dev` and `npm run build` inside `raycast-extension/`).
-
-Rules when working on it:
-
-- `skills/` stays the source of truth. The sync script strips YAML frontmatter and writes `name`, `title`, `group`, `groupTitle`, `description`, `version`, `sourcePath`, `body`, and a `references` array (each entry: `{path, bytes, body}`) into one manifest. If you need new metadata to surface in Raycast, add it in the sync script — never edit `assets/skills.json` directly.
-- References are embedded in the wrapped output inside `<instruction>` at the TOP, then the skill body, then the user's prompt at the bottom — long-context-first layout, optimized for LLM attention. If a skill's `references/` folder grows or changes, the next `npm run sync` (or auto-sync via `npm run dev`/`npm run build`) picks it up.
-- The extension folder is gitignored where it must be (`node_modules/`, `raycast-env.d.ts`, `assets/skills.json`). Do not commit those; the regeneration happens on demand.
-- The sole command is `select-skill` (`src/select-skill.tsx`). It wraps the skill body inside `<instruction>…</instruction>`, optionally appends the user's prompt, and copies the result to the clipboard (`⌘⏎` on the list skips the prompt and copies just the wrapped instruction).
-- The extension icon at `raycast-extension/assets/icon.png` is a 512×512 PNG. Swap in a replacement by overwriting that file.
 
 ## Commits
 
 Never commit unless explicitly asked to do so.
 
-This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(brief-the-recipient): …`, `fix(report-to-the-owner): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" above).
+This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(propose): …`, `fix(reconcile-spec): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" above).
 
 Repo-wide changes (touching multiple skills, `README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
 
-## V3 Workflow Conventions
+## Workflow Conventions
 
-This repo is the home of the Modular Agentic Workflow V3, the active ruleset for newly opened threads and their workflow artifacts.
+This repository is the reference home of the Modular Agentic Workflow, the ruleset for newly opened threads and their workflow artifacts.
 
-The canonical reference for the V3 target ruleset — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/project/v3/README.md`, which links the companion documents `thread-model.md`, `skill-authoring.md`, and the three workflow docs under `docs/project/v3/workflows/`. Read it before editing V3 itself or writing/editing an artifact that belongs to an existing V3 thread.
+The canonical reference — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/thread-model.md`, `docs/skill-authoring.md`, and the three workflow docs under `docs/workflows/`. Read it before editing the workflow itself or writing/editing an artifact that belongs to an existing thread.
 
-V1 remains grandfathered for its own threads, and V2 remains authoritative for its existing threads. Never migrate or mix workflow versions inside a thread.
-
-This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/project/v3/` for any rule change; this section only changes if the V3 reference doc set itself moves or splits.
+This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/` for any rule change; this section only changes if the reference doc set itself moves or splits.

@@ -6,15 +6,7 @@
       "skills": [
         "./skills/capture-discussion/discussion",
         "./skills/capture-discussion/open-thread",
-        "./skills/capture-discussion/open-ticket",
         "./skills/capture-discussion/resolve-pending-decisions"
-      ]
-    },
-    {
-      "name": "JeisKappa-documentation",
-      "source": "./",
-      "skills": [
-        "./skills/documentation/take-snapshot"
       ]
     },
     {
@@ -24,15 +16,6 @@
         "./skills/finish-navigate/archive-thread",
         "./skills/finish-navigate/finish",
         "./skills/finish-navigate/whats-next"
-      ]
-    },
-    {
-      "name": "JeisKappa-handoff",
-      "source": "./",
-      "skills": [
-        "./skills/handoff/brief-the-recipient",
-        "./skills/handoff/consult-the-expert",
-        "./skills/handoff/report-to-the-owner"
       ]
     },
     {
@@ -88,14 +71,6 @@
       ]
     },
     {
-      "name": "JeisKappa-research",
-      "source": "./",
-      "skills": [
-        "./skills/research/afk-exploration",
-        "./skills/research/the-librarian"
-      ]
-    },
-    {
       "name": "JeisKappa-review",
       "source": "./",
       "skills": [
@@ -118,14 +93,6 @@
       "source": "./",
       "skills": [
         "./skills/spec/spec"
-      ]
-    },
-    {
-      "name": "JeisKappa-support",
-      "source": "./",
-      "skills": [
-        "./skills/support/meta-prompting",
-        "./skills/support/name-cracker"
       ]
     }
   ]

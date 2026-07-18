@@ -90,11 +90,11 @@ Cross-thread references use plain repo-relative thread-root directory paths, for
 
 ### Accepted limitation
 
-Moving a thread into `docs/threads/archive/` changes its literal path, so parent, child, decision-record, external, and other repo-relative references to a thread may break when that thread is archived. This is a known and accepted limitation of Project V3. Archival performs a simple location move and does not attempt to preserve, discover, or rewrite cross-thread references, and this document promises no repair mechanism for it. The timestamp-and-slug embedded in every thread path keeps post-archival recovery a trivial search even when a literal path no longer resolves.
+Moving a thread into `docs/threads/archive/` changes its literal path, so parent, child, decision-record, external, and other repo-relative references to a thread may break when that thread is archived. This is a known and accepted limitation of the workflow. Archival performs a simple location move and does not attempt to preserve, discover, or rewrite cross-thread references, and this document promises no repair mechanism for it. The timestamp-and-slug embedded in every thread path keeps post-archival recovery a trivial search even when a literal path no longer resolves.
 
 ## Branch-agnosticism
 
-Project V3 defines no thread-to-branch mapping. Thread identity lives entirely in the thread folder, never in a branch name. No workflow skill creates, switches, or names a branch on its own initiative. Implementation commits land on the current branch as found, and branch dispositions at delivery are user-selected. The user may work directly on the default branch, use one branch per thread, or share a branch across threads — the workflow neither knows nor cares.
+The workflow defines no thread-to-branch mapping. Thread identity lives entirely in the thread folder, never in a branch name. No workflow skill creates, switches, or names a branch on its own initiative. Implementation commits land on the current branch as found, and branch dispositions at delivery are user-selected. The user may work directly on the default branch, use one branch per thread, or share a branch across threads — the workflow neither knows nor cares.
 
 ## Temporary workspaces
 

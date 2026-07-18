@@ -4,7 +4,7 @@ description: Turn a thread's durable inputs or a referenced artifact into a one-
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.2.1
+  version: 0.1.0
 ---
 
 # Plan Brief

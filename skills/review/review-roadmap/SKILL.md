@@ -4,7 +4,7 @@ description: Read a thread-root roadmap.md as a decomposition handoff and judge 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.2.0
+  version: 0.1.0
 ---
 
 # Review Roadmap

@@ -4,7 +4,7 @@ description: Turn a spec, proposal, decisions, GitHub issue, or raw prompt into 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 5.2.1
+  version: 0.1.0
 ---
 
 # Plan Strict

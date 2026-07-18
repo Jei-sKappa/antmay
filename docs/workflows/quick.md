@@ -48,4 +48,4 @@ From that point the thread continues with the complete Standard tail: reconcile 
 
 ## Template
 
-The exact recommended sequence is also published at [`shared/references/workflows/quick.md`](../../../../shared/references/workflows/quick.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.
+The exact recommended sequence is also published at [`shared/references/workflows/quick.md`](../../shared/references/workflows/quick.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.

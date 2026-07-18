@@ -4,7 +4,7 @@ description: Forward-design a thread's durable inputs (seed, decisions, an optio
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.2.1
+  version: 0.1.0
 ---
 
 # Spec

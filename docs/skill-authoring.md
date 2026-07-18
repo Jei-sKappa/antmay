@@ -1,6 +1,6 @@
 # Skill authoring
 
-This document defines the cross-skill conventions every Project V3 skill follows: interaction posture, terminal outcomes, composition, invocation-role metadata, when a capability earns its own skill, naming, how reconciliation differs from review, section headings, progressive disclosure, the filesystem-deletion rule, and the shared-reference authoring rule. Each skill remains a self-contained instruction set; these are the rules that keep the suite coherent.
+This document defines the cross-skill conventions every skill in this suite follows: interaction posture, terminal outcomes, composition, invocation-role metadata, when a capability earns its own skill, naming, how reconciliation differs from review, section headings, progressive disclosure, the filesystem-deletion rule, and the shared-reference authoring rule. Each skill remains a self-contained instruction set; these are the rules that keep the suite coherent.
 
 ## Interaction posture
 

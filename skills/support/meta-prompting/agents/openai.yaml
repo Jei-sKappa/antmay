@@ -1,5 +1,0 @@
-interface:
-  display_name: Meta Prompting
-  short_description: Refine a draft AI prompt
-policy:
-  allow_implicit_invocation: false

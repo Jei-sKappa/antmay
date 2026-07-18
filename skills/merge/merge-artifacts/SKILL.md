@@ -3,7 +3,7 @@ name: merge-artifacts
 description: Reconcile two or more competing candidate drafts of one artifact into a single canonical thread-root artifact, folding every candidate's unique content and queueing any genuine design divergence that needs a human decision; use when a multi-draft bake-off must be collapsed into one artifact.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.2.1
+  version: 0.1.0
 disable-model-invocation: true
 ---
 

@@ -4,7 +4,7 @@ description: Open a durable workflow thread on disk from a rough idea and an opt
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 3.0.1
+  version: 0.1.0
 ---
 
 # Open Thread

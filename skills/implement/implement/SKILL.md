@@ -4,7 +4,7 @@ description: Implement a brief plan or a less-structured input (`plan.md`, a see
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 4.2.1
+  version: 0.1.0
 ---
 
 # Implement

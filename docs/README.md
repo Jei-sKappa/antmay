@@ -1,14 +1,14 @@
-# Project V3
+# Modular Agentic Workflow
 
-Project V3 is a suite of reusable, independently invokable capability skills together with a small set of documented workflows that compose those skills into easy-to-discover paths. Skills are the tools; workflows are the recommended ways of arranging them.
+The Modular Agentic Workflow is a suite of reusable, independently invokable capability skills together with a small set of documented workflows that compose those skills into easy-to-discover paths. Skills are the tools; workflows are the recommended ways of arranging them.
 
 ## Architecture
 
-The repository offers a catalog of self-contained capability skills — opening a thread, discussion, proposing, specifying, planning, implementing, reconciling artifacts, reviewing delivered work, roadmapping, materializing child threads, finishing, navigating, archiving, handoff, research, and support operations. Each skill owns one capability with a fixed output contract and does not inspect a workflow name to decide how to behave.
+The repository offers a catalog of self-contained capability skills — opening a thread, discussion, proposing, specifying, planning, implementing, reconciling artifacts, reviewing delivered work, roadmapping, materializing child threads, finishing, navigating, and archiving. Each skill owns one capability with a fixed output contract and does not inspect a workflow name to decide how to behave.
 
 A **workflow** is a documented composition over those skills: a named, human-readable path that arranges capabilities into a coherent process. Composition lives in documentation — the workflow documents and their published templates — not in orchestration hidden inside skills. The same skill is reused across workflows without renamed copies.
 
-Project V3 ships three workflows:
+The methodology ships three workflows:
 
 - **[Quick](workflows/quick.md)** — the smallest delivery path for one change, optionally with a brief plan.
 - **[Standard](workflows/standard.md)** — the normal spec-driven path for one change, from clarified decisions through a handoff-grade specification, a prescriptive plan, implementation, and an outcome report.

@@ -3,7 +3,7 @@ name: emit-pending-decisions
 description: Use only when an invoking caller supplies open human decisions with their producing context and needs them queued as a `.pending-decisions/` bundle for a human to settle later; never for defects, observations, or report material — only genuine open human decisions.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.2
+  version: 0.1.0
 ---
 
 # Emit Pending Decisions

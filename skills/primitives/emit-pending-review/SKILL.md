@@ -3,7 +3,7 @@ name: emit-pending-review
 description: Use only when an invoking caller supplies already-validated, evidenced review findings for a target and needs them recorded for later attention — allocate a uniquely named bundle under the active thread's `.pending-reviews/` folder and write its routing header and severity-ordered findings.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 1.1.1
+  version: 0.1.0
 ---
 
 # Emit Pending Review

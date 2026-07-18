@@ -61,4 +61,4 @@ A Roadmap thread completes at `finish` once the direction is set and the childre
 
 ## Template
 
-The exact recommended sequence is also published at [`shared/references/workflows/roadmap.md`](../../../../shared/references/workflows/roadmap.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.
+The exact recommended sequence is also published at [`shared/references/workflows/roadmap.md`](../../shared/references/workflows/roadmap.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.

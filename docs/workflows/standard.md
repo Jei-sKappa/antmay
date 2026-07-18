@@ -49,4 +49,4 @@ A [Quick](quick.md) thread that outgrows its lighter path joins Standard at the 
 
 ## Template
 
-The exact recommended sequence is also published at [`shared/references/workflows/standard.md`](../../../../shared/references/workflows/standard.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.
+The exact recommended sequence is also published at [`shared/references/workflows/standard.md`](../../shared/references/workflows/standard.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.
