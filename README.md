@@ -8,6 +8,20 @@ Skills are not a CLI, a runtime, or a project-local state file. They are individ
 
 > General-purpose, context-agnostic skills live in the companion repository [`Jei-sKappa/skills`](https://github.com/Jei-sKappa/skills).
 
+## Installation
+
+Install the entire suite in one command:
+
+```sh
+npx skills add Jei-sKappa/antmay
+```
+
+Or install any skill individually:
+
+```sh
+npx skills add Jei-sKappa/antmay --skill <skill-name>
+```
+
 ## Workflows
 
 The three workflows differ only by **process shape** — how much ceremony a change earns. They are subject-neutral: you pick the shape that fits the work, not a router that maps bugs, features, or docs to a track. Every step is a suggestion, never a rule; skipping or adding one never invalidates a thread. A lighter path can grow into a heavier one in place, in the same thread, without starting over.
@@ -293,21 +307,5 @@ Record a descendant thread's parent- or sibling-level discovery — the affected
 ```sh
 npx skills add Jei-sKappa/antmay --skill append-roadmap-feedback
 ```
-
-## Installation
-
-Install any skill individually via:
-
-```sh
-npx skills add Jei-sKappa/antmay --skill <skill-name>
-```
-
-For example, to install the spec generator:
-
-```sh
-npx skills add Jei-sKappa/antmay --skill spec
-```
-
-Skills are grouped under one marketplace plugin per `skills/` folder — for example `JeisKappa-plan` (rendered as **`JeisKappa Plan`**), `JeisKappa-reconcile` (**`JeisKappa Reconcile`**), `JeisKappa-roadmap` (**`JeisKappa Roadmap`**), `JeisKappa-primitives` (**`JeisKappa Primitives`**), and so on. Dashes in the plugin name are split into spaces and each segment capitalized in `npx skills list`.
 
 For the workflow methodology — the thread model, the seed and decision-log contracts, the three workflow paths, and the skill-authoring rules — see [`docs/`](./docs/README.md), the reference for all new threads.

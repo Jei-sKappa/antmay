@@ -1,97 +1,37 @@
 {
   "plugins": [
     {
-      "name": "JeisKappa-capture-discussion",
+      "name": "Antmay",
       "source": "./",
       "skills": [
         "./skills/capture-discussion/discussion",
         "./skills/capture-discussion/open-thread",
-        "./skills/capture-discussion/resolve-pending-decisions"
-      ]
-    },
-    {
-      "name": "JeisKappa-finish-navigate",
-      "source": "./",
-      "skills": [
+        "./skills/capture-discussion/resolve-pending-decisions",
         "./skills/finish-navigate/archive-thread",
         "./skills/finish-navigate/finish",
-        "./skills/finish-navigate/whats-next"
-      ]
-    },
-    {
-      "name": "JeisKappa-implement",
-      "source": "./",
-      "skills": [
+        "./skills/finish-navigate/whats-next",
         "./skills/implement/implement",
         "./skills/implement/implement-plan",
-        "./skills/implement/implement-plan-with-subagents"
-      ]
-    },
-    {
-      "name": "JeisKappa-merge",
-      "source": "./",
-      "skills": [
-        "./skills/merge/merge-artifacts"
-      ]
-    },
-    {
-      "name": "JeisKappa-plan",
-      "source": "./",
-      "skills": [
+        "./skills/implement/implement-plan-with-subagents",
+        "./skills/merge/merge-artifacts",
         "./skills/plan/plan-brief",
-        "./skills/plan/plan-strict"
-      ]
-    },
-    {
-      "name": "JeisKappa-primitives",
-      "source": "./",
-      "skills": [
+        "./skills/plan/plan-strict",
         "./skills/primitives/allocate-thread",
         "./skills/primitives/append-roadmap-feedback",
         "./skills/primitives/emit-pending-decisions",
         "./skills/primitives/emit-pending-review",
-        "./skills/primitives/update-implementation-report"
-      ]
-    },
-    {
-      "name": "JeisKappa-propose",
-      "source": "./",
-      "skills": [
-        "./skills/propose/propose"
-      ]
-    },
-    {
-      "name": "JeisKappa-reconcile",
-      "source": "./",
-      "skills": [
+        "./skills/primitives/update-implementation-report",
+        "./skills/propose/propose",
         "./skills/reconcile/reconcile-plan",
         "./skills/reconcile/reconcile-proposal",
         "./skills/reconcile/reconcile-roadmap",
-        "./skills/reconcile/reconcile-spec"
-      ]
-    },
-    {
-      "name": "JeisKappa-review",
-      "source": "./",
-      "skills": [
+        "./skills/reconcile/reconcile-spec",
         "./skills/review/review-code",
         "./skills/review/review-implementation",
         "./skills/review/review-roadmap",
-        "./skills/review/review-spec"
-      ]
-    },
-    {
-      "name": "JeisKappa-roadmap",
-      "source": "./",
-      "skills": [
+        "./skills/review/review-spec",
         "./skills/roadmap/materialize-roadmap-threads",
-        "./skills/roadmap/roadmap"
-      ]
-    },
-    {
-      "name": "JeisKappa-spec",
-      "source": "./",
-      "skills": [
+        "./skills/roadmap/roadmap",
         "./skills/spec/spec"
       ]
     }
