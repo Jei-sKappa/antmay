@@ -1,5 +1,9 @@
 [![skills.sh](https://skills.sh/b/Jei-sKappa/antmay)](https://skills.sh/Jei-sKappa/antmay)
 
+<p align="center">
+  <img src="./assets/antmay-banner.png" alt="Antmay" width="100%">
+</p>
+
 # Antmay
 
 **antmay** is the reference repository for the Modular Agentic Workflow — a collection of composable, harness-agnostic `SKILL.md` skills that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Every unit of work lives in its own thread under `docs/threads/<thread>/`, holding a self-contained seed, a running decision log, and whatever artifacts the work produces — so a teammate reviewing a PR or a fresh agent session resuming work reads the same durable truth. Skills work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads `SKILL.md` files.
