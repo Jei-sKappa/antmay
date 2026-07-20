@@ -1,166 +1,319 @@
-# Spec — Workflow orchestrator CLI, v0
+# `antmay` v0 — Interactive Skill-Run Orchestrator
 
-Throughout this spec, `<tool>` is a placeholder for the tool's eventual command/binary name (see `## Degrees of freedom`). "Harness" means an agent CLI the tool drives — Claude Code (`claude`) or Codex (`codex`). "Adapter" means a terminal-multiplexer backend the tool drives to host sessions. "Completion-oriented skill" means a skill that ends by emitting the terminal outcome line `Outcome: DONE | BLOCKED | REFUSED — <reason>`.
+## 1. Intended outcome and context
 
-## 1. Intended outcome
+`antmay` is the command-line companion to the Modular Agentic Workflow. Its v0 lets a developer standing inside a workflow repository launch one supported completion-oriented Antmay skill in a durable herdr pane, leave the command or attach to the pane, and later obtain an honest terminal classification from `antmay status`. The same retained pane remains attachable through `antmay attach`, including after the skill run has reached a terminal outcome.
 
-A locally-installed command-line tool that lets a person delegate one completion-oriented skill run to an agent harness running in a durable, attachable terminal-multiplexer pane, then walk away from the screen and later learn how that run ended — DONE, BLOCKED, or REFUSED, with the reason — without having watched it and without any change to the skills themselves.
+The tool exists because completion-oriented skills communicate their terminal outcome only in their final chat message. In particular, a preflight `REFUSED` run writes no thread artifact, so a pure repository scanner cannot report it. The settled detection model reads tool-spawned harness transcripts, uses pane evidence as a fallback, and observes pending thread bundles separately; skills themselves remain unchanged (per `decisions.md` DR1, DR2, DR8).
 
-Concretely, v0 delivers exactly two commands:
+v0 deliberately delivers the smallest local interactive slice of the larger architecture: local spawn, per-run background observation, status, and attachment. Remote delegation, notifications, tmux, and headless execution remain later lanes over the same core rather than v0 features (per `decisions.md` DR3, DR5, DR7, DR11, DR19).
 
-- **`<tool> spawn`** — launch a chosen skill, in a chosen harness, against a chosen thread, inside a multiplexer pane; register the run; and start watching it for its terminal outcome. With `--attach`, drop the user straight into the live pane to watch.
-- **`<tool> status`** — read back what the tool knows: each run and its detected outcome (or that it is still active), plus any threads that are waiting on a human because they carry a pending-decisions or pending-review bundle.
+## 2. Scope
 
-The whole point is the gap between those two commands: you `spawn`, you leave, you come back and `status` tells you the answer. The skills are byte-for-byte untouched (per `decisions.md` DR1), and the tool is strictly optional — the suite works identically with the tool never installed (per `decisions.md` DR2).
+### 2.1 In scope
 
-## 2. Context
+- A public executable named `antmay`, with the commands `spawn`, `status`, and `attach` (per `decisions.md` DR12, DR19).
+- A strict TypeScript ESM Bun workspace targeting Node.js 20 or newer, split into `packages/core` and `packages/cli`, following the established `.library/sources/Jei-sKappa_jastr` project conventions (per `decisions.md` DR13, DR17).
+- Local interactive Claude Code and Codex runs hosted in herdr panes through a thin multiplexer adapter (per `decisions.md` DR2, DR3, DR11).
+- A home-state run registry, an explicit catalog of supported Antmay completion-oriented skills, transcript and pane outcome detection, pending-bundle scanning, private per-run observer workers, and synchronous status reconciliation (per `decisions.md` DR1, DR4, DR15, DR16).
+- Retained-pane attachment for active and terminal runs, with no automatic pane closure or mutation (per `decisions.md` DR18, DR19).
+- Human-readable command output and a stable machine-readable `status --json` contract (per `decisions.md` DR5, DR9, DR10).
+- Automated real-CLI end-to-end coverage through injectable process and filesystem boundaries, plus a real-herdr hands-on smoke path (per `decisions.md` DR14, DR17).
+- macOS and Linux support. WSL may work as Linux when its dependencies are present, but carries no separate compatibility promise (per `decisions.md` DR17).
 
-This thread designs a CLI to orchestrate the Modular Agentic Workflow's completion-driven skills: delegate away-from-keyboard work and find out when a run finishes or needs a human. A research pass (recorded in `seed.md`) vendored five candidate foundations, ran three competing design passes, and surfaced six open questions; a discussion pass settled the architecture across eleven decision records (`decisions.md` DR1–DR11). This spec is the forward-design of the **v0 slice** those decisions converged on — deliberately the smallest build that still delivers the "delegate, leave, come back and see the outcome" loop while exercising every subsystem the deferred lanes (remote delegation, notifications, headless execution, the tmux adapter) will later extend (per `decisions.md` DR11).
+### 2.2 Out of scope
 
-The tool's detection strategy exists because the terminal outcome line is emitted only in chat, and REFUSED writes nothing to disk by design — so the outcome of a run is invisible to a pure filesystem watcher. The empirically-verified answer (per `decisions.md` DR1) is to read harness transcripts and launch outputs, which is exactly what makes "come back and see the outcome" possible without touching a skill.
+- Remote/SSH delegation, rsync choreography, pull/sync-back commands, remote registry federation, and remote provisioning. Their future topology remains governed by `decisions.md` DR5 and DR6.
+- Notifications and notification configuration, including ntfy, desktop, and multiplexer sinks. The future sink architecture remains governed by `decisions.md` DR7.
+- A tmux adapter, headless host execution, sandboxed execution, launch-output detection, and active discovery of sessions not spawned by `antmay` (per `decisions.md` DR1–DR3, DR11).
+- Arbitrary installed skills, dialogue-driven skills, raw harness prompts, and user-defined skill protocols (per `decisions.md` DR16).
+- A `resolve` command, `watch` loop, persistent TUI/dashboard, global daemon, per-repository daemon, automatic retry loop, or automatic chaining after a terminal outcome (per `decisions.md` DR10, DR11, DR15).
+- Automatic pane closure, pane-retention timers, or an `antmay` cleanup command (per `decisions.md` DR18).
+- A per-repository `antmay` configuration file, pane-metadata-based registry reconstruction, harness hooks, or outcome breadcrumbs (per `decisions.md` DR4, DR8, DR11).
+- Native Windows support (per `decisions.md` DR17).
 
-## 3. Scope and non-scope
+## 3. Architecture and binding constraints
 
-### In scope (v0)
+### 3.1 Workspace and package boundary
 
-- A local-only CLI with two commands, `spawn` and `status`, plus `--json` output and optional installer-style interactive prompts (per `decisions.md` DR10, DR11).
-- Driving a **single multiplexer adapter, herdr**, at arm's length over its CLI/socket as a separate process (per `decisions.md` DR3).
-- Driving **two harnesses**, Claude Code and Codex, as interactive sessions inside a pane (per `decisions.md` DR2 mode 2, DR11), with the detection-strength difference between them stated in `## 5`.
-- A **home-directory registry** of run identity bindings and cached detected outcomes, keyed by repository path (per `decisions.md` DR4).
-- A **per-run watcher** implementing the interactive rungs of the detection ladder — pinned-path transcript tailing and pane-scrape triggering — to classify the terminal outcome (per `decisions.md` DR1 rungs 2–3).
-- The **one-active-run-per-folder** guard on `spawn` (per `decisions.md` DR6).
-- `status` reporting runs, outcomes, and pending `.pending-decisions/` / `.pending-reviews/` bundles, cwd-scoped by default with `--all` (per `decisions.md` DR9, DR11).
+The root is a Bun workspace with shared strict TypeScript configuration and repository-level `build`, `typecheck`, `test`, `test:cli:e2e`, `check`, and `format` scripts. Biome owns formatting/checking, Vitest owns tests, and Commander with typed definitions owns the public CLI. The built CLI targets Node.js 20 or newer and is packaged so `antmay` can be installed and run through the npm/`npx` ecosystem (per `decisions.md` DR5, DR12, DR13).
 
-### Explicitly out of scope (v0)
+`packages/core` owns the mode-agnostic domain: public run identity, the explicit skill catalog, registry semantics, outcome parsing and classification, pending-bundle attention semantics, and status projections. No core type or function may require a pane or multiplexer concept. `packages/cli` owns the `antmay` binary, Commander definitions, prompts, concrete filesystem and process integration, harness launch integration, the herdr adapter, and the private worker entry point (per `decisions.md` DR2, DR3, DR13, DR15).
 
-Each item below is deferred by a decision, not overlooked. The v0 architecture must leave each addable as a later lane without a rewrite (per `decisions.md` DR11); that forward-compatibility is itself a constraint in `## 6`.
+The worker is a private packaged module, not a public command and not present in `antmay --help`. Each successful detached spawn starts one independent Node.js worker for that run; there is no `antmay` service or daemon (per `decisions.md` DR15).
 
-- **Remote / SSH delegation**: `--remote`, remote provisioning, the delegation stub, SSH `status` federation, and the `pull` sync-back command (per `decisions.md` DR5, DR6).
-- **Notifications**: the pluggable sink module, ntfy.sh push, desktop toast, terse payload mode — all deferred; v0 has no notifications (per `decisions.md` DR7, DR11).
-- **Any adapter other than herdr**, including the tmux adapter (per `decisions.md` DR3 — tmux is the first follow-on, not v0).
-- **Headless execution** (`claude -p` / `codex exec`) and the **sandboxed lane** — DR2 modes 3 and 4, and any foreground `run`/`exec` verb (per `decisions.md` DR2, DR11). Detection rung 1 (launch-output parsing) is therefore not exercised in v0.
-- **Detection of sessions the tool did not spawn** — DR1 rung 4 (history-index matching) as an active discovery feature, and any richer attention board (per `decisions.md` DR8, DR11).
-- **A separate `resolve` command**, the `watch` auto-refresh loop, and any persistent TUI/dashboard (per `decisions.md` DR10, DR11).
-- **Any write outside the home-directory state root** — no harness config, no hooks, no outcome-breadcrumb, nothing inside any repository. This is a permanent invariant, not merely a v0 deferral (per `decisions.md` DR8).
-- **A per-repo configuration file** and **pane-metadata-based identity rebuild** — both explicitly left to a later decision (per `decisions.md` DR4); v0 does not depend on either.
+### 3.2 State and write boundary
 
-## 4. Actors and the primary flow
+All `antmay`-written files live beneath one per-user state root. Resolution is:
 
-**Actor:** a single developer, working locally, standing inside a git repository that follows this workflow's layout (threads under `docs/threads/<YYMMDDHHMMSSZ-slug>/`, bundles as `.pending-decisions/` / `.pending-reviews/` inside a thread root).
+1. `ANTMAY_STATE_HOME` when set to a non-empty path;
+2. otherwise `$XDG_STATE_HOME/antmay` when `XDG_STATE_HOME` is set; or
+3. otherwise `~/.local/state/antmay`.
 
-**Primary flow:**
+State is keyed by the repository's canonical absolute folder path. It contains authoritative run bindings and classifications plus operational data such as worker diagnostics, heartbeat/lease data, tail cursors, and any future notify-once ledger. `antmay` writes no repository file, `.gitignore`, thread artifact, harness configuration, hook, or breadcrumb. It may read active thread roots and pending-bundle directories as workflow inputs (per `decisions.md` DR4, DR8, DR12, DR15).
 
-1. The user runs `<tool> spawn` inside a repo. Missing inputs (thread, skill, harness, adapter) are gathered by flags or by interactive prompt.
-2. The tool checks the registry for an already-active run on the same repo folder; if one exists it does not silently proceed (see FR-4).
-3. The tool launches the chosen harness in a herdr pane with the repo folder as cwd, instructing it to invoke the chosen skill against the chosen thread, pinning the session identity where the harness allows it.
-4. The tool writes a run binding to the registry and starts a watcher for that run.
-5. If `--attach` was given, the user is placed into the live pane; otherwise the command returns and the watcher keeps running.
-6. The watcher detects the terminal outcome and records it (token + reason where available) to the registry.
-7. Later, the user runs `<tool> status` and reads the outcome, plus any threads carrying pending human-decision or review bundles.
+A registered run has a stable public run ID and binds at least: repository path, active thread path, catalog skill name, harness, harness session identity or heuristic join identity, adapter, adapter pane/attach handle, current classification, terminal reason when available, and worker health data. Concurrent worker and command updates must be atomic and idempotent; duplicate reconciliation must not regress a terminal classification or produce conflicting terminal records.
 
-## 5. Expected behavior
+### 3.3 Execution and adapter boundary
 
-### 5.1 `spawn`
+v0 ships only the herdr adapter, while herdr remains an external runtime program rather than a linked library. The adapter surface is limited to spawning a pane with cwd/environment/command, sending input, reading pane output, reporting liveness, enumerating handles, and attaching. Transcript location, parsing, terminal classification, registry mutation, worker recovery, and pending-bundle semantics remain outside the adapter. Herdr-specific events, output-match support, or agent-state enrichment may trigger an earlier core read but are never required for correctness (per `decisions.md` DR3).
 
-- **Inputs.** `spawn` needs four things: the target **thread** (an existing thread root in the current repo), the **skill** (a completion-oriented skill to invoke), the **harness** (`claude` or `codex`), and the **adapter** (herdr in v0). Any not supplied as flags are gathered via interactive prompt (per `decisions.md` DR10). Selection UX is free (see `## Degrees of freedom`) but each selection must resolve to a real thread root and a completion-oriented skill.
-- **Launch.** The tool starts the harness inside a herdr pane whose working directory is the repository folder, driving herdr as a separate process over its CLI/socket — never linked or embedded (per `decisions.md` DR3). The harness is instructed to run the chosen skill against the chosen thread. Session identity is pinned deterministically where the harness supports it — Claude Code via `--session-id <uuid>` — and captured by best-effort join where it does not — Codex has no interactive session-id pinning, so its rollout file is identified heuristically from cwd plus spawn time (per `decisions.md` DR1, DR3).
-- **Registration.** On a successful launch the tool records a run binding — thread × skill × repo path × harness × pinned-or-captured session identity × adapter pane handle — into the home-directory registry (per `decisions.md` DR4). The registry is v0's authoritative identity store.
-- **`--attach`.** With `--attach`, the tool immediately attaches the user's terminal to the live pane so they can watch the agent work. Without it, `spawn` returns after registration and the watcher continues independently (per `decisions.md` DR11).
-- **Active-run guard.** Before launching, `spawn` checks the registry for an existing active run bound to the same repo folder. If one exists, `spawn` must not silently start a second concurrent run; it proceeds only on explicit user override — an interactive confirmation or an override flag (per `decisions.md` DR6, whose invariant is one active session per project folder). The override mechanism's form is free (see `## Degrees of freedom`).
+The execution lane starts Claude Code or Codex in the repository folder and invokes the selected catalog skill against the selected thread. Claude Code launch pins a generated session UUID with `--session-id`; Codex interactive identity is joined best-effort from repository cwd and spawn time because interactive Codex does not expose equivalent session-ID pinning (per `decisions.md` DR1, DR3). `antmay` does not impose a permission posture on the harness; the harness's configured permission behavior remains in effect (per `decisions.md` DR2).
 
-### 5.2 The watcher and outcome detection
+### 3.4 Supported completion-skill catalog
 
-- **Ladder, interactive rungs only.** For each spawned run the tool detects the terminal outcome by walking the detection ladder strongest-first, using the two rungs that apply to tool-spawned interactive sessions (per `decisions.md` DR1): rung 2 — tailing the harness transcript at its known/joined path (Claude Code's pinned `~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl`; Codex's `~/.codex/sessions/.../rollout-*.jsonl` located by the spawn-time heuristic join) — and rung 3 — pane scraping as a fallback trigger. Rung 1 (launch output) and rung 4 (history-index discovery) are not built in v0 but the ladder must be structured so they slot in later (per `decisions.md` DR11).
-- **Authoritative signal.** Transcript tailing is the authoritative detector. herdr's agent-status and output-match may be consumed as an *early trigger* to know when to read, but must never be the sole signal, and correctness must not depend on any herdr enrichment (per `decisions.md` DR3). This is what keeps the adapter swappable.
-- **Classification.** The watcher classifies the run as one of: **active** (registered, no terminal outcome yet, pane alive), **done**, **blocked**, **refused**, or **unknown/ended-without-outcome** (the pane ended or the transcript became unavailable — e.g. `--no-session-persistence`, retention cleanup, or an uncharacterized compaction — without a detectable outcome line). Detected DONE/BLOCKED/REFUSED records the token and, where the transcript yields it, the reason text; from a Claude Code transcript the reason is recoverable, whereas a pure pane scrape yields the token reliably but the reason only best-effort (per `decisions.md` DR1).
-- **Matching discipline.** Matchers must tolerate the outcome pattern appearing in echoed input or file reads and must never raw-grep a transcript or screen; parsers must be lenient and additive-drift-tolerant, skip bad lines, avoid version-gating, and follow transcript fork chains (`forkedFrom`) (per `decisions.md` DR1). A UI-free reference implementation of this parsing exists at `.library/sources/jhlee0409_claude-code-history-viewer` and may be borrowed.
-- **Harness detection-strength difference.** For Claude Code the pinned `--session-id` makes the transcript path deterministic, so outcome and reason are reliably read. For Codex the interactive session is identified by heuristic join, so its detection is best-effort — strong, but not deterministic (per `decisions.md` DR1, DR3). This is a stated limitation, not a defect to solve in v0.
-- **Cross-cutting rule.** Regardless of what the transcript says, the presence of a `.pending-decisions/` or `.pending-reviews/` bundle in a thread always wins for "this needs a human" semantics (per `decisions.md` DR1).
+The versioned v0 catalog contains exactly these completion-oriented Antmay entry points, using each harness's native invocation identity:
 
-### 5.3 `status`
+- `implement`
+- `implement-plan`
+- `implement-plan-with-subagents`
+- `materialize-roadmap-threads`
+- `merge-artifacts`
+- `plan-brief`
+- `plan-strict`
+- `propose`
+- `reconcile-plan`
+- `reconcile-proposal`
+- `reconcile-roadmap`
+- `reconcile-spec`
+- `review-code`
+- `review-implementation`
+- `review-roadmap`
+- `review-spec`
+- `roadmap`
+- `spec`
 
-- **Content.** `status` lists the runs the tool knows about (from the registry) with each run's current classification per §5.2, and separately flags threads in scope that carry a pending `.pending-decisions/` or `.pending-reviews/` bundle (per `decisions.md` DR11). Its v0 job is deliberately minimal — a readout, not an attention board (richer framing is deferred per DR11).
-- **Scope.** Run inside a repository, `status` reports that repository (cwd-scoped). `status --all` enumerates every repository the registry has seen and reports across all of them; `--all` is simply the cwd filter removed, with no per-repo daemon (per `decisions.md` DR9).
-- **Machine-readable output.** `status --json` emits a single machine-readable JSON document on stdout, with any human-facing prose kept off stdout (stderr). This contract is relied on for later SSH-based federation, so it must be stable and self-contained (per `decisions.md` DR5; the `--json` contract adopted in `seed.md`'s convergent design facts). The exact schema is free (see `## Degrees of freedom`).
+The catalog, not a prose scan of installed `SKILL.md` bodies, defines eligibility. `spawn` verifies before creating a pane or run record that the chosen catalog entry is available to the selected harness. Unknown catalog names and unavailable installed skills fail preflight with a precise remediation or installation instruction. Updating the catalog is a CLI release change maintained alongside the suite; no skill gains `antmay`-specific metadata (per `decisions.md` DR1, DR16).
 
-### 5.4 Cross-command behavior
+## 4. Public command behavior
 
-- **No repo writes, ever.** No command writes anything inside any repository — no state directory, no `.gitignore` edit — and nothing anywhere outside the home-directory state root (per `decisions.md` DR4, DR8).
-- **Optional and passive.** The tool never becomes required for any skill and never mutates a running session's behavior; a skill run behaves identically whether or not the tool is watching (per `decisions.md` DR2).
+### 4.1 `antmay spawn`
 
-## 6. Constraints
+The complete non-interactive command shape is:
 
-- **C1 — Skills unchanged.** No skill file is modified, and no mechanism is used that requires a skill to write outcome markers or run an embedded completion script. Detection is entirely external transcript/pane reading (per `decisions.md` DR1).
-- **C2 — Write boundary (absolute).** The tool writes only under a per-user home-directory state root (e.g. an `XDG_STATE_HOME`-style `~/.local/state/<tool>/`), keyed by repository path. It writes nothing inside any repository and nothing in any harness config or hook location. No exceptions (per `decisions.md` DR4, DR8).
-- **C3 — Mode-agnostic core.** Run identity, the detection ladder, and status reporting live in a core that never assumes a pane exists; no pane/multiplexer concept leaks out of the execution-lane layer, so headless and sandboxed lanes are later extensions, not rewrites (per `decisions.md` DR2).
-- **C4 — Thin adapter, detection in core.** The multiplexer adapter interface is thin — roughly: spawn a pane (cwd, env, command), send text, read screen, report liveness, enumerate, and produce an attach handle. All detection intelligence stays in the core, never inside an adapter. herdr's extras (agent-status, blocking waits, events, toasts, worktree helpers) are consumed only as optional enrichments behind capability flags, never as load-bearing signals (per `decisions.md` DR3).
-- **C5 — herdr at arm's length (AGPL boundary).** herdr is driven only as a separate process over its CLI/socket; it is never linked or embedded (per `decisions.md` DR3).
-- **C6 — Registry is authoritative for v0.** Run identity is stored in and read from the home-directory registry. v0 correctness must not depend on pane-metadata stamping or any pane-metadata-based rebuild; whether the adapter stamps pane metadata at all is a free choice (per `decisions.md` DR4).
-- **C7 — Forward-compatibility (no lane blocked).** The v0 implementation must not foreclose the deferred lanes: remote delegation must be an added lane over the same adapter interface and identity/registry model; notifications must bolt on by consuming outcomes the core already records (the core must surface a detected outcome as a consumable event, not bury it); the tmux adapter must satisfy the same thin interface; headless (rung 1) and un-spawned-session discovery (rung 4) must slot into the same ladder (per `decisions.md` DR5, DR7, DR11).
-- **C8 — Packaging keeps provisioning open.** Even though remote provisioning is out of v0 scope, the packaging choice must keep later one-line provisioning on a fresh box feasible — i.e. a self-contained binary or an `npx`-runnable package (per `decisions.md` DR5).
-- **C9 — Workflow layout assumptions.** The tool locates threads at `docs/threads/<YYMMDDHHMMSSZ-slug>/` and bundles at `.pending-decisions/` / `.pending-reviews/` within a thread root, consistent with the documented thread model. It treats these as read-only inputs.
-- **C10 — Detection breakers acknowledged.** `--no-session-persistence` (no transcript at all), ~30-day transcript retention, and uncharacterized compaction are known breakers; when they prevent detection the tool reports the honest `unknown/ended-without-outcome` state rather than guessing an outcome (per `decisions.md` DR1).
+```text
+antmay spawn --thread <thread> --skill <catalog-name> --harness <claude|codex> --adapter herdr [--attach] [--force]
+```
 
-## 7. Acceptance guidance
+`<thread>` resolves to one existing active thread root under `docs/threads/<YYMMDDHHMMSSZ-slug>/` in the current repository. Archived threads are not spawn targets. On an interactive terminal, any missing thread, skill, harness, or adapter input is gathered with a transient prompt. With all required flags present, the command does not prompt. When input is missing and prompting is unavailable, the command fails before launching or registering anything and names the missing flag(s) (per `decisions.md` DR10, DR11, DR14, DR16).
 
-Requirements are enumerated as `FR-<id>` with checkable acceptance criteria `AC-<id>.<n>`. Every behavior in `## 5` and every hard constraint in `## 6` is covered by at least one criterion. Criteria marked *(review)* are verified by code/architecture inspection because they assert a structural property rather than a runtime output.
+Preflight validates the repository, thread, catalog membership, selected skill's harness availability, harness executable, herdr executable, adapter value, and the active-run guard. Failure before pane launch creates no registry run and no worker.
 
-### FR-1 — `spawn` launches a skill run in a herdr pane (per DR2, DR3, DR11)
-- **AC-1.1** Running `spawn` with thread, skill, and harness resolved starts a herdr pane whose working directory is the repository folder and in which the chosen harness is running the chosen skill against the chosen thread.
-- **AC-1.2** The herdr process is invoked as an external process over its CLI/socket; the tool's build links or embeds no herdr code. *(review; traces C5/DR3)*
-- **AC-1.3** With `claude` as harness, the launch pins the session with `--session-id <uuid>` and the tool records that uuid. *(traces DR1)*
-- **AC-1.4** With `codex` as harness, the launch succeeds and the tool records a heuristic identity (cwd + spawn time) sufficient to locate the rollout file; the tool does not claim deterministic identity for Codex. *(traces DR1, DR3)*
-- **AC-1.5** Missing thread/skill/harness/adapter are gathered by interactive prompt when not passed as flags, and the command is fully non-interactive when all are passed as flags. *(traces DR10)*
+By default, one active run may exist per canonical repository folder. If an active record already exists, an interactive invocation asks for explicit confirmation; a non-interactive invocation fails unless `--force` is supplied. Terminal runs never trigger the guard, even when their retained panes remain alive. Separate git worktree folders are separate repository-folder keys (per `decisions.md` DR6, DR18).
 
-### FR-2 — `spawn` registers the run in the home-directory registry (per DR4)
-- **AC-2.1** After a successful `spawn`, a registry entry exists under the home-directory state root binding thread × skill × repo path × harness × session identity × adapter pane handle.
-- **AC-2.2** No file anywhere inside the repository is created, modified, or deleted by `spawn` (verify a clean `git status` and no new untracked paths). *(traces C2/DR4, DR8)*
+After preflight, `spawn`:
 
-### FR-3 — `--attach` behavior (per DR11)
-- **AC-3.1** `spawn --attach` places the user's terminal into the live pane of the spawned session.
-- **AC-3.2** `spawn` without `--attach` returns to the shell after registration while the run continues, and a subsequent `status` shows that run.
+1. creates the harness session in a herdr pane with repository cwd and the selected native skill invocation;
+2. records a new stable run ID and complete run binding in the home-state registry;
+3. starts the private detached observer worker for that run; and
+4. either returns the run ID and attach information, or invokes the common attach operation when `--attach` is present.
 
-### FR-4 — One-active-run-per-folder guard (per DR6)
-- **AC-4.1** When the registry shows an active run bound to the current repo folder, a second `spawn` on that folder does not start a second concurrent run without explicit override.
-- **AC-4.2** The user can override the guard through the documented mechanism (interactive confirmation or an override flag), after which the second run starts.
-- **AC-4.3** When no active run is bound to the folder, `spawn` proceeds without prompting for override.
+A successful non-attached `spawn` returns only after the pane, registry binding, and worker have all been established. A partial operational failure must never be reported as success; if a pane was created before a later step failed, the error identifies that retained pane so the user is not left with an invisible session. `spawn --attach` uses the same attachment implementation as `antmay attach`, rather than duplicating adapter logic (per `decisions.md` DR15, DR19).
 
-### FR-5 — Outcome detection via the interactive ladder (per DR1, DR3)
-- **AC-5.1** For a Claude Code run that ends by emitting `Outcome: DONE — …`, `status` reports that run as `done` with the reason text, sourced from the pinned-path transcript.
-- **AC-5.2** For a run that ends BLOCKED and for a run that ends REFUSED, `status` reports `blocked` and `refused` respectively, with reason text where the transcript provides it.
-- **AC-5.3** Detection does not fire on the outcome pattern merely appearing in echoed input or in a file the agent read (no raw grep); a run that never emits a genuine final outcome is not misclassified as terminal. *(traces DR1)*
-- **AC-5.4** Transcript parsing tolerates unknown/optional fields and malformed lines without aborting, is not gated on a harness version, and follows `forkedFrom` chains to the live transcript. *(review; traces DR1)*
-- **AC-5.5** herdr agent-status/output-match, if used, only triggers an earlier transcript read; disabling that enrichment still yields correct detection via transcript tailing alone. *(review; traces C4/DR3)*
-- **AC-5.6** When the transcript is unavailable (`--no-session-persistence`, retention cleanup) or the pane ends with no detectable outcome, the run is reported `unknown/ended-without-outcome`, never a fabricated DONE/BLOCKED/REFUSED. *(traces C10/DR1)*
+### 4.2 Per-run observation and classification
 
-### FR-6 — `status` readout and scope (per DR9, DR11)
-- **AC-6.1** `status` inside a repo lists that repo's runs with each run's classification (active/done/blocked/refused/unknown).
-- **AC-6.2** `status` flags each in-scope thread that contains a `.pending-decisions/` or `.pending-reviews/` bundle as needing a human, independent of any run's transcript outcome. *(traces DR1 cross-cutting)*
-- **AC-6.3** `status` is cwd-scoped by default; `status --all` reports across every repository the registry has seen.
-- **AC-6.4** `status --json` prints exactly one JSON document to stdout with no human prose on stdout; the same run/outcome data is present in that document. *(traces DR5, seed `--json` contract)*
+The private worker receives the registered run identity through a package-internal process contract and monitors only that run. It survives the parent CLI's exit, stores diagnostics and health information under the state root, atomically finalizes the run, and exits after a terminal or ended-without-outcome classification (per `decisions.md` DR15).
 
-### FR-7 — Write boundary (per DR4, DR8)
-- **AC-7.1** Across a full spawn→detect→status cycle, the only filesystem writes performed by the tool are under the home-directory state root; nothing is written inside any repository and nothing in any harness config or hook path. *(verify by diffing repo and `~/.claude` / `~/.codex` config against a filesystem audit of tool writes)*
+For tool-spawned interactive sessions the detector walks the applicable ladder strongest-first:
 
-### FR-8 — Architectural extensibility (per DR2, DR3, DR11)
-- **AC-8.1** The core types carrying run identity, the detection ladder, and status contain no pane/multiplexer concept; the pane concept is confined to the execution-lane/adapter layer. *(review; traces C3)*
-- **AC-8.2** The multiplexer adapter is expressed against an interface (spawn/send/read/liveness/enumerate/attach) that a second adapter could implement without touching the core, and herdr-specific extras sit behind capability flags. *(review; traces C4/DR3)*
-- **AC-8.3** A detected outcome is surfaced by the core as a consumable event/record that a future notification sink could read without re-plumbing detection. *(review; traces C7/DR7, DR11)*
-- **AC-8.4** The packaging produces a self-contained binary or an `npx`-runnable artifact, keeping later one-line provisioning feasible. *(review; traces C8/DR5)*
+1. **Known/joined transcript** — Claude's pinned-path transcript or the Codex rollout selected by the cwd/spawn-time join. This is the reason-grade source.
+2. **Pane evidence** — anchored outcome-token detection against adapter output as a fallback when transcript evidence is unavailable, with reason text best-effort.
+
+Outcome recognition is role- and event-aware; it never raw-greps a transcript or pane. An outcome-looking string in user input, echoed invocation text, tool output, or a file read by the agent must not terminate the run. Transcript parsers skip malformed lines, tolerate additive unknown fields, avoid harness-version gates, exclude subagent conversations from the top-level run, and follow Claude `forkedFrom` chains. Herdr enrichment may wake the detector but cannot replace core parsing (per `decisions.md` DR1, DR3).
+
+The closed classifications are:
+
+- `active` — registered, no terminal outcome, and the pane/session remains live;
+- `done` — a genuine final `Outcome: DONE — …` was detected;
+- `blocked` — a genuine final `Outcome: BLOCKED — …` was detected;
+- `refused` — a genuine final `Outcome: REFUSED — …` was detected; and
+- `unknown` — the pane/session ended or required evidence became unavailable without a genuine terminal outcome.
+
+Transcript-derived DONE/BLOCKED/REFUSED stores the complete reason. Pane-only evidence stores the reason only when it can be recovered safely. No unavailable reason is fabricated. Transcript absence caused by disabled persistence, retention cleanup, or uncharacterized compaction yields `unknown` when the run has ended without reliable terminal evidence (per `decisions.md` DR1).
+
+The worker's terminal transition never closes, exits, sends input to, or otherwise mutates the harness pane. The pane handle remains on the terminal record; worker completion and active-run guarding depend on the run classification rather than pane liveness (per `decisions.md` DR18).
+
+### 4.3 `antmay status`
+
+The command shapes are:
+
+```text
+antmay status
+antmay status --all
+antmay status --json
+antmay status --all --json
+```
+
+Before producing output, `status` reconciles every scoped run against current transcript and pane evidence. If a run is still active but its worker health is stale, `status` restores per-run observation. Reconciliation is idempotent and never downgrades or rewrites an already-recorded terminal classification (per `decisions.md` DR15).
+
+Without `--all`, `status` requires a current workflow repository and reports runs for its canonical folder. With `--all`, it enumerates all repository folders known to the home-state registry. Human output lists each run's ID, repository/thread identity, skill, harness, classification, available reason, and attach availability/hint (per `decisions.md` DR9, DR11, DR18).
+
+For the same scope, `status` independently scans active thread roots for non-empty `.pending-decisions/` and `.pending-reviews/` workspaces. It reports those threads as needing human attention regardless of the transcript classification. Archived threads are inert and never contribute attention signals (per `decisions.md` DR1 and the thread model).
+
+With `--json`, stdout is exactly one JSON document and contains no human prose; diagnostics go to stderr. The v0 document conforms to this exact structural contract, with additional fields prohibited unless `schemaVersion` changes:
+
+```ts
+type StatusDocumentV1 = {
+  schemaVersion: 1;
+  scope:
+    | { mode: "repository"; repositoryPath: string }
+    | { mode: "all"; repositoryPath: null };
+  runs: Array<{
+    id: string;
+    repositoryPath: string;
+    threadPath: string;
+    skill: string;
+    harness: "claude" | "codex";
+    adapter: "herdr";
+    classification: "active" | "done" | "blocked" | "refused" | "unknown";
+    reason: string | null;
+    session: {
+      kind: "pinned" | "heuristic";
+      id: string | null;
+    };
+    attach: {
+      available: boolean;
+      handle: string | null;
+    };
+  }>;
+  attention: Array<{
+    repositoryPath: string;
+    threadPath: string;
+    pendingDecisions: number;
+    pendingReviews: number;
+  }>;
+};
+```
+
+This document is self-contained for later SSH federation and preserves the same run classifications, reasons, attach data, and pending-bundle counts as human output (per `decisions.md` DR5, DR9, DR18).
+
+### 4.4 `antmay attach`
+
+The command shape is:
+
+```text
+antmay attach [run-id]
+```
+
+An explicit run ID selects that run non-interactively. Without an ID, the command uses the sole attachable run in cwd scope; when several attachable runs exist it presents a transient picker on an interactive terminal and fails with an exact re-invocation hint when prompting is unavailable. Active runs and terminal runs with retained live panes are attachable (per `decisions.md` DR19).
+
+Attachment delegates through the run's recorded adapter and handle. If the run does not exist or its pane is unavailable, `attach` reports the condition honestly and leaves the registry classification and pane record unchanged. Attaching never restarts the skill, changes its outcome, resolves pending bundles, or creates another run. Pane cleanup remains a direct herdr user action in v0 (per `decisions.md` DR18, DR19).
+
+## 5. Testability and verification strategy
+
+The repository follows the `jastr` testing shape while testing `antmay`'s real production path. Vitest invokes the built `antmay` executable as a subprocess against isolated temporary repositories, home-state roots, and harness transcript/session roots. Declarative case manifests carry stable case IDs and `covers` references to the acceptance criteria below; each case asserts the applicable exit code, exact stdout, exact stderr, registry/state effects, and repository write boundary (per `decisions.md` DR13, DR14).
+
+External boundaries are injectable through:
+
+- `ANTMAY_STATE_HOME`
+- `ANTMAY_HERDR_BIN`
+- `ANTMAY_CLAUDE_BIN`
+- `ANTMAY_CODEX_BIN`
+- `ANTMAY_CLAUDE_TRANSCRIPT_ROOT`
+- `ANTMAY_CODEX_SESSION_ROOT`
+
+Checked-in scripted herdr and harness shims exercise normal launch, attach, pane liveness, worker survival, worker recovery, DONE/BLOCKED/REFUSED, echoed false positives, malformed/additively-drifting transcript lines, fork chains, missing transcripts, ended-without-outcome, active-run override, catalog rejection, status JSON, pending bundles, and write-boundary behavior. These are dependency seams, not a built-in fake harness mode; a dry-run or non-spawning-only test does not count as orchestration coverage (per `decisions.md` DR14).
+
+A documented hands-on smoke procedure uses the real herdr executable with the scripted fake harness to exercise actual pane creation, `spawn --attach`, detached spawn followed by `attach`, worker detection, retained terminal panes, and all terminal classifications without spending an agent run. The procedure is applicable on macOS and Linux. An optional manual smoke check repeats the primary flow with real Claude Code or Codex; it is additional evidence, not a routine automated-suite dependency (per `decisions.md` DR14, DR17).
+
+## 6. Acceptance guidance
+
+Every behavioral acceptance criterion below must be covered by at least one declarative end-to-end case unless it is explicitly marked as an architecture review. Unit tests may add narrower evidence but never replace the real-CLI case for an observable command contract.
+
+### FR-1 — Workspace, packaging, identity, and platform contract
+
+- **AC-1.1** `bun run build` produces an npm/`npx`-runnable executable whose `--help` identifies it as `antmay` and lists exactly the public commands `spawn`, `status`, and `attach`; no worker command appears. *(traces `decisions.md` DR12, DR13, DR15, DR19)*
+- **AC-1.2** The workspace contains `packages/core` and `packages/cli`, uses strict shared TypeScript ESM configuration, and exposes working root scripts for build, typecheck, test, CLI E2E, Biome check, and format. *(architecture review; traces DR13)*
+- **AC-1.3** The built package declares Node.js 20 or newer and the CLI/E2E suite passes on supported macOS and Linux environments; no native Windows support claim appears in package or user documentation. *(traces DR13, DR17)*
+
+### FR-2 — Spawn input and skill-catalog preflight
+
+- **AC-2.1** A TTY invocation missing thread, skill, harness, or adapter gathers each missing value through transient prompts, while the complete flagged command runs without prompting. *(traces `decisions.md` DR10, DR11, DR14)*
+- **AC-2.2** A non-interactive invocation missing any required input exits non-zero, names the missing flags, launches no pane, writes no run record, and starts no worker. *(traces DR10, DR14)*
+- **AC-2.3** The skill picker contains exactly the eighteen entries in §3.4; `--skill` accepts each catalog entry and rejects every non-catalog name before launch. *(traces DR16)*
+- **AC-2.4** A catalog skill unavailable to the selected harness exits non-zero with an installation/remediation instruction before pane creation, registration, or worker launch. *(traces DR16)*
+- **AC-2.5** A thread outside the current repository's active `docs/threads/<timestamp-slug>/` roots, including an archived thread, is rejected before launch. *(traces DR11 and the thread model)*
+
+### FR-3 — Spawn, herdr launch, registration, and immediate attachment
+
+- **AC-3.1** A valid fully flagged `spawn` launches the selected harness through the external herdr executable in a pane whose cwd is the canonical repository folder and whose initial invocation selects the requested catalog skill and thread. *(traces `decisions.md` DR2, DR3, DR11, DR16)*
+- **AC-3.2** The package links or embeds no herdr code; replacing `ANTMAY_HERDR_BIN` changes only the external executable invoked. *(architecture review plus E2E; traces DR3, DR14)*
+- **AC-3.3** Claude launch supplies a generated `--session-id` and records it as a pinned session; Codex launch records a heuristic cwd/spawn-time identity and does not claim a deterministic interactive session ID. *(traces DR1, DR3)*
+- **AC-3.4** A successful spawn creates one registry binding containing all fields required by §3.2 and prints the stable public run ID. *(traces DR4, DR12, DR19)*
+- **AC-3.5** Spawn without `--attach` returns after the pane, binding, and detached worker exist; the harness and worker continue after the parent CLI process exits. *(traces DR11, DR15)*
+- **AC-3.6** `spawn --attach` joins the newly created pane through the same adapter operation exercised by `antmay attach <run-id>`. *(traces DR19)*
+- **AC-3.7** A failure after pane creation but before complete registration/worker startup exits non-zero, never reports success, and identifies the retained pane handle in its diagnostic. *(traces DR15, DR18)*
+
+### FR-4 — One-active-run guard
+
+- **AC-4.1** With an active run for the canonical repository folder, a second interactive spawn requires explicit confirmation and a second non-interactive spawn fails unless `--force` is supplied. *(traces `decisions.md` DR6)*
+- **AC-4.2** Supplying `--force` permits the second run and does not alter the first run's record. *(traces DR6)*
+- **AC-4.3** A terminal run with a still-live retained pane does not trigger the guard, while an active run in a different worktree folder does not block the current folder. *(traces DR6, DR18)*
+
+### FR-5 — Private worker lifecycle and recovery
+
+- **AC-5.1** Each successful detached spawn starts one private packaged worker for that run; the worker is a separate process, observes only its run, survives the CLI parent, and exits after finalizing a terminal or unknown classification. *(traces `decisions.md` DR15)*
+- **AC-5.2** Concurrent or repeated worker/status reconciliation produces one idempotent terminal record and never regresses a terminal classification to active. *(traces DR15)*
+- **AC-5.3** `status` refreshes scoped evidence before output and, when a run remains active but its worker health is stale, restores observation without creating a second run. *(traces DR15)*
+- **AC-5.4** No global or per-repository daemon, public worker command, herdr hook, or harness hook is installed or required. *(architecture review; traces DR8, DR15)*
+
+### FR-6 — Outcome detection and attention semantics
+
+- **AC-6.1** A genuine final Claude DONE/BLOCKED/REFUSED message in the pinned transcript yields the corresponding classification and complete reason in the registry and `status`. *(traces `decisions.md` DR1)*
+- **AC-6.2** Codex rollout discovery uses the recorded heuristic identity, filters out subagent rollouts, and classifies a genuine top-level task completion without claiming deterministic session identity. *(traces DR1, DR3)*
+- **AC-6.3** Outcome-looking text in a user record, echoed prompt, tool/file output, or non-final assistant content does not classify the run. *(traces DR1)*
+- **AC-6.4** Transcript parsing skips malformed lines, accepts additive unknown fields without version gating, and follows Claude `forkedFrom` chains. *(traces DR1)*
+- **AC-6.5** Disabling all optional herdr event/output-match enrichments leaves transcript-based classification correct. *(architecture review plus E2E; traces DR3)*
+- **AC-6.6** Pane fallback can recover a terminal token when transcript evidence is unavailable without fabricating a reason; a run that ends with neither reliable transcript nor pane outcome is `unknown`. *(traces DR1)*
+- **AC-6.7** A non-empty pending-decision or pending-review workspace is reported as human attention independently of the run's transcript classification. *(traces DR1)*
+
+### FR-7 — Status scope and JSON contract
+
+- **AC-7.1** `status` in a repository reports only that canonical folder's runs after reconciliation; `status --all` reports runs for every repository known to the registry. *(traces `decisions.md` DR9, DR15)*
+- **AC-7.2** Human status output contains each field named in §4.3 and gives an attach hint for every retained available pane. *(traces DR11, DR18)*
+- **AC-7.3** Status attention scanning counts non-empty pending-decision and pending-review bundles in active threads and excludes archived threads. *(traces DR1 and the thread model)*
+- **AC-7.4** `status --json` emits exactly one parseable JSON document on stdout, no prose on stdout, and exactly the required schema and values in §4.3; `--all --json` changes only scope and included repositories. *(traces DR5, DR9)*
+- **AC-7.5** Human and JSON projections agree on run IDs, classifications, reasons, attach availability, and attention counts for the same state fixture. *(traces DR5, DR9, DR18)*
+
+### FR-8 — Attachment and retained-pane lifecycle
+
+- **AC-8.1** `antmay attach <run-id>` joins the recorded pane for an active run and for a terminal run whose pane remains available. *(traces `decisions.md` DR18, DR19)*
+- **AC-8.2** With no run ID, one cwd-scoped attachable run is selected directly, multiple runs prompt on a TTY, and zero or ambiguous runs fail non-interactively with an exact re-invocation hint. *(traces DR19)*
+- **AC-8.3** A missing run or unavailable pane exits non-zero without modifying the recorded outcome, attach handle, or other run data. *(traces DR19)*
+- **AC-8.4** Detecting DONE, BLOCKED, REFUSED, or unknown leaves the herdr pane and harness process unmodified and stops only the observer worker. *(traces DR18)*
+- **AC-8.5** No v0 command automatically closes, expires, or cleans a pane. *(traces DR18)*
+
+### FR-9 — Absolute write boundary and optionality
+
+- **AC-9.1** Across spawn, worker detection, status reconciliation, and attach, filesystem audit shows `antmay` writes only beneath the resolved state root and never inside the repository or harness configuration roots. *(traces `decisions.md` DR4, DR8, DR15)*
+- **AC-9.2** Changing `ANTMAY_STATE_HOME` relocates all tool-owned state and leaves the default root untouched. *(traces DR4, DR14)*
+- **AC-9.3** No skill file changes, hook installation, embedded completion script, or running-session behavior mutation is required for any v0 command. *(architecture review; traces DR1, DR2, DR8, DR16)*
+- **AC-9.4** Removing or never installing `antmay` leaves every workflow skill directly usable through its harness. *(architecture review; traces DR2)*
+
+### FR-10 — Extensible core and adapter architecture
+
+- **AC-10.1** Core run identity, catalog, detection, registry, and status types contain no pane/multiplexer type; pane handles exist only in the execution-lane/adapter boundary and its stored opaque attachment data. *(architecture review; traces `decisions.md` DR2, DR3, DR13)*
+- **AC-10.2** A second multiplexer adapter can implement spawn/send/read/liveness/enumerate/attach without changing core detection or classification. *(architecture review; traces DR3)*
+- **AC-10.3** Terminal transitions are exposed as idempotent core records/events consumable by a future notification sink without changing detector plumbing. *(architecture review; traces DR7, DR15)*
+- **AC-10.4** Launch-output and unspawned-session discovery can be added as new detection-ladder providers without changing current transcript/pane classifiers, and remote execution can wrap the existing registry/adapter/JSON contracts rather than replace them. *(architecture review; traces DR1, DR2, DR5, DR11)*
+
+### FR-11 — Automated and hands-on verification
+
+- **AC-11.1** Declarative E2E cases invoke the built `antmay` executable, use isolated temporary repository/state/transcript roots and scripted external binaries, and carry valid traceability references covering every behavioral AC above. *(traces `decisions.md` DR13, DR14)*
+- **AC-11.2** The fixture suite covers success and failure for spawn, worker survival/recovery, every classification, false-positive rejection, malformed/additive transcript data, fork following, active-run override, status human/JSON parity, pending attention, attach, retained panes, and the absolute write boundary. *(traces DR1, DR4, DR6, DR14, DR15, DR18, DR19)*
+- **AC-11.3** No automated case obtains orchestration coverage solely through a dry-run or an in-product fake-harness branch. *(architecture review; traces DR14)*
+- **AC-11.4** A documented real-herdr/scripted-harness smoke procedure exercises pane creation, immediate and later attachment, worker detection, retained terminal panes, and DONE/BLOCKED/REFUSED/unknown on macOS and Linux. *(traces DR14, DR17–DR19)*
+- **AC-11.5** The optional real-Claude/real-Codex smoke procedure is documented separately and is not required for routine deterministic test completion. *(traces DR14)*
 
 ## Degrees of freedom
 
-The *what* above is pinned. The following *hows* are deliberately left to the implementer; every admissible choice satisfies the acceptance criteria unchanged, produces no user-visible behavior the user would want to weigh in on, and is reversible without revising this spec.
+The following implementation-level choices remain open. Every admissible choice must preserve the behavior and acceptance criteria above.
 
-- **Tool / binary / package name** (the `<tool>` placeholder). Cosmetic and reversible; no AC depends on the string chosen.
-- **Implementation language and runtime**, bounded by C8 (must remain packageable as a self-contained binary or `npx`-runnable for later provisioning). The vendored research foundations are available in whatever language is chosen but none is mandated.
-- **On-disk state format and the exact state-root path**, bounded by C2/C6 (per-user, home-directory, keyed by repo path, honoring `XDG_STATE_HOME` conventions; nothing in-repo). Files vs embedded DB, and the concrete filenames, are free.
-- **The exact `--json` schema**, bounded by AC-6.4 (single self-contained stable document on stdout).
-- **The transcript/rollout parsing implementation**, bounded by the DR1 rules in AC-5.3–AC-5.4 (lenient, additive-tolerant, non-raw-grep, fork-following). Borrowing the referenced history-viewer parser is optional.
-- **The active-run-guard override mechanism** — interactive confirmation, an override flag, or both (bounded by FR-4).
-- **The thread/skill/harness selection UX** — pickers, fuzzy search, or plain arguments — bounded by AC-1.5 (must resolve to a real thread root and a completion-oriented skill, and support fully non-interactive flag use).
-- **Whether and how the herdr adapter stamps pane metadata**, bounded by C6 (v0 correctness must not depend on it).
-- **The watcher's trigger/polling strategy** — pure transcript polling, herdr-event-triggered reads, or a mix — bounded by AC-5.5 (transcript tailing must remain authoritative and sufficient on its own).
-- **How the skill invocation is delivered to the harness** — as a launch argument, an initial sent prompt, or otherwise — bounded by FR-1 (the pane ends up running the chosen skill against the chosen thread).
-
-There are genuine, listed degrees of freedom here; this section is not empty.
+- The internal registry file layout, serialization format, indexing scheme, and locking/atomic-replacement primitive beneath the fixed state root.
+- The stable run-ID encoding, provided IDs remain printable, unique within a machine registry, opaque to callers, and valid for later `attach` lookup.
+- The catalog's internal source representation and whether release-time validation/code generation derives it from repository sources; the v0 catalog contents and harness invocation results are fixed.
+- The transcript parser's internal module structure and whether code is adapted from `.library/sources/jhlee0409_claude-code-history-viewer`; its observable tolerance and classification rules are fixed.
+- Worker polling, backoff, heartbeat, and lease representation, provided detached observation, recovery, and terminal idempotence satisfy FR-5.
+- The interactive prompt library, visual layout, and fuzzy-search implementation, provided eligible choices, ambiguity behavior, and the complete non-interactive command paths remain unchanged.
+- Whether the herdr adapter stamps optional pane metadata and the internal encoding used, provided no v0 identity, recovery, or correctness path depends on that metadata.
+- Internal log formatting and rotation beneath the state root, provided diagnostics never cross the write boundary or alter command stdout/JSON contracts.
