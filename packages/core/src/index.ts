@@ -1,8 +1,55 @@
-// Public entry point for the mode-agnostic `@antmay/core` domain: run identity,
-// the skill catalog, registry semantics, outcome classification, pending-bundle
-// attention semantics, and status projections. Concrete contracts arrive with
-// the tasks that build on this shell; no export here may require a pane or
-// multiplexer concept.
+// Public entry point for the mode-agnostic `@antmay/core` domain: run identity
+// and classification, terminal-transition semantics, the fixed skill catalog
+// and request-posture validation, and the exact status document contract with
+// its deterministic projections. No export here requires a pane or multiplexer
+// concept; attachment data is only an opaque execution-lane binding.
 
-/** Public package identity, exposed so the shell exports a stable public symbol. */
-export const CORE_PACKAGE_NAME = "@antmay/core";
+export {
+  ANTMAY_SKILL_CATALOG,
+  type CatalogEntry,
+  findCatalogEntry,
+  isCatalogSkill,
+  type RequestPosture,
+  type RequestValidation,
+  validateRequestPosture,
+  validateSkillRequest,
+} from "./catalog";
+export {
+  type Adapter,
+  type AttachmentBinding,
+  type AttachmentHandle,
+  applyTerminalOutcome,
+  asAttachmentHandle,
+  asRepositoryPath,
+  asRunId,
+  asThreadPath,
+  type EndpointEndEvidence,
+  type Harness,
+  isTerminalClassification,
+  type RepositoryPath,
+  type RunClassification,
+  type RunId,
+  type RunRecord,
+  type SessionIdentity,
+  type SessionKind,
+  type TerminalClassification,
+  type TerminalOutcome,
+  type TerminalTransitionResult,
+  type ThreadPath,
+  type TranscriptTerminalKind,
+  transcriptTerminalOutcome,
+  unknownOutcome,
+  type WorkerHealth,
+  type WorkerHealthState,
+} from "./run";
+export {
+  type AttentionInput,
+  allScope,
+  projectRun,
+  projectStatusDocument,
+  repositoryScope,
+  type StatusAttention,
+  type StatusDocumentV1,
+  type StatusRun,
+  type StatusScope,
+} from "./status";
