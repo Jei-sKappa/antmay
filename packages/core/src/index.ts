@@ -16,6 +16,7 @@ export {
   validateRequestPosture,
   validateSkillRequest,
 } from "./catalog";
+export { parseTerminalOutcome } from "./outcome";
 export {
   emptyRegistry,
   findRunById,

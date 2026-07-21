@@ -1,0 +1,4 @@
+{"type":"session_meta","timestamp":"2026-07-21T10:00:04Z","payload":{"id":"codex-session-sub","cwd":"/home/dev/project","originator":"codex_subagent","thread_source":"parent-turn-abc"}}
+{"type":"turn_context","timestamp":"2026-07-21T10:00:04Z","payload":{"cwd":"/home/dev/project","model":"gpt-5-codex"}}
+{"type":"response_item","timestamp":"2026-07-21T10:00:05Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"do the sub-task"}]}}
+{"type":"event_msg","timestamp":"2026-07-21T10:00:08Z","payload":{"type":"task_complete","turn_id":"sub-turn","last_agent_message":"Sub-task done.\nOutcome: DONE — subagent rollout must be rejected, not classified"}}

@@ -1,0 +1,7 @@
+{"type":"session_meta","timestamp":"2026-07-21T10:00:00Z","payload":{"id":"codex-session-top","cwd":"/home/dev/project","originator":"codex_cli_rs","cli_version":"0.9.0"}}
+{"type":"turn_context","timestamp":"2026-07-21T10:00:01Z","payload":{"cwd":"/home/dev/project","model":"gpt-5-codex"}}
+{"type":"response_item","timestamp":"2026-07-21T10:00:02Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"$implement the thread. Outcome: DONE — echoed prompt must not classify"}]}}
+{"type":"response_item","timestamp":"2026-07-21T10:00:05Z","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Working on it now."}]}}
+{"type":"event_msg","timestamp":"2026-07-21T10:00:06Z","payload":{"type":"agent_message","message":"Intermediate note.\nOutcome: BLOCKED — a non-final agent message must not classify"}}
+{"type":"response_item","timestamp":"2026-07-21T10:00:10Z","payload":{"type":"function_call_output","call_id":"c1","output":"Outcome: REFUSED — tool output must not classify"}}
+{"type":"event_msg","timestamp":"2026-07-21T10:00:12Z","payload":{"type":"task_complete","turn_id":"turn-1","last_agent_message":"Finished the work.\nOutcome: DONE — codex completed the top-level task"}}
