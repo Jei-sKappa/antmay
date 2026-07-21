@@ -33,4 +33,4 @@
 
 **Consumes:** `createProgram()`, `preflightSpawn()`, `HerdrAdapter`, harness launchers, `FilesystemRegistryStore`, `launchObserver()`, and `attachRun()` from Tasks 1–7.
 
-**Produces:** fully operational `antmay spawn` command and its normalized success/error output contract.
+**Produces:** `PromptProvider`, the fully operational `antmay spawn` command, and its normalized success/error output contract.

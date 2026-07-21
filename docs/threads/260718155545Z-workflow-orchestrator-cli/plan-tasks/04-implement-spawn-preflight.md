@@ -36,4 +36,4 @@
 
 **Consumes:** `ANTMAY_SKILL_CATALOG`, request-validation helpers, and `FilesystemRegistryStore` from Tasks 2–3.
 
-**Produces:** `preflightSpawn(input): Promise<NormalizedSpawnRequest>` and injectable repository/thread/skill/executable resolvers with a side-effect-free failure contract.
+**Produces:** `ProcessRunner`, `preflightSpawn(input): Promise<NormalizedSpawnRequest>`, and injectable repository/thread/skill/executable resolvers with a side-effect-free failure contract.

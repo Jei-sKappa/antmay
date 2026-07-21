@@ -35,4 +35,5 @@ Source: spec.md
 9. **Implement `antmay status`** — reconcile scoped runs, restore observation, scan pending attention, and render exact human and JSON projections. → `plan-tasks/09-implement-status-command.md`
 10. **Implement `antmay attach`** — select active or retained terminal runs and join their panes without mutating recorded state. → `plan-tasks/10-implement-attach-command.md`
 11. **Build the real-CLI E2E harness and launch matrix** — exercise the built executable with scripted boundaries for workspace, preflight, spawn, guarding, and worker lifecycle. → `plan-tasks/11-build-e2e-launch-matrix.md`
-12. **Complete release verification and operating documentation** — cover detection, status, attachment, write boundaries, smoke procedures, and the full acceptance traceability gate. → `plan-tasks/12-complete-release-verification.md`
+12. **Complete runtime and architecture verification** — extend the production-path cases and structural checks through FR-10. → `plan-tasks/12-complete-release-verification.md`
+13. **Document and verify release operations** — publish user and maintainer guidance, close FR-11 traceability, exercise the documented smoke path when available, and run the final release gates. → `plan-tasks/13-document-release-operations.md`
