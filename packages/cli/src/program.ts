@@ -1,15 +1,8 @@
 import { Command } from "@commander-js/extra-typings";
 import packageJson from "../package.json" with { type: "json" };
+import { registerAttachCommand } from "./commands/attach";
 import { registerSpawnCommand } from "./commands/spawn";
 import { registerStatusCommand } from "./commands/status";
-
-/**
- * Thrown when a public command shell is invoked before its behavior lands. The
- * message is stable so callers and tests can assert on it.
- */
-function notYetImplemented(command: string): never {
-  throw new Error(`antmay ${command} is not implemented yet.`);
-}
 
 /**
  * Build the typed `antmay` program. It identifies the executable as `antmay`
@@ -27,11 +20,7 @@ export function createProgram(): Command {
 
   registerSpawnCommand(program);
   registerStatusCommand(program);
-
-  program
-    .command("attach")
-    .description("Attach to an active or retained Antmay run pane")
-    .action(() => notYetImplemented("attach"));
+  registerAttachCommand(program);
 
   return program;
 }

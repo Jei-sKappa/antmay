@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProgram } from "../src/program";
 
-const argv = (...args: string[]): string[] => ["node", "antmay", ...args];
-
 describe("antmay cli shell", () => {
   it("identifies the executable as antmay", () => {
     expect(createProgram().name()).toBe("antmay");
@@ -28,12 +26,15 @@ describe("antmay cli shell", () => {
     expect(help).not.toContain("worker");
   });
 
-  it("fails each not-yet-implemented public command with a stable diagnostic", async () => {
-    for (const command of ["attach"]) {
-      await expect(createProgram().parseAsync(argv(command))).rejects.toThrow(
-        `antmay ${command} is not implemented yet.`,
-      );
-    }
+  it("exposes attach with only the optional [run-id] and no cleanup option", () => {
+    const attach = createProgram().commands.find(
+      (command) => command.name() === "attach",
+    );
+    const help = attach?.helpInformation() ?? "";
+    expect(help).toContain("[run-id]");
+    expect(attach?.options ?? []).toEqual([]);
+    expect(help).not.toMatch(/clean/i);
+    expect(help).not.toMatch(/expir/i);
   });
 
   it("lists exactly the spawn flags in its help", () => {
