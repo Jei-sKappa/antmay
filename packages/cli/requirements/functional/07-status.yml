@@ -1,0 +1,40 @@
+# FR-7 — Status scope and JSON contract.
+- id: ANTMAY-FR-0007
+  title: Status scope and JSON contract
+  status: active
+  description: >-
+    status reconciles before output and reports only the current canonical
+    folder's runs, or every known repository under --all; human output carries
+    every contract field with an attach hint for each retained available pane;
+    attention counts non-empty pending bundles in active threads while excluding
+    archived threads; --json emits exactly one schema-version-1 document with no
+    prose on stdout; and the human and JSON projections agree on every value.
+  acceptance:
+    - id: AC-0701
+      kind: behavioral
+      statement: >-
+        status in a repository reports only that canonical folder's runs after
+        reconciliation, while status --all reports runs for every repository
+        known to the registry. (spec AC-7.1)
+    - id: AC-0702
+      kind: behavioral
+      statement: >-
+        Human status output contains each field named in the contract and gives
+        an attach hint for every retained available pane. (spec AC-7.2)
+    - id: AC-0703
+      kind: behavioral
+      statement: >-
+        Attention scanning counts non-empty pending-decision and pending-review
+        bundles in active threads and excludes archived threads. (spec AC-7.3)
+    - id: AC-0704
+      kind: behavioral
+      statement: >-
+        status --json emits exactly one parseable schema-version-1 JSON document
+        on stdout with no prose, and --all --json changes only the reported scope
+        and repositories. (spec AC-7.4)
+    - id: AC-0705
+      kind: behavioral
+      statement: >-
+        Human and JSON projections agree on run ids, classifications, reasons,
+        attach availability, and attention counts for the same state fixture.
+        (spec AC-7.5)

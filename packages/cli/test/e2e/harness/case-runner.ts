@@ -216,6 +216,32 @@ function seedRegistry(context: CaseContext): void {
   }
 }
 
+// Write every seeded harness transcript into its isolated root so the built CLI
+// reconciles against a real on-disk transcript of the exact shape under test: a
+// Claude transcript at `<transcriptRoot>/<sessionId>.jsonl`, a Codex rollout at
+// `<sessionRoot>/<file>`. `{{repo}}` placeholders resolve to the real temp repo
+// path so the reader's cwd match succeeds.
+function seedTranscripts(context: CaseContext): void {
+  for (const transcript of context.manifest.transcripts ?? []) {
+    const content = resolvePlaceholders(context, transcript.content);
+    if (transcript.harness === "claude") {
+      mkdirSync(context.transcriptRoot, { recursive: true });
+      writeFileSync(
+        path.join(context.transcriptRoot, `${transcript.sessionId}.jsonl`),
+        content,
+        "utf8",
+      );
+    } else {
+      mkdirSync(context.sessionRoot, { recursive: true });
+      writeFileSync(
+        path.join(context.sessionRoot, transcript.file ?? "rollout.jsonl"),
+        content,
+        "utf8",
+      );
+    }
+  }
+}
+
 function writeControl(shimDir: string, control: Record<string, unknown>): void {
   mkdirSync(shimDir, { recursive: true });
   writeFileSync(
@@ -691,6 +717,18 @@ async function assertState(context: CaseContext): Promise<void> {
       expect(reached, where).toBe(value.classification);
     } else if (key === "noRepoWrites") {
       // handled by the global audit; presence here documents intent
+    } else if (key === "defaultStateRootAbsent") {
+      // With ANTMAY_STATE_HOME injected, nothing may land in the default
+      // per-user root ($XDG_STATE_HOME/antmay or ~/.local/state/antmay). HOME is
+      // pinned to the case home dir and XDG_STATE_HOME is unset, so the default
+      // root would be `<home>/.local/state/antmay`; it must not exist.
+      const defaultRoot = path.join(
+        context.homeDir,
+        ".local",
+        "state",
+        "antmay",
+      );
+      expect(existsSync(defaultRoot), where).toBe(false);
     } else {
       throw new Error(label(context, `unknown assertState key ${key}`));
     }
@@ -792,6 +830,7 @@ export async function runCase(
     for (const skill of manifest.skills) installSkill(context, skill);
     writeControl(context.shimDir, manifest.control);
     seedRegistry(context);
+    seedTranscripts(context);
 
     // Snapshot every git repository AFTER fixture setup so the write audit
     // attributes only CLI-caused writes, then confirm none appear.

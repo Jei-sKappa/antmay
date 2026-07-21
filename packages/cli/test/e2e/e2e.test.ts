@@ -4,27 +4,17 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadCases } from "./harness/case-manifest";
 import { ensureBuilt, runCase } from "./harness/case-runner";
-import { loadRequirements } from "./harness/requirements";
-import { validateTraceability } from "./harness/traceability";
 
 const workspaceRoot = path.resolve(import.meta.dirname, "../../../..");
 const cliRoot = path.resolve(import.meta.dirname, "../..");
-
-// The architecture-review criteria of FR-1..FR-5. Each is proven by a structural
-// assertion below rather than by a declarative case; traceability enforces that
-// this list matches exactly the architecture criteria in the requirement files.
-const STRUCTURAL_REFS = [
-  "ANTMAY-FR-0001.AC-0102",
-  "ANTMAY-FR-0001.AC-0103",
-  "ANTMAY-FR-0005.AC-0504",
-];
 
 // Build (or locate) the production bundle once before any case runs.
 const { cliIndex, worker } = ensureBuilt(workspaceRoot);
 
 // Load every case at collection time so each becomes its own concurrent test with
 // its own timeout — a slow case then names itself instead of starving a shared
-// aggregate loop of cold CLI subprocess spawns.
+// aggregate loop of cold CLI subprocess spawns. Traceability between these cases
+// and the acceptance criteria is proven in `harness.test/requirements.test.ts`.
 const cases = await loadCases(cliRoot);
 
 function cliHelp(): string {
@@ -32,19 +22,6 @@ function cliHelp(): string {
     encoding: "utf8",
   });
 }
-
-describe("e2e traceability", () => {
-  it("covers every behavioral criterion by a case and every architecture criterion structurally", async () => {
-    const requirements = await loadRequirements(cliRoot);
-    expect(() =>
-      validateTraceability(
-        requirements,
-        cases.map((entry) => entry.manifest),
-        STRUCTURAL_REFS,
-      ),
-    ).not.toThrow();
-  });
-});
 
 // Structural assertions for the architecture-review criteria FR-1..FR-5 declare.
 // These are proven by inspecting the workspace and built package rather than by a

@@ -1,0 +1,45 @@
+# FR-9 absolute write boundary cases (behavioral). The FR-9 architecture-review
+# criteria (AC-0903/AC-0904) and every FR-10 criterion are proven by named
+# structural assertions, not by a case.
+- id: write-boundary-cross-command-audit
+  covers: [ANTMAY-FR-0009.AC-0901]
+  title: Spawn, worker, status, and attach never write inside the repository
+  description: >-
+    A full spawn (which starts a detached observer), a status reconciliation, and
+    a contextual attach run in sequence against injected roots; the repository and
+    its harness-configuration skill roots stay byte-identical throughout, because
+    every tool-owned write lands beneath the injected state root.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [status]
+      expect: { exitCode: 0, stdoutContains: ["[active]"] }
+    - argv: [attach]
+      expect: { exitCode: 0, stdoutContains: ["Attaching to run "] }
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: active }
+    - noRepoWrites: {}
+
+- id: write-boundary-state-home-relocation
+  covers: [ANTMAY-FR-0009.AC-0902]
+  title: The injected state root receives all tool state and the default root stays empty
+  description: >-
+    With ANTMAY_STATE_HOME pointed at an injected root, a spawn records its run
+    and observer state beneath that root while the default per-user state root
+    under HOME is never created.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 1
+    - workerHeartbeat: { present: true }
+    - defaultStateRootAbsent: true

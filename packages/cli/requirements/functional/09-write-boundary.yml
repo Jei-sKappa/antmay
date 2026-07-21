@@ -1,0 +1,74 @@
+# FR-9 — Absolute write boundary and optionality.
+- id: ANTMAY-FR-0009
+  title: Absolute write boundary and optionality
+  status: active
+  description: >-
+    Across spawn, worker detection, status reconciliation, and attach, antmay
+    writes only beneath the resolved state root and never inside a repository or
+    harness configuration root; relocating the state root moves every tool-owned
+    file and leaves the default root untouched; no v0 command installs a hook,
+    daemon, completion script, or skill mutation; and removing or never installing
+    antmay leaves every workflow skill directly usable through its harness.
+  acceptance:
+    - id: AC-0901
+      kind: behavioral
+      statement: >-
+        Across spawn, worker detection, status reconciliation, and attach, a
+        filesystem audit shows antmay writes only beneath the resolved state root
+        and never inside the repository or harness configuration roots. (spec
+        AC-9.1)
+    - id: AC-0902
+      kind: behavioral
+      statement: >-
+        Changing ANTMAY_STATE_HOME relocates all tool-owned state beneath the
+        injected root and leaves the default per-user state root untouched. (spec
+        AC-9.2)
+    - id: AC-0903
+      kind: architecture
+      statement: >-
+        No v0 command requires a skill-file change, hook installation, embedded
+        completion script, or running-session behavior mutation. (spec AC-9.3)
+    - id: AC-0904
+      kind: architecture
+      statement: >-
+        Removing or never installing antmay leaves every workflow skill directly
+        usable through its harness with no antmay-specific metadata. (spec AC-9.4)
+
+# FR-10 — Extensible core and adapter architecture.
+- id: ANTMAY-FR-0010
+  title: Extensible core and adapter architecture
+  status: active
+  description: >-
+    The mode-agnostic core carries no pane or multiplexer type; a second
+    multiplexer adapter needs only the defined execution-adapter surface; terminal
+    transitions are idempotent detector-neutral core records; and launch-output or
+    unspawned-session discovery and remote execution can be layered over the
+    existing registry, adapter, and JSON contracts without changing the
+    structured-transcript classifier or pane boundary.
+  acceptance:
+    - id: AC-1001
+      kind: architecture
+      statement: >-
+        Core run identity, catalog, detection, registry, and status types contain
+        no pane/multiplexer type; pane handles exist only in the
+        execution-lane/adapter boundary and its stored opaque attachment data.
+        (spec AC-10.1)
+    - id: AC-1002
+      kind: architecture
+      statement: >-
+        A second multiplexer adapter can implement spawn/send/read/liveness/
+        enumerate/attach through the defined ExecutionAdapter surface without
+        changing core detection or classification. (spec AC-10.2)
+    - id: AC-1003
+      kind: architecture
+      statement: >-
+        Terminal transitions are exposed as idempotent core records consumable by
+        a future notification sink without changing detector plumbing. (spec
+        AC-10.3)
+    - id: AC-1004
+      kind: architecture
+      statement: >-
+        Launch-output and unspawned-session discovery can be added as new
+        detection providers without changing the structured-transcript classifier
+        or pane observation boundary, and remote execution can wrap the existing
+        registry/adapter/JSON contracts. (spec AC-10.4)

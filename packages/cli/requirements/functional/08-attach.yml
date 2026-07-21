@@ -1,0 +1,41 @@
+# FR-8 — Attachment and retained-pane lifecycle.
+- id: ANTMAY-FR-0008
+  title: Attachment and retained-pane lifecycle
+  status: active
+  description: >-
+    attach joins the recorded pane of an explicitly or contextually selected run
+    — active or terminal with a retained live pane — selecting the sole cwd
+    candidate directly, prompting among several only on a TTY, and failing
+    non-interactively with an exact re-invocation hint; a missing run or
+    unavailable pane fails without mutating the record; detecting a terminal
+    outcome stops only the observer and never touches the pane; and no v0 command
+    ever closes, expires, or cleans a pane.
+  acceptance:
+    - id: AC-0801
+      kind: behavioral
+      statement: >-
+        attach <run-id> joins the recorded pane for an active run and for a
+        terminal run whose pane remains available. (spec AC-8.1)
+    - id: AC-0802
+      kind: behavioral
+      statement: >-
+        With no run id one cwd-scoped attachable run is selected directly,
+        several prompt on a TTY, and zero or ambiguous runs fail non-interactively
+        with an exact antmay attach <run-id> hint and never a recency pick. (spec
+        AC-8.2)
+    - id: AC-0803
+      kind: behavioral
+      statement: >-
+        A missing run or an unavailable pane exits non-zero without modifying the
+        recorded outcome, attach handle, or other run data. (spec AC-8.3)
+    - id: AC-0804
+      kind: behavioral
+      statement: >-
+        Detecting DONE, BLOCKED, REFUSED, or unknown leaves the herdr pane and
+        harness process unmodified, keeps the pane on the terminal record, and
+        stops only the observer worker. (spec AC-8.4)
+    - id: AC-0805
+      kind: behavioral
+      statement: >-
+        No v0 command automatically closes, expires, or cleans a pane; repeated
+        attachment leaves the pane and registry untouched. (spec AC-8.5)

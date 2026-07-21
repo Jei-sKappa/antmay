@@ -1,0 +1,136 @@
+# FR-8 attachment and retained-pane lifecycle cases (behavioral).
+- id: attach-explicit-active-and-terminal
+  covers: [ANTMAY-FR-0008.AC-0801]
+  title: An explicit id attaches to an active run and a terminal run with a live pane
+  description: >-
+    attach <run-id> joins the recorded pane of an active run and of a terminal
+    (done) run whose retained pane is still alive, driving the external herdr
+    terminal attach.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-active, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-a, handle: active-pane }
+    - { id: run-terminal, thread: 260718155545z-demo, skill: propose, harness: claude, classification: done, sessionKind: pinned, sessionId: s-t, handle: terminal-pane }
+  steps:
+    - argv: [attach, run-active]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Attaching to run run-active in pane active-pane."]
+    - argv: [attach, run-terminal]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Attaching to run run-terminal in pane terminal-pane."]
+  assertState:
+    - registryRunCount: 2
+    - herdrOp: { op: attach }
+    - run: { select: 0, classification: active }
+    - run: { select: 1, classification: done }
+
+- id: attach-contextual-selection-and-ambiguity
+  covers: [ANTMAY-FR-0008.AC-0802]
+  title: Contextual attach selects the sole run, prompts on a TTY, and fails on a tie
+  description: >-
+    With two attachable runs a non-interactive contextual attach fails with the
+    exact hint, an interactive attach prompts and joins the chosen run; once only
+    one pane remains alive it is joined directly, and with none alive the command
+    fails with the no-run hint.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-a, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-a, handle: pane-a }
+    - { id: run-b, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-b, handle: pane-b }
+  steps:
+    - argv: [attach]
+      tty: true
+      stdin: ["1"]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Multiple attachable runs:", "Attaching to run run-a in pane pane-a."]
+    - argv: [attach]
+      expect:
+        exitCode: 1
+        stdoutEmpty: true
+        stderrContains: ["Several attachable runs exist for this repository", "antmay attach <run-id>"]
+    - argv: [attach]
+      before: { paneEnded: [pane-b] }
+      expect:
+        exitCode: 0
+        stdoutContains: ["Attaching to run run-a in pane pane-a."]
+    - argv: [attach]
+      before: { paneEnded: [pane-a] }
+      expect:
+        exitCode: 1
+        stdoutEmpty: true
+        stderrContains: ["No attachable run was found for this repository", "antmay attach <run-id>"]
+  assertState:
+    - registryRunCount: 2
+
+- id: attach-missing-and-unavailable-leave-record-unchanged
+  covers: [ANTMAY-FR-0008.AC-0803]
+  title: A missing run or an unavailable pane fails without mutating the record
+  description: >-
+    Attaching to an unregistered id fails naming the id; attaching to a run whose
+    pane is no longer alive fails reporting the record was left unchanged, and the
+    recorded classification and handle are unmodified.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-um, thread: 260718155545z-demo, skill: propose, harness: claude, classification: done, sessionKind: pinned, sessionId: s-um, handle: um-pane }
+  steps:
+    - argv: [attach, nonexistent-run]
+      expect:
+        exitCode: 1
+        stdoutEmpty: true
+        stderrContains: ["No run \"nonexistent-run\" is registered"]
+    - argv: [attach, run-um]
+      before: { paneEnded: [um-pane] }
+      expect:
+        exitCode: 1
+        stderrContains: ["The run record was left unchanged."]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: done, hasHandle: true }
+
+- id: attach-terminal-detection-stops-observer-not-pane
+  covers: [ANTMAY-FR-0008.AC-0804]
+  title: Terminal detection stops only the observer and keeps the pane on the record
+  description: >-
+    A spawn whose Claude transcript closes DONE is finalized by its observer,
+    which then exits; the pane stays alive and available on the terminal record
+    and no command closed it.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true, claudeOutcome: done }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [status, --json]
+      expect:
+        exitCode: 0
+        stdoutContains: ["\"classification\": \"done\"", "\"available\": true"]
+  assertState:
+    - registryRunCount: 1
+    - runFinalizes: { select: 0, classification: done, timeoutMs: 10000 }
+    - run: { select: 0, classification: done, hasHandle: true }
+    - workerRunning: false
+
+- id: attach-no-automatic-cleanup
+  covers: [ANTMAY-FR-0008.AC-0805]
+  title: Repeated attachment never closes, expires, or cleans the pane
+  description: >-
+    Attaching to the same run twice succeeds both times and creates no new run,
+    proving no command closes or cleans the retained pane.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-keep, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-keep, handle: keep-pane }
+  steps:
+    - argv: [attach, run-keep]
+      expect: { exitCode: 0, stdoutContains: ["Attaching to run run-keep in pane keep-pane."] }
+    - argv: [attach, run-keep]
+      expect: { exitCode: 0, stdoutContains: ["Attaching to run run-keep in pane keep-pane."] }
+  assertState:
+    - registryRunCount: 1
+    - herdrOp: { op: attach }
+    - run: { select: 0, classification: active, hasHandle: true }

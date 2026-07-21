@@ -1,0 +1,150 @@
+# FR-7 status scope and JSON contract cases (behavioral). Runs are seeded with a
+# fresh healthy observer heartbeat so status reconciliation leaves them active
+# without relaunching an observer.
+- id: status-scope-repository-and-all
+  covers: [ANTMAY-FR-0007.AC-0701]
+  title: Repository scope reports only its runs; --all reports every repository
+  description: >-
+    With an active run in the current repository and another in a second
+    repository, status reports only the current folder's run, while status --all
+    reports both.
+  repos: [main, other]
+  threads: [260718155545z-demo]
+  seedRuns:
+    - id: run-here
+      repo: main
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-here
+      handle: here-pane
+      worker: { state: healthy, heartbeatAgeMs: 1000 }
+    - id: run-there
+      repo: other
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-there
+      handle: there-pane
+      worker: { state: healthy, heartbeatAgeMs: 1000 }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains: ["run-here"]
+        stdoutNotContains: ["run-there"]
+    - argv: [status, --all]
+      expect:
+        exitCode: 0
+        stdoutContains: ["run-here", "run-there", "Runs across all repositories"]
+
+- id: status-human-fields-and-attach-hint
+  covers: [ANTMAY-FR-0007.AC-0702]
+  title: Human status lists every contract field with an attach hint
+  description: >-
+    An active run with a retained available pane renders every status field —
+    id, repository, thread, skill/harness/adapter, session — plus an attach hint
+    naming the run id and pane handle.
+  threads: [260718155545z-demo]
+  seedRuns:
+    - id: run-fields
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-fields
+      handle: fields-pane
+      worker: { state: healthy, heartbeatAgeMs: 1000 }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "run-fields [active]"
+          - "repository: {{repo}}"
+          - "thread:     {{thread:260718155545z-demo}}"
+          - "skill:      propose (claude, herdr)"
+          - "session:    pinned s-fields"
+          - "attach:     antmay attach run-fields (pane fields-pane)"
+
+- id: status-attention-counts-and-archived-exclusion
+  covers: [ANTMAY-FR-0007.AC-0703]
+  title: Attention counts active-thread bundles and excludes archived threads
+  description: >-
+    A non-empty pending-decisions workspace in an active thread is reported with
+    its count, while a pending-reviews workspace under an archived thread
+    contributes no attention signal.
+  threads: [live-thread]
+  archivedThreads: [260101000000z-old]
+  files:
+    - { path: docs/threads/live-thread/.pending-decisions/d1.md, content: "one\n" }
+    - { path: docs/threads/live-thread/.pending-decisions/d2.md, content: "two\n" }
+    - { path: docs/threads/archive/260101000000z-old/.pending-reviews/r1.md, content: "review\n" }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "live-thread"
+          - "pending decisions: 2"
+          - "pending reviews:   0"
+        stdoutNotContains: ["260101000000z-old"]
+
+- id: status-json-contract
+  covers: [ANTMAY-FR-0007.AC-0704]
+  title: status --json emits one schema-version-1 document and --all changes only scope
+  description: >-
+    status --json prints exactly the schema-version-1 JSON document with no human
+    prose on stdout; --all --json changes only the reported scope.
+  threads: [260718155545z-demo]
+  seedRuns:
+    - { id: run-json, thread: 260718155545z-demo, skill: propose, harness: claude, classification: done, sessionKind: pinned, sessionId: s-json, handle: json-pane }
+  steps:
+    - argv: [status, --json]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "\"schemaVersion\": 1"
+          - "\"mode\": \"repository\""
+          - "\"classification\": \"done\""
+          - "\"attach\": {"
+          - "\"available\": true"
+        stdoutNotContains: ["Runs for", "[done]", "Attention:"]
+    - argv: [status, --all, --json]
+      expect:
+        exitCode: 0
+        stdoutContains: ["\"mode\": \"all\"", "\"repositoryPath\": null"]
+        stdoutNotContains: ["Runs across all repositories"]
+
+- id: status-human-json-parity
+  covers: [ANTMAY-FR-0007.AC-0705]
+  title: Human and JSON projections agree for the same fixture
+  description: >-
+    For one seeded fixture, the human and JSON renderings agree on the run id,
+    classification, attach handle, and pending-attention count.
+  threads: [260718155545z-demo]
+  files:
+    - { path: docs/threads/260718155545z-demo/.pending-reviews/r1.md, content: "review\n" }
+  seedRuns:
+    - { id: run-parity, thread: 260718155545z-demo, skill: propose, harness: claude, classification: done, sessionKind: pinned, sessionId: s-parity, handle: parity-pane }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "run-parity [done]"
+          - "antmay attach run-parity (pane parity-pane)"
+          - "pending reviews:   1"
+    - argv: [status, --json]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "\"id\": \"run-parity\""
+          - "\"classification\": \"done\""
+          - "\"handle\": \"parity-pane\""
+          - "\"pendingReviews\": 1"

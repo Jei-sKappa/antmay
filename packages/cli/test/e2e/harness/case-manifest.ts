@@ -29,10 +29,12 @@ const CASE_FIELDS = new Set([
   "skills",
   "control",
   "seedRuns",
+  "transcripts",
   "steps",
   "assertState",
   "auditRepoWrites",
 ]);
+const TRANSCRIPT_FIELDS = new Set(["harness", "sessionId", "file", "content"]);
 const SKILL_FIELDS = new Set([
   "harness",
   "name",
@@ -108,6 +110,13 @@ export type SeedRun = {
   worker?: SeedWorker;
 };
 
+export type SeedTranscript = {
+  harness: "claude" | "codex";
+  sessionId?: string;
+  file?: string;
+  content: string;
+};
+
 export type StepBefore = {
   control?: Record<string, unknown>;
   paneEnded?: string[];
@@ -146,6 +155,7 @@ export type CaseManifest = {
   skills: SkillSpec[];
   control: Record<string, unknown>;
   seedRuns: SeedRun[];
+  transcripts?: SeedTranscript[];
   steps: CaseStep[];
   assertState: Record<string, unknown>[];
   auditRepoWrites: boolean;
@@ -361,6 +371,63 @@ function validateSeedRun(
     seed.worker = { state, heartbeatAgeMs: age };
   }
   return seed;
+}
+
+// A seeded harness transcript written into the isolated transcript/session
+// root before the steps run, so the built CLI reconciles against a real on-disk
+// transcript of the exact shape under test. A Claude transcript is keyed by its
+// pinned session id; a Codex rollout is keyed by its `rollout-*.jsonl` file
+// name. `{{repo}}` placeholders in the content resolve to the main repository.
+function validateTranscript(
+  value: unknown,
+  index: number,
+  source: Source,
+): SeedTranscript {
+  if (!isRecord(value))
+    fail(source, `transcripts[${index}] must be a mapping.`);
+  rejectUnknownFields(value, TRANSCRIPT_FIELDS, "transcript", source);
+  const harness = validateEnum(
+    value.harness,
+    ["claude", "codex"] as const,
+    `transcripts[${index}].harness`,
+    source,
+  );
+  const content = requireString(
+    value.content,
+    `transcripts[${index}].content`,
+    source,
+  );
+  const transcript: SeedTranscript = { harness, content };
+  if (harness === "claude") {
+    if (value.file !== undefined) {
+      fail(source, `transcripts[${index}] (claude) must not set file.`);
+    }
+    transcript.sessionId = requireString(
+      value.sessionId,
+      `transcripts[${index}].sessionId`,
+      source,
+    );
+  } else {
+    if (value.sessionId !== undefined) {
+      fail(source, `transcripts[${index}] (codex) must not set sessionId.`);
+    }
+    const file = validateSafeRelPath(
+      `transcripts[${index}].file`,
+      value.file,
+      source,
+    );
+    if (file.includes("/")) {
+      fail(source, `transcripts[${index}].file must be a bare file name.`);
+    }
+    if (!file.startsWith("rollout-") || !file.endsWith(".jsonl")) {
+      fail(
+        source,
+        `transcripts[${index}].file must be a rollout-*.jsonl file name.`,
+      );
+    }
+    transcript.file = file;
+  }
+  return transcript;
 }
 
 function validateBefore(
@@ -614,6 +681,17 @@ export function validateCaseManifest(
           );
         })();
 
+  const transcripts =
+    value.transcripts === undefined
+      ? []
+      : (() => {
+          if (!Array.isArray(value.transcripts))
+            fail(source, `${id}.transcripts must be an array.`);
+          return value.transcripts.map((item, index) =>
+            validateTranscript(item, index, source),
+          );
+        })();
+
   if (!Array.isArray(value.steps) || value.steps.length === 0) {
     fail(source, `${id}.steps must be a non-empty array.`);
   }
@@ -652,6 +730,7 @@ export function validateCaseManifest(
     skills,
     control,
     seedRuns,
+    transcripts,
     steps,
     assertState,
     auditRepoWrites,

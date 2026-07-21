@@ -1,0 +1,56 @@
+# FR-6 — Outcome detection and attention semantics.
+- id: ANTMAY-FR-0006
+  title: Outcome detection and attention semantics
+  status: active
+  description: >-
+    The private observer and status reconciliation read a structured harness
+    transcript as the sole terminal-outcome authority: a genuine final Claude or
+    Codex outcome classifies with its complete reason, false-positive text never
+    classifies, malformed lines are skipped while additive fields and Claude fork
+    chains are tolerated, subagent rollouts are excluded, transient evidence gaps
+    leave an unended run active with degraded health while a positive
+    ended-without-outcome yields unknown, and pending-bundle attention is reported
+    independently of the transcript classification.
+  acceptance:
+    - id: AC-0601
+      kind: behavioral
+      statement: >-
+        A genuine final Claude DONE/BLOCKED/REFUSED message in the pinned
+        transcript yields the corresponding classification and complete reason in
+        the registry and status. (spec AC-6.1)
+    - id: AC-0602
+      kind: behavioral
+      statement: >-
+        Codex rollout discovery uses the recorded heuristic identity, filters out
+        subagent rollouts, and classifies a genuine top-level task completion
+        without claiming a deterministic session identity. (spec AC-6.2)
+    - id: AC-0603
+      kind: behavioral
+      statement: >-
+        Outcome-looking text in a user record, echoed prompt, tool/file output,
+        non-final assistant/agent content, or pane output does not classify the
+        run as DONE/BLOCKED/REFUSED. (spec AC-6.3)
+    - id: AC-0604
+      kind: behavioral
+      statement: >-
+        Transcript parsing skips malformed lines, accepts additive unknown fields
+        without version gating, and follows Claude forkedFrom chains to the final
+        message. (spec AC-6.4)
+    - id: AC-0605
+      kind: behavioral
+      statement: >-
+        With no optional herdr event/output-match enrichment reported, structured
+        transcript classification remains correct; enrichments are advisory and
+        never create a terminal record. (spec AC-6.5)
+    - id: AC-0606
+      kind: behavioral
+      statement: >-
+        Missing or unreadable transcript evidence leaves an unended run active
+        with degraded worker health, while a clean transcript with no outcome plus
+        a positively ended endpoint yields terminal unknown. (spec AC-6.6)
+    - id: AC-0607
+      kind: behavioral
+      statement: >-
+        A non-empty pending-decision or pending-review workspace is reported as
+        human attention independently of the run's transcript classification.
+        (spec AC-6.7)

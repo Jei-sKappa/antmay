@@ -1,0 +1,269 @@
+# FR-6 outcome detection and attention semantics cases (behavioral). Each seeds a
+# real on-disk transcript of the exact shape under test and drives the built
+# `status` reconciliation, which reads the structured transcript as the sole
+# terminal-outcome authority.
+- id: outcome-claude-done-blocked-refused
+  covers:
+    - ANTMAY-FR-0006.AC-0601
+    - ANTMAY-FR-0006.AC-0605
+  title: Genuine final Claude outcomes classify with their complete reason
+  description: >-
+    Three seeded active Claude runs whose pinned transcripts each close with a
+    genuine final DONE/BLOCKED/REFUSED message reconcile to the matching
+    classification and complete reason. The herdr liveness probe reports no
+    enrichment, so the structured transcript alone drives classification.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-done, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-done, handle: done-pane }
+    - { id: run-blocked, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-blocked, handle: blocked-pane }
+    - { id: run-refused, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-refused, handle: refused-pane }
+  transcripts:
+    - harness: claude
+      sessionId: s-done
+      content: |
+        {"type":"user","sessionId":"s-done","uuid":"u1","message":{"role":"user","content":"begin the skill run"}}
+        {"type":"assistant","sessionId":"s-done","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"text","text":"Work complete.\nOutcome: DONE — implemented and verified the change"}]}}
+    - harness: claude
+      sessionId: s-blocked
+      content: |
+        {"type":"user","sessionId":"s-blocked","uuid":"u1","message":{"role":"user","content":"begin the skill run"}}
+        {"type":"assistant","sessionId":"s-blocked","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"text","text":"Paused.\nOutcome: BLOCKED — waiting on a human decision"}]}}
+    - harness: claude
+      sessionId: s-refused
+      content: |
+        {"type":"user","sessionId":"s-refused","uuid":"u1","message":{"role":"user","content":"begin the skill run"}}
+        {"type":"assistant","sessionId":"s-refused","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"text","text":"Declined.\nOutcome: REFUSED — the request is out of scope"}]}}
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains: ["[done]", "[blocked]", "[refused]"]
+  assertState:
+    - registryRunCount: 3
+    - run: { select: 0, classification: done, reasonContains: "implemented and verified the change" }
+    - run: { select: 1, classification: blocked, reasonContains: "waiting on a human decision" }
+    - run: { select: 2, classification: refused, reasonContains: "the request is out of scope" }
+
+- id: outcome-codex-subagent-excluded-top-level
+  covers: [ANTMAY-FR-0006.AC-0602]
+  title: Codex discovery excludes subagent rollouts and classifies the top-level task
+  description: >-
+    A seeded active Codex run has both a subagent rollout closing REFUSED and a
+    top-level rollout closing DONE under the session root. Discovery filters the
+    subagent out by its recorded parent thread and classifies the top-level task
+    completion, so the run resolves to done with the top-level reason.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-codex, thread: 260718155545z-demo, skill: propose, harness: codex, classification: active, sessionKind: heuristic, sessionId: null, handle: codex-pane }
+  transcripts:
+    - harness: codex
+      file: rollout-sub.jsonl
+      content: |
+        {"type":"session_meta","timestamp":"2026-07-21T10:00:00Z","payload":{"cwd":"{{repo}}","id":"sub","thread_source":"parent-turn-abc"}}
+        {"type":"turn_context","timestamp":"2026-07-21T10:00:00Z","payload":{"cwd":"{{repo}}"}}
+        {"type":"event_msg","timestamp":"2026-07-21T10:00:01Z","payload":{"type":"task_complete","last_agent_message":"Sub-task done.\nOutcome: REFUSED — subagent rollout must be excluded"}}
+    - harness: codex
+      file: rollout-top.jsonl
+      content: |
+        {"type":"session_meta","timestamp":"2026-07-21T10:00:02Z","payload":{"cwd":"{{repo}}","id":"top"}}
+        {"type":"turn_context","timestamp":"2026-07-21T10:00:02Z","payload":{"cwd":"{{repo}}"}}
+        {"type":"event_msg","timestamp":"2026-07-21T10:00:05Z","payload":{"type":"task_complete","last_agent_message":"Finished.\nOutcome: DONE — codex completed the top-level task"}}
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains: ["[done]"]
+        stdoutNotContains: ["[refused]"]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, harness: codex, classification: done, reasonContains: "codex completed the top-level task" }
+
+- id: outcome-claude-false-positives-do-not-classify
+  covers: [ANTMAY-FR-0006.AC-0603]
+  title: Claude outcome-looking non-final text never classifies the run
+  description: >-
+    A seeded Claude transcript embeds outcome-looking text in a user record, an
+    echoed prompt, a tool result, and a sidechain subagent turn, but its final
+    top-level assistant turn carries no outcome. With the pane positively ended
+    and no genuine outcome, reconciliation yields unknown — never done, blocked,
+    or refused — proving none of the false positives (nor pane text) classified.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-fp, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-fp, handle: fp-pane }
+  transcripts:
+    - harness: claude
+      sessionId: s-fp
+      content: |
+        {"type":"user","sessionId":"s-fp","uuid":"u1","message":{"role":"user","content":"Run it. Do not stop until Outcome: DONE — echoed prompt must not classify."}}
+        {"type":"assistant","sessionId":"s-fp","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"text","text":"Starting."},{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","sessionId":"s-fp","uuid":"u2","parentUuid":"a1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"Outcome: DONE — tool output must not classify"}]}}
+        {"type":"assistant","sessionId":"s-fp","isSidechain":true,"uuid":"z1","parentUuid":"a1","message":{"role":"assistant","content":[{"type":"text","text":"Outcome: REFUSED — a sidechain subagent message must be ignored"}]}}
+        {"type":"assistant","sessionId":"s-fp","uuid":"a2","parentUuid":"u2","message":{"role":"assistant","content":[{"type":"text","text":"Still working; no closing outcome yet."}]}}
+  steps:
+    - argv: [status]
+      before: { paneEnded: [fp-pane] }
+      expect:
+        exitCode: 0
+        stdoutContains: ["[unknown]"]
+        stdoutNotContains: ["[done]", "[blocked]", "[refused]"]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: unknown }
+
+- id: outcome-codex-false-positives-do-not-classify
+  covers: [ANTMAY-FR-0006.AC-0603]
+  title: Codex outcome-looking non-final text never classifies the run
+  description: >-
+    A seeded Codex rollout embeds outcome-looking text in an echoed prompt, a
+    non-final agent message, and function-call output, with no top-level task
+    completion. With the pane positively ended, reconciliation yields unknown
+    rather than any false outcome.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-cfp, thread: 260718155545z-demo, skill: propose, harness: codex, classification: active, sessionKind: heuristic, sessionId: null, handle: cfp-pane }
+  transcripts:
+    - harness: codex
+      file: rollout-cfp.jsonl
+      content: |
+        {"type":"session_meta","timestamp":"2026-07-21T10:00:00Z","payload":{"cwd":"{{repo}}","id":"cfp"}}
+        {"type":"turn_context","timestamp":"2026-07-21T10:00:01Z","payload":{"cwd":"{{repo}}"}}
+        {"type":"response_item","timestamp":"2026-07-21T10:00:02Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"$propose the thread. Outcome: DONE — echoed prompt must not classify"}]}}
+        {"type":"event_msg","timestamp":"2026-07-21T10:00:03Z","payload":{"type":"agent_message","message":"Intermediate.\nOutcome: BLOCKED — a non-final agent message must not classify"}}
+        {"type":"response_item","timestamp":"2026-07-21T10:00:04Z","payload":{"type":"function_call_output","call_id":"c1","output":"Outcome: REFUSED — tool output must not classify"}}
+  steps:
+    - argv: [status]
+      before: { paneEnded: [cfp-pane] }
+      expect:
+        exitCode: 0
+        stdoutContains: ["[unknown]"]
+        stdoutNotContains: ["[done]", "[blocked]", "[refused]"]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: unknown }
+
+- id: outcome-malformed-additive-and-fork
+  covers: [ANTMAY-FR-0006.AC-0604]
+  title: Malformed lines are skipped, additive fields tolerated, and forks followed
+  description: >-
+    One seeded transcript interleaves non-JSON malformed lines and additive
+    unknown fields around a genuine final DONE; another is a fork chain whose
+    pinned session pauses BLOCKED before a forked continuation closes DONE. Both
+    reconcile to done.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-mal, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-mal, handle: mal-pane }
+    - { id: run-fork, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-fork, handle: fork-pane }
+  transcripts:
+    - harness: claude
+      sessionId: s-mal
+      content: |
+        {"type":"user","sessionId":"s-mal","uuid":"u1","message":{"role":"user","content":"go"}}
+        this line is not valid json and must be skipped
+        {"type":"assistant","sessionId":"s-mal","uuid":"a1","parentUuid":"u1","costUSD":0.12,"antmayFutureField":{"unknown":true},"message":{"role":"assistant","content":[{"type":"text","text":"Done.\nOutcome: DONE — malformed lines skipped and additive fields tolerated"}]}}
+        {"still":"unterminated
+    - harness: claude
+      sessionId: s-fork
+      content: |
+        {"type":"user","sessionId":"s-fork","uuid":"u1","message":{"role":"user","content":"/propose the thread"}}
+        {"type":"assistant","sessionId":"s-fork","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"text","text":"Pausing.\nOutcome: BLOCKED — this is not the final message"}]}}
+        {"type":"user","sessionId":"s-fork-2","forkedFrom":"s-fork","uuid":"u2","message":{"role":"user","content":"continue"}}
+        {"type":"assistant","sessionId":"s-fork-2","forkedFrom":"s-fork","uuid":"a2","parentUuid":"u2","message":{"role":"assistant","content":[{"type":"text","text":"Continued.\nOutcome: DONE — fork chain resolved to the final message"}]}}
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains: ["[done]"]
+        stdoutNotContains: ["[blocked]"]
+  assertState:
+    - registryRunCount: 2
+    - run: { select: 0, classification: done, reasonContains: "malformed lines skipped and additive fields tolerated" }
+    - run: { select: 1, classification: done, reasonContains: "fork chain resolved to the final message" }
+
+- id: outcome-transient-evidence-stays-active-degraded
+  covers: [ANTMAY-FR-0006.AC-0606]
+  title: Unreadable transcript evidence leaves an unended run active with degraded health
+  description: >-
+    A seeded active Claude run whose pinned transcript file is absent has no
+    reliable outcome and a live pane. Reconciliation keeps it active, reports the
+    unreadable-evidence diagnostic on the diagnostic stream, and never
+    terminalizes the transient failure.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - id: run-transient
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-missing
+      handle: transient-pane
+      worker: { state: healthy, heartbeatAgeMs: 1000 }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains: ["[active]"]
+        stderrContains: ["is unreadable"]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: active }
+
+- id: outcome-ended-without-outcome-is-unknown
+  covers: [ANTMAY-FR-0006.AC-0606]
+  title: A positively ended endpoint with no outcome yields terminal unknown
+  description: >-
+    A seeded active Claude run whose transcript reads cleanly with no closing
+    outcome reconciles to terminal unknown once its endpoint is positively ended.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  seedRuns:
+    - { id: run-ended, thread: 260718155545z-demo, skill: propose, harness: claude, classification: active, sessionKind: pinned, sessionId: s-open, handle: ended-pane }
+  transcripts:
+    - harness: claude
+      sessionId: s-open
+      content: |
+        {"type":"user","sessionId":"s-open","uuid":"u1","message":{"role":"user","content":"begin the skill run"}}
+        {"type":"assistant","sessionId":"s-open","uuid":"a1","parentUuid":"u1","message":{"role":"assistant","content":[{"type":"text","text":"Working on it; no closing outcome yet."}]}}
+  steps:
+    - argv: [status]
+      before: { paneEnded: [ended-pane] }
+      expect:
+        exitCode: 0
+        stdoutContains: ["[unknown]"]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: unknown }
+
+- id: outcome-attention-independent-of-classification
+  covers: [ANTMAY-FR-0006.AC-0607]
+  title: Pending bundles are reported as attention regardless of run classification
+  description: >-
+    A terminal (done) run's active thread carries a non-empty pending-decisions
+    and pending-reviews workspace; status reports the thread as needing human
+    attention with the bundle counts, independently of the done classification.
+  threads: [260718155545z-demo]
+  control: { paneAlive: true }
+  files:
+    - { path: docs/threads/260718155545z-demo/.pending-decisions/d1.md, content: "decision\n" }
+    - { path: docs/threads/260718155545z-demo/.pending-reviews/r1.md, content: "review\n" }
+  seedRuns:
+    - { id: run-attn, thread: 260718155545z-demo, skill: propose, harness: claude, classification: done, sessionKind: pinned, sessionId: s-attn, handle: attn-pane }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "[done]"
+          - "Attention:"
+          - "260718155545z-demo"
+          - "pending decisions: 1"
+          - "pending reviews:   1"
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: done }
