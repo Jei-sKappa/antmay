@@ -1,0 +1,21 @@
+{
+  "name": "antmay",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "antmay": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target=node --format=esm --outdir=dist --banner='#!/usr/bin/env node'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@antmay/core": "workspace:*",
+    "@commander-js/extra-typings": "^14",
+    "commander": "^14"
+  }
+}

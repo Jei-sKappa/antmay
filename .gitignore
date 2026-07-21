@@ -17,3 +17,9 @@ docs/threads/**/.wip/
 docs/threads/**/.pending-decisions/
 docs/threads/**/.pending-reviews/
 docs/threads/**/.implementation-runs/
+
+# Node/Bun workspace dependencies and build output
+node_modules/
+packages/*/dist/
+coverage/
+*.tsbuildinfo
