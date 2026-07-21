@@ -1,5 +1,6 @@
 import { Command } from "@commander-js/extra-typings";
 import packageJson from "../package.json" with { type: "json" };
+import { registerSpawnCommand } from "./commands/spawn";
 
 /**
  * Thrown when a public command shell is invoked before its behavior lands. The
@@ -23,10 +24,7 @@ export function createProgram(): Command {
     .configureOutput({ outputError: () => {} })
     .exitOverride();
 
-  program
-    .command("spawn")
-    .description("Launch a supported Antmay skill run in a herdr pane")
-    .action(() => notYetImplemented("spawn"));
+  registerSpawnCommand(program);
 
   program
     .command("status")

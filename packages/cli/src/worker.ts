@@ -36,9 +36,23 @@ import {
   readCodexTranscriptEvidence,
   unavailableEvidence,
 } from "./transcripts";
+import { CODEX_SPAWNED_AT_MS_ENV, WORKER_RUN_ID_ENV } from "./worker-env";
 
-/** The environment entry carrying the observed run's public ID. */
-export const WORKER_RUN_ID_ENV = "ANTMAY_WORKER_RUN_ID";
+export { CODEX_SPAWNED_AT_MS_ENV, WORKER_RUN_ID_ENV } from "./worker-env";
+
+// Read the recorded Codex spawn time from the worker environment, defaulting to
+// 0 when it is absent or unparseable so the discovery heuristic falls back to its
+// recorded-cwd filter and most-recently-modified tiebreak.
+function readCodexSpawnedAtMs(env: HarnessObservationEnv): number {
+  const raw = (env as Record<string, string | undefined>)[
+    CODEX_SPAWNED_AT_MS_ENV
+  ];
+  if (raw === undefined || raw.length === 0) {
+    return 0;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 /** The package-internal contract by which the worker learns its one run. */
 export type WorkerInvocation = {
@@ -175,10 +189,7 @@ function buildEvidenceReader(env: HarnessObservationEnv): RunEvidenceReader {
     return readCodexTranscriptEvidence({
       sessionRoot: root,
       repositoryPath: record.repositoryPath,
-      // The precise spawn time is not part of the persisted run contract; the
-      // discovery heuristic then leans on its recorded-cwd filter and its
-      // most-recently-modified tiebreak.
-      spawnedAtMs: 0,
+      spawnedAtMs: readCodexSpawnedAtMs(env),
     });
   };
 }

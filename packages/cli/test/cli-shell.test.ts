@@ -28,11 +28,35 @@ describe("antmay cli shell", () => {
     expect(help).not.toContain("worker");
   });
 
-  it("fails each public command with a stable not-yet-implemented diagnostic", async () => {
-    for (const command of ["spawn", "status", "attach"]) {
+  it("fails each not-yet-implemented public command with a stable diagnostic", async () => {
+    for (const command of ["status", "attach"]) {
       await expect(createProgram().parseAsync(argv(command))).rejects.toThrow(
         `antmay ${command} is not implemented yet.`,
       );
     }
+  });
+
+  it("lists exactly the spawn flags in its help", () => {
+    const spawn = createProgram().commands.find(
+      (command) => command.name() === "spawn",
+    );
+    const help = spawn?.helpInformation() ?? "";
+    expect(help).toContain("--thread <thread>");
+    expect(help).toContain("--skill <catalog-name>");
+    expect(help).toContain("--harness <claude|codex>");
+    expect(help).toContain("--adapter <herdr>");
+    expect(help).toContain("--request <text>");
+    expect(help).toContain("--attach");
+    expect(help).toContain("--force");
+    const flags = (spawn?.options ?? []).map((option) => option.long);
+    expect(flags).toEqual([
+      "--thread",
+      "--skill",
+      "--harness",
+      "--adapter",
+      "--request",
+      "--attach",
+      "--force",
+    ]);
   });
 });

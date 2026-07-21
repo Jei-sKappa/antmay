@@ -10,7 +10,7 @@ import { spawn as nodeSpawn, type SpawnOptions } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { RunId } from "@antmay/core";
-import { WORKER_RUN_ID_ENV } from "../worker";
+import { WORKER_RUN_ID_ENV } from "../worker-env";
 
 /** The minimal child-process handle the launcher relies on. */
 export type LaunchedChild = {
