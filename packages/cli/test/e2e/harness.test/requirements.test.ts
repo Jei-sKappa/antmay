@@ -1,14 +1,15 @@
 // The authoritative acceptance-traceability gate for the whole functional
-// requirement set (FR-1 through FR-10) plus the FR-11 harness checks. It loads
-// the real requirement files and the real declarative cases and proves: every
-// behavioral acceptance criterion is covered by at least one real-CLI case,
-// every architecture-review criterion is named by a structural assertion (and
-// never by a case), and any unknown or removed reference fails loudly. The
-// FR-11 checks (AC-11.1–AC-11.3) are proven directly against the loaded case set
-// rather than declared as tracked requirements, because they describe the test
-// infrastructure itself.
+// requirement set (FR-1 through FR-11). It loads the real requirement files and
+// the real declarative cases and proves: every behavioral acceptance criterion
+// is covered by at least one real-CLI case, every architecture-review criterion
+// is named by a structural assertion (and never by a case), and any unknown or
+// removed reference fails loudly. FR-11 tracks the verification infrastructure
+// and its operating documentation, so all of its criteria are architecture-kind:
+// AC-11.1–AC-11.3 are proven by the harness meta-checks over the loaded case set
+// below, and AC-11.4–AC-11.5 are proven by asserting the documented smoke
+// procedures exist in `docs/antmay-cli.md`.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadCases } from "../harness/case-manifest";
@@ -16,12 +17,15 @@ import { loadRequirements } from "../harness/requirements";
 import { validateTraceability } from "../harness/traceability";
 
 const cliRoot = path.resolve(import.meta.dirname, "../../..");
+const repoRoot = path.resolve(cliRoot, "../..");
+const cliDocPath = path.join(repoRoot, "docs/antmay-cli.md");
 
-// The architecture-review criteria across FR-1..FR-10. Each is proven by a named
-// structural assertion (in `e2e.test.ts`, `architecture-boundaries.test.ts`, or
-// `public-contract.test.ts`) rather than by a declarative case; traceability
-// enforces that this list matches exactly the architecture criteria in the
-// requirement files and that no case ever claims one.
+// The architecture-review criteria across FR-1..FR-11. Each is proven by a named
+// structural assertion (in `e2e.test.ts`, `architecture-boundaries.test.ts`,
+// `public-contract.test.ts`, or the FR-11 harness/documentation checks below)
+// rather than by a declarative case; traceability enforces that this list matches
+// exactly the architecture criteria in the requirement files and that no case
+// ever claims one.
 const STRUCTURAL_REFS = [
   "ANTMAY-FR-0001.AC-0102",
   "ANTMAY-FR-0001.AC-0103",
@@ -32,6 +36,11 @@ const STRUCTURAL_REFS = [
   "ANTMAY-FR-0010.AC-1002",
   "ANTMAY-FR-0010.AC-1003",
   "ANTMAY-FR-0010.AC-1004",
+  "ANTMAY-FR-0011.AC-1101",
+  "ANTMAY-FR-0011.AC-1102",
+  "ANTMAY-FR-0011.AC-1103",
+  "ANTMAY-FR-0011.AC-1104",
+  "ANTMAY-FR-0011.AC-1105",
 ];
 
 const requirements = await loadRequirements(cliRoot);
@@ -60,7 +69,7 @@ function srcFiles(dir: string): string[] {
   return out;
 }
 
-describe("acceptance traceability (FR-1..FR-10)", () => {
+describe("acceptance traceability (FR-1..FR-11)", () => {
   it("covers every behavioral criterion by a case and every architecture criterion structurally", () => {
     expect(() =>
       validateTraceability(requirements, cases, STRUCTURAL_REFS),
@@ -85,8 +94,8 @@ describe("acceptance traceability (FR-1..FR-10)", () => {
   });
 });
 
-describe("FR-11 harness checks", () => {
-  it("AC-11.1: every case invokes the built executable via a public entry with valid traceability refs", () => {
+describe("FR-11 structural assertions", () => {
+  it("ANTMAY-FR-0011.AC-1101: every case invokes the built executable via a public entry with valid traceability refs", () => {
     expect(cases.length).toBeGreaterThan(0);
     for (const testCase of cases) {
       expect(testCase.covers.length, `${testCase.id} covers`).toBeGreaterThan(
@@ -103,7 +112,7 @@ describe("FR-11 harness checks", () => {
     }
   });
 
-  it("AC-11.2: the fixture suite spans classifications, false positives, recovery, status, attach, and the write boundary", () => {
+  it("ANTMAY-FR-0011.AC-1102: the fixture suite spans classifications, false positives, recovery, status, attach, and the write boundary", () => {
     const covered = new Set(cases.flatMap((testCase) => testCase.covers));
     const requiredDimensions = [
       "ANTMAY-FR-0006.AC-0601", // done/blocked/refused classifications
@@ -123,7 +132,7 @@ describe("FR-11 harness checks", () => {
     }
   });
 
-  it("AC-11.3: no case or production source obtains coverage through a dry-run or fake-harness branch", () => {
+  it("ANTMAY-FR-0011.AC-1103: no case or production source obtains coverage through a dry-run or fake-harness branch", () => {
     for (const testCase of cases) {
       for (const step of testCase.steps) {
         for (const arg of step.argv) {
@@ -145,5 +154,34 @@ describe("FR-11 harness checks", () => {
         expect(text.includes(marker), `${file} contains ${marker}`).toBe(false);
       }
     }
+  });
+
+  it("ANTMAY-FR-0011.AC-1104: docs/antmay-cli.md documents the real-herdr scripted-harness smoke over the full matrix on macOS and Linux", () => {
+    expect(existsSync(cliDocPath), cliDocPath).toBe(true);
+    const doc = readFileSync(cliDocPath, "utf8");
+    expect(doc).toContain("Real-herdr scripted-harness smoke");
+    // The full smoke matrix: pane creation, immediate/later attach, worker
+    // detection, retained terminal panes, and every classification.
+    for (const needle of [
+      "spawn --attach",
+      "attach",
+      "retained",
+      "DONE",
+      "BLOCKED",
+      "REFUSED",
+      "unknown",
+      "macOS",
+      "Linux",
+    ]) {
+      expect(doc, `smoke doc mentions ${needle}`).toContain(needle);
+    }
+  });
+
+  it("ANTMAY-FR-0011.AC-1105: docs/antmay-cli.md documents the optional real-agent smoke separately from the deterministic gates", () => {
+    const doc = readFileSync(cliDocPath, "utf8");
+    expect(doc).toContain("Optional real-agent smoke");
+    // It must state the optional smoke is additional evidence, not a routine
+    // automated-suite dependency.
+    expect(doc.toLowerCase()).toContain("not required");
   });
 });

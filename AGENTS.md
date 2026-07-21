@@ -21,7 +21,7 @@ Update `AGENTS.md` when:
 npx skills add Jei-sKappa/antmay --skill <skill-name>
 ```
 
-There is no build, test, or lint pipeline — this is a content repository. Validation happens by reading the markdown and confirming the skill's instructions are coherent and progressively disclosed.
+The skills suite itself is content, not code: a skill is validated by reading its markdown and confirming the instructions are coherent and progressively disclosed. The repository also ships the `antmay` CLI — a Bun/TypeScript workspace under `packages/` with its own build, typecheck, and test gates, documented in the `## The antmay CLI workspace` section below.
 
 General-purpose, context-agnostic skills (meta-prompting, handoff drafts, research helpers, and the like) live in the separate companion repository `Jei-sKappa/skills`, not here. This repository holds only the skills that serve the thread-based workflow.
 
@@ -146,3 +146,28 @@ This repository is the reference home of the Modular Agentic Workflow, the rules
 The canonical reference — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/thread-model.md`, `docs/skill-authoring.md`, and the three workflow docs under `docs/workflows/`. Read it before editing the workflow itself or writing/editing an artifact that belongs to an existing thread.
 
 This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/` for any rule change; this section only changes if the reference doc set itself moves or splits.
+
+## The `antmay` CLI workspace
+
+Alongside the skills content, this repository ships the `antmay` CLI: a strict TypeScript ESM Bun workspace that launches one supported skill run in a herdr pane, observes it, and reports a terminal classification. Its user- and maintainer-facing operating contract lives at `docs/antmay-cli.md` (linked from the root `README.md`); edit that document when the shipped command shapes, state boundary, classifications, JSON contract, or smoke procedures change.
+
+Layout — two packages under `packages/`:
+
+- `packages/core` — the multiplexer-neutral domain: run identity, the skill catalog, registry semantics, outcome parsing and classification, pending-bundle attention, and status projections. No core type or function may require a pane or multiplexer concept.
+- `packages/cli` — the `antmay` binary, Commander definitions, prompts, filesystem/process integration, the herdr adapter, and the private observer worker (a packaged module, never a public command).
+
+Root scripts (run from the repository root; each must exit 0 as a standing gate):
+
+- `bun run build` — bundle `packages/core` then the CLI + worker.
+- `bun run typecheck` — strict `tsc --noEmit` across the workspace.
+- `bun run test` — the fast unit project (`vitest --project unit`).
+- `bun run test:cli:e2e` — build, then the real-CLI E2E project (`vitest --project e2e`).
+- `bun run check` — Biome formatting/lint check.
+- `bun run format` — Biome formatter (write).
+
+Test layout — two Vitest projects (see `vitest.config.ts`):
+
+- **unit** (`packages/*/test/**/*.test.ts`, excluding the E2E tree) — fast in-process tests, including the architecture-boundary and public-contract structural assertions.
+- **e2e** (`packages/cli/test/e2e/**`) — runs the BUILT `antmay` executable as a subprocess against isolated temporary repository/state/transcript roots and checked-in scripted herdr and harness shims. Declarative case manifests under `packages/cli/test/e2e/cases/` reference the requirements under `packages/cli/requirements/functional/`; the gate in `packages/cli/test/e2e/harness.test/requirements.test.ts` proves every behavioral acceptance criterion has a case and every architecture criterion has a named structural assertion. The interactive (TTY) E2E cases require `python3` (present on macOS and typical Linux CI).
+
+External-boundary and injectable-env policy: herdr, Claude Code, and Codex are external programs, invoked strictly as separate executables (never linked or embedded). `antmay` writes only beneath one per-user state root and never inside a repository or harness configuration. Tests replace every external boundary through injectable environment variables — `ANTMAY_STATE_HOME`, `ANTMAY_HERDR_BIN`, `ANTMAY_CLAUDE_BIN`, `ANTMAY_CODEX_BIN`, `ANTMAY_CLAUDE_TRANSCRIPT_ROOT`, `ANTMAY_CODEX_SESSION_ROOT`, and the injectable Claude/Codex skill-root lists — so no test touches a real herdr session, agent, or the developer's state. The CLI targets Node.js 20+ on macOS and Linux; there is no native Windows support claim.

@@ -48,6 +48,15 @@ Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
 
 `DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the suite's only shared status vocabulary. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills (such as `discussion`, `open-thread`, and `archive-thread`) and the primitives emit no terminal outcome — their questions or their narrow written artifact are the output.
 
+## `antmay` CLI
+
+This repository also ships `antmay`, a small command-line companion that launches
+one supported skill run in a durable [herdr](https://github.com/ogulcancelik/herdr) pane, observes
+it in the background, and reports an honest terminal classification — with
+`spawn`, `status`, and `attach` commands. It writes nothing inside your
+repository or harness configuration and is entirely optional. See the operating
+contract in [`docs/antmay-cli.md`](./docs/antmay-cli.md).
+
 ## Skills
 
 Every skill below is **user-invoked**: you (or your harness, routing on the skill's description) start it directly. The [Primitives](#primitives) further down are a separate class — invoked by other skills or the model, never chosen directly.

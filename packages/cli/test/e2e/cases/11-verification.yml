@@ -1,0 +1,60 @@
+# FR-11 release-verification cases (behavioral). These are the automated analog
+# of the documented real-herdr/scripted-harness smoke: they drive the built
+# executable through the same interactive lifecycle the manual smoke walks —
+# detached spawn with a surviving observer, transcript-driven terminal
+# classification, a retained live pane, and later attachment — against the
+# scripted external boundaries. They carry no FR-11 traceability ref because the
+# FR-11 criteria are properties of the whole suite and its documentation, proven
+# by named structural assertions in harness.test/requirements.test.ts.
+- id: release-detached-spawn-survives-parent
+  covers: [ANTMAY-FR-0003.AC-0305]
+  title: A detached spawn leaves a surviving observer after the parent CLI exits
+  description: >-
+    A spawn without --attach returns success and leaves the run active with a
+    detached observer worker still running and heart-beating after the parent CLI
+    process has exited — the survival property the smoke confirms by hand.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stderrEquals: "", stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: active }
+    - workerRunning: true
+    - workerHeartbeat: { present: true }
+
+- id: release-terminal-retained-pane-later-attach
+  covers:
+    - ANTMAY-FR-0008.AC-0801
+    - ANTMAY-FR-0008.AC-0804
+  title: A finalized run keeps its live pane and is attachable after termination
+  description: >-
+    A detached spawn whose Claude transcript closes DONE is finalized by its
+    observer, which then exits; the pane stays alive and available on the terminal
+    record, status reports it done and attachable, and a later contextual attach
+    joins the retained pane through the external herdr terminal attach — the
+    retained-pane-plus-later-attach path the smoke confirms by hand.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true, claudeOutcome: done }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stderrEquals: "", stdoutContains: ["Launched run "] }
+    - argv: [status, --json]
+      expect:
+        exitCode: 0
+        stdoutContains: ['"classification": "done"', '"available": true']
+    - argv: [attach]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Attaching to run ", "in pane "]
+  assertState:
+    - registryRunCount: 1
+    - runFinalizes: { select: 0, classification: done, timeoutMs: 10000 }
+    - run: { select: 0, classification: done, hasHandle: true }
+    - workerRunning: false
+    - herdrOp: { op: attach }

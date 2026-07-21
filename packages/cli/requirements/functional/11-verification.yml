@@ -1,0 +1,54 @@
+# FR-11 — Automated and hands-on verification.
+- id: ANTMAY-FR-0011
+  title: Automated and hands-on verification
+  status: active
+  description: >-
+    Every behavioral acceptance criterion is proven by a declarative real-CLI
+    case, the fixture suite spans the full orchestration matrix, no case obtains
+    coverage through a dry-run or in-product fake-harness branch, a documented
+    real-herdr/scripted-harness smoke exercises the interactive path without
+    spending an agent run, and an optional real-Claude/real-Codex smoke is
+    documented separately and never gates the deterministic suite. Each criterion
+    is a property of the verification infrastructure or its operating
+    documentation, so each is proven by a named structural assertion rather than
+    by a single command-contract case.
+  acceptance:
+    - id: AC-1101
+      kind: architecture
+      statement: >-
+        Every declarative E2E case invokes the built antmay executable through a
+        public entry point, uses isolated temporary repository/state/transcript
+        roots and scripted external binaries, and carries valid traceability
+        references; together the cases cover every behavioral acceptance
+        criterion. (spec AC-11.1)
+    - id: AC-1102
+      kind: architecture
+      statement: >-
+        The fixture suite spans spawn success and failure, every request posture,
+        accepted and rejected thread forms, both harness-specific skill-root
+        contracts, worker survival and recovery, every classification, transcript
+        and pane false-positive rejection, malformed/additive transcript data,
+        fork following, transient evidence failure, positive
+        ended-without-outcome detection, the active-run guard, status human/JSON
+        parity, pending attention, attach, retained panes, and the absolute write
+        boundary. (spec AC-11.2)
+    - id: AC-1103
+      kind: architecture
+      statement: >-
+        No automated case or production source obtains orchestration coverage
+        through a dry-run flag or an in-product fake-harness branch. (spec
+        AC-11.3)
+    - id: AC-1104
+      kind: architecture
+      statement: >-
+        A documented real-herdr/scripted-harness smoke procedure in
+        docs/antmay-cli.md exercises pane creation, immediate and later
+        attachment, worker detection, retained terminal panes, and the
+        DONE/BLOCKED/REFUSED/unknown classifications on macOS and Linux without
+        spending an agent run. (spec AC-11.4)
+    - id: AC-1105
+      kind: architecture
+      statement: >-
+        The optional real-Claude/real-Codex smoke procedure is documented in
+        docs/antmay-cli.md separately from the deterministic gates and is not
+        required for routine automated test completion. (spec AC-11.5)
