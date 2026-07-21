@@ -7,6 +7,11 @@
 // binding.
 
 export {
+  collectAttention,
+  needsAttention,
+  type ThreadPendingCounts,
+} from "./attention";
+export {
   ANTMAY_SKILL_CATALOG,
   type CatalogEntry,
   findCatalogEntry,

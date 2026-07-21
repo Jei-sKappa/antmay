@@ -25,6 +25,7 @@ describe("core has no pane/multiplexer/herdr dependency", () => {
 
   it("has core sources to inspect", () => {
     expect(files.map((file) => file.name).sort()).toEqual([
+      "attention.ts",
       "catalog.ts",
       "index.ts",
       "outcome.ts",

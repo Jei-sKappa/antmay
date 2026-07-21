@@ -1,6 +1,7 @@
 import { Command } from "@commander-js/extra-typings";
 import packageJson from "../package.json" with { type: "json" };
 import { registerSpawnCommand } from "./commands/spawn";
+import { registerStatusCommand } from "./commands/status";
 
 /**
  * Thrown when a public command shell is invoked before its behavior lands. The
@@ -25,11 +26,7 @@ export function createProgram(): Command {
     .exitOverride();
 
   registerSpawnCommand(program);
-
-  program
-    .command("status")
-    .description("Reconcile and report Antmay runs")
-    .action(() => notYetImplemented("status"));
+  registerStatusCommand(program);
 
   program
     .command("attach")

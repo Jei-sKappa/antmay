@@ -29,7 +29,7 @@ describe("antmay cli shell", () => {
   });
 
   it("fails each not-yet-implemented public command with a stable diagnostic", async () => {
-    for (const command of ["status", "attach"]) {
+    for (const command of ["attach"]) {
       await expect(createProgram().parseAsync(argv(command))).rejects.toThrow(
         `antmay ${command} is not implemented yet.`,
       );
