@@ -28,6 +28,7 @@ describe("core has no pane/multiplexer/herdr dependency", () => {
       "catalog.ts",
       "index.ts",
       "outcome.ts",
+      "reconcile.ts",
       "registry.ts",
       "run.ts",
       "status.ts",

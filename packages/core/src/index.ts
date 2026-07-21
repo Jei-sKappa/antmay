@@ -18,6 +18,13 @@ export {
 } from "./catalog";
 export { parseTerminalOutcome } from "./outcome";
 export {
+  type EndpointLiveness,
+  type ReconcileDecision,
+  type ReconcileInput,
+  reconcileEvidence,
+  type TranscriptOutcomeSignal,
+} from "./reconcile";
+export {
   emptyRegistry,
   findRunById,
   listRuns,

@@ -10,7 +10,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "bun build src/index.ts --target=node --format=esm --outdir=dist --banner='#!/usr/bin/env node'",
+    "build": "bun build src/index.ts src/worker.ts --target=node --format=esm --outdir=dist --banner='#!/usr/bin/env node'",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
