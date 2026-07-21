@@ -1,0 +1,27 @@
+# FR-4 — One-active-run guard.
+- id: ANTMAY-FR-0004
+  title: One-active-run guard
+  status: active
+  description: >-
+    A second run for the same canonical repository folder requires interactive
+    confirmation or --force; --force never mutates the first run; a terminal run
+    with a live retained pane does not trigger the guard, and an active run in a
+    different worktree folder does not block the current folder.
+  acceptance:
+    - id: AC-0401
+      kind: behavioral
+      statement: >-
+        With an active run for the canonical repository folder, a second
+        interactive spawn requires explicit confirmation and a second
+        non-interactive spawn fails unless --force is supplied. (spec AC-4.1)
+    - id: AC-0402
+      kind: behavioral
+      statement: >-
+        Supplying --force permits the second run and does not alter the first
+        run's record. (spec AC-4.2)
+    - id: AC-0403
+      kind: behavioral
+      statement: >-
+        A terminal run with a still-live retained pane does not trigger the guard,
+        and an active run in a different worktree folder does not block the
+        current folder. (spec AC-4.3)

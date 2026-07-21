@@ -1,0 +1,90 @@
+# FR-5 private worker lifecycle and recovery cases (behavioral).
+- id: worker-observes-and-survives-parent
+  covers: [ANTMAY-FR-0005.AC-0501]
+  title: A detached worker keeps observing its run after the CLI exits
+  description: >-
+    A successful detached spawn starts one private worker that is a separate
+    surviving process recording a healthy heartbeat for its run.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: active }
+    - workerRunning: true
+    - workerHeartbeat: { present: true, state: healthy }
+
+- id: worker-finalizes-and-exits-on-ended-endpoint
+  covers: [ANTMAY-FR-0005.AC-0501]
+  title: A worker finalizes to unknown and exits when the endpoint has ended
+  description: >-
+    When the pane endpoint has ended and no reliable transcript outcome exists,
+    the private worker finalizes the run to unknown and exits.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: false }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 1
+    - runFinalizes: { select: 0, classification: unknown, timeoutMs: 10000 }
+    - workerRunning: false
+
+- id: repeated-status-reconciliation-is-idempotent
+  covers: [ANTMAY-FR-0005.AC-0502]
+  title: Repeated status reconciliation keeps one idempotent terminal record
+  description: >-
+    Once a run terminalizes to unknown, repeated status reconciliation reports the
+    same terminal classification and never regresses it to active.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: false }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [status]
+      expect: { exitCode: 0, stdoutContains: ["[unknown]"] }
+    - argv: [status]
+      expect: { exitCode: 0, stdoutContains: ["[unknown]"] }
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: unknown }
+
+- id: status-restores-stale-observation
+  covers: [ANTMAY-FR-0005.AC-0503]
+  title: status restores a stale observer without creating a second run
+  description: >-
+    An active run whose observer heartbeat is stale has its detached observer
+    relaunched by status, with the run left active and no second run created.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  seedRuns:
+    - id: seed-stale
+      repo: main
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-stale
+      handle: stale-pane
+      worker: { state: healthy, heartbeatAgeMs: 120000 }
+  steps:
+    - argv: [status]
+      expect:
+        exitCode: 0
+        stdoutContains: ["[active]"]
+        stderrContains: ["restoring observation"]
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: active }
+    - workerRunning: true

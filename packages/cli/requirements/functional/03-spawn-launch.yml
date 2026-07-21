@@ -1,0 +1,53 @@
+# FR-3 — Spawn, herdr launch, registration, and immediate attachment.
+- id: ANTMAY-FR-0003
+  title: Spawn, herdr launch, registration, and immediate attachment
+  status: active
+  description: >-
+    A valid spawn launches the selected harness through the external herdr
+    executable with the exact catalog identity, thread, and literal request,
+    records a session identity per harness, registers one run binding, prints the
+    run id, keeps the harness and worker alive after the CLI exits, delegates
+    --attach through the shared attach operation, and on a post-pane failure
+    reports the retained pane without claiming success.
+  acceptance:
+    - id: AC-0301
+      kind: behavioral
+      statement: >-
+        A valid fully flagged spawn launches the harness through the external
+        herdr executable in a pane whose cwd is the canonical repository folder
+        and whose initial invocation carries the exact /skill or $skill identity,
+        the resolved thread, and any permitted request literally. (spec AC-3.1)
+    - id: AC-0302
+      kind: behavioral
+      statement: >-
+        herdr is invoked strictly as an external program; pointing ANTMAY_HERDR_BIN
+        at a different executable changes only the external program driven, with
+        no linked or embedded herdr code. (spec AC-3.2)
+    - id: AC-0303
+      kind: behavioral
+      statement: >-
+        Claude launch supplies a generated --session-id and records a pinned
+        session, while Codex launch records a heuristic session with no
+        deterministic interactive session id. (spec AC-3.3)
+    - id: AC-0304
+      kind: behavioral
+      statement: >-
+        A successful spawn creates exactly one registry binding with all required
+        fields and prints the stable public run id. (spec AC-3.4)
+    - id: AC-0305
+      kind: behavioral
+      statement: >-
+        Spawn without --attach returns after the pane, binding, and detached
+        worker exist, and the worker continues after the parent CLI process exits.
+        (spec AC-3.5)
+    - id: AC-0306
+      kind: behavioral
+      statement: >-
+        spawn --attach joins the newly created pane through the same adapter
+        attach operation exercised by antmay attach. (spec AC-3.6)
+    - id: AC-0307
+      kind: behavioral
+      statement: >-
+        A failure after pane creation but before complete registration/worker
+        startup exits non-zero, never reports success, identifies the retained
+        pane handle, and writes no run record. (spec AC-3.7)

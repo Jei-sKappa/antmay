@@ -1,0 +1,57 @@
+# FR-2 — Spawn input and skill-catalog preflight.
+- id: ANTMAY-FR-0002
+  title: Spawn input and skill-catalog preflight
+  status: active
+  description: >-
+    Spawn gathers missing input interactively and fails non-interactively naming
+    the missing flag, enforces the fixed skill catalog and its request postures,
+    resolves harness-specific skill availability, and resolves the active thread
+    exactly through the canonical git worktree — all before any side effect.
+  acceptance:
+    - id: AC-0201
+      kind: behavioral
+      statement: >-
+        A TTY invocation missing thread, skill, harness, or adapter gathers each
+        missing value through transient prompts and also prompts for a request
+        when the selected catalog entry requires one; a complete flagged command
+        runs without prompting. (spec AC-2.1)
+    - id: AC-0202
+      kind: behavioral
+      statement: >-
+        A non-interactive invocation that omits a required flag or required
+        non-empty request exits non-zero naming the missing input, and supplying
+        --request to a forbidden entry exits non-zero; no pane, run record, or
+        worker is created. (spec AC-2.2)
+    - id: AC-0203
+      kind: behavioral
+      statement: >-
+        The catalog enforces the fixed harness identities and required/optional/
+        forbidden request postures, and every non-catalog skill name is rejected
+        before launch. (spec AC-2.3)
+    - id: AC-0204
+      kind: behavioral
+      statement: >-
+        With injected skill roots, Claude availability resolves a matching
+        project/user .claude/skills entry and Codex availability resolves a
+        matching .agents/skills entry carrying agents/openai.yaml; project scope
+        wins over user scope. (spec AC-2.4)
+    - id: AC-0205
+      kind: behavioral
+      statement: >-
+        A missing skill, a frontmatter-name mismatch, or a Codex skill without
+        agents/openai.yaml fails preflight naming the harness, searched roots, and
+        the exact npx skills add remediation; no pane, run record, or worker is
+        created. (spec AC-2.5)
+    - id: AC-0206
+      kind: behavioral
+      statement: >-
+        From a nested cwd, the exact folder name, the repo-relative
+        docs/threads/<name> path, and the absolute thread-root path all resolve
+        through the canonical git worktree to the same active thread. (spec
+        AC-2.6)
+    - id: AC-0207
+      kind: behavioral
+      statement: >-
+        A thread-file path, a nonexistent value, an archived root, an external
+        root, or a cwd outside a git worktree is rejected before launch with no
+        fuzzy or most-recent selection. (spec AC-2.7)

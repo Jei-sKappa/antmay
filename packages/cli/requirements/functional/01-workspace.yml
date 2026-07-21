@@ -1,0 +1,28 @@
+# FR-1 — Workspace, packaging, identity, and platform contract.
+- id: ANTMAY-FR-0001
+  title: Workspace, packaging, identity, and platform contract
+  status: active
+  description: >-
+    The built antmay executable is npm/npx-runnable, identifies itself as antmay,
+    exposes exactly the public spawn/status/attach commands with no worker
+    command, ships from a strict two-package workspace, and targets Node.js 20+
+    without a native Windows support claim.
+  acceptance:
+    - id: AC-0101
+      kind: behavioral
+      statement: >-
+        The built executable's --help identifies it as antmay and lists exactly
+        the public commands spawn, status, and attach; no worker command appears,
+        and --version prints the package version. (spec AC-1.1)
+    - id: AC-0102
+      kind: architecture
+      statement: >-
+        The workspace contains packages/core and packages/cli under strict shared
+        TypeScript ESM configuration and exposes working root scripts for build,
+        typecheck, test, CLI E2E, Biome check, and format. (spec AC-1.2)
+    - id: AC-0103
+      kind: architecture
+      statement: >-
+        The built package declares Node.js 20 or newer, is packaged as an
+        npx-runnable executable, and makes no native Windows support claim. (spec
+        AC-1.3)

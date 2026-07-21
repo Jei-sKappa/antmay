@@ -1,0 +1,127 @@
+# FR-3 spawn / herdr launch / registration / attachment cases (behavioral).
+- id: launch-argv-identity-and-binding
+  covers:
+    - ANTMAY-FR-0003.AC-0301
+    - ANTMAY-FR-0003.AC-0302
+    - ANTMAY-FR-0003.AC-0304
+  title: A valid spawn drives the external herdr shim and records one binding
+  description: >-
+    A fully flagged spawn launches Claude through the external herdr executable in
+    a pane rooted at the canonical repository, submits the exact /implement
+    identity, thread, and literal request, registers one binding, and prints the
+    run id.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: implement }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, implement, --harness, claude, --adapter, herdr, --request, "do the thing"]
+      expect:
+        exitCode: 0
+        stderrEquals: ""
+        stdoutContains:
+          - "Launched run "
+          - "{{repo}}"
+          - "{{thread:260718155545z-demo}}"
+          - "(claude, herdr)"
+          - "antmay attach "
+  assertState:
+    - registryRunCount: 1
+    - run:
+        select: 0
+        skill: implement
+        harness: claude
+        adapter: herdr
+        classification: active
+        sessionKind: pinned
+        hasHandle: true
+    - herdrOp: { op: split, argsContains: ["--cwd", "{{repo}}"] }
+    - herdrRunText:
+        contains:
+          - "--session-id"
+          - "/implement {{thread:260718155545z-demo}}\n\ndo the thing"
+
+- id: session-identity-claude-and-codex
+  covers: [ANTMAY-FR-0003.AC-0303]
+  title: Claude records a pinned session id; Codex records a heuristic session
+  description: >-
+    Claude launch supplies a generated --session-id and records a pinned session,
+    while Codex launch records a heuristic session with no --session-id.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+    - { harness: codex, name: spec, openai: true }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, spec, --harness, codex, --adapter, herdr, --force]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 2
+    - run: { select: 0, harness: claude, sessionKind: pinned }
+    - run: { select: 1, harness: codex, sessionKind: heuristic }
+    - herdrRunText: { contains: ["--session-id"] }
+
+- id: detached-worker-survives-parent
+  covers: [ANTMAY-FR-0003.AC-0305]
+  title: Spawn returns after pane, binding, and detached worker exist
+  description: >-
+    A spawn without --attach returns success and leaves the run active with a
+    detached observer worker still running after the parent CLI exits.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 1
+    - run: { select: 0, classification: active }
+    - workerRunning: true
+    - workerHeartbeat: { present: true }
+
+- id: spawn-attach-joins-pane
+  covers: [ANTMAY-FR-0003.AC-0306]
+  title: spawn --attach joins the new pane through the shared attach operation
+  description: >-
+    A successful spawn --attach reports attaching and drives the same herdr
+    terminal attach the attach command uses.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr, --attach]
+      expect:
+        exitCode: 0
+        stdoutContains: ["attaching to pane "]
+  assertState:
+    - registryRunCount: 1
+    - herdrOp: { op: attach }
+
+- id: retained-pane-on-post-pane-failure
+  covers: [ANTMAY-FR-0003.AC-0307]
+  title: A post-pane herdr failure names the retained pane and never claims success
+  description: >-
+    When the initial submit fails after the pane exists, spawn exits non-zero,
+    prints nothing on stdout, names the retained pane handle, and writes no run
+    record or worker.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true, failOn: submit }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stdoutEmpty: true
+        stderrContains:
+          - "pane w0:p0"
+          - "submit the initial invocation"
+  assertState:
+    - registryRunCount: 0
+    - herdrOp: { op: split }
+    - herdrOp: { op: submit }
+    - workerRunning: false

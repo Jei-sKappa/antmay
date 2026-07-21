@@ -1,0 +1,24 @@
+# FR-1 workspace / packaging / identity cases (behavioral).
+- id: help-lists-public-commands
+  covers: [ANTMAY-FR-0001.AC-0101]
+  title: --help identifies antmay and lists exactly the public commands
+  description: >-
+    The built executable's --help names antmay, lists spawn/status/attach, hides
+    the private worker, and --version reports the package version.
+  steps:
+    - argv: ["--help"]
+      expect:
+        exitCode: 0
+        stderrEquals: ""
+        stdoutContains:
+          - "Usage: antmay"
+          - "spawn"
+          - "status"
+          - "attach"
+        stdoutNotContains:
+          - "worker"
+    - argv: ["--version"]
+      expect:
+        exitCode: 0
+        stderrEquals: ""
+        stdoutContains: ["0.1.0"]

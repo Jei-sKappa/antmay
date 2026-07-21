@@ -1,0 +1,109 @@
+# FR-4 one-active-run guard cases (behavioral).
+- id: guard-confirm-interactively-and-fail-non-interactively
+  covers: [ANTMAY-FR-0004.AC-0401]
+  title: A second run needs interactive confirmation and fails non-interactively
+  description: >-
+    With an active run recorded for the repository, a non-interactive second
+    spawn fails naming --force, an interactive confirmation launches the second
+    run, and declining cancels it.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  seedRuns:
+    - id: seed-guard
+      repo: main
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-guard
+      handle: seed-pane
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrEquals: "Error: An active run already exists for this repository (seed-guard); re-run with --force to launch an additional run.\n"
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      tty: true
+      stdin: ["y"]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "Launch an additional run anyway?"
+          - "Launched run "
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      tty: true
+      stdin: ["n"]
+      expect:
+        exitCode: 1
+        stdoutContains: ["Spawn cancelled"]
+
+- id: force-permits-second-run-without-mutating-first
+  covers: [ANTMAY-FR-0004.AC-0402]
+  title: --force launches a second run and leaves the first untouched
+  description: >-
+    With an active run recorded, spawn --force launches an additional run and does
+    not alter the first run's record.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  seedRuns:
+    - id: seed-first
+      repo: main
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-first
+      handle: first-pane
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr, --force]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Launched run "]
+  assertState:
+    - registryRunCount: 2
+    - run: { select: 0, skill: propose, classification: active, sessionKind: pinned }
+    - run: { select: 1, classification: active }
+
+- id: terminal-live-pane-and-cross-worktree-do-not-block
+  covers: [ANTMAY-FR-0004.AC-0403]
+  title: A terminal run and a different-worktree active run do not block the guard
+  description: >-
+    A terminal run with a live retained pane in this repository and an active run
+    in a different worktree folder both leave a fresh spawn unguarded.
+  repos: [main, other]
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  seedRuns:
+    - id: seed-done
+      repo: main
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: done
+      sessionKind: pinned
+      sessionId: s-done
+      handle: done-pane
+    - id: seed-other
+      repo: other
+      thread: 260718155545z-demo
+      skill: propose
+      harness: claude
+      classification: active
+      sessionKind: pinned
+      sessionId: s-other
+      handle: other-pane
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Launched run "]
+  assertState:
+    - registryRunCount: 3

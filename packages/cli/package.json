@@ -17,5 +17,8 @@
     "@antmay/core": "workspace:*",
     "@commander-js/extra-typings": "^14",
     "commander": "^14"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.0"
   }
 }

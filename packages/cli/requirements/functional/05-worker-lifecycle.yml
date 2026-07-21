@@ -1,0 +1,34 @@
+# FR-5 — Private worker lifecycle and recovery.
+- id: ANTMAY-FR-0005
+  title: Private worker lifecycle and recovery
+  status: active
+  description: >-
+    Each detached spawn starts one private packaged worker that observes only its
+    run, survives the CLI parent, and finalizes idempotently; status refreshes
+    evidence and restores stale observation without creating a second run; and no
+    daemon, public worker command, or hook is installed.
+  acceptance:
+    - id: AC-0501
+      kind: behavioral
+      statement: >-
+        Each successful detached spawn starts one private packaged worker that is
+        a separate surviving process observing only its run and exits after
+        finalizing a terminal or unknown classification. (spec AC-5.1)
+    - id: AC-0502
+      kind: behavioral
+      statement: >-
+        Concurrent or repeated worker/status reconciliation produces one
+        idempotent terminal record and never regresses a terminal classification
+        to active. (spec AC-5.2)
+    - id: AC-0503
+      kind: behavioral
+      statement: >-
+        status refreshes scoped evidence before output and, when a run remains
+        active but its worker health is stale, restores observation without
+        creating a second run or terminalizing the transient failure. (spec
+        AC-5.3)
+    - id: AC-0504
+      kind: architecture
+      statement: >-
+        No global or per-repository daemon, public worker command, herdr hook, or
+        harness hook is installed or required. (spec AC-5.4)

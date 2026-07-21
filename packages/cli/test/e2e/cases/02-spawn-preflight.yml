@@ -1,0 +1,202 @@
+# FR-2 spawn input and skill-catalog preflight cases (behavioral).
+- id: spawn-prompts-missing-input-then-flagged-no-prompt
+  covers: [ANTMAY-FR-0002.AC-0201]
+  title: A complete flagged spawn never prompts; a TTY spawn gathers a missing value
+  description: >-
+    A fully flagged spawn launches with no prompt, while a TTY spawn missing
+    --thread gathers it through a transient prompt.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 0
+        stdoutContains: ["Launched run "]
+        stdoutNotContains: ["Thread (folder name"]
+    - argv: [spawn, --skill, propose, --harness, claude, --adapter, herdr, --force]
+      tty: true
+      stdin: ["260718155545z-demo"]
+      expect:
+        exitCode: 0
+        stdoutContains:
+          - "Thread (folder name, docs/threads/<name>, or absolute root):"
+          - "Launched run "
+
+- id: spawn-non-interactive-missing-and-forbidden
+  covers: [ANTMAY-FR-0002.AC-0202]
+  title: Non-interactive missing flag / empty required request / forbidden request fail with no side effect
+  description: >-
+    A non-interactive spawn missing a required flag names the flag, a required
+    skill without a request names --request, and a forbidden skill with --request
+    is rejected; none creates a pane, run record, or worker.
+  threads: [260718155545z-demo]
+  steps:
+    - argv: [spawn, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stdoutEmpty: true
+        stderrEquals: "Error: Missing required input; pass --thread <thread>.\n"
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, implement, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrEquals: "Error: The \"implement\" skill requires a request; pass --request <text>.\n"
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, roadmap, --harness, claude, --adapter, herdr, --request, "do it"]
+      expect:
+        exitCode: 1
+        stderrEquals: "Error: The \"roadmap\" skill rejects --request; its operation is determined by its thread-root artifacts.\n"
+  assertState:
+    - registryRunCount: 0
+    - herdrOp: { op: split, present: false }
+    - workerRunning: false
+
+- id: catalog-postures-and-non-catalog-rejection
+  covers: [ANTMAY-FR-0002.AC-0203]
+  title: Optional launches, required accepts a request, and a non-catalog skill is rejected
+  description: >-
+    An optional-posture skill launches with no request, a required-posture skill
+    launches with a request, and a name outside the catalog is rejected before
+    launch.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+    - { harness: claude, name: implement }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 0
+        stdoutContains: ["propose (claude, herdr)"]
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, not-a-skill, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrEquals: "Error: Unknown catalog skill \"not-a-skill\"; --skill must name a supported catalog entry.\n"
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, implement, --harness, claude, --adapter, herdr, --request, "ship it", --force]
+      expect:
+        exitCode: 0
+        stdoutContains: ["implement (claude, herdr)"]
+  assertState:
+    - registryRunCount: 2
+
+- id: skill-roots-claude-and-codex
+  covers: [ANTMAY-FR-0002.AC-0204]
+  title: Claude and Codex availability resolve their own project skill roots
+  description: >-
+    Claude resolves a project .claude/skills entry and Codex resolves a project
+    .agents/skills entry carrying agents/openai.yaml.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+    - { harness: claude, name: propose, scope: user, frontmatterName: wrong-name }
+    - { harness: codex, name: spec, openai: true }
+    - { harness: codex, name: spec, scope: user, openai: false }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 0
+        stdoutContains: ["propose (claude, herdr)"]
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, spec, --harness, codex, --adapter, herdr, --force]
+      expect:
+        exitCode: 0
+        stdoutContains: ["spec (codex, herdr)"]
+
+- id: skill-unavailable-remediation
+  covers: [ANTMAY-FR-0002.AC-0205]
+  title: Missing, mismatched, and Codex-openai-less skills fail with remediation
+  description: >-
+    An uninstalled skill, a frontmatter-name mismatch, and a Codex skill without
+    agents/openai.yaml each fail naming the harness, searched roots, and the exact
+    npx skills add remediation; nothing is launched.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: spec, frontmatterName: not-spec }
+    - { harness: codex, name: roadmap, openai: false }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains:
+          - "The \"propose\" skill is not installed for the claude harness."
+          - "Searched roots:"
+          - "npx skills add Jei-sKappa/antmay --skill propose"
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, spec, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains:
+          - "The \"spec\" skill is not installed for the claude harness."
+          - "npx skills add Jei-sKappa/antmay --skill spec"
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, roadmap, --harness, codex, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains:
+          - "The \"roadmap\" skill is not installed for the codex harness."
+          - "npx skills add Jei-sKappa/antmay --skill roadmap"
+  assertState:
+    - registryRunCount: 0
+    - herdrOp: { op: split, present: false }
+
+- id: thread-forms-resolve
+  covers: [ANTMAY-FR-0002.AC-0206]
+  title: Folder name, repo-relative path, absolute path, and nested cwd all resolve
+  description: >-
+    All three thread forms and a nested cwd resolve through the canonical git
+    worktree to the same active thread.
+  threads: [260718155545z-demo]
+  skills:
+    - { harness: claude, name: propose }
+  control: { paneAlive: true }
+  steps:
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [spawn, --thread, docs/threads/260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr, --force]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [spawn, --thread, "{{thread:260718155545z-demo}}", --skill, propose, --harness, claude, --adapter, herdr, --force]
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr, --force]
+      cwd: nested/dir
+      expect: { exitCode: 0, stdoutContains: ["Launched run "] }
+  assertState:
+    - registryRunCount: 4
+    - herdrRunText: { contains: ["/propose {{thread:260718155545z-demo}}"] }
+
+- id: thread-rejections
+  covers: [ANTMAY-FR-0002.AC-0207]
+  title: File paths, nonexistent, archived, external roots, and non-git cwd are rejected
+  description: >-
+    A thread-file path, a nonexistent value, an archived root, an absolute
+    external root, and a cwd outside a git worktree are all rejected before
+    launch with no fuzzy or most-recent fallback.
+  threads: [260718155545z-demo]
+  archivedThreads: [260101000000z-old]
+  plainDirs: [outside]
+  files:
+    - { path: docs/threads/260718155545z-demo/seed.md, content: "seed\n" }
+  skills:
+    - { harness: claude, name: propose }
+  steps:
+    - argv: [spawn, --thread, docs/threads/260718155545z-demo/seed.md, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains: ["points at a file, not a thread-root directory"]
+    - argv: [spawn, --thread, nope-does-not-exist, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains: ["No thread resolves from \"nope-does-not-exist\""]
+    - argv: [spawn, --thread, docs/threads/archive/260101000000z-old, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains: ["does not resolve to a direct child"]
+    - argv: [spawn, --thread, /tmp, --skill, propose, --harness, claude, --adapter, herdr]
+      expect:
+        exitCode: 1
+        stderrContains: ["does not resolve to a direct child"]
+    - argv: [spawn, --thread, 260718155545z-demo, --skill, propose, --harness, claude, --adapter, herdr]
+      cwd: "dir:outside"
+      expect:
+        exitCode: 1
+        stderrContains: ["is not inside a git worktree"]
+  assertState:
+    - registryRunCount: 0
+    - herdrOp: { op: split, present: false }
