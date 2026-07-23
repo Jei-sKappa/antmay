@@ -8,7 +8,8 @@ Decision citations of the form `decisions.md DR<N>` refer to the thread's settle
 
 ```
 cli/src/
-├── main.ts          thin entry (Node guard, wiring)
+├── main.ts          thin entry (Node guard, dynamic bootstrap)
+├── program.ts       command parsing and dependency wiring
 ├── cli/             parseArgs grammar, help/version, exit codes
 ├── config/          config/state roots, settings validation
 ├── recipe/          recipe types, built-in standard, targets, profiles
