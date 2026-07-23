@@ -62,7 +62,7 @@ Immediately after the header, write:
 
 The follow-up is a natural-language paragraph, built from the caller's supplied suggestion, describing a useful next step such as applying the resulting decisions to the target and rechecking it. It is advice a human reads and chooses to act on — never an executable command, never workflow state, and never a promise that a named skill can be invoked automatically. Write it so it stands on its own without the originating chat.
 
-Then, for each unresolved human decision, write one canonical discussion point into the bundle file per the format in `references/shared/formats/discussion-point.md`, normalizing the caller's raw material into that structure without changing which decision is being made or inventing evidence the caller did not supply. Every point in the bundle shares the header's producer, target, and follow-up boundary.
+Then, for each unresolved human decision, write one canonical discussion point into the bundle file per the format in `references/formats/discussion-point.md`, normalizing the caller's raw material into that structure without changing which decision is being made or inventing evidence the caller did not supply. Every point in the bundle shares the header's producer, target, and follow-up boundary.
 
 ## Bundle invariant
 

@@ -146,7 +146,7 @@ Two situations stop the run once substantive execution has begun (step 5 onward)
 
 ## Roadmap-descendant feedback
 
-When the run's thread carries a `Parent:` roadmap reference in its seed and you discover something with parent- or sibling-level impact, route it to the parent through `/append-roadmap-feedback`; `references/shared/roadmap-descendant-feedback.md` spells out what qualifies as parent-level impact, what to hand the primitive, and what stays local in this run's implementation report.
+When the run's thread carries a `Parent:` roadmap reference in its seed and you discover something with parent- or sibling-level impact, route it to the parent through `/append-roadmap-feedback`; `references/roadmap-descendant-feedback.md` spells out what qualifies as parent-level impact, what to hand the primitive, and what stays local in this run's implementation report.
 
 ## Commit Policy
 

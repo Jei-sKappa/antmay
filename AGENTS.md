@@ -53,7 +53,7 @@ shared/
 ├── references/                 canonical shared reference sources (e.g. workflows/{quick,standard,roadmap}.md)
 └── manifest.yaml               flat map: skill path → list of shared/references/ sources to mirror into it
 scripts/
-└── sync-shared-references.mjs  regenerates each declaring skill's references/shared/ from the canonical sources
+└── sync-shared-references.mjs  mirrors the canonical sources into each declaring skill's references/
 ```
 
 Rules:
@@ -105,7 +105,7 @@ Still-valid authoring guidance for every skill body:
 
 - Keep `description` to one sentence (entry points) or one bounded-precondition sentence (primitives) that says what the skill does and when to trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
 - Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections — routing belongs in the frontmatter description.
-- When a skill body points at one of its own reference files, cite the full direct skill-relative path (e.g. `references/shared/formats/discussion-point.md`) — never an indirect description like "the `discussion-point.md` format under `references/shared/formats/`", and never a bare folder.
+- When a skill body points at one of its own reference files, cite the full direct skill-relative path (e.g. `references/formats/discussion-point.md`) — never an indirect description like "the `discussion-point.md` format under `references/formats/`", and never a bare folder.
 - Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, internal version labels, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `DR<N>` are allowed when they are part of the skill's emitted artifact format.
 - Status naming is fixed suite-wide. The closing `Outcome: DONE | BLOCKED | REFUSED — <reason or pointer>` line a completion-oriented skill ends with is the **terminal outcome** — never call it a "run status", "workflow status", or any other status phrase. A vocabulary a skill defines for its own caller/callee topology (e.g. an orchestrator's subagent reply tokens and lane verdicts) is **skill-local return tokens** — never called a status or an outcome, never emitted in the terminal outcome, and never reused outside the owning skill. A completed *thread's* lasting artifact is its **final deliverable**, not its "terminal outcome". Canonical definition: `docs/skill-authoring.md` (`## Terminal outcome` and `## Internal progress and local return contracts`).
 - Only skills that emit the terminal outcome mention it. A skill with none (dialogue-driven, one-shot deliverable, every primitive) stays silent about the protocol AND about its own posture label — no "emit no outcome line" negation, no "this is a dialogue-driven skill" framing: an agent never told the vocabulary exists cannot emit it, and a negation only teaches the concept it forbids.
@@ -119,8 +119,8 @@ When an edit replaces design A with design B, the resulting skill body or docume
 Some skills ship copies of the same canonical reference (for example the workflow templates under `workflows/` that `whats-next` uses, or the discussion formats). These are NOT hand-maintained per skill:
 
 - Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
-- Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script wipes and re-creates each declaring skill's `references/shared/` folder from the canonical sources.
-- NEVER hand-edit any `references/shared/` folder inside a skill. Those copies are generated, committed, and flow into distribution unchanged. Change the canonical source and re-run the script instead.
+- Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script mirrors each declared source to the same relative path under the skill's `references/` folder, owning exactly the files the manifest names: it deletes and rewrites precisely those, leaving hand-authored skill-local references untouched. Removing a manifest entry does not delete its previously generated copy — delete that orphan by hand.
+- NEVER hand-edit a generated copy under a skill's `references/` (any file the manifest declares for that skill). Those copies are generated, committed, and flow into distribution unchanged. Change the canonical source and re-run the script instead.
 
 ## When adding a new skill
 

@@ -9,7 +9,7 @@ metadata:
 
 # Discussion
 
-Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges; then present that one fork framed per the format in `references/shared/formats/discussion-point.md` and, once the user settles it, append a self-contained `DR<N>` record to the thread's `decisions.md`. The seed plus `decisions.md` are the durable artifact: they must let a later agent author the next piece of work without this conversation.
+Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges; then present that one fork framed per the format in `references/formats/discussion-point.md` and, once the user settles it, append a self-contained `DR<N>` record to the thread's `decisions.md`. The seed plus `decisions.md` are the durable artifact: they must let a later agent author the next piece of work without this conversation.
 
 ## Peer framing
 
@@ -34,7 +34,7 @@ Hold these together:
 
 3. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
 
-4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per the format in `references/shared/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
+4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per the format in `references/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
 5. **Record once the user settles the point.** Append a `DR<N>` record to `decisions.md` per `## Recording decisions`, then tell the user: `Decision saved: <short summary>.`
 
@@ -42,13 +42,13 @@ Hold these together:
 
 ## Recording decisions
 
-The thread-root `decisions.md` is the single decision store: append every settled point to it as a self-contained `DR<N>` record, following the shape, sequential numbering, and append-only rules in `references/shared/formats/decision-record.md`. Do not keep decisions anywhere else.
+The thread-root `decisions.md` is the single decision store: append every settled point to it as a self-contained `DR<N>` record, following the shape, sequential numbering, and append-only rules in `references/formats/decision-record.md`. Do not keep decisions anywhere else.
 
 What stays your judgment, not the format's: recognizing what was actually decided and whether it is decision-grade, writing the outcome as a durable projection a fresh agent can act on rather than a transcript, and flagging any dissent in the `Rationale` per the peer stance above. The discussion point itself is transient framing — its options menu, recommendation, and deliberation are never copied into the record.
 
 ## Supersession
 
-When a settled decision later changes, append a new record that supersedes the earlier one per `references/shared/formats/decision-record.md` — never rewrite or delete what is already recorded; recognizing that a decision has genuinely changed is your call. An interrupted session leaves a usable partial `decisions.md`: every record written up to the interruption is durable.
+When a settled decision later changes, append a new record that supersedes the earlier one per `references/formats/decision-record.md` — never rewrite or delete what is already recorded; recognizing that a decision has genuinely changed is your call. An interrupted session leaves a usable partial `decisions.md`: every record written up to the interruption is durable.
 
 ## Scope drift
 

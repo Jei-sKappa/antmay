@@ -2,12 +2,15 @@
 #
 # Flat map: each key is a skill path (repo-root-relative, a folder containing a
 # SKILL.md); each value is a list of source files relative to shared/references/.
-# `scripts/sync-shared-references.mjs` copies every listed source into the
-# skill's generated references/shared/ folder, preserving relative subpaths.
+# `scripts/sync-shared-references.mjs` copies every listed source to the same
+# relative path under the skill's references/ folder. The script owns exactly
+# the files listed here: it deletes and rewrites precisely those, leaving any
+# hand-authored skill-local references untouched.
 #
 # Strictly flat: skill-path keys, string-list values, one list level, no
 # anchors, no nested keys, no multiline strings. Edit shared/references/ and
-# rerun the script; never hand-edit the generated references/shared/ copies.
+# rerun the script; never hand-edit the generated copies. Removing an entry
+# below does not delete its previously generated copy — delete that by hand.
 
 skills/finish-navigate/whats-next:
   - workflows/quick.md
