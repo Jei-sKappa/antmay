@@ -268,7 +268,9 @@ export function createProductionAttachDeps(
     runner,
     store: new FilesystemRegistryStore(resolveStateRoot(env)),
     adapter: new HerdrAdapter(runner, env),
-    attachAdapter: new HerdrAdapter(new InteractiveProcessRunner(env), env),
+    attachAdapter: new HerdrAdapter(runner, env, {
+      interactiveRunner: new InteractiveProcessRunner(env),
+    }),
     isInteractive: () => prompt.isInteractive(),
     pickRun: terminalPickRun,
     writeOut: (message) => {

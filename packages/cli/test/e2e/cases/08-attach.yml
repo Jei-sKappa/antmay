@@ -22,7 +22,7 @@
         stdoutContains: ["Attaching to run run-terminal in pane terminal-pane."]
   assertState:
     - registryRunCount: 2
-    - herdrOp: { op: attach }
+    - herdrOp: { op: attach, argsContains: ["term_"] }
     - run: { select: 0, classification: active }
     - run: { select: 1, classification: done }
 
@@ -132,5 +132,5 @@
       expect: { exitCode: 0, stdoutContains: ["Attaching to run run-keep in pane keep-pane."] }
   assertState:
     - registryRunCount: 1
-    - herdrOp: { op: attach }
+    - herdrOp: { op: attach, argsContains: ["term_"] }
     - run: { select: 0, classification: active, hasHandle: true }

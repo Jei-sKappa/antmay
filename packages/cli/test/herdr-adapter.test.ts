@@ -44,6 +44,9 @@ const fail = (stderr = "boom"): ProcessRunResult => ({
 });
 
 const PANE_JSON = JSON.stringify({ result: { pane: { pane_id: "w1:p1" } } });
+const PANE_WITH_TERMINAL_JSON = JSON.stringify({
+  result: { pane: { pane_id: "w1:p1", terminal_id: "term_abc123" } },
+});
 
 function spawnSpec(overrides: Partial<SpawnSpec> = {}): SpawnSpec {
   return {
@@ -243,10 +246,16 @@ describe("HerdrAdapter observation operations", () => {
     ]);
   });
 
-  it("attach joins the pane through terminal attach", () => {
-    const runner = new ScriptedRunner(() => ok());
-    new HerdrAdapter(runner).attach(handle);
-    expect(runner.calls[0]?.args).toEqual(["terminal", "attach", "w1:p1"]);
+  it("attach resolves the pane terminal and joins it through the interactive runner", () => {
+    const runner = new ScriptedRunner(() => ok(PANE_WITH_TERMINAL_JSON));
+    const interactiveRunner = new ScriptedRunner(() => ok());
+    new HerdrAdapter(runner, {}, { interactiveRunner }).attach(handle);
+    expect(runner.calls.map((call) => call.args)).toEqual([
+      ["pane", "get", "w1:p1"],
+    ]);
+    expect(interactiveRunner.calls.map((call) => call.args)).toEqual([
+      ["terminal", "attach", "term_abc123"],
+    ]);
   });
 
   it("attach throws with the retained handle when the pane is unavailable", () => {
@@ -256,6 +265,29 @@ describe("HerdrAdapter observation operations", () => {
       expect.unreachable();
     } catch (error) {
       expect((error as HerdrAdapterError).retainedHandle).toBe(handle);
+    }
+  });
+
+  it("attach throws with the retained handle when pane metadata has no terminal id", () => {
+    const runner = new ScriptedRunner(() => ok(PANE_JSON));
+    try {
+      new HerdrAdapter(runner).attach(handle);
+      expect.unreachable();
+    } catch (error) {
+      expect((error as HerdrAdapterError).retainedHandle).toBe(handle);
+      expect((error as Error).message).toContain("returned no terminal id");
+    }
+  });
+
+  it("attach preserves the pane handle when terminal attachment fails", () => {
+    const runner = new ScriptedRunner(() => ok(PANE_WITH_TERMINAL_JSON));
+    const interactiveRunner = new ScriptedRunner(() => fail("terminal gone"));
+    try {
+      new HerdrAdapter(runner, {}, { interactiveRunner }).attach(handle);
+      expect.unreachable();
+    } catch (error) {
+      expect((error as HerdrAdapterError).retainedHandle).toBe(handle);
+      expect((error as Error).message).toContain("terminal gone");
     }
   });
 });

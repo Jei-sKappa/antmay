@@ -450,7 +450,9 @@ export function createProductionSpawnDeps(
     prompt: new TerminalPromptProvider(),
     store: new FilesystemRegistryStore(resolveStateRoot(env)),
     adapter: new HerdrAdapter(runner, env),
-    attachAdapter: new HerdrAdapter(new InteractiveProcessRunner(env), env),
+    attachAdapter: new HerdrAdapter(runner, env, {
+      interactiveRunner: new InteractiveProcessRunner(env),
+    }),
   };
 }
 

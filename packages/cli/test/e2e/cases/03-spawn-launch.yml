@@ -99,7 +99,7 @@
         stdoutContains: ["attaching to pane "]
   assertState:
     - registryRunCount: 1
-    - herdrOp: { op: attach }
+    - herdrOp: { op: attach, argsContains: ["term_"] }
 
 - id: retained-pane-on-post-pane-failure
   covers: [ANTMAY-FR-0003.AC-0307]

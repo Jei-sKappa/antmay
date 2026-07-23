@@ -182,7 +182,7 @@ function seedRegistry(context: CaseContext): void {
             "panes",
             `${encodeURIComponent(seed.handle)}.json`,
           ),
-          `${JSON.stringify({ id: seed.handle, alive: true, cwd: repositoryPath, env: {}, launchCount: 2, runs: [] })}\n`,
+          `${JSON.stringify({ id: seed.handle, terminalId: `term_${seed.handle.replace(/[^a-zA-Z0-9]/g, "_")}`, alive: true, cwd: repositoryPath, env: {}, launchCount: 2, runs: [] })}\n`,
           "utf8",
         );
       }

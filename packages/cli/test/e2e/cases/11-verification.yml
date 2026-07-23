@@ -57,4 +57,4 @@
     - runFinalizes: { select: 0, classification: done, timeoutMs: 10000 }
     - run: { select: 0, classification: done, hasHandle: true }
     - workerRunning: false
-    - herdrOp: { op: attach }
+    - herdrOp: { op: attach, argsContains: ["term_"] }

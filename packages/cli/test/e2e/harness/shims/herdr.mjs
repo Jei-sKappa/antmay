@@ -4,9 +4,10 @@
 // external process boundary the real herdr adapter drives. It emulates the real
 // herdr CLI verbs the adapter calls (`pane split`, `pane rename`, `pane run`,
 // `wait agent-status`, `pane get`, `pane list`, `terminal attach`), persists
-// controllable pane state on disk under `ANTMAY_SHIM_DIR`, and — like real herdr
-// — actually launches the harness command submitted through `pane run` so the
-// scripted Claude/Codex shims write their transcripts.
+// controllable pane state on disk under `ANTMAY_SHIM_DIR`, keeps pane and
+// terminal identifiers distinct like real herdr, and actually launches the
+// harness command submitted through `pane run` so the scripted Claude/Codex
+// shims write their transcripts.
 //
 // All state lives under `ANTMAY_SHIM_DIR`:
 //   control.json         optional case-authored control knobs
@@ -83,6 +84,16 @@ function savePane(pane) {
   writeFileSync(paneFile(pane.id), JSON.stringify(pane, null, 2), "utf8");
 }
 
+function paneForTerminal(id) {
+  if (!existsSync(panesDir)) return undefined;
+  for (const name of readdirSync(panesDir)) {
+    if (!name.endsWith(".json")) continue;
+    const pane = JSON.parse(readFileSync(join(panesDir, name), "utf8"));
+    if (pane.terminalId === id) return pane;
+  }
+  return undefined;
+}
+
 function fail(message) {
   process.stderr.write(`${message}\n`);
   process.exit(1);
@@ -148,8 +159,10 @@ function main() {
     recordEvent("split", rest);
     if (control.failOn === "split") fail("herdr: pane split refused by shim.");
     const id = nextPaneId(control.paneIdPrefix ?? "w0:p");
+    const terminalId = `term_${id.replace(/[^a-zA-Z0-9]/g, "_")}`;
     savePane({
       id,
+      terminalId,
       alive: control.paneAlive !== false,
       cwd: valueOfFlag(rest, "--cwd") ?? null,
       env: collectEnv(rest),
@@ -157,7 +170,7 @@ function main() {
       runs: [],
     });
     process.stdout.write(
-      `${JSON.stringify({ result: { pane: { pane_id: id } } })}\n`,
+      `${JSON.stringify({ result: { pane: { pane_id: id, terminal_id: terminalId } } })}\n`,
     );
     return;
   }
@@ -208,7 +221,7 @@ function main() {
       fail(`herdr: pane ${id} is not alive.`);
     }
     process.stdout.write(
-      `${JSON.stringify({ result: { pane: { pane_id: id } } })}\n`,
+      `${JSON.stringify({ result: { pane: { pane_id: id, terminal_id: pane.terminalId } } })}\n`,
     );
     return;
   }
@@ -224,12 +237,12 @@ function main() {
 
   if (group === "terminal" && verb === "attach") {
     const [id] = rest;
-    recordEvent("attach", { id });
     if (control.failOn === "attach") fail("herdr: attach refused by shim.");
-    const pane = loadPane(id);
+    const pane = paneForTerminal(id);
     if (pane === undefined || pane.alive !== true) {
-      fail(`herdr: pane ${id} is not attachable.`);
+      fail(`herdr: terminal ${id} is not attachable.`);
     }
+    recordEvent("attach", { id, paneId: pane.id });
     return;
   }
 

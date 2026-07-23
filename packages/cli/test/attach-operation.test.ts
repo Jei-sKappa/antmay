@@ -87,12 +87,26 @@ describe("attachRun", () => {
     const runner: ProcessRunner = {
       run(_p, args): ProcessRunResult {
         calls.push([...args]);
-        return { code: 0, stdout: "", stderr: "" };
+        return {
+          code: 0,
+          stdout:
+            args[0] === "pane"
+              ? JSON.stringify({
+                  result: {
+                    pane: { pane_id: "w1:p1", terminal_id: "term_abc123" },
+                  },
+                })
+              : "",
+          stderr: "",
+        };
       },
       locate: () => null,
     };
     attachRun(new HerdrAdapter(runner), asAttachmentHandle("w1:p1"));
-    expect(calls).toEqual([["terminal", "attach", "w1:p1"]]);
+    expect(calls).toEqual([
+      ["pane", "get", "w1:p1"],
+      ["terminal", "attach", "term_abc123"],
+    ]);
   });
 
   it("surfaces the adapter's retained-handle error unchanged on failure", () => {

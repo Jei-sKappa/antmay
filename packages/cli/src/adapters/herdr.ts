@@ -5,10 +5,11 @@
 // real CLI: `pane split` creates a pane with the repository cwd and environment,
 // `pane run` launches the harness and submits the initial input as one literal
 // turn, `pane read`/`pane get`/`pane list` observe, and `terminal attach` joins.
-// Pane identifiers are treated as opaque handles. A partial spawn failure after
-// the pane already exists throws a diagnostic that names the RETAINED pane so
-// the user can find the orphaned session; classification and registry state are
-// never touched here.
+// Pane identifiers are treated as opaque handles. Attachment resolves the
+// pane's live terminal identifier immediately before handing the user's TTY to
+// herdr. A partial spawn failure after the pane already exists throws a
+// diagnostic that names the RETAINED pane so the user can find the orphaned
+// session; classification and registry state are never touched here.
 
 import {
   type Adapter,
@@ -124,6 +125,19 @@ function paneIdFromSplit(stdout: string): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+// The terminal id associated with a live pane, read from `pane get` output.
+// herdr's `terminal attach` accepts this id rather than the pane id recorded as
+// the durable attachment handle.
+function terminalIdFromPane(stdout: string): string | null {
+  const value = readNested(
+    tryParseJson(stdout),
+    "result",
+    "pane",
+    "terminal_id",
+  );
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
 // The advisory agent state herdr reports for a pane, if present.
 function agentStateFrom(stdout: string): string | undefined {
   const value = readNested(
@@ -140,7 +154,14 @@ function enrichmentsFrom(stdout: string): ObservationEnrichments | undefined {
   return agentState === undefined ? undefined : { agentState };
 }
 
-/** The herdr adapter. All external calls go through the injected ProcessRunner. */
+export type HerdrAdapterOptions = {
+  /** Runner that hands the user's TTY to `herdr terminal attach`. */
+  readonly interactiveRunner?: ProcessRunner | undefined;
+  /** Spawn readiness timeout; tests may override the production default. */
+  readonly idleTimeoutMs?: number | undefined;
+};
+
+/** The herdr adapter. All external calls go through injected process runners. */
 export class HerdrAdapter implements ExecutionAdapter {
   readonly name: Adapter = "herdr";
 
@@ -149,10 +170,16 @@ export class HerdrAdapter implements ExecutionAdapter {
   constructor(
     private readonly runner: ProcessRunner,
     env: HerdrEnv = {},
-    private readonly idleTimeoutMs: number = DEFAULT_IDLE_TIMEOUT_MS,
+    options: HerdrAdapterOptions = {},
   ) {
     this.program = herdrProgram(env);
+    this.interactiveRunner = options.interactiveRunner ?? runner;
+    this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS;
   }
+
+  private readonly interactiveRunner: ProcessRunner;
+
+  private readonly idleTimeoutMs: number;
 
   private herdr(args: readonly string[]): ProcessRunResult {
     return this.runner.run(this.program, args);
@@ -306,7 +333,26 @@ export class HerdrAdapter implements ExecutionAdapter {
   }
 
   attach(handle: AttachmentHandle): void {
-    const result = this.herdr(["terminal", "attach", handle]);
+    const pane = this.herdr(["pane", "get", handle]);
+    if (pane.code !== 0) {
+      throw new HerdrAdapterError(
+        `herdr could not resolve a terminal for pane ${handle} (${describeFailure(pane)}).`,
+        handle,
+      );
+    }
+    const terminalId = terminalIdFromPane(pane.stdout);
+    if (terminalId === null) {
+      throw new HerdrAdapterError(
+        `herdr pane ${handle} returned no terminal id.`,
+        handle,
+      );
+    }
+
+    const result = this.interactiveRunner.run(this.program, [
+      "terminal",
+      "attach",
+      terminalId,
+    ]);
     if (result.code !== 0) {
       throw new HerdrAdapterError(
         `herdr could not attach to pane ${handle} (${describeFailure(result)}).`,
