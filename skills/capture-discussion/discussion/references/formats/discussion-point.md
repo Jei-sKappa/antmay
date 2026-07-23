@@ -4,14 +4,14 @@ A discussion point is a compact, self-contained structure that gives the reader 
 
 ## Point structure
 
-A discussion point has these parts, in this order:
+A discussion point has these explicitly labeled sections, in the fixed order below.
 
 - **Point** — the decision to make, stated as a single question or fork. This is the choice the reader must settle, not the background.
 - **What you need to know** — the self-contained evidence and surrounding context a reader needs to decide, written so the point stands on its own without any prior conversation. State established facts plainly as facts.
-- **Creative options OR a practical proposed solution** — choose the presentation that fits the fork:
+- **Options** OR **Proposed solution** — choose the presentation that fits the fork:
   - *Creative options* when the decision is genuinely open and the reader benefits from seeing distinct, well-formed alternatives. Present concrete lettered options (A/B/C…), each with real pros and cons — each a real candidate rather than a strawman. Lettering lets the reader answer tersely ("go with B").
   - *A practical proposed solution* when one path is clearly the sensible default and the reader mainly needs to confirm or redirect it. State the single proposal once and what it entails, with its reasoning inline.
-- **Recommendation (creative mode only)** — when the point presents lettered creative options, add a Recommendation: the reasoned pick among them with its principal trade-off. Give one clear recommendation; do not hedge across several. If no option is genuinely preferable, say so and explain why the choice is a true toss-up. A point in practical mode has no Recommendation element — the proposed solution already carries the pick and its reasoning, so do not re-add a Recommendation out of template instinct.
+- **Recommendation** (creative mode only) — when the point presents lettered creative options, add a Recommendation: the reasoned pick among them with its principal trade-off. Give one clear recommendation; do not hedge across several. If no option is genuinely preferable, say so and explain why the choice is a true toss-up. A point in practical mode has no Recommendation element — the proposed solution already carries the pick and its reasoning, so do not re-add a Recommendation out of template instinct.
 
 ## Discipline
 

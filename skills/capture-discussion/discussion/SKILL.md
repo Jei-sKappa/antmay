@@ -4,7 +4,7 @@ description: Conduct an open-ended interview that discovers decision points live
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Discussion
