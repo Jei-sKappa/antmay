@@ -1,0 +1,32 @@
+# Task 1: Package scaffold and CLI grammar
+
+**Objective:** Stand up the self-contained `cli/` package with the required toolchain and expose the strict `antmay afk` argument grammar, help/version forms, and exit-code constants, so every later task has a buildable, testable home.
+
+**Input / context:** `spec.md` §"CLI surface and exit codes" and §"Constraints" (Placement, Toolchain); `decisions.md DR17` (self-contained package under `cli/`, no root workspace), `DR33` (toolchain: Node ≥ 22, ESM, strict TS, tsup, Vitest, `util.parseArgs`, no frameworks), `DR22`/`DR40` (exit codes), `DR37`/`DR45` (strict grammar, no prompting), `DR48` (Node ≥ 22 runtime guard). The repository root currently has no `package.json` — do not create one.
+
+**Steps:**
+
+1. Create `cli/package.json`: `"name": "antmay"`, `"private": true`, `"type": "module"`, `"bin": { "antmay": "./dist/main.js" }`, `"engines": { "node": ">=22" }`, scripts `build` (`tsup`), `typecheck` (`tsc --noEmit`), `test` (`vitest run`), `check` (`npm run typecheck && npm run test && npm run build`), and devDependencies `typescript`, `tsup`, `vitest`, `@types/node`. Run `npm --prefix cli install` to produce `cli/package-lock.json`.
+2. Create `cli/tsconfig.json` with `strict: true`, `module`/`moduleResolution` `NodeNext`, `target` `ES2022`, `noEmit`-compatible settings (tsup does the emit), including `src` only.
+3. Create `cli/tsup.config.ts`: entry `src/main.ts`, format `esm`, `banner: { js: "#!/usr/bin/env node" }`, output `dist/`.
+4. Create `cli/vitest.config.ts` picking up `src/**/*.test.ts`.
+5. Create `cli/src/cli/exit-codes.ts` exporting the constants `EXIT_OK = 0`, `EXIT_FAILURE = 1`, `EXIT_WAITING = 2`, `EXIT_SIGINT = 130`, `EXIT_SIGTERM = 143`, `EXIT_SIGHUP = 129`.
+6. Create `cli/src/cli/parse.ts` exporting `parseCliArguments(argv: string[]): CliCommand`, built on `util.parseArgs` with `strict: true` plus manual positional validation. `CliCommand` is a discriminated union: `{ kind: "help"; text: string }`, `{ kind: "version" }`, `{ kind: "run"; recipe: string; thread: string; dangerouslySkipPermissions: boolean }`, `{ kind: "resume"; runId: string }`, `{ kind: "list" }`, `{ kind: "usage-error"; message: string; usage: string }`. Grammar per `spec.md`: `afk run <recipe> --thread <path> [--dangerously-skip-permissions]`, `afk resume <run-id>`, `afk list`; unknown flags, missing values, extra positionals, and unknown subcommands yield `usage-error` with the *nearest* usage text; `-h` is the only short flag; `--help`/`--version` are recognized at the top, `afk`, and subcommand levels; `resume` rejects `--dangerously-skip-permissions`; `list` accepts no option except help.
+7. Create `cli/src/cli/help.ts` with the usage/help text for each level and the version string (read from an embedded constant kept in sync with `cli/package.json`). Producing help/version text must not touch configuration, state, Git, or harnesses.
+8. Create `cli/src/main.ts`: first statement is a runtime guard failing clearly on Node < 22 (check `process.versions.node` before other imports do work); then export `runMain(argv: string[], handlers: CommandHandlers): Promise<number>` where `CommandHandlers` has `run`, `resume`, `list` async members returning exit codes, and the module's entry invocation calls `runMain` with placeholder handlers that print a not-yet-implemented error to stderr and return `EXIT_FAILURE` (replaced by Tasks 12/14/15). `help`/`version` are handled inside `runMain` (print to stdout, return `EXIT_OK`); `usage-error` prints `message` and `usage` to stderr and returns `EXIT_FAILURE`. `runMain` never prompts on stdin.
+9. Add `cli/src/cli/parse.test.ts` covering: all three subcommands accepted with valid arguments; unknown flag, missing `--thread` value, extra positional, unknown recipe-level subcommand each yield `usage-error` naming the nearest usage; `resume --dangerously-skip-permissions` rejected; `list --anything` rejected; help and version parse at all three levels; `-h` works and no other short flag does.
+
+**Files modified:** `cli/package.json` (NEW), `cli/package-lock.json` (NEW), `cli/tsconfig.json` (NEW), `cli/tsup.config.ts` (NEW), `cli/vitest.config.ts` (NEW), `cli/src/main.ts` (NEW), `cli/src/cli/exit-codes.ts` (NEW), `cli/src/cli/parse.ts` (NEW), `cli/src/cli/help.ts` (NEW), `cli/src/cli/parse.test.ts` (NEW)
+
+**Verification:** `npm --prefix cli run check` exits 0. `node cli/dist/main.js --help` and `node cli/dist/main.js afk run --help` exit 0 with usage on stdout even with `ANTMAY_CONFIG_HOME=relative-garbage` in the environment. `node cli/dist/main.js afk run standard` (missing `--thread`) exits 1 with usage on stderr. `test ! -f package.json` at the repository root succeeds.
+
+**Acceptance criteria:**
+
+- `cli/` builds, typechecks, and tests via its own scripts; `check` runs all three (AC-19.1, AC-19.3 scaffold-level).
+- Grammar acceptance/rejection matches AC-1.1 and AC-1.4; help/version satisfy AC-1.2's isolation from config/state/Git/harnesses.
+- The built `dist/main.js` starts with a shebang and is mapped as the `antmay` bin.
+- No dependency beyond the four devDependencies exists; the repository root gained no `package.json` or workspace config.
+
+**Consumes:** none
+
+**Produces:** the `cli/` package with scripts `build`/`typecheck`/`test`/`check`; `parseCliArguments(argv: string[]): CliCommand` and the `CliCommand` union from `cli/src/cli/parse.ts`; exit-code constants from `cli/src/cli/exit-codes.ts`; `runMain(argv, handlers)` from `cli/src/main.ts` with the `CommandHandlers` injection point later tasks fill.

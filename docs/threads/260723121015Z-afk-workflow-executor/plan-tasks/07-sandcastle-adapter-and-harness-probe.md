@@ -1,0 +1,38 @@
+# Task 7: Sandcastle adapter and harness probe
+
+**Objective:** Define the Antmay-owned `HarnessInvoker` boundary and implement it over Sandcastle 0.12.0 with the exact required option mapping and permission policies, plus the harness-executable `--version` preflight probe.
+
+**Input / context:** `spec.md` §"Executing a stage" (Sandcastle call shape), §"Terminal display" (normalized events feed the display), and the harness-preflight details in §"Creating a run"; `decisions.md DR39` (adapter boundary, exact `run` options, error normalization), `DR7`/`DR33` (Sandcastle pinned exactly `0.12.0`, public APIs only: `run`, `codex`, `claudeCode`, `noSandbox`), `DR8` (permission policies; session capture always disabled), `DR20`/`DR21` (idle timeout, completion signals, 60-second grace), `DR48` (executable probe mechanics), `DR23` (no auth/model/skill preflight). The npm package is `@ai-hero/sandcastle`; `noSandbox` is imported from the `@ai-hero/sandcastle/sandboxes/no-sandbox` subpath; relevant option names in 0.12.0: `agent`, `sandbox`, `cwd`, `prompt`, `maxIterations`, `completionSignal`, `completionTimeoutSeconds`, `idleTimeoutSeconds`, `branchStrategy`, `logging` (`{ type: "file", path, verbose, onAgentStreamEvent }`), `signal`; provider factories `codex(model, { captureSessions, approvalsReviewer })` and `claudeCode(model, { captureSessions, permissionMode })`.
+
+**Steps:**
+
+1. Run `npm --prefix cli install @ai-hero/sandcastle@0.12.0 --save-exact`.
+2. Create `cli/src/harness/types.ts` — the runner-facing boundary, with no Sandcastle imports:
+   - `type HarnessEvent = { type: "text"; text: string } | { type: "tool-call"; name: string; args: string }` (the display consumes these);
+   - `type AttemptRequest = { harness: HarnessId; model: string; prompt: string; idleTimeoutSeconds: number; dangerouslySkipPermissions: boolean; repoRoot: string; logFilePath: string; onEvent: (event: HarnessEvent) => void; signal: AbortSignal }`;
+   - `type AttemptOutcome = { kind: "completed"; finalText: string } | { kind: "failed"; category: "idle-timeout" | "aborted" | "provider-error"; errorClass: string; errorMessage: string }`;
+   - `interface HarnessInvoker { invoke(request: AttemptRequest): Promise<AttemptOutcome> }` — the seam every runner test fakes.
+3. Create `cli/src/harness/sandcastle.ts` exporting `buildSandcastleRunOptions(request: AttemptRequest)` (pure, unit-testable) and `createSandcastleInvoker(): HarnessInvoker`. Option mapping, exactly:
+   - `agent`: `codex(model, { captureSessions: false, approvalsReviewer: "auto_review" })` or `claudeCode(model, { captureSessions: false, permissionMode: "auto" })`; when `dangerouslySkipPermissions` is true, omit `approvalsReviewer`/`permissionMode` (keep `captureSessions: false`);
+   - `sandbox: noSandbox()`; `cwd: repoRoot`; `prompt` inline; `maxIterations: 1`; `branchStrategy: { type: "head" }`;
+   - `completionSignal: ["Outcome: DONE", "Outcome: BLOCKED", "Outcome: REFUSED"]`; `completionTimeoutSeconds: 60`; `idleTimeoutSeconds` from the request;
+   - `logging: { type: "file", path: request.logFilePath, verbose: true, onAgentStreamEvent }` where the callback maps Sandcastle `AgentStreamEvent`s to `HarnessEvent`s (text chunks and tool calls; drop raw lines — they go to the file);
+   - `signal: request.signal`; and nothing else — no `promptFile`, `hooks`, `promptArgs`, `copyToWorktree`, `output`, `resumeSession`, `timeouts` overrides, or env manipulation.
+4. Implement result normalization in the invoker: on resolve, `finalText` is the captured single-iteration result text (`RunResult.stdout`); on reject, inspect the error — an abort surfaced via `signal.reason`/`AbortError` maps to category `"aborted"`; Sandcastle's idle-timeout failure (identify its error class/message in the pinned 0.12.0 sources, `run.ts`/`Orchestrator.ts`) maps to `"idle-timeout"`; everything else maps to `"provider-error"` — always retaining the original error's class name and message. No Sandcastle type appears in any exported signature.
+5. Create `cli/src/harness/probe.ts` exporting `probeHarnessExecutables(harnesses: HarnessId[], repoRoot: string, spawn?): Promise<ProbeResult>` with `ProbeResult = { ok: true; versions: Record<HarnessId, string> } | { ok: false; failures: { harness: HarnessId; binary: string; reason: string }[] }`: fixed mapping `codex` → `codex`, `claude-code` → `claude`; execute `<binary> --version` via `child_process.execFile` (no shell) with inherited `PATH`, `cwd: repoRoot`, fixed 10-second timeout; success requires exit `0` and non-whitespace output; the trimmed version line goes into `versions`; report *all* failing harnesses together, each diagnosing spawn/timeout/signal/exit/empty-output distinctly. No version parsing, no minimums, no auth or model probing.
+6. Add tests: `cli/src/harness/sandcastle.test.ts` — assert `buildSandcastleRunOptions` output field-by-field for both harnesses, default and dangerous permission modes, both prompt cases, and assert the exact absent-option set (AC-9.1, AC-9.2); event-mapping tests for the `onAgentStreamEvent` bridge; error-normalization tests with synthetic aborted/idle/other rejections. `cli/src/harness/probe.test.ts` — use fake executables on a prepended `PATH` in a temp dir (exit 0 + version line; exit 1; empty output; sleep-past-timeout; missing binary), assert aggregate failure reporting and captured version lines (AC-7.2).
+
+**Files modified:** `cli/package.json`, `cli/package-lock.json`, `cli/src/harness/types.ts` (NEW), `cli/src/harness/sandcastle.ts` (NEW), `cli/src/harness/probe.ts` (NEW), `cli/src/harness/sandcastle.test.ts` (NEW), `cli/src/harness/probe.test.ts` (NEW)
+
+**Verification:** `npm --prefix cli run check` exits 0. `node -e "const p=require('./cli/package.json'); if (p.dependencies['@ai-hero/sandcastle'] !== '0.12.0') process.exit(1)"` exits 0. `grep -rn "@ai-hero/sandcastle" cli/src --include='*.ts' -l | grep -v test` prints only `cli/src/harness/sandcastle.ts`.
+
+**Acceptance criteria:**
+
+- Sandcastle option mapping matches AC-9.1 exactly, including the absent options; permission policy per AC-9.2 including the dangerous omission; idle timeout passes through with no wall-clock timeout (AC-9.3).
+- No Sandcastle type or import escapes `cli/src/harness/sandcastle.ts`; normalized errors keep provider-neutral category + original class/message (AC-9.4).
+- The probe satisfies AC-7.2 mechanics and aggregate reporting, and yields the version line Task 5's log header consumes.
+- `@ai-hero/sandcastle` is pinned exactly to `0.12.0` (AC-19.2 portion).
+
+**Consumes:** `HarnessId` from `cli/src/config/settings.ts` (Task 2); log-file path conventions from `cli/src/state/logs.ts` (Task 5 — the invoker writes to the path the log module created).
+
+**Produces:** `HarnessInvoker`, `AttemptRequest`, `AttemptOutcome`, `HarnessEvent` from `cli/src/harness/types.ts`; `createSandcastleInvoker(): HarnessInvoker` and `buildSandcastleRunOptions(request)` from `cli/src/harness/sandcastle.ts`; `probeHarnessExecutables(harnesses, repoRoot): Promise<ProbeResult>` from `cli/src/harness/probe.ts`.

@@ -1,0 +1,29 @@
+# Task 9: Git boundary engine
+
+**Objective:** Implement boundary status collection, declarative Git-policy evaluation (HEAD rule, path selectors, change requirement), and boundary finalization that stages only validated observed paths and commits with the exact declared subject.
+
+**Input / context:** `spec.md` §"Git boundaries and executor commits"; `decisions.md DR50` (three-part policy, boundary status set, selector validation, staging discipline, exact subjects, violation/commit-error kinds), `DR49` (no empty commits, no push/amend/rebase/hook bypass; DONE with no changes advances), `DR51` (HEAD rule judged within one attempt only), `DR52` (finalize before any queue pause). Consumes `runGit` and the repo fixture from Task 4, `GitPolicy`/`PathSelector`/`resolveSelector` from Task 3. Concrete porcelain/plumbing choices are free (spec degree of freedom 7) as long as observed-path validation and exact subjects hold.
+
+**Steps:**
+
+1. Create `cli/src/gitops/status.ts` exporting `collectBoundaryStatus(repoRoot: string): Promise<string[]>` — the boundary status set: staged, unstaged, deleted, and untracked paths with untracked files expanded (individual files, not collapsed directories) and ignored files excluded. Use `git status --porcelain=v1 -uall --no-renames` (or v2) and parse both path columns of rename/copy lines defensively; return normalized repo-relative POSIX paths, deduplicated and sorted. Also export `readHead(repoRoot): Promise<string>` (`git rev-parse HEAD`) and `isWorktreeClean(repoRoot): Promise<boolean>` (empty boundary status set) — the same status set later used by run/resume clean-worktree preflight.
+2. Create `cli/src/gitops/boundary.ts` exporting the evaluation and finalization pair:
+   - `evaluateBoundary(policy: GitPolicy, threadRelPath: string, observedPaths: string[], headAtStart: string, headAtBoundary: string): BoundaryEvaluation` with `BoundaryEvaluation = { ok: true; changedPaths: string[] } | { ok: false; kind: "git-policy-violation"; message: string }` — violations: HEAD moved when `headMayChange` is false (judged attempt-start → boundary only); any observed path outside the resolved selectors (resolve each selector via `resolveSelector`; exact-file equality or subtree-prefix match); `changeRequired` true with zero observed paths; any observed path when `allowedChanges` is empty (clean boundary). Messages name the offending paths or rule.
+   - `finalizeBoundary(repoRoot: string, policy: GitPolicy, threadFolder: string, evaluation: { ok: true; changedPaths: string[] }): Promise<FinalizeResult>` with `FinalizeResult = { kind: "committed"; subject: string } | { kind: "advanced-unchanged" } | { kind: "commit-error"; message: string }` — when `changedPaths` is empty or `commitSubjectTemplate` is null with nothing to do, return `advanced-unchanged` (never an empty commit); otherwise `git add -- <each validated observed path>`, re-verify via `git diff --cached --name-only` that the staged set equals the validated set (a discrepancy is a `commit-error` with diagnostics), then `git commit -m "<subject>"` with the subject rendered by replacing `<thread-folder>` in `commitSubjectTemplate` with the full thread folder name. Never `--no-verify`, never push/amend/rebase. A non-zero commit exit (e.g. a failing hook) returns `commit-error` with stderr.
+3. Add `cli/src/gitops/status.test.ts` on the repo fixture: staged/unstaged/deleted/untracked all reported; untracked directory contents expanded; `.gitignore`d files excluded; rename handling.
+4. Add `cli/src/gitops/boundary.test.ts` on the repo fixture, exercising each `standard` policy shape (build policies directly from `standardRecipe`): `spec` — required `spec.md` change commits with exact subject `docs(<fixture-thread-folder>): spec`; `reconcile-spec` — unchanged worktree advances without a commit; `review-spec` — any change is a violation; `plan-strict` — `plan.md` + `plan-tasks/` descendants commit, a stray file violates; missing required change violates; HEAD moved by a fixture commit mid-attempt violates when forbidden and passes for `implement-plan-with-subagents`'s policy while a residual change still violates its clean rule; staging-discrepancy and failing-hook paths yield `commit-error`; a synthetic non-`standard` policy exercises the same code path (no stage-name branching).
+
+**Files modified:** `cli/src/gitops/status.ts` (NEW), `cli/src/gitops/boundary.ts` (NEW), `cli/src/gitops/status.test.ts` (NEW), `cli/src/gitops/boundary.test.ts` (NEW)
+
+**Verification:** `npm --prefix cli run check` exits 0; `npm --prefix cli run test -- src/gitops` exits 0. `grep -rn "no-verify\|push\|--amend\|rebase" cli/src/gitops/boundary.ts` finds no Git invocation using them.
+
+**Acceptance criteria:**
+
+- Each `standard` policy row behaves per AC-12.2/AC-12.3/AC-12.5 in fixture tests: violations for out-of-selector paths, forbidden HEAD movement, missing required change, dirty clean-boundary; exact commit subjects; unchanged optional stages advance commit-free; no empty commit ever.
+- Staging uses only validated observed paths, with a verified staged-set equality check (AC-12.3).
+- Commit failure surfaces as `commit-error` with diagnostics, leaving the worktree for later finalization (AC-12.4 substrate).
+- The engine consumes policy data only — no recipe, stage, or skill names appear in `cli/src/gitops/` (DR46).
+
+**Consumes:** `runGit` from `cli/src/gitops/git.ts` and `createRepoFixture` from `cli/src/test-helpers/git-fixture.ts` (Task 4); `GitPolicy`, `PathSelector` from `cli/src/recipe/types.ts` and `resolveSelector` from `cli/src/recipe/targets.ts` (Task 3).
+
+**Produces:** `collectBoundaryStatus(repoRoot)`, `readHead(repoRoot)`, `isWorktreeClean(repoRoot)` from `cli/src/gitops/status.ts`; `evaluateBoundary(policy, threadRelPath, observedPaths, headAtStart, headAtBoundary)` and `finalizeBoundary(repoRoot, policy, threadFolder, evaluation)` from `cli/src/gitops/boundary.ts`.
