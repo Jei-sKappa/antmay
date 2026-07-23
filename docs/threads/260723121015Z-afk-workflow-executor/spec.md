@@ -14,7 +14,7 @@ When implemented, the user can:
 4. resume the paused run later, from any terminal, with `antmay afk resume <run-id>` (DR2, DR36); and
 5. discover all runs across repositories with `antmay afk list` (DR15, DR38).
 
-A stage advances only on positive evidence: successful harness completion, an authoritatively parsed `Outcome: DONE` final line, empty `.pending-decisions/` and `.pending-reviews/` queues, and a satisfied per-stage Git boundary (DR3, DR29, DR50). Everything else pauses the run without losing work.
+A stage advances only on positive evidence: successful harness completion, an authoritatively parsed `Outcome: DONE` final line, a satisfied per-stage Git boundary — finalized, when validly changed, with an executor commit even before any queue pause — and empty `.pending-decisions/` and `.pending-reviews/` queues (DR3, DR29, DR50, DR52). Everything else pauses the run without losing work.
 
 ## Context
 
@@ -65,11 +65,11 @@ The CLI exposes exactly (DR45):
 
 Grammar is strict: unknown flags, missing values, and extra positionals are rejected; invalid grammar prints the nearest usage to stderr and exits `1` (DR37, DR45). `run` and `resume` never prompt (DR45).
 
-Exit codes (DR22, DR36, DR38, DR40):
+Exit codes (DR22, DR36, DR38, DR40, DR54, DR55):
 
 - `0` — `run`/`resume` completed the whole recipe; `list` succeeded; help/version.
 - `2` — the checkpoint is durably `Waiting for user`: non-DONE outcomes, pending queues, harness failures, malformed output, idle timeouts, Git-boundary pauses.
-- `1` — command or preflight failure before useful execution: invalid arguments or configuration, invalid thread selection, unknown run, resume of a completed run, lock contention; also `list` with partial checkpoint-read failures.
+- `1` — command or preflight failure before useful execution: invalid arguments or configuration, invalid thread selection, unknown run, resume of a completed run, an unfinished same-thread run, a dirty worktree at resume, lock contention; also `list` with partial checkpoint-read failures.
 - `130`, `143`, `129` — after `SIGINT`, `SIGTERM`, `SIGHUP` respectively, with best-effort checkpointing and cleanup.
 
 Final terminal output of `run`/`resume` names the run ID and its current condition; waiting output includes the reason and the exact resume command (DR22). The CLI itself never prints a line beginning with `Outcome:` (DR22, DR43).
@@ -119,16 +119,17 @@ The canonical Git worktree root becomes the Sandcastle working directory, the `c
 
 ### Recipe model and the built-in `standard` recipe
 
-A recipe is an ordered array of stage descriptors consumed by one generic runner that contains no branches tied to the Standard workflow, individual stages, or skill names (DR4, DR46, DR50). Each descriptor carries (DR31, DR50):
+A recipe is an ordered array of stage descriptors consumed by one generic runner that contains no branches tied to the Standard workflow, individual stages, or skill names (DR4, DR46, DR50). Each descriptor carries (DR31, DR50, DR53):
 
 - a stable `id`;
 - a `skill`;
 - a declarative target: `thread-root`, or `thread-file` with a thread-relative path;
-- a declarative Git policy (see "Per-stage Git policy" below).
+- a declarative Git policy (see "Per-stage Git policy" below);
+- a declarative queue-resolution behavior — `advance` or `rerun` — governing resume after a `pending-queues` pause that followed the stage's DONE finalization (DR53).
 
 Target resolution produces a normalized repository-relative path, adds a trailing slash for the thread root, and rejects any descriptor that escapes the selected thread (DR31).
 
-The `standard` recipe targets: the thread root for `spec`; `spec.md` for `reconcile-spec`, `review-spec`, and `plan-strict`; `plan.md` for `reconcile-plan` and `implement-plan-with-subagents` (DR31).
+The `standard` recipe targets: the thread root for `spec`; `spec.md` for `reconcile-spec`, `review-spec`, and `plan-strict`; `plan.md` for `reconcile-plan` and `implement-plan-with-subagents` (DR31). Its queue-resolution behavior is `advance` for `spec` and `plan-strict` — their following reconcile stages are the designated folders of newly resolved decisions — and `rerun` for `reconcile-spec`, `review-spec`, `reconcile-plan`, and `implement-plan-with-subagents` (DR53).
 
 At run creation the resolved ordered stage descriptors (including resolved profiles) are copied into the persisted checkpoint; every resume uses this immutable snapshot rather than re-resolving the built-in recipe (DR5).
 
@@ -147,6 +148,7 @@ The harness adapter renders exactly `` <trigger> `<resolved-target>`. `` and app
 5. Harness-executable preflight: collect the distinct harnesses referenced by resolved stage profiles and verify each; report all unavailable harnesses together (DR23, DR48).
 6. Clean-worktree requirement: the Git worktree must be clean before the first checkpoint is created (DR49); cleanliness uses the same status set as Git-boundary inspection — staged, unstaged, deleted, and untracked paths, with ignored files excluded (DR50).
 7. Confirmation that both `.pending-decisions/` and `.pending-reviews/` inside the thread contain no regular files directly inside them; an absent directory counts as empty; bundle contents are never interpreted (DR3, DR37, DR44).
+8. Unfinished-run guard: no non-completed run may exist recording the same canonical workspace and repository-relative thread path. When one does, `run` refuses with exit `1` and no new run, naming that run's ID and condition, its exact resume command, and the manual remedy of deleting its run directory if it is abandoned. Runs for other threads in the same workspace do not block, and corrupt or unreadable checkpoints encountered by the scan produce warnings without blocking creation (DR55).
 
 Only after preflight does the executor generate the run ID and snapshot, resolve the canonical workspace, acquire its lock, and repeat the queue check under the lock; it then exclusively creates the run directory and the initial `ready` checkpoint before launching any harness (DR28, DR37). Failures before the checkpoint — including lock contention or a queue race — exit `1`, release any acquired lock, and create no run. A run-directory or initial-checkpoint creation failure releases the lock, identifies any partial path, exits `1`, and launches no harness. Once the initial checkpoint exists, later failures use durable pause or fatal-checkpoint behavior (DR27, DR37). The only optional new-run execution flag is `--dangerously-skip-permissions` (DR37).
 
@@ -184,17 +186,17 @@ The adapter forwards normalized text and tool-call events to the display, preser
 
 **Queue gate (DR3, DR44).** Both pending directories are scanned at initial preflight, after lock acquisition, immediately before each stage attempt, after every harness return or error, and during locked resume preflight. Scans collect direct regular files from both queues, normalize and lexically sort their paths, and never read bundle bodies. A queue found non-empty before a stage pauses without launching or allocating another attempt.
 
-**Classification precedence after an attempt (DR41, DR44).** Any pending file selects `pending-queues` and takes precedence over parsed outcomes (including BLOCKED/REFUSED) and provider errors, because emptying the queues is the concrete resume requirement. Otherwise, classification proceeds in order: idle timeout (`idle-timeout`), other harness errors (`harness-error`), then final-outcome parsing — `outcome-blocked`, `outcome-refused`, `malformed-outcome` for a missing or unrecognizable token, or DONE.
+**Classification precedence after an attempt (DR41, DR44, DR52).** A parsed DONE goes to Git-boundary evaluation first (see "Git boundaries and executor commits"); with the boundary finalized, non-empty queues pause the run as `pending-queues` over the committed boundary, and empty queues complete the stage. For every non-DONE result, any pending file selects `pending-queues` and takes precedence over parsed outcomes (BLOCKED/REFUSED) and provider errors, because emptying the queues is the concrete resume requirement. Otherwise, classification proceeds in order: idle timeout (`idle-timeout`), other harness errors (`harness-error`), then final-outcome parsing — `outcome-blocked`, `outcome-refused`, or `malformed-outcome` for a missing or unrecognizable token.
 
-**Malformed or missing outcome (DR30).** When Sandcastle resolves but no valid token parses, the executor finishes the attempt as `waiting`, persists `waiting-for-user` at the same stage with kind `malformed-outcome`, preserves all filesystem changes and the attempt log, releases the lock, and exits `2`. It prints the expected prefixes, the unrecognized candidate line when present, the log path, a warning that files may have changed, and the exact resume command. It never infers success from files, retries automatically, resumes the agent session, or offers a mark-success override.
+**Malformed or missing outcome (DR30).** When Sandcastle resolves but no valid token parses, the executor finishes the attempt as `waiting`, persists `waiting-for-user` at the same stage with kind `malformed-outcome`, preserves all filesystem changes and the attempt log, releases the lock, and exits `2`. It prints the expected prefixes, the unrecognized candidate line when present, the log path, a warning that files may have changed and must be reverted or deliberately committed before resuming, and the exact resume command. It never infers success from files, retries automatically, resumes the agent session, or offers a mark-success override.
 
 **Gate errors (DR44).** When an existing run's advancement invariant cannot be evaluated — for example an unreadable pending directory — the run durably pauses at the same stage with kind `gate-error`, releases the lock, and exits `2`; a failure to write that pause follows the fatal-checkpoint path (DR27). A queue-read error during initial preflight exits `1` with no run.
 
 ### Git boundaries and executor commits
 
-Git-boundary evaluation occurs only after a successful harness exit, an authoritatively parsed DONE terminal outcome, and empty pending queues; every other outcome or failure pauses without any executor commit (DR49, DR50).
+Git-boundary evaluation occurs after a successful harness exit and an authoritatively parsed DONE terminal outcome, regardless of queue state: the boundary is finalized — committed when validly changed — before any queue pause (DR52). Every other outcome or failure pauses without any executor commit (DR49, DR50).
 
-Every stage descriptor carries a declarative Git policy with three independent parts (DR50): whether `HEAD` must remain unchanged or may change; whether the post-DONE worktree must be clean or may contain changes only beneath resolved path selectors, including whether at least one change is required; and whether a valid changed boundary receives an executor commit with a declared message or no executor action. The generic runner interprets this data without branching on recipe, stage, or skill names.
+Every stage descriptor carries a declarative Git policy with three independent parts (DR50): whether `HEAD` must remain unchanged or may change during a harness attempt; whether the post-DONE worktree must be clean or may contain changes only beneath resolved path selectors, including whether at least one change is required; and whether a valid changed boundary receives an executor commit with a declared message or no executor action. The generic runner interprets this data without branching on recipe, stage, or skill names. The `HEAD` rule is enforced within a single attempt — `HEAD` observed at attempt start must equal `HEAD` at that attempt's boundary evaluation; `HEAD` movement while a run is paused belongs to the user and never raises a violation (DR51).
 
 The `standard` recipe declares (DR50):
 
@@ -211,19 +213,19 @@ The `standard` recipe declares (DR50):
 
 The runner inspects all staged, unstaged, deleted, and untracked files with untracked files expanded, validates them against canonical repository-relative exact-file or subtree selectors, and stages only the validated observed paths; ignored operational queues and implementation workspaces do not enter the status set (DR50). A DONE stage with no remaining changes advances without an empty commit (DR49). Commits made by a skill remain untouched; `implement-plan-with-subagents` owns its reviewed task commits, and any residual implementation worktree change is a Git-policy violation (DR50). The executor never pushes, amends, rebases, rewrites history, bypasses hooks, or creates an empty commit (DR49).
 
-A disallowed path, forbidden `HEAD` movement, missing required change, unexpectedly dirty clean boundary, staging discrepancy, or commit failure pauses without advancing, preserves the completed attempt, and enters boundary-finalization waiting with kind `git-policy-violation` or `commit-error` (DR50). Resume from that condition reacquires the lock, rechecks queues and the Git policy, then commits or advances **without another harness invocation** once the boundary is valid; pending queues found before boundary finalization retain precedence and require the normal same-stage rerun after they are resolved (DR50).
+A disallowed path, forbidden `HEAD` movement within the attempt, missing required change, unexpectedly dirty clean boundary, staging discrepancy, or commit failure pauses without advancing, preserves the completed attempt, and enters boundary-finalization waiting with kind `git-policy-violation` or `commit-error`; pending queue files present at that moment are listed on the same pause (DR50, DR52). Resume from that condition reacquires the lock, rechecks queues and the Git policy, then finalizes the boundary **without another harness invocation** once it is valid and the queues are empty — committing the preserved diff, or advancing when the intended diff has become empty (DR50). When such a pause had listed pending files, the finalized stage then continues per its declared queue-resolution behavior (DR52, DR53).
 
-Explicit resume of any paused stage acknowledges that the paused worktree's current uncommitted changes belong to recovery of that stage and may enter its eventual successful boundary commit; the pause output states this consequence, and users must not mix unrelated edits into a paused workspace (DR49).
+Pause output for every non-DONE pause states that the attempt failed, that its file changes are unvalidated, and that the user must revert them or deliberately commit them before resuming (DR54).
 
 Beyond boundary enforcement, the executor never inspects, classifies, cleans, stashes, or authorizes dirty-worktree changes on a skill's behalf and never synthesizes a skill's dirty-worktree advance authorization; a skill's dirty-worktree `REFUSED` pauses the run, and the user may supply the required authorization through that stage's settings `prompt` (DR18).
 
-The stage-entry Git baseline and observed `HEAD` are part of the durable run cursor so unexpected history movement can be diagnosed across pause and resume (DR50).
+The stage-entry Git baseline and observed `HEAD` are part of the durable run cursor and are diagnostic-only: pause and resume output warn when history moved across a pause, and no violation is raised for it (DR50, DR51).
 
 ### Durable state
 
 **Checkpoint schema (DR26, DR50).** `state.json` uses `schemaVersion: 1` and stores: the run and executor identities; UTC creation and update timestamps; the absolute repository root; the repository-relative thread path; the resolved workspace configuration; the dangerous-permission choice; the immutable recipe snapshot with every resolved stage profile; the current zero-based stage index; the run condition; an ordered attempt history; an optional waiting reason (`waiting: null` for ready, completed, and successful transitions — DR41); and the stage-entry Git baseline and observed `HEAD` (DR50). Run conditions are `ready`, `executing`, `waiting-for-user`, and `completed`; attempt results are `executing`, `done`, `waiting`, and `interrupted`. Each attempt records its number, stage index and ID, timestamps, result, parsed terminal outcome when present, pending-file paths, human- and machine-readable failure information when applicable, and a run-relative log path. Timestamps use ISO-8601 UTC; stored repository-internal and log paths use normalized relative POSIX form where applicable. An unknown schema version fails clearly; v0 performs no migration.
 
-**Transitions (DR26).** Before spawning a harness, a new `executing` attempt is atomically persisted. A successful stage finishes that attempt, advances the stage index, and persists `ready` — or `completed` when the index reaches the recipe length. A paused stage finishes the attempt and persists `waiting-for-user` without advancing. After manual stale-lock recovery from an abandoned `executing` checkpoint, resume marks the abandoned attempt `interrupted` and creates a new attempt for the same stage.
+**Transitions (DR26, DR52).** Before spawning a harness, a new `executing` attempt is atomically persisted. A completed stage finishes that attempt as `done`, advances the stage index, and persists `ready` — or `completed` when the index reaches the recipe length. A DONE-finalized stage pausing for queues also finishes its attempt as `done` but persists `waiting-for-user` without advancing; every other paused stage finishes the attempt as `waiting` and persists `waiting-for-user` without advancing. After manual stale-lock recovery from an abandoned `executing` checkpoint, resume marks the abandoned attempt `interrupted` and creates a new attempt for the same stage.
 
 **Atomic persistence (DR27).** Every checkpoint write serializes deterministic two-space JSON with a trailing newline, exclusively creates a uniquely named temporary file beside `state.json` with mode `0600`, writes the complete document, flushes and closes it, atomically renames it over `state.json`, and best-effort flushes the containing directory. Antmay state directories use mode `0700`; attempt logs use mode `0600`. Readers treat only `state.json` as authoritative and ignore leftover temporary files. The executor never truncates a checkpoint in place and keeps no automatic backup. If persistence fails before a stage launch, the stage does not launch; if it fails after a stage returns, the executor does not advance or launch another stage — it reports a fatal checkpoint error and leaves the previous valid checkpoint and attempt log for manual recovery.
 
@@ -233,16 +235,16 @@ The stage-entry Git baseline and observed `HEAD` are part of the durable run cur
 
 ### Resuming a run
 
-`antmay afk resume <run-id>` (DR36): loads and validates the checkpoint; rejects unknown, malformed, or completed runs (a completed run reports that fact and exits `1`); verifies the recorded repository is still the Git root containing the recorded active thread; revalidates non-empty `seed.md` and `decisions.md`; verifies the current stage's snapshotted harness executable (only that one — DR48); resolves the snapshotted workspace and requires its canonical path to match; acquires its lock; and rechecks both pending queues under that lock. Resume fails clearly when the recorded repository path no longer resolves; it never searches for a replacement (DR9).
+`antmay afk resume <run-id>` (DR36): loads and validates the checkpoint; rejects unknown, malformed, or completed runs (a completed run reports that fact and exits `1`); verifies the recorded repository is still the Git root containing the recorded active thread; revalidates non-empty `seed.md` and `decisions.md`; verifies the current stage's snapshotted harness executable (only that one — DR48); resolves the snapshotted workspace and requires its canonical path to match; requires a clean worktree — the boundary status set: staged, unstaged, deleted, and untracked paths, ignored files excluded — for every waiting kind except `git-policy-violation` and `commit-error` and for `ready` and `executing` runs, a dirty tree failing preflight with exit `1`, the checkpoint unchanged, and a message telling the user to commit what they want to keep or revert the rest (DR54); acquires its lock; and rechecks both pending queues under that lock. Resume fails clearly when the recorded repository path no longer resolves; it never searches for a replacement (DR9).
 
 Then:
 
 - A waiting run with non-empty queues remains unchanged, prints the remaining files, releases the lock, and exits `2`.
-- A waiting run with empty queues starts a new attempt at the same stage — or, for `git-policy-violation`/`commit-error`, performs boundary finalization without another harness invocation (DR50).
+- A waiting run with empty queues proceeds by kind: a `pending-queues` pause whose finished attempt parsed DONE (its boundary already finalized) continues per the stage's declared queue-resolution behavior — `advance` moves on to the next stage without rerunning the finalized stage, `rerun` starts a fresh attempt of the same stage (DR53); `git-policy-violation`/`commit-error` get boundary finalization without another harness invocation (DR50); every other kind starts a new attempt at the same stage.
 - A `ready` run starts its stored next stage.
 - An `executing` run proceeds only after the user manually removes any stale lock; resume then atomically marks the abandoned attempt `interrupted` and starts a new attempt at the same stage (DR16, DR26).
 
-Resume never rereads settings or current recipe definitions, accepts no execution overrides, resumes no agent session, and never skips directly to the following stage (DR2, DR36). After the retried stage succeeds, it continues through subsequent snapshotted stages until another pause or completion. Any resume preflight failure leaves the checkpoint unchanged (DR36).
+Resume never rereads settings or current recipe definitions, accepts no execution overrides, resumes no agent session, and never advances past a stage that lacks DONE finalization (DR2, DR36, DR53). After the resumed stage completes — by rerun, finalization, or declared advance — it continues through subsequent snapshotted stages until another pause or completion. Any resume preflight failure leaves the checkpoint unchanged (DR36).
 
 ### Listing runs
 
@@ -258,7 +260,7 @@ A second signal during cleanup exits immediately with the corresponding conventi
 
 ### Terminal display
 
-New runs print a compact summary of run ID, recipe, thread, workspace, permission mode, and stage count, with a prominent warning for unrestricted permissions (DR43). Every attempt prints its stage position and ID, harness/model, attempt number, and absolute log path. The live view renders normalized assistant text and concise tool-call lines, truncating only displayed arguments while preserving full raw data in the log; the terminal renderer consumes Sandcastle's normalized events, never provider-specific raw JSON (DR19, DR43). An Antmay-owned display heartbeat prints elapsed time every five minutes regardless of harness output and does not affect Sandcastle's idle timer (DR43).
+New runs print a compact summary of run ID, recipe, thread, workspace, permission mode, and stage count, with a prominent warning for unrestricted permissions (DR43). Resume re-prints that prominent warning in its startup summary whenever the persisted permission choice is unrestricted (DR56). Every attempt prints its stage position and ID, harness/model, attempt number, and absolute log path. The live view renders normalized assistant text and concise tool-call lines, truncating only displayed arguments while preserving full raw data in the log; the terminal renderer consumes Sandcastle's normalized events, never provider-specific raw JSON (DR19, DR43). An Antmay-owned display heartbeat prints elapsed time every five minutes regardless of harness output and does not affect Sandcastle's idle timer (DR43).
 
 TTY output may use color, must honor `NO_COLOR`, and avoids spinners that interfere with streams. Normal messages go to stdout; warnings and errors go to stderr. Stage success prints its position and duration. Durable pause prints the stored reason, pending paths, log path, run ID, and exact resume command (DR19, DR43). Recipe completion prints the run, recipe, total elapsed time, and absolute checkpoint path (DR43).
 
@@ -315,20 +317,21 @@ Each AC below is a checkable assertion; the cited DR(s) are the settled decision
 - **AC-5.3** A missing, empty, or whitespace-only `seed.md` or `decisions.md` fails preflight with exit `1` and no run.
 - **AC-5.4** The checkpoint records the absolute canonical repository root and the normalized repository-relative `docs/threads/<thread-folder>` path.
 
-### FR-6 — Recipe and prompt rendering (DR4, DR31)
+### FR-6 — Recipe and prompt rendering (DR4, DR31, DR53)
 
-- **AC-6.1** The built-in `standard` recipe contains exactly the six stages in order with the declared targets (thread root; `spec.md` ×3; `plan.md` ×2); resolved targets are repository-relative, the thread-root target ends with a trailing slash, and a descriptor escaping the thread is rejected.
+- **AC-6.1** The built-in `standard` recipe contains exactly the six stages in order with the declared targets (thread root; `spec.md` ×3; `plan.md` ×2) and each stage's declared queue-resolution behavior (`advance` for `spec` and `plan-strict`; `rerun` for the others); resolved targets are repository-relative, the thread-root target ends with a trailing slash, and a descriptor escaping the thread is rejected.
 - **AC-6.2** For Codex the rendered prompt is exactly `` $<skill> `<resolved-target>`. `` and for Claude Code exactly `` /<skill> `<resolved-target>`. ``, with the profile prompt appended after a single space only when non-empty; no other executor-added instruction text exists.
 - **AC-6.3** The runner code contains no branch on recipe name, stage ID, or skill name; runner tests exercise a non-`standard` synthetic recipe through the same code path.
 - **AC-6.4** The runner performs no artifact precondition checks beyond seed/decision genesis validation — e.g. a missing `spec.md` before `plan-strict` still launches the stage and pauses only via the skill's own terminal outcome.
 
-### FR-7 — Run-creation preflight and allocation (DR23, DR35, DR37, DR48, DR49)
+### FR-7 — Run-creation preflight and allocation (DR23, DR35, DR37, DR48, DR49, DR55)
 
-- **AC-7.1** Every preflight failure (arguments, recipe, thread, settings, harness executables, dirty worktree, non-empty queues, queue-read error, lock contention) exits `1` and leaves no run directory, no checkpoint, and no held lock.
+- **AC-7.1** Every preflight failure (arguments, recipe, thread, settings, harness executables, dirty worktree, non-empty queues, unfinished same-thread run, queue-read error, lock contention) exits `1` and leaves no run directory, no checkpoint, and no held lock.
 - **AC-7.2** Harness preflight probes each distinct selected harness's mapped binary (`codex`, `claude`) with `--version`, no shell, canonical-repo cwd, 10-second timeout; requires exit `0` plus non-whitespace output; reports all unavailable harnesses together; performs no auth, model, or skill probing.
 - **AC-7.3** A dirty worktree (staged, unstaged, deleted, or untracked non-ignored paths) at new-run preflight fails with exit `1` and no run.
 - **AC-7.4** The pending-queue check is repeated under the acquired workspace lock before the initial checkpoint is written; a file appearing between the first check and lock acquisition prevents run creation.
 - **AC-7.5** Run IDs match `<YYYYMMDDTHHmmssSSSZ>-<8-lowercase-hex>`; the run directory is created exclusively with collision regeneration; the initial checkpoint has condition `ready` and is written before any harness launch.
+- **AC-7.6** A non-completed run recording the same canonical workspace and thread path makes `run` exit `1` with no new run, printing the existing run's ID, condition, and exact resume command; runs for other threads in the same workspace do not block; corrupt checkpoints found by the scan warn without blocking.
 
 ### FR-8 — Workspace locking (DR10, DR16, DR24, DR28)
 
@@ -350,29 +353,29 @@ Each AC below is a checkable assertion; the cited DR(s) are the settled decision
 - **AC-10.2** The attempt record stores the candidate line, the parsed token, and trailing detail; a Sandcastle completion-signal match without a valid final-line token never advances the stage.
 - **AC-10.3** A missing or malformed token yields a durable pause at the same stage with kind `malformed-outcome`, exit `2`, and output containing the expected prefixes, the candidate line when present, the log path, a files-may-have-changed warning, and the exact resume command; no automatic retry or file-based success inference occurs.
 
-### FR-11 — Queue gate and classification (DR3, DR41, DR44)
+### FR-11 — Queue gate and classification (DR3, DR41, DR44, DR52)
 
 - **AC-11.1** Queue scans occur at initial preflight, after lock acquisition, immediately before each attempt, after every harness return or error, and during locked resume preflight; scans list direct regular files only, treat absent directories as empty, and never read file contents.
 - **AC-11.2** A non-empty queue found before a stage pauses the run without allocating an attempt or launching a harness.
-- **AC-11.3** After an attempt, pending files select `pending-queues` even when the outcome parsed as DONE, BLOCKED, or REFUSED or a provider error occurred; without pending files, classification order is idle-timeout, harness-error, then outcome token.
+- **AC-11.3** After an attempt, a parsed DONE is boundary-finalized before queue classification, so a `pending-queues` pause on a DONE stage sits on a committed boundary; for non-DONE results, pending files select `pending-queues` over BLOCKED, REFUSED, and provider errors; without pending files, classification order is idle-timeout, harness-error, then outcome token.
 - **AC-11.4** The stored waiting object for `pending-queues` lists normalized, lexically sorted repository-relative pending-file paths, and those paths are printed on pause and on a blocked resume.
 - **AC-11.5** An unreadable pending directory during an existing run pauses with kind `gate-error` and exit `2`; the same failure during initial preflight exits `1` with no run.
 
-### FR-12 — Git boundaries and commits (DR49, DR50)
+### FR-12 — Git boundaries and commits (DR49, DR50, DR51, DR52, DR54)
 
-- **AC-12.1** Boundary evaluation runs only after successful harness exit + parsed DONE + empty queues; BLOCKED, REFUSED, malformed, harness-error, idle-timeout, interrupted, and pending-queue results produce no executor commit.
-- **AC-12.2** Each `standard` stage enforces its declared policy: `HEAD` movement where forbidden, any path outside the stage's selectors, a missing required change, or a dirty worktree on a clean-boundary stage each pause with kind `git-policy-violation` without advancing and without a commit.
+- **AC-12.1** Boundary evaluation runs after successful harness exit + parsed DONE, regardless of queue state, and a valid changed boundary is committed before any `pending-queues` pause; BLOCKED, REFUSED, malformed, harness-error, idle-timeout, and interrupted results produce no executor commit.
+- **AC-12.2** Each `standard` stage enforces its declared policy: `HEAD` movement where forbidden, any path outside the stage's selectors, a missing required change, or a dirty worktree on a clean-boundary stage each pause with kind `git-policy-violation` without advancing and without a commit; forbidden `HEAD` movement is judged from attempt start to boundary evaluation, and `HEAD` movement across a pause warns without pausing.
 - **AC-12.3** Valid changed boundaries are committed with the exact declared subject (e.g. `docs(260723121015Z-afk-workflow-executor): spec` for this thread), staging only validated observed paths; optional-change stages advance without a commit when unchanged; no empty commit is ever created; hooks are not bypassed.
-- **AC-12.4** A commit failure after a gated DONE pauses with kind `commit-error`, preserving the completed attempt and worktree; resume performs boundary finalization — recheck queues and policy, then commit or advance — without another harness invocation; pending files found at that point take precedence and force a same-stage rerun after resolution.
+- **AC-12.4** A commit failure after DONE pauses with kind `commit-error`, preserving the completed attempt and worktree; resume performs boundary finalization — recheck queues and policy, then commit or advance — without another harness invocation; pending files listed on such a pause must be emptied first, after which the finalized stage continues per its declared queue-resolution behavior.
 - **AC-12.5** `implement-plan-with-subagents` may move `HEAD` but must end clean; a residual change pauses as `git-policy-violation`; the executor never creates an implementation-stage commit.
-- **AC-12.6** Pause output for a paused stage states that current uncommitted changes will belong to that stage's recovery and may enter its boundary commit.
-- **AC-12.7** The checkpoint records the stage-entry Git baseline and observed `HEAD`.
+- **AC-12.6** Pause output for every non-DONE pause states that the attempt's file changes are unvalidated and must be reverted or deliberately committed before resuming.
+- **AC-12.7** The checkpoint records the stage-entry Git baseline and observed `HEAD`; resume warns when history moved across a pause and raises no violation for it.
 
 ### FR-13 — Checkpoint model and persistence (DR26, DR27, DR35)
 
 - **AC-13.1** `state.json` carries `schemaVersion: 1` and all fields listed in "Checkpoint schema"; an unknown schema version fails clearly with no migration attempt.
 - **AC-13.2** Every write is atomic: unique same-directory temp file, mode `0600`, full write + flush + close, rename over `state.json`, best-effort directory flush; a reader sees either the previous or the complete new document at any interruption point (tested by injected write/rename failures).
-- **AC-13.3** An `executing` attempt is persisted before the harness spawns; success advances the index and persists `ready`/`completed`; pauses persist `waiting-for-user` without advancing; a persistence failure before launch prevents the launch, and one after a stage return halts with a fatal checkpoint error, never advancing.
+- **AC-13.3** An `executing` attempt is persisted before the harness spawns; a completed stage advances the index and persists `ready`/`completed`; pauses persist `waiting-for-user` without advancing — a DONE-finalized queue pause finishes its attempt as `done`, every other pause as `waiting`; a persistence failure before launch prevents the launch, and one after a stage return halts with a fatal checkpoint error, never advancing.
 - **AC-13.4** Attempt logs are exclusively created at `logs/<NN>-<stage-id>-attempt-<NN>.log`, never appended or overwritten across attempts, begin with the required Antmay header (including the observed harness version), and are referenced run-relative from the checkpoint.
 - **AC-13.5** State directories are mode `0700`; checkpoints and logs are mode `0600`.
 
@@ -382,12 +385,12 @@ Each AC below is a checkable assertion; the cited DR(s) are the settled decision
 - **AC-14.2** Harness-error objects retain the provider-neutral category plus Sandcastle class and message; interrupted objects record signal or manual-recovery origin; malformed objects retain the candidate line when available.
 - **AC-14.3** Pause rendering consumes the stored object (adding operational paths and the resume command) rather than re-deriving a cause from logs.
 
-### FR-15 — Resume (DR2, DR9, DR16, DR36, DR48)
+### FR-15 — Resume (DR2, DR9, DR16, DR36, DR48, DR53, DR54)
 
-- **AC-15.1** Resume validates the checkpoint, repository/thread relationship, seed and decision files, the current stage's snapshotted harness executable only, and canonical workspace identity, then acquires the lock and rechecks queues beneath it; any preflight failure leaves the checkpoint unchanged.
+- **AC-15.1** Resume validates the checkpoint, repository/thread relationship, seed and decision files, the current stage's snapshotted harness executable only, canonical workspace identity, and — for every kind except `git-policy-violation`/`commit-error` — a clean worktree, then acquires the lock and rechecks queues beneath it; a dirty worktree exits `1` with a commit-or-revert message; any preflight failure leaves the checkpoint unchanged.
 - **AC-15.2** Unknown and malformed runs exit `1`; completed runs report completion and exit `1`; a recorded repository path that no longer resolves fails clearly with no search for a replacement.
-- **AC-15.3** Waiting + non-empty queues: checkpoint unchanged, remaining files printed, lock released, exit `2`. Waiting + empty queues: new attempt at the same stage (boundary finalization for Git kinds, with no harness call). Ready: the stored next stage runs. Executing: refused until the stale lock is manually removed, then the abandoned attempt is marked `interrupted` and a new attempt starts at the same stage.
-- **AC-15.4** Resume never rereads settings or built-in recipe definitions, never accepts execution overrides, never resumes an agent session, never skips a stage, and continues through subsequent snapshotted stages after success until pause or completion; completed stages are never rerun.
+- **AC-15.3** Waiting + non-empty queues: checkpoint unchanged, remaining files printed, lock released, exit `2`. Waiting + empty queues: a DONE-finalized `pending-queues` pause follows the stage's declared behavior — `advance` continues with the next stage, `rerun` starts a fresh same-stage attempt; Git kinds get boundary finalization with no harness call; every other kind gets a new attempt at the same stage. Ready: the stored next stage runs. Executing: refused until the stale lock is manually removed, then the abandoned attempt is marked `interrupted` and a new attempt starts at the same stage.
+- **AC-15.4** Resume never rereads settings or built-in recipe definitions, never accepts execution overrides, never resumes an agent session, and never advances past a stage lacking DONE finalization; it continues through subsequent snapshotted stages after success until pause or completion, and stages the run has advanced past are never rerun.
 
 ### FR-16 — List (DR38)
 
@@ -401,9 +404,9 @@ Each AC below is a checkable assertion; the cited DR(s) are the settled decision
 - **AC-17.2** A signal before the initial checkpoint exits without creating a run; a second signal during cleanup exits immediately with the conventional code.
 - **AC-17.3** A rejection caused by the abort is classified as interruption (never `harness-error`), and no new attempt or stage starts after the first signal.
 
-### FR-18 — Display (DR19, DR43)
+### FR-18 — Display (DR19, DR43, DR56)
 
-- **AC-18.1** New-run output includes run ID, recipe, thread, workspace, permission mode, and stage count, with a prominent warning when permissions are unrestricted; each attempt announces stage position and ID, harness/model, attempt number, and absolute log path.
+- **AC-18.1** New-run output includes run ID, recipe, thread, workspace, permission mode, and stage count, with a prominent warning when permissions are unrestricted; resume re-prints that prominent warning when the persisted run is unrestricted; each attempt announces stage position and ID, harness/model, attempt number, and absolute log path.
 - **AC-18.2** The live view shows normalized assistant text and concise tool-call lines (arguments truncated in display only, full data in the log) and prints an elapsed-time heartbeat at five-minute intervals independent of harness output.
 - **AC-18.3** Stage success prints position and duration; pause prints stored reason, pending paths, log path, run ID, and exact resume command; completion prints run, recipe, total elapsed time, and absolute checkpoint path; raw provider JSON never reaches the terminal; stdout/stderr separation holds.
 
@@ -416,8 +419,8 @@ Each AC below is a checkable assertion; the cited DR(s) are the settled decision
 
 ### FR-20 — Verification strategy (DR34)
 
-- **AC-20.1** Automated suites, using the injected harness interface and disposable fixtures, cover: settings validation/resolution; all thread-path forms and genesis validation; target and prompt rendering for both harnesses; outcome parsing and queue gates; every checkpoint transition and atomic-write failure; lock acquire/release with owner tokens; complete, paused, interrupted, malformed, timed-out, and resumed runs; Sandcastle option mapping; exit codes, diagnostics, and list behavior.
-- **AC-20.2** Tests specifically prove: completed stages do not rerun; settings edits do not alter snapshots; preflight failures create no run; queue checks repeat under the lock.
+- **AC-20.1** Automated suites, using the injected harness interface and disposable fixtures, cover: settings validation/resolution; all thread-path forms and genesis validation; target and prompt rendering for both harnesses; outcome parsing and queue gates; every checkpoint transition and atomic-write failure; lock acquire/release with owner tokens; complete, paused, interrupted, malformed, timed-out, and resumed runs; DONE-finalized queue pauses with declared advance and rerun resume behavior; dirty-worktree resume refusal; the unfinished same-thread-run guard; Sandcastle option mapping; exit codes, diagnostics, and list behavior.
+- **AC-20.2** Tests specifically prove: stages the run has advanced past do not rerun; settings edits do not alter snapshots; preflight failures create no run; queue checks repeat under the lock.
 - **AC-20.3** A documented manual checklist exists covering: build and `npm link`; at least one installed skill invoked through Codex and one through Claude Code in disposable Standard runs; curated streaming and verbose logs verified; recognized outcomes confirmed; one real pause and resume exercised. It is documentation, not an automated credentialed gate.
 
 ### Coverage and traceability
@@ -435,7 +438,7 @@ The following *hows* are deliberately left to the implementer. Every admissible 
 5. **Attempt-log header layout** — free, provided the required header facts (run, stage + ordinal, attempt, harness, model, repository, thread, UTC start, observed harness version) appear before the Sandcastle stream.
 6. **Display details** — tool-call argument truncation lengths, elapsed-time formatting, color palette and styling (within TTY-only, `NO_COLOR`, no meaning-carrying color, no stream-breaking spinners).
 7. **Git invocation details** — which `git` porcelain/plumbing commands and flags implement status inspection, `HEAD` observation, staging, and committing, provided the observed-path validation, exact commit subjects, and never-push/amend/rebase/hook-bypass rules hold.
-8. **Position of the clean-worktree check within new-run preflight** — anywhere before run allocation, failing with exit `1` and no run.
+8. **Position of the clean-worktree and unfinished-run checks within new-run preflight** — anywhere before run allocation, failing with exit `1` and no run.
 9. **Location and filename of the documentation artifacts** — the copyable settings example and the manual smoke checklist may live where the implementer finds natural (e.g. `cli/README.md`), provided the missing-settings diagnostic points at the example accurately.
 10. **Internal error representation** — plain typed functions with manual validators are the required posture (DR33, DR46); the concrete error types/discriminated unions used internally are free.
 
@@ -443,7 +446,7 @@ Anything not listed here and not explicitly settled by a cited DR should be trea
 
 ## Risks and accepted trade-offs
 
-- **Partial changes in the user's checkout.** V0 runs unsandboxed in the active checkout with no rollback; a failed, interrupted, or blocked stage can leave partial changes (DR1). Mitigated by the clean-worktree start requirement, per-stage boundary commits, and pause-time warnings (DR30, DR43, DR49).
+- **Partial changes in the user's checkout.** V0 runs unsandboxed in the active checkout with no rollback; a failed, interrupted, or blocked stage can leave partial changes (DR1). Mitigated by the clean-worktree start and resume requirements, per-stage boundary commits, and pause-time warnings (DR30, DR43, DR49, DR54).
 - **Unattended agents on the host.** Default AI-mediated approvals reduce but do not eliminate risk; the unrestricted mode is explicitly dangerous and loudly flagged (DR8, DR43).
 - **Hard-kill recovery is manual.** After a crash or power loss, the user must verify no executor owns the workspace and remove a stale lock by hand before resuming (DR16).
 - **Skill-level pauses are correct behavior.** A dirty-worktree `REFUSED` from `implement-plan-with-subagents`, or any skill refusal, pauses the recipe; that is the executor accurately relaying the skill's contract, not an executor defect (DR18).
