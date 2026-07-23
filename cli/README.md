@@ -42,3 +42,16 @@ Copy the following complete example to get started:
   non-empty string; `prompt` is a string; `idleTimeoutSeconds` is a positive
   finite integer.
 - Settings perform no environment interpolation and store no credentials.
+
+## Stale workspace locks
+
+While a run holds the workspace, `antmay` writes an exclusive lock file under
+`<state-root>/afk-locks/`. A second `run` or `resume` against the same checkout
+exits `1` and prints the existing lock's record and exact path.
+
+`antmay` never reclaims a lock automatically. After a crash or power loss, the
+lock file remains even though no executor still owns it. To recover, inspect the
+printed lock record and path, verify that the recorded process (its `pid`) is no
+longer running, and only then manually remove that exact file. Do not remove a
+lock whose process may still be alive — doing so allows two executors to mutate
+the same checkout at once.
