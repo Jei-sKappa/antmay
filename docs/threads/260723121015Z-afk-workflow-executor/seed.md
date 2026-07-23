@@ -1,0 +1,3 @@
+# AFK Workflow Executor CLI
+
+Build a CLI that can execute a predefined sequence of completion-oriented skills unattended, such as creating, reconciling, and reviewing a specification; producing and reconciling a strict plan; and implementing that plan with subagents. The executor should continue through successful steps and pause only when an `Outcome:` reports an issue or when human attention is requested through `.pending-decisions/` or potentially `.pending-reviews/`. The work should evaluate whether `.library/sources/mattpocock_sandcastle` provides the right foundation for harness integration, sandboxing, and orchestration, or whether a smaller purpose-built implementation would better fit the required workflow.
