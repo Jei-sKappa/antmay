@@ -6,7 +6,6 @@ A discussion point is a compact, self-contained structure that gives the reader 
 
 A discussion point has these parts, in this order:
 
-- **Title** — a short line naming the decision.
 - **Point** — the decision to make, stated as a single question or fork. This is the choice the reader must settle, not the background.
 - **What you need to know** — the self-contained evidence and surrounding context a reader needs to decide, written so the point stands on its own without any prior conversation. State established facts plainly as facts.
 - **Creative options OR a practical proposed solution** — choose the presentation that fits the fork:
