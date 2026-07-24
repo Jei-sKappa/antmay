@@ -69,11 +69,11 @@ an automated pipeline.
 
 Work through the steps in order, checking each box as you confirm it:
 
-1. [ ] **Build and install.** From the repo root, run `npm --prefix cli run check` and
-   confirm it exits `0` (typecheck, tests, build). Then run `npm link` from
-   `cli/` and confirm `antmay --version` resolves the linked binary on `PATH`
-   and exits `0`. (If you prefer not to mutate global npm state, run
-   `node cli/dist/main.js --version` instead and confirm it exits `0`; the
+1. [ ] **Build and install.** From the `cli/` directory, run `npm run check`
+   and confirm it exits `0` (typecheck, tests, build). Then run `npm link`
+   and confirm `antmay --version` resolves the linked binary on `PATH` and
+   exits `0`. (If you prefer not to mutate global npm state, run
+   `node dist/main.js --version` instead and confirm it exits `0`; the
    `npm link` path is still the documented install and should be verified at
    least once.)
 2. [ ] **Create a disposable repository.** In a scratch directory, `git init` a

@@ -150,5 +150,4 @@ This section is a POINTER — it intentionally does NOT duplicate the rules. Edi
 ## Antmay CLI
 
 Alongside the skills, this repo ships the **Antmay CLI** under `cli/` — a TypeScript/Node executor (`antmay`) that drives the Modular Agentic Workflow unattended. It runs a built-in recipe stage by stage against one selected thread through an agentic harness (Codex or Claude Code), with durable checkpoints, workspace locking, and per-stage Git boundaries. Its command surface is one namespace with three subcommands: `antmay afk run`, `antmay afk resume`, and `antmay afk list`.
-
-Unlike the skill content, `cli/` is a real codebase with its own build/test gate (`npm --prefix cli run check`). It is a self-contained project: **read `cli/AGENTS.md` before working on any file under `cli/`** — that document maps the toolchain, execution model, module layout, and the fixed contracts (exit codes, version sync, dynamic-import discipline, lock handling) you must preserve.
+Unlike the skill content, `cli/` is a real codebase with its own build/test gate (`npm run check`).
