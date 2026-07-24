@@ -29,7 +29,7 @@ const HAPPY_SCENARIO = {
     "review-spec": ["outcome-done"],
     "plan-strict": ["plan-strict-correct"],
     "reconcile-plan": ["reconcile-plan-correct"],
-    "implement-plan-with-subagents": ["outcome-done"],
+    "implement-plan-with-subagents": ["implement-plan-with-subagents-correct"],
   },
 };
 
@@ -40,6 +40,8 @@ const EXPECTED_ARTIFACTS = {
     "# Plan: Fake\n\nPlaceholder plan.\n<!-- scripted reconcile-plan append -->\n",
   "plan-tasks/01-fake-task.md":
     "# Task 01\n\nPlaceholder task.\n<!-- scripted reconcile-plan append -->\n",
+  "implementation-report.md":
+    "# Implementation Report: Fake\n\nPlaceholder report.\n",
 };
 
 let passed = 0;
@@ -404,6 +406,7 @@ function main() {
     `docs(${threadName}): reconcile spec`,
     `docs(${threadName}): plan`,
     `docs(${threadName}): reconcile plan`,
+    `docs(${threadName}): implementation report`,
   ];
   const history = git(["log", "--format=%s", "--reverse"]);
   const actualSubjects = history.ok ? history.output.trimEnd().split("\n") : [];

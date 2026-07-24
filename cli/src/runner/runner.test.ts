@@ -265,7 +265,10 @@ describe("executeRun — full completion (AC-6.3, AC-13.3)", () => {
       {},
       { before: () => writeThreadFile(fixture, "plan.md", "# Plan\n") },
       {},
-      {},
+      {
+        before: () =>
+          writeThreadFile(fixture, "implementation-report.md", "# Report\n"),
+      },
     ];
     const result = await executeRun(
       makeContext(
@@ -280,7 +283,7 @@ describe("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     expect(cp.condition).toBe("completed");
     expect(cp.stageIndex).toBe(6);
     expect(cp.gitCursor).toEqual({ stageIndex: 6, headAtStageEntry: null, observedHead: null });
-    expect(await commitCount(fixture)).toBe(before + 2);
+    expect(await commitCount(fixture)).toBe(before + 3);
   });
 });
 

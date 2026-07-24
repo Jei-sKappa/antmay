@@ -256,7 +256,10 @@ function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
     {},
     { before: () => writeThreadFileSync(fixture, "plan.md", "# Plan\n") },
     {},
-    {},
+    {
+      before: () =>
+        writeThreadFileSync(fixture, "implementation-report.md", "# Report\n"),
+    },
   ];
 }
 
@@ -274,7 +277,7 @@ function standardScriptedScenario(
       "review-spec": ["outcome-done"],
       "plan-strict": ["plan-strict-correct"],
       "reconcile-plan": ["reconcile-plan-correct"],
-      "implement-plan-with-subagents": ["outcome-done"],
+      "implement-plan-with-subagents": ["implement-plan-with-subagents-correct"],
       ...overrides,
     },
   };
@@ -628,6 +631,34 @@ describe("resumeCommand — harness-free Git-boundary finalization (AC-15.3, DR5
     const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
     expect(result.err).toContain("HEAD moved");
     expect(result.code).toBe(0);
+  });
+
+  it("finalizes the implement boundary by committing the implementation report", async () => {
+    const h = await setup();
+    const steps = standardSteps(h.fixture);
+    steps[5] = {
+      before: () => {
+        writeThreadFileSync(h.fixture, "implementation-report.md", "# Report\n");
+        writeRootFileSync(h.fixture, "stray.txt", "x");
+      },
+    };
+    await seed(h, steps);
+    const runId = await soleRunId(h);
+    const seededCp = await readCp(h, runId);
+    expect(seededCp.stageIndex).toBe(5);
+    expect(seededCp.waiting?.kind).toBe("git-policy-violation");
+
+    await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
+    const result = await resume(h, runId, []);
+    expect(result.code).toBe(0);
+    const folder = h.fixture.threadFolder as string;
+    expect(await commitSubjects(h.fixture)).toContain(
+      `docs(${folder}): implementation report`,
+    );
+    const cp = await readCp(h, runId);
+    expect(cp.condition).toBe("completed");
+    // Stage 5 was finalized, never rerun by a harness invocation.
+    expect(attemptCountAt(cp, 5)).toBe(1);
   });
 });
 

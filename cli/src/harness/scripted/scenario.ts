@@ -11,8 +11,8 @@ export const SCRIPTED_HARNESS_TOGGLE_VAR = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS"
 export const SCRIPTED_SCENARIO_FILENAME = "scripted-harness.json";
 
 /**
- * The built-in scripted case catalog settled in DR4. Scenario files may select
- * only these names.
+ * The built-in scripted case catalog. Scenario files may select only these
+ * names.
  */
 export const SCRIPTED_CASE_NAMES = [
   "outcome-done",
@@ -22,6 +22,7 @@ export const SCRIPTED_CASE_NAMES = [
   "reconcile-spec-correct",
   "plan-strict-correct",
   "reconcile-plan-correct",
+  "implement-plan-with-subagents-correct",
 ] as const;
 
 export type ScriptedCaseName = (typeof SCRIPTED_CASE_NAMES)[number];
@@ -39,6 +40,7 @@ const STAGE_SPECIFIC_CASE_STAGE: Readonly<
   "reconcile-spec-correct": "reconcile-spec",
   "plan-strict-correct": "plan-strict",
   "reconcile-plan-correct": "reconcile-plan",
+  "implement-plan-with-subagents-correct": "implement-plan-with-subagents",
 };
 
 const OUTCOME_CASES: ReadonlySet<ScriptedCaseName> = new Set([

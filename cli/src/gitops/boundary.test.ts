@@ -213,6 +213,91 @@ describe("standard `plan-strict`", () => {
   });
 });
 
+describe("standard `implement-plan-with-subagents`", () => {
+  it("commits the implementation report with the exact subject", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    await fs.writeFile(
+      path.join(fixture.threadPath as string, "implementation-report.md"),
+      "# Implementation Report\n",
+      "utf8",
+    );
+    const head = await readHead(fixture.root);
+    const observed = await collectBoundaryStatus(fixture.root);
+
+    const evaluation = evaluateBoundary(
+      policyOf("implement-plan-with-subagents"),
+      rel,
+      observed,
+      head,
+      head,
+    );
+    expect(evaluation).toEqual({
+      ok: true,
+      changedPaths: [`${rel}/implementation-report.md`],
+    });
+    if (!evaluation.ok) return;
+
+    const result = await finalizeBoundary(
+      fixture.root,
+      policyOf("implement-plan-with-subagents"),
+      fixture.threadFolder as string,
+      evaluation,
+    );
+    expect(result).toEqual({
+      kind: "committed",
+      subject: `docs(${fixture.threadFolder}): implementation report`,
+    });
+    expect(await lastSubject(fixture)).toBe(
+      `docs(${fixture.threadFolder}): implementation report`,
+    );
+    expect(await collectBoundaryStatus(fixture.root)).toEqual([]);
+  });
+
+  it("violates when a DONE attempt left no report", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    const head = await readHead(fixture.root);
+
+    const evaluation = evaluateBoundary(
+      policyOf("implement-plan-with-subagents"),
+      rel,
+      [],
+      head,
+      head,
+    );
+    expect(evaluation.ok).toBe(false);
+    if (evaluation.ok) return;
+    expect(evaluation.kind).toBe("git-policy-violation");
+    expect(evaluation.message).toContain("at least one allowed change");
+  });
+
+  it("violates when uncommitted code sits beside the report", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    await fs.writeFile(
+      path.join(fixture.threadPath as string, "implementation-report.md"),
+      "# Implementation Report\n",
+      "utf8",
+    );
+    await fs.writeFile(path.join(fixture.root, "src-leftover.ts"), "x", "utf8");
+    const head = await readHead(fixture.root);
+    const observed = await collectBoundaryStatus(fixture.root);
+
+    const evaluation = evaluateBoundary(
+      policyOf("implement-plan-with-subagents"),
+      rel,
+      observed,
+      head,
+      head,
+    );
+    expect(evaluation.ok).toBe(false);
+    if (evaluation.ok) return;
+    expect(evaluation.message).toContain("src-leftover.ts");
+    expect(evaluation.message).not.toContain("implementation-report.md");
+  });
+});
+
 describe("resume-finalization mode", () => {
   it("accepts an already-committed required diff and does not enforce HEAD", async () => {
     const fixture = await newFixture();
@@ -272,7 +357,7 @@ describe("HEAD rule", () => {
     expect(evaluation.message).toContain("HEAD");
   });
 
-  it("permits HEAD movement for implement-plan-with-subagents but still requires a clean end", async () => {
+  it("permits HEAD movement for implement-plan-with-subagents but still bounds the end to the report", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
     const headAtStart = await readHead(fixture.root);
@@ -280,23 +365,19 @@ describe("HEAD rule", () => {
     const headAtBoundary = await readHead(fixture.root);
     const implementPolicy = policyOf("implement-plan-with-subagents");
 
-    // Clean end: HEAD moved, but no residual change → passes, no commit.
-    const clean = evaluateBoundary(
+    // The report is the one permitted residual change; HEAD having moved for the
+    // skill's own per-task commits does not disturb it.
+    const withReport = evaluateBoundary(
       implementPolicy,
       rel,
-      [],
+      [`${rel}/implementation-report.md`],
       headAtStart,
       headAtBoundary,
     );
-    expect(clean).toEqual({ ok: true, changedPaths: [] });
-    if (!clean.ok) return;
-    const finalizeClean = await finalizeBoundary(
-      fixture.root,
-      implementPolicy,
-      fixture.threadFolder as string,
-      clean,
-    );
-    expect(finalizeClean).toEqual({ kind: "advanced-without-commit" });
+    expect(withReport).toEqual({
+      ok: true,
+      changedPaths: [`${rel}/implementation-report.md`],
+    });
 
     // Residual worktree change → violation despite the permitted HEAD move.
     const dirty = evaluateBoundary(

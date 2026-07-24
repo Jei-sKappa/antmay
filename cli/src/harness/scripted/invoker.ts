@@ -34,6 +34,10 @@ export const PLAN_STRICT_OWNED_TASKS: Readonly<Record<string, string>> = {
 export const RECONCILE_PLAN_APPEND_LINE =
   "<!-- scripted reconcile-plan append -->\n";
 
+/** Exact bytes written by `implement-plan-with-subagents-correct`. */
+export const IMPLEMENT_REPORT_CONTENT =
+  "# Implementation Report: Fake\n\nPlaceholder report.\n";
+
 const ABORTED_OUTCOME: AttemptOutcome = {
   kind: "failed",
   category: "aborted",
@@ -632,6 +636,26 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       ok: true,
       finalText: "Scripted plan reconcile.\nOutcome: DONE",
       effectSummary: `append plan.md and ${tasks.paths.length} task file(s)`,
+    };
+  },
+
+  "implement-plan-with-subagents-correct": async ({
+    threadRelPath,
+    threadAbsRoot,
+  }) => {
+    const result = await writeOwnedFile(
+      threadRelPath,
+      threadAbsRoot,
+      "implementation-report.md",
+      IMPLEMENT_REPORT_CONTENT,
+    );
+    if (!result.ok) {
+      return result;
+    }
+    return {
+      ok: true,
+      finalText: "Scripted implementation report write.\nOutcome: DONE",
+      effectSummary: "write implementation-report.md",
     };
   },
 };

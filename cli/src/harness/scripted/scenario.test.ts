@@ -28,7 +28,7 @@ const VALID_STANDARD_SCENARIO = {
     "review-spec": ["outcome-done"],
     "plan-strict": ["plan-strict-correct"],
     "reconcile-plan": ["reconcile-plan-correct"],
-    "implement-plan-with-subagents": ["outcome-done"],
+    "implement-plan-with-subagents": ["implement-plan-with-subagents-correct"],
   },
 } as const;
 
@@ -130,7 +130,7 @@ describe("resolveScriptedScenarioPath", () => {
 });
 
 describe("case catalog", () => {
-  it("exposes exactly the seven DR4 names", () => {
+  it("exposes exactly the eight built-in names", () => {
     expect([...SCRIPTED_CASE_NAMES]).toEqual([
       "outcome-done",
       "outcome-blocked",
@@ -139,6 +139,7 @@ describe("case catalog", () => {
       "reconcile-spec-correct",
       "plan-strict-correct",
       "reconcile-plan-correct",
+      "implement-plan-with-subagents-correct",
     ]);
   });
 
@@ -154,6 +155,12 @@ describe("case catalog", () => {
     ["plan-strict-correct", "reconcile-plan", false],
     ["reconcile-plan-correct", "reconcile-plan", true],
     ["reconcile-plan-correct", "plan-strict", false],
+    [
+      "implement-plan-with-subagents-correct",
+      "implement-plan-with-subagents",
+      true,
+    ],
+    ["implement-plan-with-subagents-correct", "reconcile-plan", false],
   ] as const satisfies readonly [ScriptedCaseName, string, boolean][])(
     "%s on %s => %s",
     (caseName, stageId, compatible) => {
@@ -329,6 +336,16 @@ describe("validateScriptedScenario — invalid shape classes (AC-2.2)", () => {
         },
       },
       /stages\.spec\[0\] \(reconcile-plan-correct\) is not compatible with stage spec/,
+    );
+    expectRejected(
+      {
+        ...VALID_STANDARD_SCENARIO,
+        stages: {
+          ...VALID_STANDARD_SCENARIO.stages,
+          "review-spec": ["implement-plan-with-subagents-correct"],
+        },
+      },
+      /stages\.review-spec\[0\] \(implement-plan-with-subagents-correct\) is not compatible with stage review-spec/,
     );
   });
 

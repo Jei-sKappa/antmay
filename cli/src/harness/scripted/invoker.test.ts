@@ -15,6 +15,7 @@ import {
 } from "../../test-helpers/git-fixture.js";
 import {
   createScriptedInvoker,
+  IMPLEMENT_REPORT_CONTENT,
   PLAN_STRICT_OWNED_TASKS,
   PLAN_STRICT_PLAN_CONTENT,
   RECONCILE_PLAN_APPEND_LINE,
@@ -146,7 +147,7 @@ async function initAttemptLog(
 }
 
 describe("createScriptedInvoker", () => {
-  it("exposes exactly the seven built-in scripted cases", () => {
+  it("exposes exactly the eight built-in scripted cases", () => {
     expect([...SCRIPTED_CASE_NAMES].sort()).toEqual(
       [
         "outcome-done",
@@ -156,6 +157,7 @@ describe("createScriptedInvoker", () => {
         "reconcile-spec-correct",
         "plan-strict-correct",
         "reconcile-plan-correct",
+        "implement-plan-with-subagents-correct",
       ].sort(),
     );
   });
@@ -545,6 +547,76 @@ describe("createScriptedInvoker", () => {
     expect(outcome.kind).toBe("failed");
     if (outcome.kind !== "failed") throw new Error("expected failure");
     expect(outcome.category).toBe("provider-error");
+  });
+
+  it("writes the exact implementation-report bytes and rewrites them in place", async () => {
+    const fixture = await newFixture();
+    const stage = stageById("implement-plan-with-subagents");
+    const invoker = createScriptedInvoker(
+      makeScenario({
+        "implement-plan-with-subagents": [
+          "implement-plan-with-subagents-correct",
+          "implement-plan-with-subagents-correct",
+        ],
+      }),
+    );
+    const reportPath = path.join(
+      fixture.threadPath!,
+      "implementation-report.md",
+    );
+
+    const first = buildRequest(fixture, stage, { attemptNumber: 1 });
+    await initAttemptLog(fixture, first);
+    expect(await invoker.invoke(first)).toEqual({
+      kind: "completed",
+      finalText: "Scripted implementation report write.\nOutcome: DONE",
+    });
+    expect(await readFile(reportPath, "utf8")).toBe(IMPLEMENT_REPORT_CONTENT);
+
+    // A rerun of the stage replaces the report in place; it never appends a
+    // second copy.
+    const second = buildRequest(fixture, stage, {
+      attemptNumber: 2,
+      logFilePath: path.join(
+        fixture.root,
+        ".antmay-runs",
+        "06-implement-attempt-02.log",
+      ),
+    });
+    await initAttemptLog(fixture, second);
+    await invoker.invoke(second);
+    expect(await readFile(reportPath, "utf8")).toBe(IMPLEMENT_REPORT_CONTENT);
+  });
+
+  it("rejects an in-thread symlinked implementation-report.md", async () => {
+    const fixture = await newFixture();
+    const seedPath = path.join(fixture.threadPath!, "seed.md");
+    const seedBefore = await readFile(seedPath, "utf8");
+    const linkPath = path.join(fixture.threadPath!, "implementation-report.md");
+    await symlink("seed.md", linkPath);
+
+    const invoker = createScriptedInvoker(
+      makeScenario({
+        "implement-plan-with-subagents": [
+          "implement-plan-with-subagents-correct",
+        ],
+      }),
+    );
+    const request = buildRequest(
+      fixture,
+      stageById("implement-plan-with-subagents"),
+    );
+    await initAttemptLog(fixture, request);
+
+    const outcome = await invoker.invoke(request);
+    expect(outcome).toMatchObject({
+      kind: "failed",
+      category: "provider-error",
+      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorMessage: expect.stringContaining("symlink"),
+    });
+    expect(await readFile(seedPath, "utf8")).toBe(seedBefore);
+    expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
   });
 
   it("rejects symlinked prerequisites that escape the thread", async () => {

@@ -244,9 +244,9 @@ async function soleCheckpointDir(stateRoot: string): Promise<string> {
 }
 
 /**
- * Standard-recipe script: the two authoring stages (spec, plan-strict) and the
- * first reconciliation stage change their boundary; review-spec, reconcile-plan,
- * and the implementation stage change nothing.
+ * Standard-recipe script: the two authoring stages (spec, plan-strict), the
+ * first reconciliation stage, and the implementation stage change their
+ * boundary; review-spec and reconcile-plan change nothing.
  */
 function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
   return [
@@ -255,12 +255,15 @@ function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
     {},
     { before: () => writeThreadFile(fixture, "plan.md", "# Plan\n") },
     {},
-    {},
+    {
+      before: () =>
+        writeThreadFile(fixture, "implementation-report.md", "# Report\n"),
+    },
   ];
 }
 
 describe("runCommand — happy path (AC-1.3, AC-20.2)", () => {
-  it("runs the standard recipe to completion, committing only changed authoring and reconciliation boundaries", async () => {
+  it("runs the standard recipe to completion, committing only the boundaries that changed", async () => {
     const h = await setup();
     const folder = h.fixture.threadFolder as string;
     const before = (await commitSubjects(h.fixture)).length;
@@ -269,8 +272,9 @@ describe("runCommand — happy path (AC-1.3, AC-20.2)", () => {
 
     expect(result.code).toBe(0);
     const subjects = await commitSubjects(h.fixture);
-    expect(subjects.length).toBe(before + 3);
-    expect(subjects.slice(0, 3)).toEqual([
+    expect(subjects.length).toBe(before + 4);
+    expect(subjects.slice(0, 4)).toEqual([
+      `docs(${folder}): implementation report`,
       `docs(${folder}): plan`,
       `docs(${folder}): reconcile spec`,
       `docs(${folder}): spec`,
@@ -560,7 +564,7 @@ function standardScriptedScenario(
       "review-spec": ["outcome-done"],
       "plan-strict": ["plan-strict-correct"],
       "reconcile-plan": ["reconcile-plan-correct"],
-      "implement-plan-with-subagents": ["outcome-done"],
+      "implement-plan-with-subagents": ["implement-plan-with-subagents-correct"],
       ...overrides,
     },
   };
@@ -624,6 +628,7 @@ describe("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
     const subjects = await commitSubjects(h.fixture);
     expect(subjects).toContain(`docs(${folder}): spec`);
     expect(subjects).toContain(`docs(${folder}): plan`);
+    expect(subjects).toContain(`docs(${folder}): implementation report`);
   });
 
   it("rejects outcome-done on a required-change stage via the ordinary Git-policy pause", async () => {
@@ -640,6 +645,31 @@ describe("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
     if (cp.ok) {
       expect(cp.checkpoint.waiting?.kind).toBe("git-policy-violation");
     }
+  });
+
+  it("pauses when the implement stage reaches DONE without leaving a report", async () => {
+    const h = await setup();
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({
+        "implement-plan-with-subagents": ["outcome-done"],
+      }),
+    );
+    const result = await run(h, [], { env: scriptedEnv(h) });
+    expect(result.code).toBe(2);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (cp.ok) {
+      expect(cp.checkpoint.stageIndex).toBe(5);
+      expect(cp.checkpoint.waiting?.kind).toBe("git-policy-violation");
+      expect(cp.checkpoint.waiting?.message).toContain(
+        "at least one allowed change",
+      );
+    }
+    const folder = h.fixture.threadFolder as string;
+    expect(await commitSubjects(h.fixture)).not.toContain(
+      `docs(${folder}): implementation report`,
+    );
   });
 
   it("leaves real mode unchanged when the toggle is unset", async () => {

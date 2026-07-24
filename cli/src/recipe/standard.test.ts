@@ -97,9 +97,11 @@ describe("standardRecipe — stage table (AC-6.1)", () => {
 
     expect(byId["implement-plan-with-subagents"].gitPolicy).toEqual({
       headMayChange: true,
-      allowedChanges: [],
-      changeRequired: false,
-      commitSubjectTemplate: null,
+      allowedChanges: [
+        { kind: "exact-file", threadRelativePath: "implementation-report.md" },
+      ],
+      changeRequired: true,
+      commitSubjectTemplate: "docs(<thread-folder>): implementation report",
     });
   });
 

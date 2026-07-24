@@ -62,7 +62,11 @@ never touch config, state, Git, or harnesses.
   classifies the session, and recognizes the skill's terminal `Outcome:` line.
   On a recognized `DONE`, the **boundary engine** (`src/gitops/`) validates that
   post-DONE changes fall within the stage's allowed selectors and produces the
-  declared boundary commit.
+  declared boundary commit. This includes the implement stage: the skill makes
+  its own per-task code commits and leaves the thread's
+  `implementation-report.md` uncommitted, and the stage boundary is what commits
+  that report. Because the report is `changeRequired`, a DONE implement attempt
+  that left none pauses rather than advancing silently.
 - **Pauses** surface as exit code `2` (waiting): when a queue gate finds pending
   work (e.g. a file under the thread's `.pending-decisions/`), the run
   checkpoints and prints the exact `antmay afk resume <run-id>` command.

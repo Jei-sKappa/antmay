@@ -6,6 +6,10 @@ const planTasksSubtree: PathSelector = {
   kind: "subtree",
   threadRelativePath: "plan-tasks",
 };
+const implementationReportFile: PathSelector = {
+  kind: "exact-file",
+  threadRelativePath: "implementation-report.md",
+};
 
 /**
  * The built-in `standard` recipe: the six Modular Agentic Workflow stages in
@@ -82,9 +86,9 @@ export const standardRecipe: Recipe = {
       target: { kind: "thread-file", path: "plan.md" },
       gitPolicy: {
         headMayChange: true,
-        allowedChanges: [],
-        changeRequired: false,
-        commitSubjectTemplate: null,
+        allowedChanges: [implementationReportFile],
+        changeRequired: true,
+        commitSubjectTemplate: "docs(<thread-folder>): implementation report",
       },
       queueResolution: "rerun",
     },
