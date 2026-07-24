@@ -46,13 +46,6 @@ export async function runMain(
   }
 }
 
-function notImplemented(name: string): () => Promise<number> {
-  return async () => {
-    process.stderr.write(`antmay: '${name}' is not implemented yet\n`);
-    return EXIT_FAILURE;
-  };
-}
-
 /**
  * The real `run` handler. It dynamically imports the command implementation and
  * the concrete harness dependencies only when `run` was selected, so the
@@ -119,14 +112,35 @@ async function resumeHandler(command: ResumeCommand): Promise<number> {
 }
 
 /**
+ * The real `list` handler. Like `run` and `resume`, it dynamically imports the
+ * command implementation only when `list` was selected, keeping the state
+ * modules out of the pre-dispatch static import graph. `list` reads only the
+ * state root, so it imports no config, harness, or Git dependency.
+ */
+async function listHandler(_command: ListCommand): Promise<number> {
+  const [{ listCommand }, os] = await Promise.all([
+    import("./commands/list.js"),
+    import("node:os"),
+  ]);
+
+  return listCommand({
+    env: process.env,
+    homedir: os.homedir(),
+    stdout: process.stdout,
+    stderr: process.stderr,
+    isTTY: process.stdout.isTTY === true,
+  });
+}
+
+/**
  * Side-effect-free entry used by the bootstrap: dispatches through `runMain`.
- * The `run` and `resume` handlers dynamically import their heavy dependencies on
- * selection; `list` remains a placeholder a later task replaces the same way.
+ * Each of the three subcommand handlers dynamically imports its dependencies on
+ * selection, so nothing heavy loads for help, version, or grammar errors.
  */
 export async function runProgram(argv: string[]): Promise<number> {
   return runMain(argv, {
     run: runHandler,
     resume: resumeHandler,
-    list: notImplemented("afk list"),
+    list: listHandler,
   });
 }
