@@ -69,7 +69,7 @@ an automated pipeline.
 
 Work through the steps in order, checking each box as you confirm it:
 
-1. [ ] **Build and install.** From `cli/`, run `npm --prefix cli run check` and
+1. [ ] **Build and install.** From the repo root, run `npm --prefix cli run check` and
    confirm it exits `0` (typecheck, tests, build). Then run `npm link` from
    `cli/` and confirm `antmay --version` resolves the linked binary on `PATH`
    and exits `0`. (If you prefer not to mutate global npm state, run
