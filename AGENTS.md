@@ -146,3 +146,9 @@ This repository is the reference home of the Modular Agentic Workflow, the rules
 The canonical reference — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/thread-model.md`, `docs/skill-authoring.md`, and the three workflow docs under `docs/workflows/`. Read it before editing the workflow itself or writing/editing an artifact that belongs to an existing thread.
 
 This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/` for any rule change; this section only changes if the reference doc set itself moves or splits.
+
+## Antmay CLI
+
+Alongside the skills, this repo ships the **Antmay CLI** under `cli/` — a TypeScript/Node executor (`antmay`) that drives the Modular Agentic Workflow unattended. It runs a built-in recipe stage by stage against one selected thread through an agentic harness (Codex or Claude Code), with durable checkpoints, workspace locking, and per-stage Git boundaries. Its command surface is one namespace with three subcommands: `antmay afk run`, `antmay afk resume`, and `antmay afk list`.
+
+Unlike the skill content, `cli/` is a real codebase with its own build/test gate (`npm --prefix cli run check`). It is a self-contained project: **read `cli/AGENTS.md` before working on any file under `cli/`** — that document maps the toolchain, execution model, module layout, and the fixed contracts (exit codes, version sync, dynamic-import discipline, lock handling) you must preserve.
