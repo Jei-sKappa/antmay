@@ -26,7 +26,7 @@ Copy the following complete example to get started:
       "model": "gpt-5-codex"
     },
     "stages": {
-      "implement": {
+      "implement-plan-with-subagents": {
         "prompt": "Prefer small, well-tested changes.",
         "idleTimeoutSeconds": 3600
       }
@@ -41,6 +41,11 @@ Copy the following complete example to get started:
   `idleTimeoutSeconds`. `harness` is `codex` or `claude-code`; `model` is a
   non-empty string; `prompt` is a string; `idleTimeoutSeconds` is a positive
   finite integer.
+- Stage overrides use the exact stage IDs from the selected recipe. The
+  built-in `standard` recipe ends with `implement-plan-with-subagents`; its
+  `prompt` is appended to that skill invocation. This unattended recipe uses
+  the subagent implementation variant in place of the human-run Standard
+  workflow's `implement-plan` step.
 - Settings perform no environment interpolation and store no credentials.
 
 ## Stale workspace locks
