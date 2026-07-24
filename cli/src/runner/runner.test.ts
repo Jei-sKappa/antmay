@@ -12,7 +12,7 @@ import { standardRecipe } from "../recipe/standard.js";
 import { resolveStageTarget } from "../recipe/targets.js";
 import type { StageDescriptor } from "../recipe/types.js";
 import type { RunCheckpoint } from "../state/checkpoint.js";
-import { readCheckpoint } from "../state/persist.js";
+import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import {
   createFakeHarness,
   type FakeHarnessStep,
@@ -23,6 +23,7 @@ import {
 } from "../test-helpers/git-fixture.js";
 import type { RunnerContext } from "./runner.js";
 import { executeRun } from "./runner.js";
+import { SignalInterruption } from "./signals.js";
 
 const fixtures: RepoFixture[] = [];
 const runDirs: string[] = [];
@@ -534,6 +535,109 @@ describe("executeRun — interruption (AC-17.3)", () => {
     expect(cp.waiting?.diagnostics?.origin).toBe("SIGINT");
     expect(cp.attempts[0].result).toBe("interrupted");
     expect(cp.waiting?.message).toContain("unvalidated");
+  });
+});
+
+describe("executeRun — signal interruption (AC-17.1, AC-17.3)", () => {
+  it("finishes the reserved attempt interrupted when a signal arrives before launch", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const controller = new AbortController();
+    // Abort during attemptStarted: after the executing checkpoint and its log,
+    // but before the harness is invoked.
+    const display: Display = {
+      ...nullDisplay,
+      attemptStarted: () => controller.abort(new SignalInterruption("SIGINT")),
+    };
+    const harness = createFakeHarness([{}]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, display, controller.signal),
+    );
+
+    expect(result).toEqual({ status: "interrupted", signal: "SIGINT" });
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("waiting-for-user");
+    expect(cp.waiting?.kind).toBe("interrupted");
+    expect(cp.waiting?.diagnostics?.origin).toBe("SIGINT");
+    expect(cp.attempts.length).toBe(1);
+    expect(cp.attempts[0].result).toBe("interrupted");
+  });
+
+  it("interrupts a mid-flight attempt, pauses interrupted, preserves the log, and starts nothing new", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const controller = new AbortController();
+    const harness = createFakeHarness([
+      { before: () => controller.abort(new SignalInterruption("SIGTERM")), hangUntilAbort: true },
+      {}, // A second attempt must never start after the first signal.
+    ]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, nullDisplay, controller.signal),
+    );
+
+    expect(result).toEqual({ status: "interrupted", signal: "SIGTERM" });
+    expect(harness.calls.length).toBe(1);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("waiting-for-user");
+    expect(cp.waiting?.kind).toBe("interrupted");
+    expect(cp.waiting?.diagnostics?.origin).toBe("SIGTERM");
+    expect(cp.waiting?.message).toContain("unvalidated");
+    expect(cp.attempts.length).toBe(1);
+    expect(cp.attempts[0].result).toBe("interrupted");
+    // The attempt's log file survives the interruption.
+    await expect(fs.access(path.join(runDir, cp.attempts[0].logPath))).resolves.toBeUndefined();
+  });
+
+  it("retains a pending file discovered at interruption while staying kind interrupted", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const controller = new AbortController();
+    let pendingRel = "";
+    const harness = createFakeHarness([
+      {
+        before: async () => {
+          pendingRel = await dropPendingDecision(fixture, "d1.md");
+          controller.abort(new SignalInterruption("SIGINT"));
+        },
+        hangUntilAbort: true,
+      },
+    ]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, nullDisplay, controller.signal),
+    );
+
+    expect(result.status).toBe("interrupted");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.kind).toBe("interrupted");
+    expect(cp.waiting?.pendingFiles).toEqual([pendingRel]);
+    expect(cp.attempts[0].pendingFiles).toEqual([pendingRel]);
+  });
+
+  it("stops between stages without touching the ready checkpoint or rendering a pause", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const controller = new AbortController();
+    controller.abort(new SignalInterruption("SIGHUP"));
+
+    const checkpoint = buildCheckpoint(fixture, [cleanStage, betaStage]);
+    await writeCheckpoint(runDir, checkpoint);
+    const before = await fs.readFile(path.join(runDir, "state.json"));
+
+    const rec = recorder();
+    const harness = createFakeHarness([{}]);
+    const result = await executeRun(
+      makeContext(checkpoint, runDir, harness, rec.display, controller.signal),
+    );
+
+    expect(result).toEqual({ status: "interrupted", signal: "SIGHUP" });
+    expect(harness.calls.length).toBe(0);
+    expect(rec.runPaused.length).toBe(0);
+    const after = await fs.readFile(path.join(runDir, "state.json"));
+    expect(after.equals(before)).toBe(true);
   });
 });
 

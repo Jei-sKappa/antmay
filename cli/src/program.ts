@@ -68,7 +68,6 @@ async function runHandler(command: RunCommand): Promise<number> {
       import("node:os"),
     ]);
 
-  const controller = new AbortController();
   return runCommand(
     {
       recipe: command.recipe,
@@ -84,7 +83,6 @@ async function runHandler(command: RunCommand): Promise<number> {
       stdout: process.stdout,
       stderr: process.stderr,
       isTTY: process.stdout.isTTY === true,
-      signal: controller.signal,
     },
   );
 }

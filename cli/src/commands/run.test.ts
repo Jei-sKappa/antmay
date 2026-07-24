@@ -7,6 +7,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../config/settings.js";
 import type { ProbeResult } from "../harness/probe.js";
+import { EXIT_SIGHUP, EXIT_SIGINT, EXIT_SIGTERM } from "../cli/exit-codes.js";
+import type { installSignalHandlers } from "../runner/signals.js";
+import { SignalInterruption } from "../runner/signals.js";
 import { acquireWorkspaceLock, locksDirectory } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { readCheckpoint } from "../state/persist.js";
@@ -66,6 +69,27 @@ const VALID_SETTINGS = {
   afk: { defaults: { harness: "codex", model: "test-model" } },
 };
 
+const SIGNAL_EXIT: Record<string, number> = {
+  SIGINT: EXIT_SIGINT,
+  SIGTERM: EXIT_SIGTERM,
+  SIGHUP: EXIT_SIGHUP,
+};
+
+/**
+ * A `installSignalHandlers`-shaped fake that never touches `process`: `signaled`
+ * returns whatever the supplied getter reports and `exitCodeFor` maps by the
+ * conventional codes. The default getter reports no signal.
+ */
+function fakeSignals(
+  signaled: () => NodeJS.Signals | null = () => null,
+): typeof installSignalHandlers {
+  return () => ({
+    signaled,
+    exitCodeFor: (sig) => SIGNAL_EXIT[sig] ?? EXIT_SIGINT,
+    uninstall: () => undefined,
+  });
+}
+
 /** Harness probe fake that reports a distinctive version for every request. */
 const okProbe: RunDeps["probe"] = async (harnesses): Promise<ProbeResult> => {
   const versions: Partial<Record<HarnessId, string>> = {};
@@ -118,7 +142,8 @@ async function run(
     dangerouslySkipPermissions: boolean;
     probe: RunDeps["probe"];
     generateId: () => string;
-    signal: AbortSignal;
+    createAbortController: () => AbortController;
+    installSignals: RunDeps["installSignals"];
   }> = {},
 ): Promise<RunResult> {
   const out = new Capture();
@@ -136,7 +161,9 @@ async function run(
     stdout: out,
     stderr: err,
     isTTY: false,
-    signal: overrides.signal ?? new AbortController().signal,
+    createAbortController: overrides.createAbortController,
+    // Default to a no-op installer so tests never register real process handlers.
+    installSignals: overrides.installSignals ?? fakeSignals(),
     generateId: overrides.generateId,
   };
   const code = await runCommand(
@@ -462,6 +489,43 @@ describe("runCommand — non-blocking and pause behavior (AC-7.6, AC-1.3)", () =
     expect(result.code).toBe(2);
     const runId = (await runDirNames(h.stateRoot))[0]!;
     expect(result.out).toContain(`antmay afk resume ${runId}`);
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+});
+
+describe("runCommand — signal interruption (AC-17.1, AC-17.2)", () => {
+  it("returns the signal exit code and creates no run when interrupted before allocation", async () => {
+    const h = await setup();
+    const result = await run(h, standardSteps(h.fixture), {
+      installSignals: fakeSignals(() => "SIGINT"),
+    });
+    expect(result.code).toBe(EXIT_SIGINT);
+    expect(await runDirNames(h.stateRoot)).toEqual([]);
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("maps an active interruption to the signal exit code, not the durable-pause code", async () => {
+    const h = await setup();
+    const controller = new AbortController();
+    const result = await run(
+      h,
+      [{ before: () => controller.abort(new SignalInterruption("SIGINT")), hangUntilAbort: true }],
+      {
+        createAbortController: () => controller,
+        installSignals: fakeSignals(() => null),
+      },
+    );
+
+    expect(result.code).toBe(EXIT_SIGINT);
+    expect(result.code).not.toBe(2);
+    const runDir = await soleCheckpointDir(h.stateRoot);
+    const cp = await readCheckpoint(runDir);
+    expect(cp.ok).toBe(true);
+    if (cp.ok) {
+      expect(cp.checkpoint.condition).toBe("waiting-for-user");
+      expect(cp.checkpoint.waiting?.kind).toBe("interrupted");
+    }
+    // The lock is released before the command returns the signal exit code.
     expect(await lockNames(h.stateRoot)).toEqual([]);
   });
 });

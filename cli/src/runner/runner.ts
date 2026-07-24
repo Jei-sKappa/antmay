@@ -25,6 +25,7 @@ import type { BoundaryDisposition } from "./classify.js";
 import { classifyAttempt } from "./classify.js";
 import type { OutcomeParse } from "./outcome.js";
 import { parseTerminalOutcome } from "./outcome.js";
+import { SignalInterruption } from "./signals.js";
 
 /** The interval between display heartbeats for a live attempt. */
 const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
@@ -54,6 +55,7 @@ export type RunnerContext = {
 export type RunnerResult =
   | { status: "completed" }
   | { status: "paused"; waiting: WaitingInfo }
+  | { status: "interrupted"; signal: NodeJS.Signals }
   | { status: "fatal-checkpoint"; message: string };
 
 type PersistOutcome = { ok: true } | { ok: false; message: string };
@@ -97,6 +99,13 @@ function terminalResultFrom(parse: OutcomeParse | null): TerminalResult | null {
 function candidateLineOf(parse: OutcomeParse | null): string | undefined {
   if (parse === null) return undefined;
   return parse.candidateLine === null ? undefined : parse.candidateLine;
+}
+
+/** The originating signal name when the abort reason is a `SignalInterruption`,
+ * else `null` for any other (or absent) abort. */
+function signalReason(signal: AbortSignal): NodeJS.Signals | null {
+  const reason = signal.reason;
+  return reason instanceof SignalInterruption ? reason.signal : null;
 }
 
 function abortOrigin(signal: AbortSignal): string {
@@ -157,7 +166,74 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     return { status: "fatal-checkpoint", message };
   }
 
+  // Finish a reserved attempt as a signal interruption: persist a durable
+  // `interrupted` waiting pause carrying the signal origin, the DR54 warning,
+  // and any pending paths retained as evidence, then return `interrupted`.
+  async function finishInterrupted(args: {
+    sig: NodeJS.Signals;
+    executingAttempt: AttemptRecord;
+    finalCursor: {
+      stageIndex: number;
+      headAtStageEntry: string | null;
+      observedHead: string | null;
+    };
+    pendingFiles: string[];
+    logAbsPath: string;
+    failure?: { errorClass: string; errorMessage: string };
+  }): Promise<RunnerResult> {
+    const endedAt = clock().toISOString();
+    const baseMessage =
+      "The attempt was interrupted before producing a terminal outcome.";
+    const pending = args.pendingFiles.length > 0 ? args.pendingFiles : undefined;
+    const diagnostics: WaitingDiagnostics = args.failure
+      ? {
+          category: "interrupted",
+          errorClass: args.failure.errorClass,
+          errorMessage: args.failure.errorMessage,
+          origin: args.sig,
+        }
+      : { category: "interrupted", origin: args.sig };
+    const waiting: WaitingInfo = {
+      kind: "interrupted",
+      message: `${baseMessage} ${DR54_WARNING}`,
+      pendingFiles: pending,
+      diagnostics,
+    };
+    const settled: AttemptRecord = {
+      ...args.executingAttempt,
+      result: "interrupted",
+      endedAt,
+      terminalResult: null,
+      pendingFiles: pending,
+      failure: { kind: "interrupted", message: baseMessage },
+    };
+    const persisted = await persist({
+      ...checkpoint,
+      attempts: replaceLast(checkpoint.attempts, settled),
+      condition: "waiting-for-user",
+      waiting,
+      gitCursor: args.finalCursor,
+    });
+    if (!persisted.ok) return fatal(persisted.message);
+    display.runPaused({
+      waiting,
+      runId,
+      logAbsPath: args.logAbsPath,
+      resumeCommand,
+      checkpointPath,
+    });
+    return { status: "interrupted", signal: args.sig };
+  }
+
   while (checkpoint.stageIndex < stageCount) {
+    // A first signal while the checkpoint is durably ready between stages stops
+    // before allocating anything: the cursor stays byte-for-byte unchanged, no
+    // fictional pause is rendered, and the run reports the interruption.
+    const readySig = signalReason(signal);
+    if (readySig !== null) {
+      return { status: "interrupted", signal: readySig };
+    }
+
     const stageIndex = checkpoint.stageIndex;
     const stage: SnapshottedStage = checkpoint.stages[stageIndex];
     const profile = stage.profile;
@@ -277,6 +353,24 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       profile.prompt,
     );
 
+    // A signal after reserving the attempt and creating its log but before the
+    // harness launches finishes the reserved attempt as interrupted without
+    // ever invoking the harness.
+    const preLaunchSig = signalReason(signal);
+    if (preLaunchSig !== null) {
+      return finishInterrupted({
+        sig: preLaunchSig,
+        executingAttempt,
+        finalCursor: {
+          stageIndex,
+          headAtStageEntry: cursorEntry,
+          observedHead: attemptStartHead,
+        },
+        pendingFiles: [],
+        logAbsPath: logPaths.absPath,
+      });
+    }
+
     const attemptStartMs = Date.now();
     const heartbeat = setInterval(() => {
       display.heartbeat(Date.now() - attemptStartMs);
@@ -310,6 +404,30 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const isDone = parse !== null && parse.token === "DONE";
 
     let observedHead = await readHead(repoRoot);
+
+    // A signal-caused abort is an interruption. This branch precedes ordinary
+    // non-DONE queue/error classification: a first-signal rejection is always
+    // interruption, never harness-error or a pending-queues relabel. The
+    // post-attempt scan's pending paths are retained as evidence.
+    const abortSig = signalReason(signal);
+    if (
+      outcome.kind === "failed" &&
+      outcome.category === "aborted" &&
+      abortSig !== null
+    ) {
+      return finishInterrupted({
+        sig: abortSig,
+        executingAttempt,
+        finalCursor: { stageIndex, headAtStageEntry: cursorEntry, observedHead },
+        pendingFiles,
+        logAbsPath: logPaths.absPath,
+        failure: {
+          errorClass: outcome.errorClass,
+          errorMessage: outcome.errorMessage,
+        },
+      });
+    }
+
     let boundary: BoundaryDisposition = { evaluated: false };
     if (isDone) {
       const observedPaths = await collectBoundaryStatus(repoRoot);
