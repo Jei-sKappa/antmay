@@ -54,13 +54,49 @@ function notImplemented(name: string): () => Promise<number> {
 }
 
 /**
- * Side-effect-free entry used by the bootstrap: dispatches through `runMain`
- * with placeholder handlers. Later tasks replace these placeholders with real
- * handlers that dynamically import their heavy dependencies on selection.
+ * The real `run` handler. It dynamically imports the command implementation and
+ * the concrete harness dependencies only when `run` was selected, so the
+ * command/config/state/Git/harness subsystems stay out of the pre-dispatch
+ * static import graph and never load for help, version, or grammar errors.
+ */
+async function runHandler(command: RunCommand): Promise<number> {
+  const [{ runCommand }, { createSandcastleInvoker }, { probeHarnessExecutables }, os] =
+    await Promise.all([
+      import("./commands/run.js"),
+      import("./harness/sandcastle.js"),
+      import("./harness/probe.js"),
+      import("node:os"),
+    ]);
+
+  const controller = new AbortController();
+  return runCommand(
+    {
+      recipe: command.recipe,
+      thread: command.thread,
+      dangerouslySkipPermissions: command.dangerouslySkipPermissions,
+    },
+    {
+      env: process.env,
+      cwd: process.cwd(),
+      homedir: os.homedir(),
+      invoker: createSandcastleInvoker(),
+      probe: probeHarnessExecutables,
+      stdout: process.stdout,
+      stderr: process.stderr,
+      isTTY: process.stdout.isTTY === true,
+      signal: controller.signal,
+    },
+  );
+}
+
+/**
+ * Side-effect-free entry used by the bootstrap: dispatches through `runMain`.
+ * The `run` handler dynamically imports its heavy dependencies on selection;
+ * `resume`/`list` remain placeholders later tasks replace the same way.
  */
 export async function runProgram(argv: string[]): Promise<number> {
   return runMain(argv, {
-    run: notImplemented("afk run"),
+    run: runHandler,
     resume: notImplemented("afk resume"),
     list: notImplemented("afk list"),
   });
