@@ -32,6 +32,8 @@ smoke checklist); this section is the map for agents editing the code.
   agentic harness invoker.
 - Commands: `npm --prefix cli run check` (typecheck + test + build) is the full
   gate; `npm run build`, `npm run typecheck`, `npm run test` run the pieces.
+  `npm run demo` builds without tests and executes the scripted Standard happy
+  path in a unique disposable repository under `/tmp`.
   The binary is `dist/main.js`, exposed as `antmay` via the `bin` field.
 
 ### Command surface
@@ -88,6 +90,9 @@ never touch config, state, Git, or harnesses.
 - `thread/`, `workspace/`, `display/` — thread resolution and queue gates,
   current-checkout detection, and the curated terminal stream.
 - `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
+- `scripts/scripted-happy-path.mjs` — dependency-free developer demo that
+  validates default config, builds the CLI, and verifies a complete scripted
+  Standard run in a unique `/tmp` repository.
 
 ### Contracts to preserve
 
@@ -132,6 +137,14 @@ Built-in scripted cases only — no arbitrary code, shell commands, or
 scenario-supplied operations outside the fixed catalog in
 `harness/scripted/scenario.ts`. Help, version, grammar errors, and `list` never
 interpret the toggle or touch scenario/state/Git/harness modules.
+
+The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
+gate. It reads but never modifies the developer's resolved default config,
+requires the exact happy-path scenario, injects the scripted toggle only into
+the child CLI process, and preserves its temporary repository and default-state
+checkpoint for inspection. Its own checks use one `[PASS]`/`[FAIL]` line per
+expectation with expected/actual failure details, while separator lines bracket
+the child CLI's terminal stream.
 
 ## Engineering Principles
 

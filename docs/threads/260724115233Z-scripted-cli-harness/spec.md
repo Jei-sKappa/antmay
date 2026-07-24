@@ -1,8 +1,8 @@
 # Spec: Scripted harness for manual CLI testing
 
 Decision citations refer to records in `decisions.md`. DR7 supersedes the
-scenario-path portions of DR1 and DR5; this spec states only the surviving
-contract.
+scenario-path portions of DR1 and DR5, and DR10 supersedes DR8's exclusion of a
+packaged human-run demo; this spec states only the surviving contract.
 
 ## Intended outcome
 
@@ -66,6 +66,10 @@ only the external execution and executable-probe edges.
   and durable attempt selection.
 - Vitest coverage at the existing unit and command-integration levels and the
   existing `npm --prefix cli run check` gate (per `decisions.md` DR9).
+- A human-invoked `npm run demo` helper that validates the default config,
+  builds without tests, creates a unique `/tmp` repository, runs the exact
+  scripted Standard happy path, and verifies its results (per `decisions.md`
+  DR10).
 - Updating `cli/AGENTS.md` to preserve the new test-mode architecture and
   safety rules across sessions, as required by the repository instructions.
 
@@ -78,10 +82,9 @@ only the external execution and executable-probe edges.
   commands, JavaScript, or any other executable scenario content.
 - Scenario snapshots, hashes, immutable run inputs, migration, merging,
   defaults, aliases, interpolation, or multiple scenario files.
-- A scenario generator, setup command, npm script, committed example scenario,
-  or dedicated manual smoke-test walkthrough (per `decisions.md` DR8).
-- A subprocess CLI test framework, automated disposable-repository fixture,
-  new E2E directory, CI change, or credentialed provider test (per
+- A scenario generator, setup command, or committed example scenario.
+- A reusable subprocess CLI test framework, automated test-owned repository
+  fixture, new E2E directory, CI change, or credentialed provider test (per
   `decisions.md` DR9).
 - New terminal-outcome kinds, waiting kinds, recipes, provider types, retry
   rules, workspace strategies, or changes to Git-boundary semantics.
@@ -348,7 +351,9 @@ renderer, and log header format remain shared with real execution.
   behavior. The optional scripted marker must be validated when present and
   preserved by all subsequent checkpoint writes.
 - Introduce no additional test-mode environment variable.
-- Do not add the conveniences or automated E2E scope excluded by DR8 and DR9.
+- Keep the DR10 demo human-invoked and outside `npm run check` and CI; add no
+  scenario generator, setup command, committed scenario, or automated E2E
+  framework.
 - Do not stage, commit, push, publish, or alter package-release state as part of
   implementing this spec unless separately requested.
 
@@ -480,9 +485,8 @@ renderer, and log header format remain shared with real execution.
 
 - **AC-7.1** The diff adds no CLI flag/help entry, settings field, provider ID,
   additional test-mode environment variable, runtime/development dependency,
-  scenario snapshot, generator, setup command, npm script, example scenario,
-  dedicated smoke walkthrough, E2E directory, or CI configuration (DR1,
-  DR7–DR9).
+  scenario snapshot, generator, setup command, example scenario, automated E2E
+  directory, or CI configuration (DR1, DR7–DR10).
 - **AC-7.2** `cli/AGENTS.md` documents the fixed toggle/file, the fact that
   profiles remain logical Codex/Claude Code values, the fail-closed resume
   marker, and the built-in-case-only/no-arbitrary-code boundary.
@@ -490,6 +494,14 @@ renderer, and log header format remain shared with real execution.
   executable probe, settings validation, list behavior, queue gates, Git
   policies, locks, signals, and checkpoint atomic-write behavior remain
   regression-tested and unchanged outside the scripted-mode selection seam.
+- **AC-7.4** `npm run demo` reads but never mutates the resolved default config,
+  builds without tests, creates a unique repository under `/tmp`, invokes the
+  built CLI with only the scripted toggle added, verifies the fixed artifacts,
+  expected commits, clean worktree, and completed scripted checkpoint, and
+  preserves the repository and run state for inspection. It brackets child CLI
+  output with explicit start/finish separators and reports every prerequisite
+  and result as a separate pass/fail check with expected/actual failure details
+  (DR10).
 
 ### FR-8 — Verification
 

@@ -57,3 +57,30 @@ All four plan tasks completed. The CLI now supports developer-only scripted harn
   disposable Git repository, produced the expected spec/plan/reconcile
   boundary commits and fixed plan/task artifacts, left the worktree clean, and
   recorded a completed scripted checkpoint.
+
+## Follow-up implementation: scripted happy-path demo
+
+- Added dependency-free `cli/scripts/scripted-happy-path.mjs`, exposed as
+  `npm run demo`. It validates the resolved default settings and exact
+  happy-path scenario, builds without tests, creates a unique Git repository
+  under `/tmp`, invokes the real built CLI with the scripted toggle, and
+  verifies the fixed artifacts, expected boundary commits, clean worktree, and
+  completed scripted checkpoint.
+- The helper refuses Antmay-specific config/state root overrides, never creates
+  or changes config, preserves its repository and default-state run for
+  inspection, and remains outside the CLI grammar, `npm run check`, and CI.
+- Demo and CLI output are separated by explicit `ANTMAY CLI STARTED` /
+  `ANTMAY CLI FINISHED` lines. Every prerequisite and post-run expectation is
+  reported independently as `[PASS]` or `[FAIL]`; failures show expected and
+  actual values, and independent post-run checks continue after a failure.
+- Prerequisite checks were exercised against missing settings, malformed
+  settings JSON, a non-happy scenario, and a forbidden root override; every
+  case exited `1` before build or repository allocation. `node --check` passed.
+- The full `npm --prefix cli run check` gate passed typechecking, all 429 tests
+  across 32 files, and the production build. A direct `.mjs` run completed
+  successfully with isolated XDG roots, and `npm --prefix cli run demo`
+  completed all six Standard stages against the actual default config/state,
+  preserving verified completed runs in distinct temporary repositories.
+- The finalized checklist output was exercised with an intentionally wrong
+  review case (14 passes and one explicit expected/actual failure) and the
+  complete happy path (38 passes, zero failures).

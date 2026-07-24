@@ -61,6 +61,37 @@ longer running, and only then manually remove that exact file. Do not remove a
 lock whose process may still be alive — doing so allows two executors to mutate
 the same checkout at once.
 
+## Scripted happy-path demo
+
+`npm run demo` exercises the built CLI through all six Standard stages without
+contacting Codex or Claude Code. It validates the existing default
+`settings.json` and exact happy-path `scripted-harness.json`, runs
+`npm run build` without tests, and creates a unique disposable repository under
+`/tmp/antmay-scripted-happy-*`.
+
+From `cli/` run:
+
+```sh
+npm run demo
+```
+
+From the repository root, the equivalent command is:
+
+```sh
+npm --prefix cli run demo
+```
+
+The command refuses `ANTMAY_CONFIG_HOME` and `ANTMAY_STATE_HOME` overrides so
+the CLI uses its normal XDG-to-home config and state resolution. It never
+creates or edits either config file. On success it verifies the clean worktree,
+fixed artifacts, boundary commits, and completed scripted checkpoint, then
+prints and preserves the temporary repository and run paths for inspection.
+Every prerequisite and result is printed as an individual `[PASS]` or `[FAIL]`
+check with expected and actual values on failure. The built CLI's own terminal
+stream is enclosed by `ANTMAY CLI STARTED` and `ANTMAY CLI FINISHED` separator
+lines.
+The demo is developer-run and is not part of `npm run check` or CI.
+
 ## Manual smoke checklist
 
 This checklist is **human-run documentation, not an automated gate and not part

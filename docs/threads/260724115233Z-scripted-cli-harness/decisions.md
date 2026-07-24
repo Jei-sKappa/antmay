@@ -71,3 +71,30 @@ Context: The environment-gated adapter and its cases need automated regression c
 Decision: The MVP is verified within the existing Vitest suite. Tests cover strict scenario parsing, every built-in case and its fixed effects, prerequisite and request-shape failures, normalized events, verbose-log content, terminal outcomes, toggle interpretation, production runtime selection, replacement of both real invocation and executable probing, checkpoint marking, live scenario rereading, durable attempt selection, and fail-closed resume. Tests must not spawn Codex or Claude Code. The existing `npm --prefix cli run check` command remains the complete gate. No subprocess CLI suite, new E2E directory, CI change, or automated disposable-repository fixture is added.
 
 Rationale: Focused unit and command-level integration tests protect the dangerous provider-selection boundary and deterministic case behavior without creating the broader E2E infrastructure deferred by the thread. The scripted harness remains available as a building block if later use demonstrates that automated end-to-end coverage is worthwhile.
+
+## DR10: Human-invoked scripted happy-path demo
+
+Context: Manual use of the completed scripted harness proved the full Standard
+happy path and exposed enough repeated repository/config/build plumbing to
+justify the convenience deferred by DR8. The helper must remain developer-only,
+must not create or rewrite configuration, and must not turn into an automated
+E2E or CI system.
+
+Decision: Add a dependency-free `cli/scripts/scripted-happy-path.mjs`, exposed
+as `npm run demo`. It validates the developer's resolved default settings and
+exact happy-path scenario, builds without tests, creates a unique disposable
+Git repository under `/tmp`, invokes the real built CLI with the scripted toggle
+injected only into the child process, verifies the completed artifacts,
+commits, clean worktree, and checkpoint, and preserves the repository and state
+for inspection. The command refuses Antmay-specific config/state root
+overrides, remains outside the CLI grammar, and is not added to `npm run check`
+or CI. It prints every prerequisite and post-run expectation as an individual
+pass/fail check with expected and actual values on failure, continues through
+independent post-run checks, and brackets the child CLI stream with explicit
+started/finished separators.
+
+Rationale: A human-invoked demo makes the proven manual workflow repeatable
+without broadening the scenario language or provider contract. Unique temporary
+repositories avoid destructive cleanup and collisions, while read-only config
+handling and explicit post-run verification keep the convenience bounded and
+trustworthy.
