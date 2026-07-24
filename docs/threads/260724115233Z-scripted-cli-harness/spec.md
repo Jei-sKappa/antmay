@@ -60,8 +60,8 @@ only the external execution and executable-probe edges.
   emits normalized events, appends deterministic attempt-log content, and
   returns ordinary provider-neutral outcomes.
 - A scripted executable probe that never spawns Codex or Claude Code.
-- A minimal optional checkpoint marker that fixes a run's real-versus-scripted
-  mode at creation and preserves fail-closed resume behavior.
+- A minimal optional checkpoint marker recording that a run started in scripted
+  mode and preserving fail-closed resume behavior.
 - Integration with both `run` and `resume`, including live scenario rereading
   and durable attempt selection.
 - Vitest coverage at the existing unit and command-integration levels and the
@@ -73,6 +73,7 @@ only the external execution and executable-probe edges.
 
 - Adding `scripted` to `HarnessId`, `settings.json`, stage profiles, CLI flags,
   help text, or the public command grammar.
+- Any additional test-mode environment variable.
 - User-authored file operations, output bodies, paths, callbacks, shell
   commands, JavaScript, or any other executable scenario content.
 - Scenario snapshots, hashes, immutable run inputs, migration, merging,
@@ -222,9 +223,9 @@ The registry contains exactly these initial names (per `decisions.md` DR4):
 Placeholder
 ```
 
-The effectful write cases replace the content of the fixed files they own with
-their fixed bodies when those destinations already exist as ordinary files.
-They do not delete unrelated files. Reconcile cases append exactly one
+The two artifact-creation cases replace the content of the fixed files they own
+with their fixed bodies when those destinations already exist as ordinary
+files. They do not delete unrelated files. Reconcile cases append exactly one
 newline-terminated fixed line per invocation. A required input that is absent,
 not an ordinary file/directory, symlinked outside the thread, or otherwise
 unsafe causes a scripted-harness provider failure. No case executes a process
@@ -254,11 +255,11 @@ selected built-in recipe before allocating a run. All existing preflight
 requirements still apply, except real executable probing is replaced by the
 scripted probe.
 
-The initial checkpoint records a minimal optional marker that the run's harness
-execution mode is scripted (per `decisions.md` DR5). The marker does not replace
-or alter `observedHarnessVersions`, logical stage profiles, or the checkpoint's
-existing `schemaVersion: 1`. Checkpoints written before this feature, which lack
-the optional marker, remain valid real-mode checkpoints.
+The initial checkpoint records a minimal optional marker when the run starts in
+scripted mode (per `decisions.md` DR5). The marker does not replace or alter
+`observedHarnessVersions`, logical stage profiles, or the checkpoint's existing
+`schemaVersion: 1`. Checkpoints written before this feature, which lack the
+optional marker, remain valid.
 
 Once allocated, the unchanged runner invokes cases and applies its normal
 semantics:
@@ -280,7 +281,8 @@ transition, display rendering, or exit-code logic.
 
 ### Resume behavior
 
-Harness mode is fixed when a run is created:
+Resume selects its execution mode from the current toggle, subject to the
+checkpoint's fail-closed scripted-start guard:
 
 - A resumable checkpoint carrying the scripted marker requires the exact
   `ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS=1` toggle. With it, `resume` resolves the
@@ -289,10 +291,9 @@ Harness mode is fixed when a run is created:
 - Without the toggle, a scripted run exits `1` before any executable probe,
   harness invocation, lock acquisition, or checkpoint mutation and prints an
   actionable instruction to repeat the command with the toggle.
-- A real-mode checkpoint without the marker continues to use the real harness
-  path. Supplying the scripted toggle for such a checkpoint is a mode mismatch
-  and exits `1`; this MVP does not switch an existing run between real and
-  scripted execution.
+- For a checkpoint without the marker, the exact toggle enables scripted mode
+  and an unset or empty toggle selects ordinary real-harness behavior. Any other
+  non-empty value remains a configuration error.
 
 The next case remains derived from the runner's durable per-stage attempt
 number. For example, `spec: ["outcome-blocked", "spec-correct"]` pauses attempt
@@ -346,6 +347,7 @@ renderer, and log header format remain shared with real execution.
 - Preserve old real-mode checkpoints and ordinary `run`, `resume`, and `list`
   behavior. The optional scripted marker must be validated when present and
   preserved by all subsequent checkpoint writes.
+- Introduce no additional test-mode environment variable.
 - Do not add the conveniences or automated E2E scope excluded by DR8 and DR9.
 - Do not stage, commit, push, publish, or alter package-release state as part of
   implementing this spec unless separately requested.
@@ -355,8 +357,9 @@ renderer, and log header format remain shared with real execution.
 ### FR-1 — Test-mode activation and isolation
 
 - **AC-1.1** With the toggle unset or empty, all existing real-mode tests pass
-  unchanged and `run`/`resume` use the Sandcastle invoker plus real executable
-  probe.
+  unchanged; `run` and an unmarked real-mode `resume` use the Sandcastle invoker
+  plus real executable probe, while a marked scripted resume fails closed per
+  AC-5.3.
 - **AC-1.2** With the toggle exactly `1`, `run` and eligible scripted `resume`
   use the scripted invoker and scripted probe; spies prove neither Sandcastle
   `run` nor `child_process.execFile` is called (DR1, DR7, DR9).
@@ -433,16 +436,17 @@ renderer, and log header format remain shared with real execution.
 
 ### FR-5 — Checkpoint and resume safety
 
-- **AC-5.1** A scripted `run` writes a minimal optional scripted-mode marker in
-  the initial checkpoint before launch; real checkpoints omit it; the
-  checkpoint remains schema version `1`; old marker-less checkpoints validate
-  and behave as real runs (DR5).
+- **AC-5.1** A scripted `run` writes a minimal optional started-scripted marker
+  in the initial checkpoint before launch; real runs omit it; the checkpoint
+  remains schema version `1`; old marker-less checkpoints still validate
+  (DR5).
 - **AC-5.2** Every checkpoint transition preserves and validates the marker,
   including ready, executing, waiting, interrupted, and completed writes.
 - **AC-5.3** A resumable scripted checkpoint without exact toggle `1` exits `1`
   before probe, lock acquisition, or mutation and tells the developer how to
-  enable the mode; an exact-toggle resume of a marker-less real checkpoint
-  exits `1` as a mode mismatch (DR5, DR7).
+  enable the mode; for an unmarked checkpoint, exact toggle `1` selects scripted
+  execution and an unset or empty toggle selects ordinary real-harness
+  execution (DR5, DR7).
 - **AC-5.4** A correctly toggled scripted resume validates the live scenario
   against the snapshot, uses the next durable attempt, and otherwise follows
   existing queue, recovery, boundary-finalization, pause, and continuation
@@ -475,9 +479,10 @@ renderer, and log header format remain shared with real execution.
 ### FR-7 — MVP scope and repository conformance
 
 - **AC-7.1** The diff adds no CLI flag/help entry, settings field, provider ID,
-  runtime/development dependency, scenario snapshot, generator, setup command,
-  npm script, example scenario, dedicated smoke walkthrough, E2E directory, or
-  CI configuration (DR7–DR9).
+  additional test-mode environment variable, runtime/development dependency,
+  scenario snapshot, generator, setup command, npm script, example scenario,
+  dedicated smoke walkthrough, E2E directory, or CI configuration (DR1,
+  DR7–DR9).
 - **AC-7.2** `cli/AGENTS.md` documents the fixed toggle/file, the fact that
   profiles remain logical Codex/Claude Code values, the fail-closed resume
   marker, and the built-in-case-only/no-arbitrary-code boundary.
@@ -494,8 +499,9 @@ renderer, and log header format remain shared with real execution.
   normalization (DR9).
 - **AC-8.2** Command-level tests cover scripted new-run marking, complete happy
   execution, BLOCKED then resumed second-attempt selection, live scenario
-  rereading, invalid/exhausted scenarios, fail-closed marker/toggle mismatch,
-  and preservation of real-mode behavior (DR9).
+  rereading, invalid/exhausted scenarios, fail-closed marked resume, toggle
+  selection for unmarked checkpoints, and preservation of real-mode behavior
+  (DR9).
 - **AC-8.3** Runtime-selection tests use spies/fakes to prove scripted mode
   replaces both real seams and that no test starts Codex, Claude Code, or a
   provider executable (DR9).
@@ -526,8 +532,9 @@ must satisfy all acceptance criteria without changing observable semantics:
    metadata or close over the validated stage snapshot to reconstruct the
    expected prompt, provided prompt parsing never becomes dispatch.
 3. **Checkpoint marker representation.** The optional schema-version-1 field
-   name and nesting are free provided absence means real mode, the value is
-   strictly validated, and all transitions preserve it.
+   name and nesting are free provided it records that the run started in
+   scripted mode, the value is strictly validated, and all transitions preserve
+   it.
 4. **Plan fixture details.** The exact placeholder `plan.md` body, task count,
    task filenames, task bodies, and fixed reconciliation-line text are free.
    They must be non-empty constants, remain within the selected thread, and
