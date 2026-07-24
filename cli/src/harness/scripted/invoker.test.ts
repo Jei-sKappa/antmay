@@ -395,7 +395,34 @@ describe("createScriptedInvoker", () => {
     });
   });
 
-  it("writes owned plan artifacts and preserves unrelated files", async () => {
+  it("creates a missing plan-tasks directory and writes owned plan artifacts", async () => {
+    const fixture = await newFixture();
+    const tasksDir = path.join(fixture.threadPath!, "plan-tasks");
+    await expect(lstat(tasksDir)).rejects.toMatchObject({ code: "ENOENT" });
+
+    const invoker = createScriptedInvoker(
+      makeScenario({ "plan-strict": ["plan-strict-correct"] }),
+    );
+    const request = buildRequest(fixture, stageById("plan-strict"));
+    await initAttemptLog(fixture, request);
+
+    const outcome = await invoker.invoke(request);
+
+    expect(outcome).toEqual({
+      kind: "completed",
+      finalText: "Scripted plan write.\nOutcome: DONE",
+    });
+    expect(await readFile(path.join(fixture.threadPath!, "plan.md"), "utf8")).toBe(
+      PLAN_STRICT_PLAN_CONTENT,
+    );
+    for (const [relPath, content] of Object.entries(PLAN_STRICT_OWNED_TASKS)) {
+      expect(
+        await readFile(path.join(fixture.threadPath!, relPath), "utf8"),
+      ).toBe(content);
+    }
+  });
+
+  it("preserves unrelated files in an existing plan-tasks directory", async () => {
     const fixture = await newFixture();
     const unrelated = path.join(fixture.threadPath!, "notes.md");
     await writeFile(unrelated, "keep me\n", "utf8");
@@ -415,18 +442,67 @@ describe("createScriptedInvoker", () => {
 
     await invoker.invoke(request);
 
-    expect(await readFile(path.join(fixture.threadPath!, "plan.md"), "utf8")).toBe(
-      PLAN_STRICT_PLAN_CONTENT,
-    );
-    for (const [relPath, content] of Object.entries(PLAN_STRICT_OWNED_TASKS)) {
-      expect(
-        await readFile(path.join(fixture.threadPath!, relPath), "utf8"),
-      ).toBe(content);
-    }
     expect(await readFile(unrelated, "utf8")).toBe("keep me\n");
     expect(
       await readFile(path.join(foreignTaskDir, "99-unrelated.md"), "utf8"),
     ).toBe("# Unrelated\n");
+  });
+
+  it("validates every plan destination before changing plan.md", async () => {
+    const fixture = await newFixture();
+    const planPath = path.join(fixture.threadPath!, "plan.md");
+    const planBefore = "# Existing plan\n";
+    await writeFile(planPath, planBefore, "utf8");
+    await writeFile(
+      path.join(fixture.threadPath!, "plan-tasks"),
+      "not a directory\n",
+      "utf8",
+    );
+
+    const invoker = createScriptedInvoker(
+      makeScenario({ "plan-strict": ["plan-strict-correct"] }),
+    );
+    const request = buildRequest(fixture, stageById("plan-strict"));
+    await initAttemptLog(fixture, request);
+
+    const outcome = await invoker.invoke(request);
+
+    expect(outcome).toMatchObject({
+      kind: "failed",
+      category: "provider-error",
+      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorMessage: expect.stringContaining("directory"),
+    });
+    expect(await readFile(planPath, "utf8")).toBe(planBefore);
+  });
+
+  it("rejects a symlinked plan-tasks parent before changing plan.md", async () => {
+    const fixture = await newFixture();
+    const planPath = path.join(fixture.threadPath!, "plan.md");
+    const planBefore = "# Existing plan\n";
+    await writeFile(planPath, planBefore, "utf8");
+    const outsideTasks = path.join(fixture.root, "outside-plan-tasks");
+    await mkdir(outsideTasks);
+    await symlink(
+      outsideTasks,
+      path.join(fixture.threadPath!, "plan-tasks"),
+    );
+
+    const invoker = createScriptedInvoker(
+      makeScenario({ "plan-strict": ["plan-strict-correct"] }),
+    );
+    const request = buildRequest(fixture, stageById("plan-strict"));
+    await initAttemptLog(fixture, request);
+
+    const outcome = await invoker.invoke(request);
+
+    expect(outcome).toMatchObject({
+      kind: "failed",
+      category: "provider-error",
+      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorMessage: expect.stringContaining("symlink"),
+    });
+    expect(await readFile(planPath, "utf8")).toBe(planBefore);
   });
 
   it("appends reconcile-plan lines in lexical task order", async () => {

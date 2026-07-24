@@ -575,13 +575,6 @@ async function writeScriptedScenario(
   return scenarioPath;
 }
 
-/** plan-strict-correct requires plan-tasks/ to exist before writing owned tasks. */
-async function prepareThreadForScripted(fixture: RepoFixture): Promise<void> {
-  await fs.mkdir(path.join(fixture.threadPath as string, "plan-tasks"), {
-    recursive: true,
-  });
-}
-
 function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
   return {
     ANTMAY_CONFIG_HOME: h.configRoot,
@@ -612,7 +605,6 @@ describe("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
 
   it("marks the initial checkpoint, prints startup output, and uses scripted seams", async () => {
     const h = await setup();
-    await prepareThreadForScripted(h.fixture);
     const scenarioPath = await writeScriptedScenario(h.configRoot);
     const result = await run(h, [], {
       env: scriptedEnv(h),

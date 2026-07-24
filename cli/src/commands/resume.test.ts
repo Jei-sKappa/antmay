@@ -289,12 +289,6 @@ async function writeScriptedScenario(
   return scenarioPath;
 }
 
-async function prepareThreadForScripted(fixture: RepoFixture): Promise<void> {
-  await fs.mkdir(path.join(fixture.threadPath as string, "plan-tasks"), {
-    recursive: true,
-  });
-}
-
 function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
   return {
     ...baseEnv(h),
@@ -308,7 +302,6 @@ async function seedScriptedBlocked(
     spec: ["outcome-blocked", "spec-correct"],
   }),
 ): Promise<string> {
-  await prepareThreadForScripted(h.fixture);
   await writeScriptedScenario(h.configRoot, scenario);
   const seeded = await seed(h, [], { env: scriptedEnv(h) });
   expect(seeded.code).toBe(2);
@@ -880,7 +873,6 @@ describe("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
-    await prepareThreadForScripted(h.fixture);
     await writeScriptedScenario(
       h.configRoot,
       standardScriptedScenario({
@@ -896,7 +888,6 @@ describe("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
 
   it("pauses with harness-error when the stage case array is exhausted on resume", async () => {
     const h = await setup();
-    await prepareThreadForScripted(h.fixture);
     await writeScriptedScenario(
       h.configRoot,
       standardScriptedScenario({ spec: ["outcome-blocked"] }),

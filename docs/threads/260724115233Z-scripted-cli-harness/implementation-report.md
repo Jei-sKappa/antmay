@@ -35,3 +35,25 @@ All four plan tasks completed. The CLI now supports developer-only scripted harn
 - Broader post-implementation review of the change as a whole (task-scoped gates only covered each task's diff).
 - Spec verify stage against acceptance criteria, if desired.
 - Automated E2E reuse of the scripted adapter remains intentionally out of scope for this MVP.
+
+## Post-implementation correction: fresh-thread plan task creation
+
+- Root cause: owned-file containment validation required `plan-tasks/` to
+  exist before the later recursive directory creation, so the Standard scripted
+  happy path paused at `plan-strict-correct` on a fresh thread after partially
+  writing `plan.md`.
+- Fix: owned writes now validate existing parent components while accepting
+  safe missing parents beneath the selected thread, then create those parents
+  during the write phase. `plan-strict-correct` prepares its complete fixed
+  plan/task write set before applying the first effect.
+- Regression coverage: scripted invoker tests prove fresh-thread directory
+  creation, preservation of unrelated task files, rejection of invalid and
+  symlinked parents, and byte-for-byte preservation of an existing `plan.md`
+  when validation fails. Run/resume tests no longer pre-create `plan-tasks/`.
+- Verification: the focused invoker test passed 29 tests. The full
+  `npm --prefix cli run check` gate passed typechecking, all 429 tests across 32
+  test files, and the production build. A manual invocation of the built
+  `cli/dist/main.js` completed all six Standard stages with exit `0` in a fresh
+  disposable Git repository, produced the expected spec/plan/reconcile
+  boundary commits and fixed plan/task artifacts, left the worktree clean, and
+  recorded a completed scripted checkpoint.

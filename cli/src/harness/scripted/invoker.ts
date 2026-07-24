@@ -54,6 +54,13 @@ type CaseContext = {
   threadAbsRoot: string;
 };
 
+type OwnedFileWrite = {
+  threadRelativePath: string;
+  absPath: string;
+  parentAbs: string;
+  content: string;
+};
+
 function scriptedProviderError(message: string): AttemptOutcome {
   return {
     kind: "failed",
@@ -212,12 +219,14 @@ async function assertLexicalWriteDestination(
   return { ok: true };
 }
 
-async function writeOwnedFile(
+async function prepareOwnedFileWrite(
   threadRelPath: string,
   threadAbsRoot: string,
   threadRelativePath: string,
   content: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; write: OwnedFileWrite } | { ok: false; error: string }
+> {
   if (!isThreadRelativePathWithin(threadRelPath, threadRelativePath)) {
     return { ok: false, error: "thread-relative path escapes the selected thread." };
   }
@@ -226,30 +235,76 @@ async function writeOwnedFile(
   if (!lexicalDest.ok) {
     return lexicalDest;
   }
-  const contained = await assertPathContainedInThread(threadAbsRoot, absPath);
-  if (!contained.ok) {
-    return contained;
+  const parentSegments = threadRelativePath.split("/").slice(0, -1);
+  let currentParent = threadAbsRoot;
+  for (const segment of parentSegments) {
+    currentParent = path.join(currentParent, segment);
+    let stat;
+    try {
+      stat = await lstat(currentParent);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        break;
+      }
+      return { ok: false, error: "destination parent is not accessible." };
+    }
+    if (stat.isSymbolicLink()) {
+      return { ok: false, error: "destination parent must not be a symlink." };
+    }
+    if (!stat.isDirectory()) {
+      return { ok: false, error: "destination parent must be a directory." };
+    }
+    const contained = await assertPathContainedInThread(
+      threadAbsRoot,
+      currentParent,
+    );
+    if (!contained.ok) {
+      return contained;
+    }
   }
 
-  const parentAbs = path.dirname(contained.resolvedAbs);
-  const parentContained = await assertPathContainedInThread(
-    threadAbsRoot,
-    parentAbs,
-  );
-  if (!parentContained.ok) {
-    return parentContained;
-  }
+  return {
+    ok: true,
+    write: {
+      threadRelativePath,
+      absPath,
+      parentAbs: path.dirname(absPath),
+      content,
+    },
+  };
+}
 
+async function applyOwnedFileWrite(
+  write: OwnedFileWrite,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    await mkdir(parentAbs, { recursive: true });
-    await writeFile(contained.resolvedAbs, content, "utf8");
+    await mkdir(write.parentAbs, { recursive: true });
+    await writeFile(write.absPath, write.content, "utf8");
   } catch (error) {
     return {
       ok: false,
-      error: `failed to write ${threadRelativePath}: ${(error as Error).message}`,
+      error: `failed to write ${write.threadRelativePath}: ${(error as Error).message}`,
     };
   }
   return { ok: true };
+}
+
+async function writeOwnedFile(
+  threadRelPath: string,
+  threadAbsRoot: string,
+  threadRelativePath: string,
+  content: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const prepared = await prepareOwnedFileWrite(
+    threadRelPath,
+    threadAbsRoot,
+    threadRelativePath,
+    content,
+  );
+  if (!prepared.ok) {
+    return prepared;
+  }
+  return applyOwnedFileWrite(prepared.write);
 }
 
 async function appendOwnedFile(
@@ -500,24 +555,27 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     };
   },
   "plan-strict-correct": async ({ threadRelPath, threadAbsRoot }) => {
-    const planWrite = await writeOwnedFile(
-      threadRelPath,
-      threadAbsRoot,
-      "plan.md",
-      PLAN_STRICT_PLAN_CONTENT,
-    );
-    if (!planWrite.ok) {
-      return planWrite;
-    }
-    for (const [relPath, content] of Object.entries(PLAN_STRICT_OWNED_TASKS)) {
-      const taskWrite = await writeOwnedFile(
+    const ownedWrites = [
+      ["plan.md", PLAN_STRICT_PLAN_CONTENT],
+      ...Object.entries(PLAN_STRICT_OWNED_TASKS),
+    ] as const;
+    const preparedWrites: OwnedFileWrite[] = [];
+    for (const [relPath, content] of ownedWrites) {
+      const prepared = await prepareOwnedFileWrite(
         threadRelPath,
         threadAbsRoot,
         relPath,
         content,
       );
-      if (!taskWrite.ok) {
-        return taskWrite;
+      if (!prepared.ok) {
+        return prepared;
+      }
+      preparedWrites.push(prepared.write);
+    }
+    for (const write of preparedWrites) {
+      const applied = await applyOwnedFileWrite(write);
+      if (!applied.ok) {
+        return applied;
       }
     }
     return {
