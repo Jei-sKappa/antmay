@@ -13,16 +13,16 @@ Start from the outputs of Tasks 1–3. Use the full `spec.md` command, checkpoin
 1. Extend `RunCheckpoint` with one optional strictly validated marker whose only valid present value records that the run started in scripted mode; keep `schemaVersion: 1`, accept old marker-less checkpoints, reject malformed marker values, and rely on typed checkpoint spreads so every transition preserves it.
 2. Extend the `runCommand` dependency boundary to receive the scripted invoker factory and scripted probe alongside the existing real seams, without changing `HarnessId`, settings, stage profiles, or public command arguments.
 3. In `run`, interpret the toggle only after the command has been selected; retain ordinary settings/profile resolution; when enabled, resolve and load the fixed scenario once against selected recipe stage IDs before probe and allocation, select both scripted seams as one runtime, and set the marker in the initial checkpoint. Invalid toggle/scenario input must exit `1` with no allocated run.
-4. In `resume`, load the checkpoint before selecting a runtime. Reject a marked scripted checkpoint unless the toggle is exactly `1` before provider probe, lock acquisition, or checkpoint mutation; for an unmarked checkpoint, select scripted mode only for exact `1` and otherwise preserve state-root-only real resume behavior.
+4. In `resume`, load the checkpoint before selecting a runtime. Reject a marked scripted checkpoint unless the toggle is exactly `1` before provider probe, lock acquisition, or checkpoint mutation. For an unmarked checkpoint, select scripted mode for exact `1`, preserve state-root-only real resume behavior only when the toggle is unset or empty, and reject every other non-empty value before provider probe, lock acquisition, or checkpoint mutation.
 5. For scripted resume, lazily resolve the config root, load the live file once against `checkpoint.stages.map(stage => stage.id)`, select both scripted seams, and retain the loaded object for every attempt launched by that invocation, including queue/boundary paths that ultimately make no harness call.
 6. Update `program.ts` so only the selected `run` or `resume` handler dynamically imports and injects the scripted factory/probe; keep help, version, grammar errors, and `list` free of scripted-toggle, config, scenario, state, Git, and harness work.
 7. Add a conspicuous scripted-mode startup renderer containing the resolved scenario path, and invoke it on both new-run and resume paths before a possible harness call while preserving the logical harness/model in ordinary summaries and attempt headers.
 8. Extend checkpoint tests for absent/present/invalid marker values and round-trip preservation across representative ready, executing, waiting, interrupted, and completed transitions.
 9. Extend `run` command tests for exact toggle interpretation, fixed-path failure before allocation, scripted initial marking, paired seam replacement, startup output, complete Standard happy behavior and boundary commit subjects, required-change rejection of no-op DONE, and unchanged real mode.
 10. Extend `resume` command tests for marked fail-closed rejection before probe/lock/mutation, unmarked real/scripted selection, live scenario rereading, snapshot-stage validation without settings/recipe reads, BLOCKED attempt 1 followed by `spec-correct` attempt 2, exhausted arrays, startup output, and no-call queue/boundary resume paths that still require valid scripted configuration.
-11. Add or update display and lazy-dispatch regression tests to prove no rendered live line begins with `Outcome:`, scripted startup is prominent, neither real Sandcastle invocation nor real executable probing runs in scripted mode, and help/version/grammar/list stay side-effect-free.
+11. Add or update display, program-dispatch, and list-command regression tests to prove no rendered live line begins with `Outcome:`, scripted startup is prominent, neither real Sandcastle invocation nor real executable probing runs in scripted mode, help/version/grammar paths dispatch no command handler, and `list` ignores the toggle and scenario without loading scripted dependencies.
 12. Update `cli/AGENTS.md` with the exact toggle and fixed filename, logical Codex/Claude Code profile rule, paired seam replacement, optional fail-closed checkpoint marker, live rereading, and built-in-case-only/no-arbitrary-code safety boundary.
-13. Run the focused checkpoint, display, run, and resume suites, then run the complete CLI gate.
+13. Run the focused checkpoint, display, run, resume, list, and program-dispatch suites, then run the complete CLI gate.
 
 ## Files modified
 
@@ -30,16 +30,18 @@ Start from the outputs of Tasks 1–3. Use the full `spec.md` command, checkpoin
 - `cli/src/commands/run.test.ts`
 - `cli/src/commands/resume.ts`
 - `cli/src/commands/resume.test.ts`
+- `cli/src/commands/list.test.ts`
 - `cli/src/display/terminal.ts`
 - `cli/src/display/terminal.test.ts`
 - `cli/src/program.ts`
+- `cli/src/program.test.ts` (NEW)
 - `cli/src/state/checkpoint.ts`
 - `cli/src/state/checkpoint.test.ts`
 - `cli/AGENTS.md`
 
 ## Verification
 
-Run `npm --prefix cli run test -- src/state/checkpoint.test.ts src/display/terminal.test.ts src/commands/run.test.ts src/commands/resume.test.ts` and confirm it exits `0`. Run `rg -n 'scripted|ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS' cli/src/cli cli/src/config/settings.ts cli/src/commands/list.ts cli/src/cli/help.ts` and confirm no public grammar, help, settings, provider ID, or list behavior was added. Then run `npm --prefix cli run check` and confirm typecheck, all Vitest tests, and the production build exit `0`.
+Run `npm --prefix cli run test -- src/state/checkpoint.test.ts src/display/terminal.test.ts src/commands/run.test.ts src/commands/resume.test.ts src/commands/list.test.ts src/program.test.ts` and confirm it exits `0`. Run `rg -n 'scripted|ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS' cli/src/cli cli/src/config/settings.ts cli/src/commands/list.ts cli/src/cli/help.ts` and confirm no public grammar, help, settings, provider ID, or list behavior was added. Then run `npm --prefix cli run check` and confirm typecheck, all Vitest tests, and the production build exit `0`.
 
 ## Acceptance criteria
 
