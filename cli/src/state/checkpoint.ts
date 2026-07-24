@@ -124,6 +124,8 @@ export type RunCheckpoint = {
     headAtStageEntry: string | null;
     observedHead: string | null;
   };
+  /** Present only when the run started in scripted test harness mode. */
+  startedScripted?: true;
 };
 
 /**
@@ -617,6 +619,12 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     }
   } else if (condition !== undefined && doc.waiting !== null) {
     errors.push(`condition "${condition}" requires waiting to be null.`);
+  }
+
+  if ("startedScripted" in doc) {
+    if (doc.startedScripted !== true) {
+      errors.push(`startedScripted must be true when present.`);
+    }
   }
 
   // gitCursor.

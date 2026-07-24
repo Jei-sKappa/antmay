@@ -331,3 +331,133 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     if (!result.ok) expect(result.errors.some((e) => /name the current stage/.test(e))).toBe(true);
   });
 });
+
+describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => {
+  it("accepts marker-less checkpoints", () => {
+    const result = validateCheckpoint(validCheckpoint());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.checkpoint.startedScripted).toBeUndefined();
+    }
+  });
+
+  it("accepts startedScripted: true and round-trips it", () => {
+    const doc = validCheckpoint();
+    doc.startedScripted = true;
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.checkpoint.startedScripted).toBe(true);
+    }
+  });
+
+  it("rejects any present value other than true", () => {
+    const doc = { ...validCheckpoint(), startedScripted: false as unknown };
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /startedScripted must be true/.test(e))).toBe(true);
+    }
+  });
+
+  it("preserves the marker across representative condition transitions", () => {
+    const transitions: RunCheckpoint[] = [
+      { ...validCheckpoint(), startedScripted: true, condition: "ready", waiting: null },
+      {
+        ...validCheckpoint(),
+        startedScripted: true,
+        condition: "executing",
+        waiting: null,
+        attempts: [
+          {
+            attempt: 1,
+            stageIndex: 0,
+            stageId: "spec",
+            startedAt: "2026-07-23T12:15:01.000Z",
+            result: "executing",
+            terminalResult: null,
+            logPath: "logs/00-spec-attempt-01.log",
+          },
+        ],
+      },
+      {
+        ...validCheckpoint(),
+        startedScripted: true,
+        condition: "waiting-for-user",
+        waiting: {
+          kind: "outcome-blocked",
+          message: "The spec stage reported BLOCKED and paused for human attention.",
+          candidateLine: "Outcome: BLOCKED — x",
+        },
+        attempts: [
+          {
+            attempt: 1,
+            stageIndex: 0,
+            stageId: "spec",
+            startedAt: "2026-07-23T12:15:01.000Z",
+            endedAt: "2026-07-23T12:15:30.000Z",
+            result: "waiting",
+            terminalResult: {
+              token: "BLOCKED",
+              candidateLine: "Outcome: BLOCKED — x",
+              detail: "blocked",
+            },
+            logPath: "logs/00-spec-attempt-01.log",
+          },
+        ],
+      },
+      {
+        ...validCheckpoint(),
+        startedScripted: true,
+        condition: "waiting-for-user",
+        waiting: {
+          kind: "interrupted",
+          message: "The harness attempt was interrupted by a signal.",
+        },
+        attempts: [
+          {
+            attempt: 1,
+            stageIndex: 0,
+            stageId: "spec",
+            startedAt: "2026-07-23T12:15:01.000Z",
+            endedAt: "2026-07-23T12:15:30.000Z",
+            result: "interrupted",
+            terminalResult: null,
+            logPath: "logs/00-spec-attempt-01.log",
+          },
+        ],
+      },
+      {
+        ...validCheckpoint(),
+        startedScripted: true,
+        condition: "completed",
+        stageIndex: 2,
+        waiting: null,
+        gitCursor: { stageIndex: 2, headAtStageEntry: null, observedHead: null },
+        attempts: [
+          {
+            attempt: 1,
+            stageIndex: 0,
+            stageId: "spec",
+            startedAt: "2026-07-23T12:15:01.000Z",
+            endedAt: "2026-07-23T12:15:30.000Z",
+            result: "done",
+            terminalResult: {
+              token: "DONE",
+              candidateLine: "Outcome: DONE",
+              detail: "done",
+            },
+            logPath: "logs/00-spec-attempt-01.log",
+          },
+        ],
+      },
+    ];
+    for (const doc of transitions) {
+      const result = validateCheckpoint(doc);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.checkpoint.startedScripted).toBe(true);
+      }
+    }
+  });
+});

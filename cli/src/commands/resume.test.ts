@@ -8,6 +8,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
 import type { HarnessId } from "../config/settings.js";
 import type { ProbeResult } from "../harness/probe.js";
+import { createScriptedInvoker } from "../harness/scripted/invoker.js";
+import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
+import {
+  SCRIPTED_HARNESS_TOGGLE_VAR,
+  SCRIPTED_SCENARIO_FILENAME,
+} from "../harness/scripted/scenario.js";
 import type { installSignalHandlers } from "../runner/signals.js";
 import { SignalInterruption } from "../runner/signals.js";
 import type { RunCheckpoint } from "../state/checkpoint.js";
@@ -117,6 +123,7 @@ async function seed(
   steps: FakeHarnessStep[],
   overrides: Partial<{
     dangerouslySkipPermissions: boolean;
+    env: NodeJS.ProcessEnv;
     probe: RunDeps["probe"];
     installSignals: RunDeps["installSignals"];
     createAbortController: () => AbortController;
@@ -126,11 +133,13 @@ async function seed(
   const err = new Capture();
   const invoker = createFakeHarness(steps);
   const deps: RunDeps = {
-    env: baseEnv(h),
+    env: overrides.env ?? baseEnv(h),
     cwd: h.fixture.root,
     homedir: os.homedir(),
     invoker,
     probe: overrides.probe ?? okProbe,
+    createScriptedInvoker,
+    scriptedProbe: probeScriptedHarnessExecutables,
     stdout: out,
     stderr: err,
     isTTY: false,
@@ -168,6 +177,8 @@ async function resume(
     homedir: os.homedir(),
     invoker,
     probe: overrides.probe ?? okProbe,
+    createScriptedInvoker,
+    scriptedProbe: probeScriptedHarnessExecutables,
     stdout: out,
     stderr: err,
     isTTY: false,
@@ -251,6 +262,58 @@ function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
 
 const DONE = { kind: "completed", finalText: "Outcome: DONE" } as const;
 const BLOCKED = { kind: "completed", finalText: "Outcome: BLOCKED — needs a human" } as const;
+
+function standardScriptedScenario(
+  overrides: Partial<Record<string, string[]>> = {},
+): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    stages: {
+      spec: ["spec-correct"],
+      "reconcile-spec": ["reconcile-spec-correct"],
+      "review-spec": ["outcome-done"],
+      "plan-strict": ["plan-strict-correct"],
+      "reconcile-plan": ["reconcile-plan-correct"],
+      "implement-plan-with-subagents": ["outcome-done"],
+      ...overrides,
+    },
+  };
+}
+
+async function writeScriptedScenario(
+  configRoot: string,
+  scenario: Record<string, unknown> = standardScriptedScenario(),
+): Promise<string> {
+  const scenarioPath = path.join(configRoot, SCRIPTED_SCENARIO_FILENAME);
+  await fs.writeFile(scenarioPath, JSON.stringify(scenario, null, 2), "utf8");
+  return scenarioPath;
+}
+
+async function prepareThreadForScripted(fixture: RepoFixture): Promise<void> {
+  await fs.mkdir(path.join(fixture.threadPath as string, "plan-tasks"), {
+    recursive: true,
+  });
+}
+
+function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv(h),
+    [SCRIPTED_HARNESS_TOGGLE_VAR]: "1",
+  };
+}
+
+async function seedScriptedBlocked(
+  h: Harness,
+  scenario: Record<string, unknown> = standardScriptedScenario({
+    spec: ["outcome-blocked", "spec-correct"],
+  }),
+): Promise<string> {
+  await prepareThreadForScripted(h.fixture);
+  await writeScriptedScenario(h.configRoot, scenario);
+  const seeded = await seed(h, [], { env: scriptedEnv(h) });
+  expect(seeded.code).toBe(2);
+  return soleRunId(h);
+}
 
 describe("resumeCommand — preflight rejections (AC-15.2)", () => {
   it("rejects an unknown run with exit 1", async () => {
@@ -762,5 +825,147 @@ describe("resumeCommand — signals during resumed execution (AC-17)", () => {
     expect(cp.condition).toBe("waiting-for-user");
     expect(cp.waiting?.kind).toBe("interrupted");
     expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+});
+
+describe("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
+  it("rejects a non-exact toggle on an unmarked checkpoint before probe or lock", async () => {
+    const h = await setup();
+    await seed(h, [{ outcome: BLOCKED }]);
+    const runId = await soleRunId(h);
+    const before = await readCp(h, runId);
+    expect(before.startedScripted).toBeUndefined();
+
+    let probeCalled = false;
+    const result = await resume(h, runId, [], {
+      env: { ...baseEnv(h), [SCRIPTED_HARNESS_TOGGLE_VAR]: "true" },
+      probe: async (...args) => {
+        probeCalled = true;
+        return okProbe(...args);
+      },
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(probeCalled).toBe(false);
+    const after = await readCp(h, runId);
+    expect(after.updatedAt).toBe(before.updatedAt);
+  });
+
+  it("rejects a marked scripted checkpoint without the toggle before probe or lock", async () => {
+    const h = await setup();
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({ spec: ["outcome-blocked"] }),
+    );
+    const seeded = await seed(h, [], { env: scriptedEnv(h) });
+    expect(seeded.code).toBe(2);
+    const runId = await soleRunId(h);
+    const before = await readCp(h, runId);
+
+    let probeCalled = false;
+    const result = await resume(h, runId, [], {
+      probe: async (...args) => {
+        probeCalled = true;
+        return okProbe(...args);
+      },
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(probeCalled).toBe(false);
+    const after = await readCp(h, runId);
+    expect(after.updatedAt).toBe(before.updatedAt);
+  });
+
+  it("selects scripted mode for an unmarked checkpoint when the toggle is exact 1", async () => {
+    const h = await setup();
+    await seed(h, [{ outcome: BLOCKED }]);
+    const runId = await soleRunId(h);
+    await prepareThreadForScripted(h.fixture);
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({
+        spec: ["outcome-blocked", "spec-correct"],
+      }),
+    );
+    const result = await resume(h, runId, standardSteps(h.fixture), {
+      env: scriptedEnv(h),
+    });
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("SCRIPTED TEST HARNESS MODE");
+  });
+
+  it("pauses with harness-error when the stage case array is exhausted on resume", async () => {
+    const h = await setup();
+    await prepareThreadForScripted(h.fixture);
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({ spec: ["outcome-blocked"] }),
+    );
+    const seeded = await seed(h, [], { env: scriptedEnv(h) });
+    expect(seeded.code).toBe(2);
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).waiting?.kind).toBe("outcome-blocked");
+
+    const result = await resume(h, runId, standardSteps(h.fixture), {
+      env: scriptedEnv(h),
+    });
+    expect(result.code).toBe(2);
+    expect(result.out).toContain(`antmay afk resume ${runId}`);
+    const cp = await readCp(h, runId);
+    expect(cp.waiting?.kind).toBe("harness-error");
+    expect(cp.waiting?.message).toContain("provider-error");
+    expect(cp.waiting?.message).toContain("exhausted");
+    expect(attemptCountAt(cp, 0)).toBe(2);
+    expect(cp.attempts[1]?.result).toBe("waiting");
+  });
+
+  it("runs spec-correct on attempt 2 after an outcome-blocked pause", async () => {
+    const h = await setup();
+    const runId = await seedScriptedBlocked(h);
+    const result = await resume(h, runId, standardSteps(h.fixture), {
+      env: scriptedEnv(h),
+    });
+    expect(result.code).toBe(0);
+    const cp = await readCp(h, runId);
+    expect(attemptCountAt(cp, 0)).toBe(2);
+    const folder = h.fixture.threadFolder as string;
+    expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
+  });
+
+  it("requires a valid scenario for boundary-finalization resume paths", async () => {
+    const h = await setup();
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({ spec: ["outcome-done"] }),
+    );
+    await seed(h, [], { env: scriptedEnv(h) });
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).waiting?.kind).toBe("git-policy-violation");
+    await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
+
+    const result = await resume(h, runId, standardSteps(h.fixture).slice(1), {
+      env: scriptedEnv(h),
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
+  });
+
+  it("requires a valid scenario for no-call pending-queue resume paths", async () => {
+    const h = await setup();
+    await writeScriptedScenario(h.configRoot);
+    let calls = 0;
+    await seed(h, [], {
+      env: scriptedEnv(h),
+      installSignals: fakeSignals(() => (++calls > 1 ? "SIGINT" : null)),
+    });
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).condition).toBe("ready");
+
+    dropPendingSync(h.fixture, "q.md");
+    await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
+
+    const result = await resume(h, runId, [], { env: scriptedEnv(h) });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
   });
 });

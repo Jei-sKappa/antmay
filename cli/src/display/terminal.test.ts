@@ -6,6 +6,7 @@ import type { WaitingInfo } from "../state/checkpoint.js";
 import {
   createTerminalDisplay,
   printRunSummary,
+  printScriptedModeStartup,
   printUnrestrictedWarning,
   type DisplayOptions,
 } from "./terminal.js";
@@ -272,5 +273,15 @@ describe("printUnrestrictedWarning", () => {
     printUnrestrictedWarning(err);
     expect(err.text).toContain("WARNING");
     expect(err.text.trimEnd().split("\n").length).toBeGreaterThan(1);
+  });
+});
+
+describe("printScriptedModeStartup", () => {
+  it("prints a prominent scripted banner with the scenario path and no Outcome: prefix", () => {
+    const { options, out } = makeOptions();
+    printScriptedModeStartup(options, "/cfg/scripted-harness.json");
+    expect(out.text).toContain("SCRIPTED TEST HARNESS MODE");
+    expect(out.text).toContain("/cfg/scripted-harness.json");
+    expect(out.lines.every((line) => !line.startsWith("Outcome:"))).toBe(true);
   });
 });

@@ -102,6 +102,37 @@ never touch config, state, Git, or harnesses.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 
+### Scripted test harness (developer-only)
+
+Scripted mode is gated exclusively by the environment variable
+`ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS`. Only the exact string `1` enables it;
+unset or empty preserves ordinary real-harness behavior; every other non-empty
+value is a configuration error that must not fall through to a real harness.
+
+When enabled, `run` and eligible `resume` read the live scenario from
+`<resolved-config-root>/scripted-harness.json` (fixed filename; never created by
+the CLI). The scenario is validated once per command against the selected or
+snapshotted stage IDs and reread on every resume — never copied into the
+checkpoint.
+
+Runtime selection replaces **both** seams together: the Sandcastle invoker and
+the executable probe are swapped for `createScriptedInvoker` and
+`probeScriptedHarnessExecutables`. Logical stage profiles (Codex / Claude Code
+harness id and configured model) stay unchanged in settings, snapshots, prompts,
+and attempt headers; only the provider contact is bypassed.
+
+A scripted `run` may write optional `startedScripted: true` on the initial
+checkpoint (`schemaVersion` stays `1`). Marker-less checkpoints remain valid.
+Resume is fail-closed: a marked checkpoint refuses to continue unless the toggle
+is exactly `1`, before probe, lock acquisition, or mutation. Scripted resume
+still requires a valid live scenario even on queue/boundary paths that make no
+harness call.
+
+Built-in scripted cases only — no arbitrary code, shell commands, or
+scenario-supplied operations outside the fixed catalog in
+`harness/scripted/scenario.ts`. Help, version, grammar errors, and `list` never
+interpret the toggle or touch scenario/state/Git/harness modules.
+
 ## Engineering Principles
 
 These principles guide all implementation decisions in this project:

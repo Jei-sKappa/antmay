@@ -8,10 +8,16 @@ import { VERSION } from "../cli/help.js";
 import { resolveRoots } from "../config/roots.js";
 import { loadSettings } from "../config/settings.js";
 import type { HarnessId } from "../config/settings.js";
-import { createTerminalDisplay, printRunSummary } from "../display/terminal.js";
+import { createTerminalDisplay, printRunSummary, printScriptedModeStartup } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import type { probeHarnessExecutables } from "../harness/probe.js";
+import { createScriptedInvoker } from "../harness/scripted/invoker.js";
+import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
+import {
+  interpretScriptedHarnessToggle,
+  loadScriptedScenario,
+} from "../harness/scripted/scenario.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import { resolveStageProfiles } from "../recipe/profiles.js";
 import { builtInRecipes, knownStageIds } from "../recipe/standard.js";
@@ -48,6 +54,8 @@ export type RunDeps = {
   homedir: string | undefined;
   invoker: HarnessInvoker;
   probe: typeof probeHarnessExecutables;
+  createScriptedInvoker: typeof createScriptedInvoker;
+  scriptedProbe: typeof probeScriptedHarnessExecutables;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   isTTY: boolean;
@@ -116,6 +124,12 @@ export async function runCommand(
       return fail(`Unknown recipe "${args.recipe}". Known recipes: ${known}.`);
     }
 
+    const toggleResult = interpretScriptedHarnessToggle(deps.env);
+    if (toggleResult.mode === "error") {
+      return fail(toggleResult.message);
+    }
+    const useScripted = toggleResult.mode === "scripted";
+
     // Preflight 2: thread resolution and validation (owning Git root, active
     // location, seed, and decision log).
     const thread = await resolveThreadTarget(args.thread, deps.cwd);
@@ -154,10 +168,26 @@ export async function runCommand(
       return fail(targetErrors.join("\n"));
     }
 
+    let invoker = deps.invoker;
+    let probe = deps.probe;
+    let scenarioPath: string | undefined;
+    if (useScripted) {
+      const loaded = await loadScriptedScenario(
+        roots.configRoot,
+        recipe.stages.map((stage) => stage.id),
+      );
+      if (!loaded.ok) {
+        return fail(loaded.errors.join("\n"));
+      }
+      invoker = deps.createScriptedInvoker(loaded.scenario);
+      probe = deps.scriptedProbe;
+      scenarioPath = loaded.scenarioPath;
+    }
+
     // Preflight 4: harness-executable preflight over the distinct selected
     // harnesses; require a non-empty version for each and keep the observed lines.
     const distinct = [...new Set(stages.map((stage) => stage.profile.harness))];
-    const probeResult = await deps.probe(distinct, thread.repoRoot);
+    const probeResult = await probe(distinct, thread.repoRoot);
     if (!probeResult.ok) {
       const lines = probeResult.failures.map(
         (failure) => `${failure.harness} (${failure.binary}): ${failure.reason}`,
@@ -332,6 +362,7 @@ export async function runCommand(
           attempts: [],
           waiting: null,
           gitCursor: { stageIndex: 0, headAtStageEntry: null, observedHead: null },
+          ...(useScripted ? { startedScripted: true as const } : {}),
         };
         try {
           await writeCheckpoint(created.runDir, checkpoint);
@@ -377,6 +408,9 @@ export async function runCommand(
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,
       stageCount: stages.length,
     });
+    if (scenarioPath !== undefined) {
+      printScriptedModeStartup(displayOptions, scenarioPath);
+    }
 
     const display = createTerminalDisplay(displayOptions);
     try {
@@ -385,7 +419,7 @@ export async function runCommand(
         runDir,
         stateRoot: roots.stateRoot,
         lock,
-        invoker: deps.invoker,
+        invoker,
         display,
         harnessVersions,
         signal: controller.signal,

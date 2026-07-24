@@ -7,6 +7,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../config/settings.js";
 import type { ProbeResult } from "../harness/probe.js";
+import { createScriptedInvoker } from "../harness/scripted/invoker.js";
+import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
+import {
+  SCRIPTED_HARNESS_TOGGLE_VAR,
+  SCRIPTED_SCENARIO_FILENAME,
+} from "../harness/scripted/scenario.js";
 import { EXIT_SIGHUP, EXIT_SIGINT, EXIT_SIGTERM } from "../cli/exit-codes.js";
 import type { installSignalHandlers } from "../runner/signals.js";
 import { SignalInterruption } from "../runner/signals.js";
@@ -140,6 +146,7 @@ async function run(
     recipe: string;
     thread: string;
     dangerouslySkipPermissions: boolean;
+    env: NodeJS.ProcessEnv;
     probe: RunDeps["probe"];
     generateId: () => string;
     createAbortController: () => AbortController;
@@ -153,11 +160,14 @@ async function run(
       ANTMAY_CONFIG_HOME: h.configRoot,
       ANTMAY_STATE_HOME: h.stateRoot,
       NO_COLOR: "1",
+      ...overrides.env,
     },
     cwd: h.fixture.root,
     homedir: os.homedir(),
     invoker: createFakeHarness(steps),
     probe: overrides.probe ?? okProbe,
+    createScriptedInvoker,
+    scriptedProbe: probeScriptedHarnessExecutables,
     stdout: out,
     stderr: err,
     isTTY: false,
@@ -537,3 +547,123 @@ function dropPendingDecisionSync(fixture: RepoFixture, name: string): void {
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, name), "open decision", "utf8");
 }
+
+/** Happy-path scripted scenario for the built-in standard recipe. */
+function standardScriptedScenario(
+  overrides: Partial<Record<string, string[]>> = {},
+): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    stages: {
+      spec: ["spec-correct"],
+      "reconcile-spec": ["reconcile-spec-correct"],
+      "review-spec": ["outcome-done"],
+      "plan-strict": ["plan-strict-correct"],
+      "reconcile-plan": ["reconcile-plan-correct"],
+      "implement-plan-with-subagents": ["outcome-done"],
+      ...overrides,
+    },
+  };
+}
+
+async function writeScriptedScenario(
+  configRoot: string,
+  scenario: Record<string, unknown> = standardScriptedScenario(),
+): Promise<string> {
+  const scenarioPath = path.join(configRoot, SCRIPTED_SCENARIO_FILENAME);
+  await fs.writeFile(scenarioPath, JSON.stringify(scenario, null, 2), "utf8");
+  return scenarioPath;
+}
+
+/** plan-strict-correct requires plan-tasks/ to exist before writing owned tasks. */
+async function prepareThreadForScripted(fixture: RepoFixture): Promise<void> {
+  await fs.mkdir(path.join(fixture.threadPath as string, "plan-tasks"), {
+    recursive: true,
+  });
+}
+
+function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
+  return {
+    ANTMAY_CONFIG_HOME: h.configRoot,
+    ANTMAY_STATE_HOME: h.stateRoot,
+    NO_COLOR: "1",
+    [SCRIPTED_HARNESS_TOGGLE_VAR]: "1",
+  };
+}
+
+describe("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
+  it("rejects a non-exact toggle before allocation", async () => {
+    const h = await setup();
+    const result = await run(h, [], {
+      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "true" },
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(await runDirNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("rejects a missing scenario file before allocation", async () => {
+    const h = await setup();
+    const result = await run(h, [], { env: scriptedEnv(h) });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(await runDirNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("marks the initial checkpoint, prints startup output, and uses scripted seams", async () => {
+    const h = await setup();
+    await prepareThreadForScripted(h.fixture);
+    const scenarioPath = await writeScriptedScenario(h.configRoot);
+    const result = await run(h, [], {
+      env: scriptedEnv(h),
+    });
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("SCRIPTED TEST HARNESS MODE");
+    expect(result.out).toContain(scenarioPath);
+
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (cp.ok) {
+      expect(cp.checkpoint.startedScripted).toBe(true);
+      expect(cp.checkpoint.condition).toBe("completed");
+      expect(cp.checkpoint.observedHarnessVersions.codex).toContain("scripted-harness");
+    }
+    const folder = h.fixture.threadFolder as string;
+    const subjects = await commitSubjects(h.fixture);
+    expect(subjects).toContain(`docs(${folder}): spec`);
+    expect(subjects).toContain(`docs(${folder}): plan`);
+  });
+
+  it("rejects outcome-done on a required-change stage via the ordinary Git-policy pause", async () => {
+    const h = await setup();
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({ spec: ["outcome-done"] }),
+    );
+    const result = await run(h, [], { env: scriptedEnv(h) });
+    expect(result.code).toBe(2);
+    const runDir = await soleCheckpointDir(h.stateRoot);
+    const cp = await readCheckpoint(runDir);
+    expect(cp.ok).toBe(true);
+    if (cp.ok) {
+      expect(cp.checkpoint.waiting?.kind).toBe("git-policy-violation");
+    }
+  });
+
+  it("leaves real mode unchanged when the toggle is unset", async () => {
+    const h = await setup();
+    let probeHarnesses: HarnessId[] = [];
+    const trackingProbe: RunDeps["probe"] = async (harnesses, repoRoot) => {
+      probeHarnesses = [...harnesses];
+      return okProbe(harnesses, repoRoot);
+    };
+    const result = await run(h, standardSteps(h.fixture), { probe: trackingProbe });
+    expect(result.code).toBe(0);
+    expect(probeHarnesses.length).toBeGreaterThan(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (cp.ok) {
+      expect(cp.checkpoint.startedScripted).toBeUndefined();
+    }
+  });
+});

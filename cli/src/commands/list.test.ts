@@ -363,4 +363,27 @@ describe("listCommand corruption handling (AC-16.3)", () => {
     const stateEntries = await fs.readdir(stateRoot);
     expect(stateEntries).toEqual(["afk-runs"]);
   });
+
+  it("ignores the scripted toggle and lists runs without loading scenario dependencies", async () => {
+    const stateRoot = await tempDir("antmay-list-");
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T170000000Z-toggle00",
+        updatedAt: "2026-07-23T17:00:00.000Z",
+        condition: "ready",
+        stageIndex: 0,
+      }),
+    );
+    const { deps: d, out, err } = deps({
+      ANTMAY_STATE_HOME: stateRoot,
+      ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS: "1",
+    });
+
+    const code = await listCommand(d);
+
+    expect(code).toBe(0);
+    expect(err.text).toBe("");
+    expect(out.text).toContain("20260723T170000000Z-toggle00");
+  });
 });

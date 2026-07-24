@@ -53,13 +53,21 @@ export async function runMain(
  * static import graph and never load for help, version, or grammar errors.
  */
 async function runHandler(command: RunCommand): Promise<number> {
-  const [{ runCommand }, { createSandcastleInvoker }, { probeHarnessExecutables }, os] =
-    await Promise.all([
-      import("./commands/run.js"),
-      import("./harness/sandcastle.js"),
-      import("./harness/probe.js"),
-      import("node:os"),
-    ]);
+  const [
+    { runCommand },
+    { createSandcastleInvoker },
+    { probeHarnessExecutables },
+    { createScriptedInvoker },
+    { probeScriptedHarnessExecutables },
+    os,
+  ] = await Promise.all([
+    import("./commands/run.js"),
+    import("./harness/sandcastle.js"),
+    import("./harness/probe.js"),
+    import("./harness/scripted/invoker.js"),
+    import("./harness/scripted/probe.js"),
+    import("node:os"),
+  ]);
 
   return runCommand(
     {
@@ -73,6 +81,8 @@ async function runHandler(command: RunCommand): Promise<number> {
       homedir: os.homedir(),
       invoker: createSandcastleInvoker(),
       probe: probeHarnessExecutables,
+      createScriptedInvoker,
+      scriptedProbe: probeScriptedHarnessExecutables,
       stdout: process.stdout,
       stderr: process.stderr,
       isTTY: process.stdout.isTTY === true,
@@ -88,13 +98,21 @@ async function runHandler(command: RunCommand): Promise<number> {
  * `builtInRecipes` for resolution.
  */
 async function resumeHandler(command: ResumeCommand): Promise<number> {
-  const [{ resumeCommand }, { createSandcastleInvoker }, { probeHarnessExecutables }, os] =
-    await Promise.all([
-      import("./commands/resume.js"),
-      import("./harness/sandcastle.js"),
-      import("./harness/probe.js"),
-      import("node:os"),
-    ]);
+  const [
+    { resumeCommand },
+    { createSandcastleInvoker },
+    { probeHarnessExecutables },
+    { createScriptedInvoker },
+    { probeScriptedHarnessExecutables },
+    os,
+  ] = await Promise.all([
+    import("./commands/resume.js"),
+    import("./harness/sandcastle.js"),
+    import("./harness/probe.js"),
+    import("./harness/scripted/invoker.js"),
+    import("./harness/scripted/probe.js"),
+    import("node:os"),
+  ]);
 
   return resumeCommand(
     { runId: command.runId },
@@ -104,6 +122,8 @@ async function resumeHandler(command: ResumeCommand): Promise<number> {
       homedir: os.homedir(),
       invoker: createSandcastleInvoker(),
       probe: probeHarnessExecutables,
+      createScriptedInvoker,
+      scriptedProbe: probeScriptedHarnessExecutables,
       stdout: process.stdout,
       stderr: process.stderr,
       isTTY: process.stdout.isTTY === true,

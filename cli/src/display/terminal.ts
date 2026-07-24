@@ -85,6 +85,32 @@ export function printUnrestrictedWarning(stderr: NodeJS.WritableStream): void {
 }
 
 /**
+ * Conspicuous scripted-test-mode banner printed on new-run and resume startup
+ * before any harness invocation. Includes the resolved scenario path; logical
+ * harness/model remain in the ordinary summaries and attempt headers.
+ */
+export function printScriptedModeStartup(
+  options: DisplayOptions,
+  scenarioPath: string,
+): void {
+  const useColor = options.isTTY && !options.noColor;
+  const paint = (text: string, code: Ansi): string =>
+    useColor ? `${ANSI[code]}${text}${ANSI.reset}` : text;
+
+  emit(
+    options.stdout,
+    [
+      paint("*** SCRIPTED TEST HARNESS MODE ***", "yellow"),
+      `  Scenario: ${scenarioPath}`,
+      paint(
+        "  Logical harness profiles are unchanged; no Codex or Claude Code process runs.",
+        "dim",
+      ),
+    ].join("\n"),
+  );
+}
+
+/**
  * Render the compact new-run/resume startup summary to stdout — run ID,
  * recipe, thread, workspace, permission mode, and stage count — and emit the
  * prominent unrestricted warning to stderr when permissions are unrestricted.

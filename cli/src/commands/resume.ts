@@ -1,16 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import {
-  EXIT_FAILURE,
-  EXIT_OK,
-  EXIT_WAITING,
-} from "../cli/exit-codes.js";
-import { resolveStateRoot } from "../config/roots.js";
+import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
+import { resolveRoots, resolveStateRoot } from "../config/roots.js";
 import type { HarnessId } from "../config/settings.js";
 import {
   createTerminalDisplay,
   printRunSummary,
+  printScriptedModeStartup,
 } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { evaluateBoundary, finalizeBoundary } from "../gitops/boundary.js";
@@ -19,6 +16,11 @@ import {
   isWorktreeClean,
   readHead,
 } from "../gitops/status.js";
+import {
+  interpretScriptedHarnessToggle,
+  loadScriptedScenario,
+  SCRIPTED_HARNESS_TOGGLE_VAR,
+} from "../harness/scripted/scenario.js";
 import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import type {
@@ -181,12 +183,48 @@ export async function resumeCommand(
     sig = signalCode();
     if (sig !== null) return sig;
 
+    const toggleResult = interpretScriptedHarnessToggle(deps.env);
+    const isMarkedScripted = checkpoint.startedScripted === true;
+
+    if (isMarkedScripted) {
+      if (toggleResult.mode !== "scripted") {
+        return fail(
+          `Run "${args.runId}" was started in scripted test mode. Re-run resume with ${SCRIPTED_HARNESS_TOGGLE_VAR}=1 to continue.`,
+        );
+      }
+    } else if (toggleResult.mode === "error") {
+      return fail(toggleResult.message);
+    }
+
+    const useScripted = isMarkedScripted || toggleResult.mode === "scripted";
+    let invoker = deps.invoker;
+    let probe = deps.probe;
+    let scenarioPath: string | undefined;
+    if (useScripted) {
+      const roots = resolveRoots(deps.env, deps.homedir);
+      if (!roots.ok) {
+        return fail(roots.message);
+      }
+      const loaded = await loadScriptedScenario(
+        roots.configRoot,
+        checkpoint.stages.map((stage) => stage.id),
+      );
+      if (!loaded.ok) {
+        return fail(loaded.errors.join("\n"));
+      }
+      invoker = deps.createScriptedInvoker(loaded.scenario);
+      probe = deps.scriptedProbe;
+      scenarioPath = loaded.scenarioPath;
+    }
+    sig = signalCode();
+    if (sig !== null) return sig;
+
     const stageIndex = checkpoint.stageIndex;
     const stage = checkpoint.stages[stageIndex]!;
     const currentHarness = stage.profile.harness;
 
     // Probe only the current stage's snapshotted harness (DR48).
-    const probeResult = await deps.probe([currentHarness], repoRoot);
+    const probeResult = await probe([currentHarness], repoRoot);
     if (!probeResult.ok) {
       const lines = probeResult.failures.map(
         (failure) => `${failure.harness} (${failure.binary}): ${failure.reason}`,
@@ -309,7 +347,7 @@ export async function resumeCommand(
         runDir,
         stateRoot,
         lock,
-        invoker: deps.invoker,
+        invoker,
         display,
         harnessVersions,
         signal: controller.signal,
@@ -400,6 +438,9 @@ export async function resumeCommand(
         dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,
         stageCount,
       });
+      if (scenarioPath !== undefined) {
+        printScriptedModeStartup(displayOptions, scenarioPath);
+      }
 
       sig = signalCode();
       if (sig !== null) return sig;
