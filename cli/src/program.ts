@@ -88,14 +88,45 @@ async function runHandler(command: RunCommand): Promise<number> {
 }
 
 /**
+ * The real `resume` handler. Like `run`, it dynamically imports the command
+ * implementation and the concrete harness dependencies only when `resume` was
+ * selected. `resume` accepts no execution overrides and never rereads settings
+ * or recipe definitions, so it imports neither `loadSettings` nor
+ * `builtInRecipes` for resolution.
+ */
+async function resumeHandler(command: ResumeCommand): Promise<number> {
+  const [{ resumeCommand }, { createSandcastleInvoker }, { probeHarnessExecutables }, os] =
+    await Promise.all([
+      import("./commands/resume.js"),
+      import("./harness/sandcastle.js"),
+      import("./harness/probe.js"),
+      import("node:os"),
+    ]);
+
+  return resumeCommand(
+    { runId: command.runId },
+    {
+      env: process.env,
+      cwd: process.cwd(),
+      homedir: os.homedir(),
+      invoker: createSandcastleInvoker(),
+      probe: probeHarnessExecutables,
+      stdout: process.stdout,
+      stderr: process.stderr,
+      isTTY: process.stdout.isTTY === true,
+    },
+  );
+}
+
+/**
  * Side-effect-free entry used by the bootstrap: dispatches through `runMain`.
- * The `run` handler dynamically imports its heavy dependencies on selection;
- * `resume`/`list` remain placeholders later tasks replace the same way.
+ * The `run` and `resume` handlers dynamically import their heavy dependencies on
+ * selection; `list` remains a placeholder a later task replaces the same way.
  */
 export async function runProgram(argv: string[]): Promise<number> {
   return runMain(argv, {
     run: runHandler,
-    resume: notImplemented("afk resume"),
+    resume: resumeHandler,
     list: notImplemented("afk list"),
   });
 }
