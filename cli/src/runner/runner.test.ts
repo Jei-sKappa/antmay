@@ -709,3 +709,73 @@ describe("executeRun — no artifact preconditions (AC-6.4)", () => {
     expect(harness.calls.length).toBe(2);
   });
 });
+
+describe("executeRun — harness stage context", () => {
+  it("passes snapshotted stage metadata and attempt number on the first attempt", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const checkpoint = buildCheckpoint(fixture, [alphaStage]);
+    checkpoint.stages[0].profile.prompt = "focus on acceptance criteria";
+    const harness = createFakeHarness([{}]);
+
+    await executeRun(makeContext(checkpoint, runDir, harness));
+
+    expect(harness.calls).toHaveLength(1);
+    expect(harness.calls[0].stage).toEqual({
+      id: "alpha",
+      skill: "alpha-skill",
+      target: alphaStage.target,
+      resolvedTarget: path.posix.join(fixture.threadRelPath as string, "notes.md"),
+      threadRelPath: fixture.threadRelPath,
+      profilePrompt: "focus on acceptance criteria",
+      attemptNumber: 1,
+    });
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.attempts[0].attempt).toBe(1);
+  });
+
+  it("increments attemptNumber on a later attempt of the same stage", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const checkpoint = buildCheckpoint(fixture, [cleanStage]);
+    checkpoint.stageIndex = 0;
+    checkpoint.condition = "waiting-for-user";
+    checkpoint.attempts = [
+      {
+        attempt: 1,
+        stageIndex: 0,
+        stageId: "solo",
+        startedAt: "2026-07-24T00:00:00.000Z",
+        endedAt: "2026-07-24T00:01:00.000Z",
+        result: "waiting",
+        terminalResult: { token: "BLOCKED", candidateLine: "Outcome: BLOCKED", detail: "" },
+        logPath: "logs/01-solo-attempt-1.log",
+      },
+    ];
+    checkpoint.waiting = {
+      kind: "outcome-blocked",
+      message: "blocked",
+    };
+    checkpoint.gitCursor = {
+      stageIndex: 0,
+      headAtStageEntry: await readHead(fixture.root),
+      observedHead: await readHead(fixture.root),
+    };
+    const harness = createFakeHarness([{}]);
+
+    await executeRun(makeContext(checkpoint, runDir, harness));
+
+    expect(harness.calls).toHaveLength(1);
+    expect(harness.calls[0].stage).toEqual({
+      id: "solo",
+      skill: "solo-skill",
+      target: cleanStage.target,
+      resolvedTarget: path.posix.join(fixture.threadRelPath as string, "artifact.md"),
+      threadRelPath: fixture.threadRelPath,
+      profilePrompt: "",
+      attemptNumber: 2,
+    });
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.attempts[1].attempt).toBe(2);
+  });
+});

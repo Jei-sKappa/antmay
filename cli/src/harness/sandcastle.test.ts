@@ -30,6 +30,15 @@ function makeRequest(overrides: Partial<AttemptRequest> = {}): AttemptRequest {
     harness: "codex",
     model: "gpt-5",
     prompt: "$spec `docs/threads/260723121015Z-demo`.",
+    stage: {
+      id: "spec",
+      skill: "spec",
+      target: { kind: "thread-root" },
+      resolvedTarget: "docs/threads/260723121015Z-demo",
+      threadRelPath: "docs/threads/260723121015Z-demo",
+      profilePrompt: "",
+      attemptNumber: 1,
+    },
     idleTimeoutSeconds: 900,
     dangerouslySkipPermissions: false,
     workspace: { cwd: "/repo", sandbox: "none", branchStrategy: "head" },
@@ -109,6 +118,33 @@ describe("buildSandcastleRunOptions", () => {
     for (const key of ABSENT_OPTIONS) {
       expect(key in options).toBe(false);
     }
+  });
+
+  it("ignores stage metadata, preserving harness/model/prompt run options", () => {
+    const baseline = buildSandcastleRunOptions(makeRequest());
+    const withStage = buildSandcastleRunOptions(
+      makeRequest({
+        stage: {
+          id: "other-stage",
+          skill: "other-skill",
+          target: { kind: "thread-file", path: "notes.md" },
+          resolvedTarget: "docs/threads/other/notes.md",
+          threadRelPath: "docs/threads/other",
+          profilePrompt: "extra context",
+          attemptNumber: 99,
+        },
+      }),
+    );
+    expect(withStage.cwd).toBe(baseline.cwd);
+    expect(withStage.prompt).toBe(baseline.prompt);
+    expect(withStage.maxIterations).toBe(baseline.maxIterations);
+    expect(withStage.completionSignal).toEqual(baseline.completionSignal);
+    expect(withStage.completionTimeoutSeconds).toBe(baseline.completionTimeoutSeconds);
+    expect(withStage.idleTimeoutSeconds).toBe(baseline.idleTimeoutSeconds);
+    expect(withStage.branchStrategy).toEqual(baseline.branchStrategy);
+    expect(withStage.sandbox.name).toBe(baseline.sandbox.name);
+    expect(withStage.agent.name).toBe(baseline.agent.name);
+    expect(withStage.agent.captureSessions).toBe(baseline.agent.captureSessions);
   });
 
   describe("codex agent + permission policy", () => {
