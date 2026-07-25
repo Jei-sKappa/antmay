@@ -360,12 +360,12 @@ async function main() {
         : ["afk", "resume", soleRunId(stateRoot)];
     const label = `antmay ${args.join(" ")}`;
 
-    separator(`${label} — STARTED`);
+    separator("ANTMAY DEMO STARTED");
     const child = command(process.execPath, [DIST_MAIN, ...args], {
       cwd: repoRoot,
       env: childEnv,
     });
-    separator(`${label} — FINISHED`);
+    separator("ANTMAY DEMO FINISHED");
 
     const actual = child.status ?? child.error;
     const ok = actual === step.expectExit;

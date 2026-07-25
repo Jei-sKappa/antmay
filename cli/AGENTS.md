@@ -192,8 +192,8 @@ Everything temporary is preserved for inspection.
 The demo verifies exactly one thing per invocation — the exit code — as a single
 `[PASS]`/`[FAIL]` line, and stops at the first `[FAIL]`. Broader behavioral
 assertions belong in the `*.test.ts` suite, which already covers the scripted
-seams end to end. Separator lines naming the invocation bracket each child
-CLI's terminal stream, and a closing summary prints the commit list, the
+seams end to end. `ANTMAY DEMO STARTED` / `ANTMAY DEMO FINISHED` separator
+lines bracket each child CLI's terminal stream, and a closing summary prints the commit list, the
 working-tree state, and the paths and environment needed to keep driving the
 result by hand.
 
