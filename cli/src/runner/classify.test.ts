@@ -7,6 +7,7 @@ import type {
   ClassificationInput,
 } from "./classify.js";
 import { classifyAttempt } from "./classify.js";
+import type { WaitingKind, WaitingReason } from "../state/checkpoint.js";
 import type { OutcomeParse } from "./outcome.js";
 
 const completed: AttemptOutcome = { kind: "completed", finalText: "Outcome: DONE" };
@@ -68,14 +69,40 @@ function input(overrides: Partial<ClassificationInput>): ClassificationInput {
   };
 }
 
-/** Assert the result is a pause (or pause-done) and return it narrowed. */
-function pauseOf(
-  result: Classification,
-): Exclude<Classification, { action: "advance" }> {
+/**
+ * Assert the result is a pause (or pause-done) and expose both views of it: the
+ * governing reason that decides the resume path, and the full list of kinds the
+ * pause reported.
+ */
+function pauseOf(result: Classification): {
+  action: "pause" | "pause-done";
+  kind: WaitingKind;
+  message: string;
+  detail: string | undefined;
+  kinds: WaitingKind[];
+  reasons: WaitingReason[];
+} {
   if (result.action === "advance") {
     throw new Error(`expected a pause, got advance`);
   }
-  return result;
+  const [governing] = result.reasons;
+  return {
+    action: result.action,
+    kind: governing.kind,
+    message: governing.message,
+    detail: governing.detail,
+    kinds: result.reasons.map((reason) => reason.kind),
+    reasons: result.reasons,
+  };
+}
+
+/** The reason of a given kind the pause reported, for asserting on a co-reason. */
+function reasonOf(result: Classification, kind: WaitingKind): WaitingReason {
+  const found = pauseOf(result).reasons.find((reason) => reason.kind === kind);
+  if (found === undefined) {
+    throw new Error(`expected a ${kind} reason`);
+  }
+  return found;
 }
 
 describe("classifyAttempt", () => {
@@ -102,78 +129,89 @@ describe("classifyAttempt", () => {
     const result = classifyAttempt(input({ boundary: violationBoundary }));
     expect(result).toEqual({
       action: "pause",
-      kind: "git-policy-violation",
-      message: violationBoundary.message,
+      reasons: [
+        { kind: "git-policy-violation", message: violationBoundary.message },
+      ],
     });
   });
 
-  it("DONE + violation lists pending files in the message", () => {
+  it("DONE + violation reports the pending files as their own reason", () => {
     const pending = ["docs/threads/t/.pending-decisions/d/q.md"];
-    const result = pauseOf(
-      classifyAttempt(input({ boundary: violationBoundary, pendingFiles: pending })),
+    const result = classifyAttempt(
+      input({ boundary: violationBoundary, pendingFiles: pending }),
     );
-    expect(result.kind).toBe("git-policy-violation");
-    expect(result.message).toContain(violationBoundary.message);
-    expect(result.message).toContain(pending[0]);
+    // The boundary still governs, and the pending bundle is not swallowed by it.
+    expect(pauseOf(result).kind).toBe("git-policy-violation");
+    expect(pauseOf(result).message).toBe(violationBoundary.message);
+    expect(pauseOf(result).message).not.toContain(pending[0]);
+    expect(reasonOf(result, "pending-queues").pendingFiles).toEqual(pending);
   });
 
-  it("DONE + violation + failed scan retains the boundary kind with the scan folded in (DR57/AC-11.6)", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({
-          boundary: violationBoundary,
-          pendingFiles: ["docs/threads/t/p.md"],
-          queueScanError: "EACCES reading .pending-reviews",
-        }),
-      ),
+  it("DONE + violation + failed scan retains the boundary kind and reports both queue problems (DR57/AC-11.6)", () => {
+    const result = classifyAttempt(
+      input({
+        boundary: violationBoundary,
+        pendingFiles: ["docs/threads/t/p.md"],
+        queueScanError: "EACCES reading .pending-reviews",
+      }),
     );
-    expect(result.kind).toBe("git-policy-violation");
-    expect(result.kind).not.toBe("gate-error");
-    expect(result.message).toContain(violationBoundary.message);
-    expect(result.message).toContain("docs/threads/t/p.md");
-    expect(result.message).toContain("EACCES reading .pending-reviews");
+    expect(pauseOf(result).kind).toBe("git-policy-violation");
+    expect(pauseOf(result).kinds).toEqual([
+      "git-policy-violation",
+      "gate-error",
+      "pending-queues",
+    ]);
+    expect(reasonOf(result, "gate-error").message).toContain(
+      "EACCES reading .pending-reviews",
+    );
+    expect(reasonOf(result, "pending-queues").message).toContain(
+      "docs/threads/t/p.md",
+    );
   });
 
   it("DONE + commit-error + failed scan retains commit-error, never gate-error", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({
-          boundary: commitErrorBoundary,
-          queueScanError: "EIO reading .pending-decisions",
-        }),
-      ),
+    const result = classifyAttempt(
+      input({
+        boundary: commitErrorBoundary,
+        queueScanError: "EIO reading .pending-decisions",
+      }),
     );
-    expect(result.kind).toBe("commit-error");
-    expect(result.message).toContain(commitErrorBoundary.message);
-    expect(result.message).toContain("EIO reading .pending-decisions");
+    expect(pauseOf(result).kind).toBe("commit-error");
+    expect(pauseOf(result).message).toBe(commitErrorBoundary.message);
+    expect(reasonOf(result, "gate-error").message).toContain(
+      "EIO reading .pending-decisions",
+    );
   });
 
-  it("a failed queue scan without a failed DONE boundary is a gate-error", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({
-          attemptOutcome: failed("provider-error"),
-          parse: blockedParse,
-          queueScanError: "EACCES reading .pending-reviews",
-        }),
-      ),
+  it("a failed queue scan without a failed DONE boundary is governed by gate-error", () => {
+    const result = classifyAttempt(
+      input({
+        attemptOutcome: failed("provider-error"),
+        parse: blockedParse,
+        queueScanError: "EACCES reading .pending-reviews",
+      }),
     );
-    expect(result.kind).toBe("gate-error");
-    expect(result.message).toContain("EACCES reading .pending-reviews");
+    expect(pauseOf(result).kind).toBe("gate-error");
+    expect(pauseOf(result).message).toContain("EACCES reading .pending-reviews");
+    // The harness failure that also held is still reported.
+    expect(reasonOf(result, "harness-error").message).toContain("provider-error");
   });
 
-  it("gate-error dominates a non-DONE pending queue when the scan itself failed", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({
-          attemptOutcome: completed,
-          parse: blockedParse,
-          pendingFiles: ["docs/threads/t/p.md"],
-          queueScanError: "unreadable",
-        }),
-      ),
+  it("gate-error governs a non-DONE pending queue when the scan itself failed, without hiding the rest", () => {
+    const result = classifyAttempt(
+      input({
+        attemptOutcome: completed,
+        parse: blockedParse,
+        pendingFiles: ["docs/threads/t/p.md"],
+        queueScanError: "unreadable",
+      }),
     );
-    expect(result.kind).toBe("gate-error");
+    expect(pauseOf(result).kind).toBe("gate-error");
+    expect(pauseOf(result).kinds).toEqual([
+      "gate-error",
+      "pending-queues",
+      "outcome-blocked",
+    ]);
   });
 
   it("BLOCKED with no pending files pauses as outcome-blocked", () => {
@@ -184,18 +222,18 @@ describe("classifyAttempt", () => {
     expect(result.message).toContain("BLOCKED");
     // The agent's own reason travels separately from the classification
     // sentence, stripped of the dash that separated it from the token.
-    expect(result.action === "pause" && result.detail).toBe("needs input");
+    expect(result.detail).toBe("needs input");
     expect(result.message).not.toContain("—");
   });
 
-  it("BLOCKED with pending files pauses as pending-queues (waiting)", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({ parse: blockedParse, pendingFiles: ["docs/threads/t/p.md"] }),
-      ),
+  it("BLOCKED with pending files is governed by pending-queues but reports both", () => {
+    const result = classifyAttempt(
+      input({ parse: blockedParse, pendingFiles: ["docs/threads/t/p.md"] }),
     );
-    expect(result.action).toBe("pause");
-    expect(result.kind).toBe("pending-queues");
+    expect(pauseOf(result).action).toBe("pause");
+    expect(pauseOf(result).kind).toBe("pending-queues");
+    expect(pauseOf(result).kinds).toEqual(["pending-queues", "outcome-blocked"]);
+    expect(reasonOf(result, "outcome-blocked").detail).toBe("needs input");
   });
 
   it("REFUSED with no pending files pauses as outcome-refused", () => {
@@ -203,13 +241,12 @@ describe("classifyAttempt", () => {
     expect(result.kind).toBe("outcome-refused");
   });
 
-  it("REFUSED with pending files pauses as pending-queues", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({ parse: refusedParse, pendingFiles: ["docs/threads/t/p.md"] }),
-      ),
+  it("REFUSED with pending files is governed by pending-queues but reports both", () => {
+    const result = classifyAttempt(
+      input({ parse: refusedParse, pendingFiles: ["docs/threads/t/p.md"] }),
     );
-    expect(result.kind).toBe("pending-queues");
+    expect(pauseOf(result).kind).toBe("pending-queues");
+    expect(pauseOf(result).kinds).toEqual(["pending-queues", "outcome-refused"]);
   });
 
   it("provider error with no pending files pauses as harness-error", () => {
@@ -228,18 +265,17 @@ describe("classifyAttempt", () => {
     expect(result.message).toContain("the harness fell over");
   });
 
-  it("provider error with pending files pauses as pending-queues (queue dominance)", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({
-          attemptOutcome: failed("provider-error"),
-          parse: null,
-          boundary: notEvaluated,
-          pendingFiles: ["docs/threads/t/p.md"],
-        }),
-      ),
+  it("provider error with pending files is governed by pending-queues but reports both", () => {
+    const result = classifyAttempt(
+      input({
+        attemptOutcome: failed("provider-error"),
+        parse: null,
+        boundary: notEvaluated,
+        pendingFiles: ["docs/threads/t/p.md"],
+      }),
     );
-    expect(result.kind).toBe("pending-queues");
+    expect(pauseOf(result).kind).toBe("pending-queues");
+    expect(pauseOf(result).kinds).toEqual(["pending-queues", "harness-error"]);
   });
 
   it("idle timeout with no pending files pauses as idle-timeout", () => {
@@ -256,18 +292,17 @@ describe("classifyAttempt", () => {
     expect(result.message).toContain("idle-timeout");
   });
 
-  it("idle timeout with pending files pauses as pending-queues", () => {
-    const result = pauseOf(
-      classifyAttempt(
-        input({
-          attemptOutcome: failed("idle-timeout"),
-          parse: null,
-          boundary: notEvaluated,
-          pendingFiles: ["docs/threads/t/p.md"],
-        }),
-      ),
+  it("idle timeout with pending files is governed by pending-queues but reports both", () => {
+    const result = classifyAttempt(
+      input({
+        attemptOutcome: failed("idle-timeout"),
+        parse: null,
+        boundary: notEvaluated,
+        pendingFiles: ["docs/threads/t/p.md"],
+      }),
     );
-    expect(result.kind).toBe("pending-queues");
+    expect(pauseOf(result).kind).toBe("pending-queues");
+    expect(pauseOf(result).kinds).toEqual(["pending-queues", "idle-timeout"]);
   });
 
   it("a missing/unrecognizable token pauses as malformed-outcome with prefixes and the candidate line", () => {

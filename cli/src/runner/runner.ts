@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { Display } from "../display/types.js";
+import type { Display, StageDisposition } from "../display/types.js";
 import { renderStagePrompt } from "../harness/prompt.js";
 import type { AttemptOutcome, HarnessInvoker } from "../harness/types.js";
 import {
@@ -16,6 +16,7 @@ import type {
   TerminalResult,
   WaitingDiagnostics,
   WaitingInfo,
+  WaitingReason,
 } from "../state/checkpoint.js";
 import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
 import { attemptLogPaths, createAttemptLog } from "../state/logs.js";
@@ -98,6 +99,21 @@ function candidateLineOf(parse: OutcomeParse | null): string | undefined {
   return parse.candidateLine === null ? undefined : parse.candidateLine;
 }
 
+/**
+ * How the stage itself ended, read from the attempt's own terminal token rather
+ * than from the reason that governs the run's pause: a stage can be refused
+ * while a pending bundle is what actually holds the run.
+ */
+function stageDisposition(
+  aborted: boolean,
+  parse: OutcomeParse | null,
+): StageDisposition {
+  if (aborted) return "interrupted";
+  if (parse !== null && parse.token === "REFUSED") return "refused";
+  if (parse !== null && parse.token === "BLOCKED") return "blocked";
+  return "failed";
+}
+
 /** The originating signal name when the abort reason is a `SignalInterruption`,
  * else `null` for any other (or absent) abort. */
 function signalReason(signal: AbortSignal): NodeJS.Signals | null {
@@ -158,8 +174,18 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     }
   }
 
+  function elapsedMs(): number {
+    return clock().getTime() - Date.parse(checkpoint.createdAt);
+  }
+
   function fatal(message: string): RunnerResult {
-    display.warn(message);
+    display.runFailed({
+      runId,
+      recipeName,
+      totalElapsedMs: elapsedMs(),
+      checkpointPath,
+      message,
+    });
     return { status: "fatal-checkpoint", message };
   }
 
@@ -170,7 +196,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       waiting,
       runId,
       recipeName,
-      totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
+      totalElapsedMs: elapsedMs(),
       logAbsPath,
       resumeCommand,
       checkpointPath,
@@ -205,9 +231,20 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           origin: args.sig,
         }
       : { category: "interrupted", origin: args.sig };
+    // The interruption is what stopped the run; pending paths observed on the
+    // way out are a second, independent reason it cannot simply resume.
+    const reasons: WaitingReason[] = [{ kind: "interrupted", message: baseMessage }];
+    if (pending !== undefined) {
+      reasons.push({
+        kind: "pending-queues",
+        message: pendingQueuesMessage(pending),
+        pendingFiles: pending,
+      });
+    }
     const waiting: WaitingInfo = {
       kind: "interrupted",
       message: baseMessage,
+      reasons,
       nextAction: UNVALIDATED_CHANGES_NOTE,
       pendingFiles: pending,
       diagnostics,
@@ -243,6 +280,14 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     // fictional pause is rendered, and the run reports the interruption.
     const readySig = signalReason(signal);
     if (readySig !== null) {
+      display.runInterrupted({
+        runId,
+        recipeName,
+        totalElapsedMs: elapsedMs(),
+        checkpointPath,
+        resumeCommand,
+        signal: readySig,
+      });
       return { status: "interrupted", signal: readySig };
     }
 
@@ -527,8 +572,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         display.runCompleted({
           runId,
           recipeName,
-          totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
+          totalElapsedMs: elapsedMs(),
           checkpointPath,
+          stageCount,
         });
         return { status: "completed" };
       }
@@ -545,7 +591,8 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       };
       const waiting: WaitingInfo = {
         kind: "pending-queues",
-        message: classification.message,
+        message: classification.reasons[0].message,
+        reasons: classification.reasons,
         pendingFiles,
         candidateLine: candidateLineOf(parse),
       };
@@ -567,10 +614,22 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     // classification.action === "pause": every non-DONE pause. When the abort
     // signal caused it, the attempt records `interrupted` with its origin.
     const aborted = outcome.kind === "failed" && outcome.category === "aborted";
-    const kind = aborted ? "interrupted" : classification.kind;
+    const governing = classification.reasons[0];
+    const kind = aborted ? "interrupted" : governing.kind;
     const baseMessage = aborted
       ? "The attempt was interrupted before producing a terminal outcome."
-      : classification.message;
+      : governing.message;
+    // An abort replaces the stage's own reason with the interruption, but the
+    // queue-level reasons it observed still hold and are still reported.
+    const reasons: WaitingReason[] = aborted
+      ? [
+          { kind: "interrupted", message: baseMessage },
+          ...classification.reasons.filter(
+            (reason) =>
+              reason.kind === "pending-queues" || reason.kind === "gate-error",
+          ),
+        ]
+      : classification.reasons;
 
     let diagnostics: WaitingDiagnostics | undefined;
     if (outcome.kind === "failed") {
@@ -591,7 +650,8 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const waiting: WaitingInfo = {
       kind,
       message: baseMessage,
-      detail: aborted ? undefined : classification.detail,
+      reasons,
+      detail: aborted ? undefined : governing.detail,
       nextAction: UNVALIDATED_CHANGES_NOTE,
       pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
       candidateLine: candidateLineOf(parse),
@@ -616,7 +676,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     display.stageStopped({
       stagePosition,
       durationMs,
-      disposition: aborted ? "interrupted" : "problem",
+      disposition: stageDisposition(aborted, parse),
     });
     renderPause(waiting, logPaths.absPath);
     return { status: "paused", waiting };
@@ -626,8 +686,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   display.runCompleted({
     runId,
     recipeName,
-    totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
+    totalElapsedMs: elapsedMs(),
     checkpointPath,
+    stageCount,
   });
   return { status: "completed" };
 }

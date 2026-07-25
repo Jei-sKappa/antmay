@@ -1,6 +1,9 @@
 import type { AttemptOutcome } from "../harness/types.js";
-import type { WaitingKind } from "../state/checkpoint.js";
+import type { WaitingKind, WaitingReason } from "../state/checkpoint.js";
 import type { OutcomeParse } from "./outcome.js";
+
+/** An array guaranteed by construction to hold at least one element. */
+type NonEmpty<T> = [T, ...T[]];
 
 /**
  * The outcome of evaluating a stage's per-stage Git boundary. `evaluated: false`
@@ -36,14 +39,16 @@ export type ClassificationInput = {
 /**
  * The single next action for a classified attempt. `advance` moves to the next
  * stage; `pause` records the attempt as `waiting`; `pause-done` is the
- * DONE-finalized queue pause whose attempt records `done`. `detail` carries the
- * agent's own reason text, separate from the classification's own sentence, and
- * is present only when the attempt supplied one.
+ * DONE-finalized queue pause whose attempt records `done`.
+ *
+ * A pause lists every reason that held, in precedence order, so `reasons[0]` is
+ * the governing reason the resume path dispatches on. A stage that stopped for
+ * its own result while a queue reason also held reports both.
  */
 export type Classification =
   | { action: "advance" }
-  | { action: "pause"; kind: WaitingKind; message: string; detail?: string }
-  | { action: "pause-done"; kind: "pending-queues"; message: string };
+  | { action: "pause"; reasons: NonEmpty<WaitingReason> }
+  | { action: "pause-done"; reasons: NonEmpty<WaitingReason> };
 
 const EXPECTED_PREFIXES =
   "Outcome: DONE, Outcome: BLOCKED, or Outcome: REFUSED";
@@ -60,8 +65,11 @@ function pendingQueuesMessage(sorted: string[]): string {
   return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
 }
 
-function scanDiagnostic(queueScanError: string): string {
-  return `The post-attempt pending-queue scan also failed and must be repeated before finalizing: ${queueScanError}`;
+function gateErrorMessage(queueScanError: string): string {
+  return (
+    "The advancement invariant could not be evaluated because the " +
+    `pending-queue scan failed: ${queueScanError}`
+  );
 }
 
 function harnessMessage(
@@ -90,93 +98,114 @@ function malformedMessage(candidateLine: string | null): string {
   return `${opening} No candidate final line was present.`;
 }
 
+function candidateLineOf(parse: OutcomeParse | null): string | undefined {
+  if (parse === null || parse.candidateLine === null) return undefined;
+  return parse.candidateLine;
+}
+
+/**
+ * Every queue-level reason that holds, scan failure first: a scan that could not
+ * complete and a pending list that was observed are separate problems, and a
+ * caller that reports both gets both.
+ */
+function queueReasons(
+  sorted: string[],
+  queueScanError: string | null,
+): WaitingReason[] {
+  const reasons: WaitingReason[] = [];
+  if (queueScanError !== null) {
+    reasons.push({ kind: "gate-error", message: gateErrorMessage(queueScanError) });
+  }
+  if (sorted.length > 0) {
+    reasons.push({
+      kind: "pending-queues",
+      message: pendingQueuesMessage(sorted),
+      pendingFiles: sorted,
+    });
+  }
+  return reasons;
+}
+
+/**
+ * The stage-level reason for an attempt that did not reach a finalized DONE: a
+ * harness failure if the provider never returned, else the parsed BLOCKED or
+ * REFUSED verdict, else an unrecognizable terminal line.
+ */
+function stageReason(
+  attemptOutcome: AttemptOutcome,
+  parse: OutcomeParse | null,
+): WaitingReason {
+  if (attemptOutcome.kind === "failed") {
+    const kind: WaitingKind =
+      attemptOutcome.category === "idle-timeout" ? "idle-timeout" : "harness-error";
+    return { kind, message: harnessMessage(attemptOutcome) };
+  }
+  if (parse !== null && (parse.token === "BLOCKED" || parse.token === "REFUSED")) {
+    const blocked = parse.token === "BLOCKED";
+    return {
+      kind: blocked ? "outcome-blocked" : "outcome-refused",
+      message: `The stage reported Outcome: ${parse.token} and paused for human attention.`,
+      detail: detailOf(parse.detail),
+      candidateLine: parse.candidateLine,
+    };
+  }
+  return {
+    kind: "malformed-outcome",
+    message: malformedMessage(parse === null ? null : parse.candidateLine),
+    candidateLine: candidateLineOf(parse),
+  };
+}
+
 /**
  * The pure precedence function that turns an attempt's outcome, harness result,
  * queue state, and finalized boundary into the single next action, in strict
  * precedence order (DR41/DR44/DR52/DR57). Pure — no I/O.
+ *
+ * Precedence decides which reason governs the resume path and therefore leads
+ * the list; it never discards the others. A stage-level reason and a
+ * queue-level reason that both hold are both reported.
  */
 export function classifyAttempt(input: ClassificationInput): Classification {
   const { attemptOutcome, parse, pendingFiles, queueScanError, boundary } = input;
   const isDone = parse !== null && parse.token === "DONE";
   const sorted = sortPending(pendingFiles);
+  const queues = queueReasons(sorted, queueScanError);
 
-  // 1. A parsed DONE with a failed boundary keeps its boundary kind, listing any
-  //    pending files and folding a failed scan diagnostic into the same message
+  // 1. A parsed DONE with a failed boundary is governed by its boundary kind
   //    rather than downgrading to gate-error (DR57).
   if (isDone && boundary.evaluated && !boundary.ok) {
-    let message = boundary.message;
-    if (sorted.length > 0) {
-      message += ` Pending bundle files present at this boundary: ${sorted.join(", ")}.`;
-    }
-    if (queueScanError !== null) {
-      message += ` ${scanDiagnostic(queueScanError)}`;
-    }
-    return { action: "pause", kind: boundary.kind, message };
+    const governing: WaitingReason = { kind: boundary.kind, message: boundary.message };
+    return { action: "pause", reasons: [governing, ...queues] };
   }
 
-  // 2. Otherwise a failed queue scan is a gate error.
+  // 2. Otherwise a failed queue scan governs, because nothing downstream of it
+  //    can be evaluated. A stage that also failed on its own terms says so.
   if (queueScanError !== null) {
+    const [governing, ...rest] = queues as NonEmpty<WaitingReason>;
     return {
       action: "pause",
-      kind: "gate-error",
-      message: `The advancement invariant could not be evaluated because the pending-queue scan failed: ${queueScanError}`,
+      reasons: isDone
+        ? [governing, ...rest]
+        : [governing, ...rest, stageReason(attemptOutcome, parse)],
     };
   }
 
   // 3. A parsed DONE with a finalized-ok boundary advances on an empty queue,
   //    else pauses as a DONE-finalized pending-queues pause.
   if (isDone) {
-    if (sorted.length === 0) {
+    const [governing, ...rest] = queues;
+    if (governing === undefined) {
       return { action: "advance" };
     }
-    return {
-      action: "pause-done",
-      kind: "pending-queues",
-      message: pendingQueuesMessage(sorted),
-    };
+    return { action: "pause-done", reasons: [governing, ...rest] };
   }
 
-  // 4. For every non-DONE result, pending files take precedence over BLOCKED,
-  //    REFUSED, and provider errors.
-  if (sorted.length > 0) {
-    return {
-      action: "pause",
-      kind: "pending-queues",
-      message: pendingQueuesMessage(sorted),
-    };
+  // 4. For every non-DONE result, pending files govern over BLOCKED, REFUSED,
+  //    and provider errors — but the stage's own result is reported alongside.
+  const stage = stageReason(attemptOutcome, parse);
+  const [governing, ...rest] = queues;
+  if (governing === undefined) {
+    return { action: "pause", reasons: [stage] };
   }
-
-  // 5 & 6. Harness failure: idle timeout stays distinct; every other failure is
-  //         a harness error.
-  if (attemptOutcome.kind === "failed") {
-    const kind: WaitingKind =
-      attemptOutcome.category === "idle-timeout" ? "idle-timeout" : "harness-error";
-    return { action: "pause", kind, message: harnessMessage(attemptOutcome) };
-  }
-
-  // 7. The parsed token: BLOCKED, REFUSED, or a missing/unrecognizable token.
-  if (parse !== null && parse.token !== null) {
-    if (parse.token === "BLOCKED") {
-      return {
-        action: "pause",
-        kind: "outcome-blocked",
-        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
-        detail: detailOf(parse.detail),
-      };
-    }
-    if (parse.token === "REFUSED") {
-      return {
-        action: "pause",
-        kind: "outcome-refused",
-        message: "The stage reported Outcome: REFUSED and paused for human attention.",
-        detail: detailOf(parse.detail),
-      };
-    }
-  }
-
-  return {
-    action: "pause",
-    kind: "malformed-outcome",
-    message: malformedMessage(parse === null ? null : parse.candidateLine),
-  };
+  return { action: "pause", reasons: [governing, ...rest, stage] };
 }

@@ -401,6 +401,7 @@ export async function resumeCommand(
           recipeName,
           totalElapsedMs: clock().getTime() - Date.parse(base.createdAt),
           checkpointPath,
+          stageCount,
         });
         return EXIT_OK;
       }

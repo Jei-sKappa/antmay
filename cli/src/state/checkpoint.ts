@@ -59,20 +59,61 @@ export const UNVALIDATED_CHANGES_NOTE =
   "commit them before resuming.";
 
 /**
+ * One reason a run stopped. Several can hold at once — a stage that reported
+ * REFUSED while a pending bundle also awaits resolution stops for both — so a
+ * pause records every reason it observed rather than only the one that governs
+ * the resume path.
+ */
+export type WaitingReason = {
+  kind: WaitingKind;
+  message: string;
+  detail?: string;
+  pendingFiles?: string[];
+  candidateLine?: string;
+};
+
+/**
  * The single waiting object a `waiting-for-user` checkpoint carries. It always
  * names a kind and a complete human message describing what happened; the
  * agent's own reason text, the human's next action, pending paths, a candidate
  * outcome line, and structured diagnostics are present when applicable.
+ *
+ * `kind`, `message`, and `detail` describe the **governing** reason — the one
+ * that decides how `resume` behaves. `reasons` lists every reason the pause
+ * observed, in precedence order, so the governing one is always `reasons[0]`.
+ * A checkpoint written before reasons were recorded carries none, and reads
+ * back as the single governing reason.
  */
 export type WaitingInfo = {
   kind: WaitingKind;
   message: string;
+  reasons?: WaitingReason[];
   detail?: string;
   nextAction?: string;
   pendingFiles?: string[];
   candidateLine?: string;
   diagnostics?: WaitingDiagnostics;
 };
+
+/**
+ * Every reason a pause stopped for, in precedence order. A pause that recorded
+ * no list yields its governing reason alone, so a reader never has to special-
+ * case one against the other.
+ */
+export function waitingReasons(waiting: WaitingInfo): WaitingReason[] {
+  if (waiting.reasons !== undefined && waiting.reasons.length > 0) {
+    return waiting.reasons;
+  }
+  return [
+    {
+      kind: waiting.kind,
+      message: waiting.message,
+      detail: waiting.detail,
+      pendingFiles: waiting.pendingFiles,
+      candidateLine: waiting.candidateLine,
+    },
+  ];
+}
 
 /**
  * The parsed terminal text result of an attempt. `token` is the recognized
@@ -445,6 +486,49 @@ function validateAttempt(value: unknown, label: string, errors: string[]): void 
   }
 }
 
+/**
+ * Validate the recorded reason list. It must be non-empty, each entry must name
+ * a known kind and carry a complete message, and the first entry must be the
+ * governing reason the surrounding waiting object already names — that identity
+ * is what lets `resume` keep dispatching on `waiting.kind` alone.
+ */
+function validateWaitingReasons(
+  value: unknown,
+  governingKind: unknown,
+  errors: string[],
+): void {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`waiting.reasons must be a non-empty array.`);
+    return;
+  }
+  value.forEach((entry, index) => {
+    const label = `waiting.reasons[${index}]`;
+    if (!isPlainObject(entry)) {
+      errors.push(`${label} must be an object.`);
+      return;
+    }
+    if (typeof entry.kind !== "string" || !WAITING_KINDS.has(entry.kind)) {
+      errors.push(`${label}.kind must be a known waiting kind.`);
+    }
+    if (!isNonEmptyString(entry.message)) {
+      errors.push(`${label}.message must be a non-empty string.`);
+    }
+    if (entry.detail !== undefined && !isNonEmptyString(entry.detail)) {
+      errors.push(`${label}.detail must be a non-empty string.`);
+    }
+    if (entry.pendingFiles !== undefined) {
+      validateSortedUniquePending(entry.pendingFiles, `${label}.pendingFiles`, errors);
+    }
+    if (entry.candidateLine !== undefined && typeof entry.candidateLine !== "string") {
+      errors.push(`${label}.candidateLine must be a string.`);
+    }
+  });
+  const first = value[0];
+  if (isPlainObject(first) && first.kind !== governingKind) {
+    errors.push(`waiting.reasons[0].kind must equal waiting.kind.`);
+  }
+}
+
 function validateWaiting(value: unknown, errors: string[]): void {
   if (!isPlainObject(value)) {
     errors.push(`waiting object must be an object.`);
@@ -466,6 +550,9 @@ function validateWaiting(value: unknown, errors: string[]): void {
   }
   if (value.candidateLine !== undefined && typeof value.candidateLine !== "string") {
     errors.push(`waiting.candidateLine must be a string.`);
+  }
+  if (value.reasons !== undefined) {
+    validateWaitingReasons(value.reasons, value.kind, errors);
   }
   if (value.diagnostics !== undefined) {
     const d = value.diagnostics;

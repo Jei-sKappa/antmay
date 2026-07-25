@@ -1,6 +1,7 @@
 import type { HarnessEvent } from "../harness/types.js";
-import type { WaitingInfo } from "../state/checkpoint.js";
-import type { Display } from "./types.js";
+import type { WaitingInfo, WaitingKind, WaitingReason } from "../state/checkpoint.js";
+import { waitingReasons } from "../state/checkpoint.js";
+import type { Display, StageDisposition } from "./types.js";
 
 /**
  * The stream and rendering context every terminal renderer and standalone
@@ -21,6 +22,14 @@ const TOOL_ARG_DISPLAY_LIMIT = 160;
 /** Prefix every line of live harness output carries, so agent output is
  * distinguishable at a glance from the executor's own lines. */
 const AGENT_GUTTER = "│ ";
+
+/**
+ * The indent every line an executor writes beneath a stage header carries, so
+ * the header owns everything under it. Quoted harness output is left flush and
+ * leans on the agent gutter instead, which is this same width and lines the
+ * quoted block up with its indented siblings.
+ */
+const STAGE_INDENT = " ".repeat(AGENT_GUTTER.length);
 
 /** Prefix every line of developer-only diagnostic output carries. */
 const DEV_PREFIX = "[DEV] ";
@@ -58,11 +67,91 @@ const AGENT_STYLE: readonly Ansi[] = ["brightWhite"];
 /** The style a stage header carries, marking the start of a stage. */
 const STAGE_STYLE: readonly Ansi[] = ["bold", "cyan"];
 
-/** How a stage that ended without finalizing is described. */
-const STOPPED_VERB: Record<"problem" | "interrupted", string> = {
-  problem: "finished with problems",
-  interrupted: "stopped",
+/**
+ * How each stage disposition is spoken. The word says what happened and the
+ * color says how badly, so a reader with color stripped loses nothing.
+ */
+const STAGE_DISPOSITION: Record<
+  StageDisposition,
+  { verb: string; icon: string; color: Ansi }
+> = {
+  refused: { verb: "refused", icon: "!", color: "red" },
+  blocked: { verb: "blocked", icon: "⊘", color: "red" },
+  failed: { verb: "failed", icon: "✖", color: "red" },
+  interrupted: { verb: "interrupted", icon: "■", color: "yellow" },
 };
+
+/**
+ * The banner each reason a run stopped for is announced with. `group` orders
+ * the banners when several hold at once: what the stage did comes before what
+ * the queue state is, so the reason nearest the resume command is the one to
+ * act on.
+ */
+const REASON_BANNER: Record<
+  WaitingKind,
+  { label: string; icon: string; color: Ansi; group: "stage" | "queue" }
+> = {
+  "outcome-refused": { label: "REFUSED", icon: "!", color: "red", group: "stage" },
+  "outcome-blocked": { label: "BLOCKED", icon: "⊘", color: "red", group: "stage" },
+  "malformed-outcome": {
+    label: "FAILED — no terminal outcome",
+    icon: "✖",
+    color: "red",
+    group: "stage",
+  },
+  "harness-error": {
+    label: "FAILED — harness error",
+    icon: "✖",
+    color: "red",
+    group: "stage",
+  },
+  "idle-timeout": {
+    label: "FAILED — idle timeout",
+    icon: "✖",
+    color: "red",
+    group: "stage",
+  },
+  "git-policy-violation": {
+    label: "FAILED — git policy violation",
+    icon: "✖",
+    color: "red",
+    group: "stage",
+  },
+  "commit-error": {
+    label: "FAILED — commit failed",
+    icon: "✖",
+    color: "red",
+    group: "stage",
+  },
+  interrupted: { label: "INTERRUPTED", icon: "■", color: "yellow", group: "stage" },
+  "pending-queues": {
+    label: "WAITING FOR USER",
+    icon: "⏸",
+    color: "yellow",
+    group: "queue",
+  },
+  "gate-error": {
+    label: "FAILED — queue scan error",
+    icon: "✖",
+    color: "red",
+    group: "queue",
+  },
+};
+
+/** Every `key:` label a closing block can print, so one alignment column serves
+ * the identity block, the reason banners, and the closing action lines alike. */
+const CLOSING_KEYS = [
+  "Run ID",
+  "Recipe",
+  "Elapsed",
+  "Checkpoint",
+  "Reason",
+  "Detail",
+  "Pending",
+  "Next",
+  "Log",
+  "Resume",
+] as const;
 
 /** Paints text in the requested styles, or returns it unchanged when color is
  * off. Every renderer in this module gets its painter from here. */
@@ -235,6 +324,79 @@ export function printRunSummary(
   );
 }
 
+/** The one alignment column every closing block shares. */
+const CLOSING_WIDTH = keyWidth(...CLOSING_KEYS);
+
+/**
+ * The identity block every closing block opens with: which run this was, and
+ * where its durable state lives. What to do about it follows underneath.
+ */
+function runSummaryBlock(
+  paint: Painter,
+  info: {
+    runId: string;
+    recipeName: string;
+    totalElapsedMs: number;
+    checkpointPath: string;
+  },
+): string[] {
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, CLOSING_WIDTH);
+  return [
+    "",
+    paint("Run summary", "bold"),
+    line("Run ID", info.runId),
+    line("Recipe", info.recipeName),
+    line("Elapsed", formatDuration(info.totalElapsedMs)),
+    line("Checkpoint", info.checkpointPath),
+  ];
+}
+
+/**
+ * Every reason a pause stopped for, ordered for reading: what the stage did,
+ * then what the queue state is. Relative order within a group is preserved, so
+ * the governing reason still leads its own group.
+ */
+function orderedReasons(waiting: WaitingInfo): WaitingReason[] {
+  const all = waitingReasons(waiting);
+  const inGroup = (group: "stage" | "queue"): WaitingReason[] =>
+    all.filter((reason) => REASON_BANNER[reason.kind].group === group);
+  return [...inGroup("stage"), ...inGroup("queue")];
+}
+
+/**
+ * One reason's banner and its supporting lines. An unrecognizable terminal line
+ * is echoed here behind the agent gutter that marks it quoted, because that line
+ * is the whole of the complaint.
+ */
+function reasonBlock(paint: Painter, reason: WaitingReason): string[] {
+  const banner = REASON_BANNER[reason.kind];
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, CLOSING_WIDTH);
+
+  const lines = [
+    "",
+    paint(`${banner.label} ${banner.icon}`, "bold", banner.color),
+    line("Reason", reason.message),
+  ];
+  if (reason.detail !== undefined) {
+    lines.push(line("Detail", reason.detail));
+  }
+  if (reason.pendingFiles !== undefined && reason.pendingFiles.length > 0) {
+    lines.push(`  ${paint("Pending:", ...KEY_STYLE)}`);
+    for (const file of reason.pendingFiles) {
+      lines.push(`    - ${file}`);
+    }
+  }
+  if (reason.kind === "malformed-outcome" && reason.candidateLine !== undefined) {
+    lines.push(`  ${paint("Candidate outcome line:", ...KEY_STYLE)}`);
+    lines.push(
+      `${paint(AGENT_GUTTER, "dim")}${paint(reason.candidateLine, ...AGENT_STYLE)}`,
+    );
+  }
+  return lines;
+}
+
 /**
  * Build the terminal `Display`. Normal operational output goes to stdout;
  * warnings and errors go to stderr. Color is emitted only on a TTY with color
@@ -270,9 +432,9 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
         [
           "",
           paint(title, ...STAGE_STYLE),
-          infoLine(paint, "", "Harness", info.harness, width),
-          infoLine(paint, "", "Model", info.model, width),
-          infoLine(paint, "", "Log", info.logAbsPath, width),
+          infoLine(paint, STAGE_INDENT, "Harness", info.harness, width),
+          infoLine(paint, STAGE_INDENT, "Model", info.model, width),
+          infoLine(paint, STAGE_INDENT, "Log", info.logAbsPath, width),
           "",
         ].join("\n"),
       );
@@ -290,7 +452,10 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
     heartbeat(elapsedMs) {
       emit(
         options.stdout,
-        paint(`· still working — elapsed ${formatDuration(elapsedMs)}`, "dim"),
+        `${STAGE_INDENT}${paint(
+          `· still working — elapsed ${formatDuration(elapsedMs)}`,
+          "dim",
+        )}`,
       );
     },
 
@@ -299,114 +464,96 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
         options.stdout,
         [
           "",
-          paint(
-            `Stage ${info.stagePosition} succeeded in ${formatDuration(info.durationMs)} ✓`,
+          `${STAGE_INDENT}${paint(
+            `Stage ${info.stagePosition} done in ${formatDuration(info.durationMs)} ✓`,
             "green",
-          ),
+          )}`,
         ].join("\n"),
       );
     },
 
     stageStopped(info) {
+      const { verb, icon, color } = STAGE_DISPOSITION[info.disposition];
       emit(
         options.stdout,
         [
           "",
-          paint(
-            `Stage ${info.stagePosition} ${STOPPED_VERB[info.disposition]} in ` +
-              `${formatDuration(info.durationMs)} ⚠`,
-            "yellow",
-          ),
+          `${STAGE_INDENT}${paint(
+            `Stage ${info.stagePosition} ${verb} in ${formatDuration(info.durationMs)} ${icon}`,
+            color,
+          )}`,
         ].join("\n"),
       );
     },
 
-    runPaused(info: {
-      waiting: WaitingInfo;
-      runId: string;
-      recipeName: string;
-      totalElapsedMs: number;
-      logAbsPath: string | null;
-      resumeCommand: string;
-      checkpointPath: string;
-    }) {
-      const { waiting } = info;
-      const width = keyWidth(
-        "Reason",
-        "Detail",
-        "Next",
-        "Pending",
-        "Resume",
-        "Log",
-        "Run ID",
-        "Recipe",
-        "Elapsed",
-        "Checkpoint",
-      );
+    runPaused(info) {
       const line = (key: string, value: string): string =>
-        infoLine(paint, "  ", key, value, width);
+        infoLine(paint, "  ", key, value, CLOSING_WIDTH);
+      const reasons = orderedReasons(info.waiting);
 
-      // What happened, then what to do about it, then the reference identity of
-      // the run that is now waiting.
-      const lines: string[] = [
-        "",
-        paint("Run paused — Waiting for user", "bold"),
-        line("Reason", waiting.message),
-      ];
-      if (waiting.detail !== undefined) {
-        lines.push(line("Detail", waiting.detail));
+      const lines = runSummaryBlock(paint, info);
+      // Several reasons can hold at once, and none of them outranks the others
+      // for a reader: each is announced in full.
+      if (reasons.length > 1) {
+        lines.push("", paint(`Run stopped for ${reasons.length} reasons:`, "bold"));
       }
-      if (waiting.pendingFiles && waiting.pendingFiles.length > 0) {
-        lines.push(`  ${paint("Pending:", ...KEY_STYLE)}`);
-        for (const file of waiting.pendingFiles) {
-          lines.push(`    - ${file}`);
-        }
+      for (const reason of reasons) {
+        lines.push(...reasonBlock(paint, reason));
       }
-      if (waiting.nextAction !== undefined) {
-        lines.push(line("Next", waiting.nextAction));
+
+      // The instruction and the command close the run, so the last thing on
+      // screen is the thing to type next.
+      lines.push("");
+      if (info.waiting.nextAction !== undefined) {
+        lines.push(line("Next", info.waiting.nextAction));
       }
-      lines.push(line("Resume", info.resumeCommand));
       if (info.logAbsPath !== null) {
         lines.push(line("Log", info.logAbsPath));
       }
-      lines.push("");
-      lines.push(line("Run ID", info.runId));
-      lines.push(line("Recipe", info.recipeName));
-      lines.push(line("Elapsed", formatDuration(info.totalElapsedMs)));
-      lines.push(line("Checkpoint", info.checkpointPath));
+      lines.push(line("Resume", info.resumeCommand));
       emit(options.stdout, lines.join("\n"));
-
-      // A malformed outcome is the one pause whose whole complaint is the line
-      // itself, so it is echoed verbatim behind the gutter that marks it quoted.
-      // Every other kind already carries its reason in the block above.
-      if (
-        waiting.kind === "malformed-outcome" &&
-        waiting.candidateLine !== undefined
-      ) {
-        emit(
-          options.stdout,
-          `  ${paint("Candidate outcome line:", ...KEY_STYLE)}`,
-        );
-        emitAgent(waiting.candidateLine, ...AGENT_STYLE);
-      }
     },
 
     runCompleted(info) {
-      const width = keyWidth("Run ID", "Recipe", "Elapsed", "Checkpoint");
-      const line = (key: string, value: string): string =>
-        infoLine(paint, "  ", key, value, width);
-
-      emit(
-        options.stdout,
-        [
-          "",
-          paint("Run completed", "bold"),
-          line("Run ID", info.runId),
-          line("Recipe", info.recipeName),
-          line("Elapsed", formatDuration(info.totalElapsedMs)),
-          line("Checkpoint", info.checkpointPath),
-        ].join("\n"),
+      const lines = runSummaryBlock(paint, info);
+      lines.push(
+        "",
+        paint(
+          `SUCCESS — ${info.stageCount}/${info.stageCount} stages completed ✓`,
+          "bold",
+          "green",
+        ),
       );
+      emit(options.stdout, lines.join("\n"));
+    },
+
+    runInterrupted(info) {
+      const line = (key: string, value: string): string =>
+        infoLine(paint, "  ", key, value, CLOSING_WIDTH);
+      const lines = runSummaryBlock(paint, info);
+      lines.push(
+        "",
+        paint("INTERRUPTED ■", "bold", "yellow"),
+        line(
+          "Reason",
+          `Stopped by ${info.signal} between stages; the checkpoint is unchanged.`,
+        ),
+        "",
+        line("Resume", info.resumeCommand),
+      );
+      emit(options.stdout, lines.join("\n"));
+    },
+
+    runFailed(info) {
+      const line = (key: string, value: string): string =>
+        infoLine(paint, "  ", key, value, CLOSING_WIDTH);
+      const lines = runSummaryBlock(paint, info);
+      lines.push(
+        "",
+        paint("FAILED — checkpoint write ✖", "bold", "red"),
+        line("Reason", info.message),
+      );
+      emit(options.stdout, lines.join("\n"));
     },
 
     warn(message) {

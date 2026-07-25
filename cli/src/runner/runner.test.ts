@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import type { Display } from "../display/types.js";
+import type { Display, StageDisposition } from "../display/types.js";
 import { nullDisplay } from "../display/types.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import { readHead } from "../gitops/status.js";
@@ -167,6 +167,8 @@ function recorder(): {
   stageStopped: Array<Parameters<Display["stageStopped"]>[0]>;
   runPaused: Array<Parameters<Display["runPaused"]>[0]>;
   runCompleted: Array<Parameters<Display["runCompleted"]>[0]>;
+  runInterrupted: Array<Parameters<Display["runInterrupted"]>[0]>;
+  runFailed: Array<Parameters<Display["runFailed"]>[0]>;
   warns: string[];
 } {
   const attemptStarted: Array<Parameters<Display["attemptStarted"]>[0]> = [];
@@ -174,6 +176,8 @@ function recorder(): {
   const stageStopped: Array<Parameters<Display["stageStopped"]>[0]> = [];
   const runPaused: Array<Parameters<Display["runPaused"]>[0]> = [];
   const runCompleted: Array<Parameters<Display["runCompleted"]>[0]> = [];
+  const runInterrupted: Array<Parameters<Display["runInterrupted"]>[0]> = [];
+  const runFailed: Array<Parameters<Display["runFailed"]>[0]> = [];
   const warns: string[] = [];
   const display: Display = {
     attemptStarted: (info) => attemptStarted.push(info),
@@ -183,6 +187,8 @@ function recorder(): {
     stageStopped: (info) => stageStopped.push(info),
     runPaused: (info) => runPaused.push(info),
     runCompleted: (info) => runCompleted.push(info),
+    runInterrupted: (info) => runInterrupted.push(info),
+    runFailed: (info) => runFailed.push(info),
     warn: (message) => warns.push(message),
   };
   return {
@@ -192,6 +198,8 @@ function recorder(): {
     stageStopped,
     runPaused,
     runCompleted,
+    runInterrupted,
+    runFailed,
     warns,
   };
 }
@@ -342,24 +350,28 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
     name: string;
     step: FakeHarnessStep;
     kind: string;
+    disposition: StageDisposition;
     candidateLine: string | null;
   }> = [
     {
       name: "BLOCKED",
       step: { outcome: { kind: "completed", finalText: "reasoning\n\nOutcome: BLOCKED — needs a human" } },
       kind: "outcome-blocked",
+      disposition: "blocked",
       candidateLine: "Outcome: BLOCKED — needs a human",
     },
     {
       name: "REFUSED",
       step: { outcome: { kind: "completed", finalText: "Outcome: REFUSED" } },
       kind: "outcome-refused",
+      disposition: "refused",
       candidateLine: "Outcome: REFUSED",
     },
     {
       name: "malformed",
       step: { outcome: { kind: "completed", finalText: "I wandered off." } },
       kind: "malformed-outcome",
+      disposition: "failed",
       candidateLine: "I wandered off.",
     },
     {
@@ -373,6 +385,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
         },
       },
       kind: "idle-timeout",
+      disposition: "failed",
       candidateLine: null,
     },
     {
@@ -386,6 +399,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
         },
       },
       kind: "harness-error",
+      disposition: "failed",
       candidateLine: null,
     },
   ];
@@ -408,7 +422,11 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
 
       expect(result.status).toBe("paused");
       expect(rec.stageSucceeded.length).toBe(0);
-      expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["problem"]);
+      // The stage line reports what the stage itself did, independently of the
+      // reason that governs the run's pause.
+      expect(rec.stageStopped.map((s) => s.disposition)).toEqual([
+        testCase.disposition,
+      ]);
       const cp = await loadCheckpoint(runDir);
       expect(cp.condition).toBe("waiting-for-user");
       expect(cp.waiting?.kind).toBe(testCase.kind);
@@ -495,7 +513,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     expect(await commitCount(fixture)).toBe(before);
   });
 
-  it("keeps git-policy-violation with a folded scan diagnostic when the queue scan also fails", async () => {
+  it("keeps git-policy-violation governing and records the failed scan as its own reason when the queue scan also fails", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
 
@@ -518,8 +536,16 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
 
     expect(result.status).toBe("paused");
     const cp = await loadCheckpoint(runDir);
+    // The boundary still decides the resume path, and the scan failure it holds
+    // alongside is reported rather than folded into the boundary's own message.
     expect(cp.waiting?.kind).toBe("git-policy-violation");
-    expect(cp.waiting?.message).toContain("scan also failed");
+    expect(cp.waiting?.reasons?.map((reason) => reason.kind)).toEqual([
+      "git-policy-violation",
+      "gate-error",
+    ]);
+    expect(
+      cp.waiting?.reasons?.find((reason) => reason.kind === "gate-error")?.message,
+    ).toContain("pending-queue scan failed");
     expect(cp.attempts[0].result).toBe("waiting");
   });
 
