@@ -94,9 +94,9 @@ never touch config, state, Git, or harnesses.
 - `thread/`, `workspace/`, `display/` — thread resolution and queue gates,
   current-checkout detection, and the curated terminal stream.
 - `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
-- `scripts/scripted-happy-path.mjs` — dependency-free developer demo that
-  validates default config, builds the CLI, and verifies a complete scripted
-  Standard run in a unique `/tmp` repository.
+- `scripts/demo.mjs` + `scripts/scenarios/` — dependency-free developer demo
+  that builds the CLI and drives a selected scripted scenario through a unique
+  `/tmp` repository.
 
 ### Contracts to preserve
 
@@ -152,12 +152,27 @@ performs, and the frame fabricates no sandbox, branch, or timing. Scripted mode
 announces itself in exactly one dim line printed ahead of the run details block.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
-gate. It reads but never modifies the developer's resolved default config,
-requires the exact happy-path scenario, injects the scripted toggle only into
-the child CLI process, and preserves its temporary repository and default-state
-checkpoint for inspection. Its own checks use one `[PASS]`/`[FAIL]` line per
-expectation with expected/actual failure details, while separator lines bracket
-the child CLI's terminal stream.
+gate. Its scenarios are checked in under `scripts/scenarios/`, one file per
+scenario declaring the scripted-harness document plus the ordered `run`/`resume`
+invocations and the exit code each must produce; the id is the filename stem and
+discovery is automatic, so a new scenario is a new file and nothing else.
+`happy-path` sorts first wherever scenarios are listed and is what the
+selection prompt takes when answered with Enter. Each
+demo run allocates a unique `/tmp` directory holding an isolated config root, an
+isolated state root, and the disposable repository, and injects
+`ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the scripted toggle only into the
+child CLI processes. The developer's real `settings.json` is copied in so their
+harness and model profiles are exercised; that copy is the only read of real
+config, and nothing under the developer's real config or state root is written.
+Everything temporary is preserved for inspection.
+
+The demo verifies exactly one thing per invocation — the exit code — as a single
+`[PASS]`/`[FAIL]` line, and stops at the first `[FAIL]`. Broader behavioral
+assertions belong in the `*.test.ts` suite, which already covers the scripted
+seams end to end. Separator lines naming the invocation bracket each child
+CLI's terminal stream, and a closing summary prints the commit list, the
+working-tree state, and the paths and environment needed to keep driving the
+result by hand.
 
 ## Engineering Principles
 

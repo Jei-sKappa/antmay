@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm run test && npm run build",
-    "demo": "node scripts/scripted-happy-path.mjs"
+    "demo": "node scripts/demo.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

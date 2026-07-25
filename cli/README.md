@@ -61,35 +61,53 @@ longer running, and only then manually remove that exact file. Do not remove a
 lock whose process may still be alive — doing so allows two executors to mutate
 the same checkout at once.
 
-## Scripted happy-path demo
+## Scripted demo
 
-`npm run demo` exercises the built CLI through all six Standard stages without
-contacting Codex or Claude Code. It validates the existing default
-`settings.json` and exact happy-path `scripted-harness.json`, runs
-`npm run build` without tests, and creates a unique disposable repository under
-`/tmp/antmay-scripted-happy-*`.
+`npm run demo` drives the built CLI through the Standard recipe without
+contacting Codex or Claude Code, so you end up with a real disposable
+repository and run directory to inspect. It runs `npm run build` without tests,
+then executes the scenario you pick.
 
 From `cli/` run:
 
 ```sh
-npm run demo
+npm run demo -- --scenario happy-path
 ```
 
 From the repository root, the equivalent command is:
 
 ```sh
-npm --prefix cli run demo
+npm --prefix cli run demo -- --scenario happy-path
 ```
 
-The command refuses `ANTMAY_CONFIG_HOME` and `ANTMAY_STATE_HOME` overrides so
-the CLI uses its normal XDG-to-home config and state resolution. It never
-creates or edits either config file. On success it verifies the clean worktree,
-fixed artifacts, boundary commits, and completed scripted checkpoint, then
-prints and preserves the temporary repository and run paths for inspection.
-Every prerequisite and result is printed as an individual `[PASS]` or `[FAIL]`
-check with expected and actual values on failure. The built CLI's own terminal
-stream is enclosed by `ANTMAY CLI STARTED` and `ANTMAY CLI FINISHED` separator
-lines.
+Scenarios live in `scripts/scenarios/`; each one is a scripted-harness document
+plus the CLI invocations to make against it. `--list` prints the available ids:
+
+- `happy-path` — the six Standard stages, no pauses; one `afk run` expected to
+  exit `0`.
+- `blocked-reconcile-spec` — `reconcile-spec` reports `Outcome: BLOCKED`, so
+  `afk run` is expected to exit `2`, and the demo then runs `afk resume`, which
+  is expected to complete the recipe at exit `0`.
+
+Adding a scenario means adding one `scripts/scenarios/<id>.mjs` file;
+`happy-path` is always listed first, and the rest follow alphabetically. Without
+`--scenario`, the demo prompts on a terminal — answering with Enter picks
+`happy-path` — and otherwise exits non-zero listing the ids.
+
+Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding
+an isolated config root, an isolated state root, and the disposable Git
+repository. Your real `settings.json` is copied into that config root so the
+demo exercises your own harness and model profiles; nothing under your real
+config or state root is written, and no run record or workspace lock of yours is
+touched.
+
+The only thing the demo verifies is each invocation's exit code, reported as one
+`[PASS]` or `[FAIL]` line; a `[FAIL]` skips the remaining invocations and exits
+non-zero. Behavior beyond the exit code is covered by the automated suite. Every
+built-CLI stream is enclosed by `— STARTED` and `— FINISHED` separator lines
+naming the invocation, and the closing summary prints the commit list, the
+working-tree state, and the paths (plus a copy-pasteable environment) you need
+to keep poking at the result by hand.
 The demo is developer-run and is not part of `npm run check` or CI.
 
 ## Manual smoke checklist
