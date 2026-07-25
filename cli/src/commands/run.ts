@@ -409,7 +409,7 @@ export async function runCommand(
       threadRelPath: thread.threadRelPath,
       workspacePath: workspace.path,
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,
-      stageCount: stages.length,
+      stageIds: stages.map((stage) => stage.id),
     });
 
     const display = createTerminalDisplay(displayOptions);

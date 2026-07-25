@@ -48,22 +48,36 @@ function makeOptions(
 const ANSI_PATTERN = /\x1b\[\d+m/;
 
 describe("attemptStarted", () => {
-  it("prints stage position/ID, harness/model, attempt, and log path to stdout", () => {
+  const attempt = {
+    stagePosition: "2/5",
+    stageId: "plan",
+    harness: "codex",
+    model: "gpt-5",
+    attempt: 1,
+    logAbsPath: "/runs/r1/logs/2-plan-1.log",
+  };
+
+  it("prints stage position/ID, harness, model, and log path to stdout", () => {
     const { options, out, err } = makeOptions();
-    createTerminalDisplay(options).attemptStarted({
-      stagePosition: "2/5",
-      stageId: "plan",
-      harness: "codex",
-      model: "gpt-5",
-      attempt: 3,
-      logAbsPath: "/runs/r1/logs/2-plan-3.log",
-    });
+    createTerminalDisplay(options).attemptStarted(attempt);
     expect(out.text).toContain("2/5");
     expect(out.text).toContain("plan");
-    expect(out.text).toContain("codex/gpt-5");
-    expect(out.text).toContain("3");
-    expect(out.text).toContain("/runs/r1/logs/2-plan-3.log");
+    expect(out.text).toContain("Harness: codex");
+    expect(out.text).toContain("Model:   gpt-5");
+    expect(out.text).toContain("/runs/r1/logs/2-plan-1.log");
     expect(err.text).toBe("");
+  });
+
+  it("says nothing about the attempt on a first attempt", () => {
+    const { options, out } = makeOptions();
+    createTerminalDisplay(options).attemptStarted(attempt);
+    expect(out.text).not.toContain("attempt");
+  });
+
+  it("names the attempt number on a retry", () => {
+    const { options, out } = makeOptions();
+    createTerminalDisplay(options).attemptStarted({ ...attempt, attempt: 3 });
+    expect(out.text).toContain("attempt 3");
   });
 });
 
@@ -74,7 +88,7 @@ describe("harnessEvent", () => {
       type: "text",
       text: "hello from the model",
     });
-    expect(out.text).toContain("hello from the model");
+    expect(out.text).toContain("│ hello from the model");
   });
 
   it("renders a tool call as one concise line with truncated arguments", () => {
@@ -86,6 +100,7 @@ describe("harnessEvent", () => {
       args: longArgs,
     });
     const rendered = out.text;
+    expect(rendered).toContain("│ ");
     expect(rendered).toContain("Bash(");
     expect(rendered).toContain("…");
     // Truncation happens in the display only: the full 500-char payload is not
@@ -106,14 +121,13 @@ describe("heartbeat", () => {
 });
 
 describe("stageSucceeded", () => {
-  it("prints position and duration", () => {
+  it("prints position and duration, with the success mark trailing", () => {
     const { options, out } = makeOptions();
     createTerminalDisplay(options).stageSucceeded({
       stagePosition: "1/5",
       durationMs: 90_000,
     });
-    expect(out.text).toContain("1/5");
-    expect(out.text).toContain("1m 30s");
+    expect(out.text).toContain("Stage 1/5 succeeded in 1m 30s ✓");
   });
 });
 
@@ -154,7 +168,7 @@ describe("runPaused", () => {
     expect(out.text).not.toContain("Log:");
   });
 
-  it("never renders a line beginning with Outcome:, even for an adversarial candidate line (AC-1.5)", () => {
+  it("echoes a candidate outcome line verbatim, behind the gutter that marks it as quoted", () => {
     const { options, out } = makeOptions();
     createTerminalDisplay(options).runPaused({
       waiting: {
@@ -167,17 +181,14 @@ describe("runPaused", () => {
       resumeCommand: "antmay afk resume r",
       checkpointPath: "/runs/r/state.json",
     });
-    // The candidate text is surfaced so a human can see it verbatim …
-    expect(out.text).toContain("Outcome: DONEish");
-    // … but no rendered line begins with `Outcome:`.
-    for (const line of out.lines) {
-      expect(line.startsWith("Outcome:")).toBe(false);
-    }
+    // The candidate text is surfaced verbatim, quoted rather than authored: it
+    // is never a line antmay appears to have written itself.
+    expect(out.text).toContain("│ Outcome: DONEish");
   });
 });
 
 describe("runCompleted", () => {
-  it("names the Completed condition and prints run, recipe, elapsed, checkpoint", () => {
+  it("names the Run completed condition and prints run ID, recipe, elapsed, checkpoint", () => {
     const { options, out } = makeOptions();
     createTerminalDisplay(options).runCompleted({
       runId: "run-1",
@@ -185,7 +196,7 @@ describe("runCompleted", () => {
       totalElapsedMs: 3_723_000,
       checkpointPath: "/runs/run-1/state.json",
     });
-    expect(out.text).toContain("Completed");
+    expect(out.text).toContain("Run completed");
     expect(out.text).toContain("run-1");
     expect(out.text).toContain("standard");
     expect(out.text).toContain("1h 2m 3s");
@@ -240,10 +251,10 @@ describe("printRunSummary", () => {
     threadRelPath: "docs/threads/t",
     workspacePath: "/repo",
     dangerouslySkipPermissions: false,
-    stageCount: 6,
+    stageIds: ["spec", "reconcile-spec", "review-spec"],
   };
 
-  it("prints run ID, recipe, thread, workspace, permission mode, and stage count", () => {
+  it("prints run ID, recipe, thread, workspace, permission mode, and stage names", () => {
     const { options, out, err } = makeOptions();
     printRunSummary(options, info);
     expect(out.text).toContain("run-9");
@@ -251,7 +262,7 @@ describe("printRunSummary", () => {
     expect(out.text).toContain("docs/threads/t");
     expect(out.text).toContain("/repo");
     expect(out.text).toContain("restricted");
-    expect(out.text).toContain("6");
+    expect(out.text).toContain("spec, reconcile-spec, review-spec");
     // No unrestricted warning when permissions are restricted.
     expect(err.text).toBe("");
   });
@@ -268,21 +279,38 @@ describe("printRunSummary", () => {
 });
 
 describe("printUnrestrictedWarning", () => {
-  it("writes the multi-line warning to the given stream", () => {
-    const err = new Capture();
-    printUnrestrictedWarning(err);
+  it("writes the boxed multi-line warning to stderr", () => {
+    const { options, out, err } = makeOptions();
+    printUnrestrictedWarning(options);
     expect(err.text).toContain("WARNING");
-    expect(err.text.trimEnd().split("\n").length).toBeGreaterThan(1);
+    // Boxed: every line is bordered by `*` and shares one width.
+    const lines = err.text.trimEnd().split("\n");
+    expect(lines.length).toBeGreaterThan(1);
+    const widths = new Set(lines.map((line) => line.length));
+    expect(widths.size).toBe(1);
+    for (const line of lines) {
+      expect(line.startsWith("*")).toBe(true);
+      expect(line.endsWith("*")).toBe(true);
+    }
+    expect(out.text).toBe("");
+  });
+
+  it("paints the warning yellow on a color-enabled TTY", () => {
+    const { options, err } = makeOptions({ isTTY: true, noColor: false });
+    printUnrestrictedWarning(options);
+    expect(err.text).toContain("\x1b[33m");
   });
 });
 
 describe("printScriptedModeStartup", () => {
-  it("prints one scripted-mode line with the scenario path and no Outcome: prefix", () => {
+  it("prints the scripted-harness block with every line marked [DEV]", () => {
     const { options, out } = makeOptions();
     printScriptedModeStartup(options, "/cfg/scripted-harness.json");
-    expect(out.text).toContain("SCRIPTED HARNESS ENABLED");
-    expect(out.text).toContain("/cfg/scripted-harness.json");
-    expect(out.lines.filter((line) => line.length > 0)).toHaveLength(1);
-    expect(out.lines.every((line) => !line.startsWith("Outcome:"))).toBe(true);
+    const lines = out.lines.filter((line) => line.length > 0);
+    expect(lines).toEqual([
+      "[DEV] Scripted harness",
+      "[DEV]   enabled: true",
+      "[DEV]   config:  /cfg/scripted-harness.json",
+    ]);
   });
 });

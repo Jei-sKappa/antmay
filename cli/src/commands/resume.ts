@@ -439,7 +439,7 @@ export async function resumeCommand(
         threadRelPath,
         workspacePath: checkpoint.workspace.path,
         dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,
-        stageCount,
+        stageIds: checkpoint.stages.map((stage) => stage.id),
       });
 
       sig = signalCode();

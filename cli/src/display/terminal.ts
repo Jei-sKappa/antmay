@@ -18,6 +18,16 @@ export interface DisplayOptions {
  * full data always survives untouched in the attempt log. */
 const TOOL_ARG_DISPLAY_LIMIT = 160;
 
+/** Prefix every line of live harness output carries, so agent output is
+ * distinguishable at a glance from the executor's own lines. */
+const AGENT_GUTTER = "│ ";
+
+/** Prefix every line of developer-only diagnostic output carries. */
+const DEV_PREFIX = "[DEV] ";
+
+/** Width of the boxed unrestricted-permissions warning, borders included. */
+const WARNING_BOX_WIDTH = 62;
+
 const ANSI = {
   reset: "\x1b[0m",
   bold: "\x1b[1m",
@@ -26,26 +36,73 @@ const ANSI = {
   green: "\x1b[32m",
   yellow: "\x1b[33m",
   cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  brightBlue: "\x1b[94m",
+  brightWhite: "\x1b[97m",
 } as const;
 
 type Ansi = Exclude<keyof typeof ANSI, "reset">;
 
-/**
- * Structural guard for AC-1.5: no rendered output line may begin with
- * `Outcome:`. Any candidate line that would (e.g. an echoed malformed-outcome
- * line carrying `Outcome: DONEish`) is prefixed with a space so the guarantee
- * holds even for adversarial waiting objects.
- */
-function guardLine(line: string): string {
-  return line.startsWith("Outcome:") ? ` ${line}` : line;
+/** The style every `key: value` label carries, so the key reads as a label
+ * distinct from its value. */
+const KEY_STYLE: readonly Ansi[] = ["brightBlue"];
+
+/** The style every `key: value` value carries, kept a shade quieter than live
+ * harness output so the two never read as the same voice. */
+const VALUE_STYLE: readonly Ansi[] = ["white"];
+
+/** The style live harness output carries — the brightest text on screen, since
+ * it is the one thing a human is actually here to read. */
+const AGENT_STYLE: readonly Ansi[] = ["brightWhite"];
+
+/** The style a stage header carries, marking the start of a stage. */
+const STAGE_STYLE: readonly Ansi[] = ["bold", "cyan"];
+
+/** Paints text in the requested styles, or returns it unchanged when color is
+ * off. Every renderer in this module gets its painter from here. */
+type Painter = (text: string, ...codes: Ansi[]) => string;
+
+function createPainter(options: DisplayOptions): Painter {
+  const useColor = options.isTTY && !options.noColor;
+  return (text, ...codes) =>
+    useColor ? `${codes.map((code) => ANSI[code]).join("")}${text}${ANSI.reset}` : text;
 }
 
-/** Split a block into lines, guard each, and write it as one newline-terminated
- * chunk. Color codes wrap whole labels the renderer controls, never arbitrary
- * echoed content, so the guard's literal prefix check is sufficient. */
+/** Write a block as one newline-terminated chunk, exactly as composed. */
 function emit(stream: NodeJS.WritableStream, text: string): void {
-  const guarded = text.split("\n").map(guardLine).join("\n");
-  stream.write(`${guarded}\n`);
+  stream.write(`${text}\n`);
+}
+
+/**
+ * Render one `key: value` info line. The key is painted so it reads as a label;
+ * padding is applied outside the color codes so values stay aligned at
+ * `keyWidth` regardless of whether color is on.
+ */
+function infoLine(
+  paint: Painter,
+  indent: string,
+  key: string,
+  value: string,
+  keyWidth: number,
+): string {
+  const label = `${key}:`;
+  const gap = " ".repeat(Math.max(1, keyWidth - label.length + 1));
+  return `${indent}${paint(label, ...KEY_STYLE)}${gap}${paint(value, ...VALUE_STYLE)}`;
+}
+
+/** The widest `key:` label in a group, used as that group's alignment column. */
+function keyWidth(...keys: string[]): number {
+  return Math.max(...keys.map((key) => key.length + 1));
+}
+
+/** Prefix every line of `text` with the agent gutter. Quoted harness output is
+ * always rendered through this, so it reads as quoted rather than as a line the
+ * executor authored — antmay only ever speaks in its own unprefixed lines. */
+function withGutter(text: string, gutter: string): string {
+  return text
+    .split("\n")
+    .map((line) => `${gutter}${line}`)
+    .join("\n");
 }
 
 function formatDuration(ms: number): string {
@@ -66,48 +123,66 @@ function truncateArgs(args: string): string {
 }
 
 /**
- * The prominent multi-line unrestricted-permissions warning. Emitted to
- * `stderr` and reused verbatim by both the run and resume startup paths
- * whenever the persisted permission choice is unrestricted.
+ * Write a developer-only diagnostic block, followed by a blank line that keeps
+ * it separate from the run's own output. Every line carries the `[DEV]` prefix,
+ * so output that exists purely for development is never mistaken for part of an
+ * ordinary run.
  */
-export function printUnrestrictedWarning(stderr: NodeJS.WritableStream): void {
+function emitDev(options: DisplayOptions, text: string): void {
+  const paint = createPainter(options);
+  emit(options.stdout, `${withGutter(text, paint(DEV_PREFIX, "dim"))}\n`);
+}
+
+/**
+ * The prominent boxed unrestricted-permissions warning, followed by a blank
+ * line. Emitted in yellow to `stderr` and reused verbatim by both the run and
+ * resume startup paths whenever the persisted permission choice is
+ * unrestricted.
+ */
+export function printUnrestrictedWarning(options: DisplayOptions): void {
+  const paint = createPainter(options);
+  const border = "*".repeat(WARNING_BOX_WIDTH);
+  const body = [
+    "WARNING: running with --dangerously-skip-permissions",
+    "The harness runs with no permission prompts: it can read,",
+    "modify, and delete files and execute arbitrary commands.",
+    "Only use this in an isolated or otherwise trusted setup.",
+  ].map((line) => `* ${line.padEnd(WARNING_BOX_WIDTH - 4)} *`);
+
   emit(
-    stderr,
-    [
-      "************************************************************",
-      "  WARNING: running with --dangerously-skip-permissions",
-      "  The harness runs with no permission prompts: it can read,",
-      "  modify, and delete files and execute arbitrary commands.",
-      "  Only use this in an isolated or otherwise trusted setup.",
-      "************************************************************",
-    ].join("\n"),
+    options.stderr,
+    `${paint([border, ...body, border].join("\n"), "yellow")}\n`,
   );
 }
 
 /**
- * The single dim line noting scripted-test mode, printed on new-run and resume
- * startup ahead of the ordinary run summary so it reads as one added note
- * before otherwise-unchanged output. Carries the resolved scenario path; logical
- * harness/model stay in the ordinary summaries and attempt headers.
+ * The developer-only scripted-harness block, printed on new-run and resume
+ * startup ahead of the ordinary run details block so it reads as one added note
+ * before otherwise-unchanged output. Carries the resolved scenario path;
+ * logical harness/model stay in the ordinary details block and stage headers.
  */
 export function printScriptedModeStartup(
   options: DisplayOptions,
   scenarioPath: string,
 ): void {
-  const useColor = options.isTTY && !options.noColor;
-  const paint = (text: string, code: Ansi): string =>
-    useColor ? `${ANSI[code]}${text}${ANSI.reset}` : text;
+  const paint = createPainter(options);
+  const width = keyWidth("enabled", "config");
 
-  emit(
-    options.stdout,
-    paint(`SCRIPTED HARNESS ENABLED — ${scenarioPath}`, "dim"),
+  emitDev(
+    options,
+    [
+      paint("Scripted harness", "bold"),
+      infoLine(paint, "  ", "enabled", "true", width),
+      infoLine(paint, "  ", "config", scenarioPath, width),
+    ].join("\n"),
   );
 }
 
 /**
- * Render the compact new-run/resume startup summary to stdout — run ID,
- * recipe, thread, workspace, permission mode, and stage count — and emit the
- * prominent unrestricted warning to stderr when permissions are unrestricted.
+ * Render the compact new-run/resume startup details to stdout — run ID,
+ * recipe, thread, workspace, permission mode, and the ordered stage IDs. When
+ * permissions are unrestricted the prominent warning goes to stderr first, so
+ * it leads the startup output rather than trailing it.
  */
 export function printRunSummary(
   options: DisplayOptions,
@@ -117,33 +192,41 @@ export function printRunSummary(
     threadRelPath: string;
     workspacePath: string;
     dangerouslySkipPermissions: boolean;
-    stageCount: number;
+    stageIds: readonly string[];
   },
 ): void {
-  const useColor = options.isTTY && !options.noColor;
-  const paint = (text: string, code: Ansi): string =>
-    useColor ? `${ANSI[code]}${text}${ANSI.reset}` : text;
+  const paint = createPainter(options);
 
   const permissionMode = info.dangerouslySkipPermissions
     ? "unrestricted (--dangerously-skip-permissions)"
     : "restricted";
+  const width = keyWidth(
+    "Run",
+    "Recipe",
+    "Thread",
+    "Workspace",
+    "Permissions",
+    "Stages",
+  );
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, width);
+
+  if (info.dangerouslySkipPermissions) {
+    printUnrestrictedWarning(options);
+  }
 
   emit(
     options.stdout,
     [
-      paint("Run summary", "bold"),
-      `  Run:         ${info.runId}`,
-      `  Recipe:      ${info.recipeName}`,
-      `  Thread:      ${info.threadRelPath}`,
-      `  Workspace:   ${info.workspacePath}`,
-      `  Permissions: ${permissionMode}`,
-      `  Stages:      ${info.stageCount}`,
+      paint("Run details", "bold"),
+      line("Run", info.runId),
+      line("Recipe", info.recipeName),
+      line("Thread", info.threadRelPath),
+      line("Workspace", info.workspacePath),
+      line("Permissions", permissionMode),
+      line("Stages", info.stageIds.join(", ")),
     ].join("\n"),
   );
-
-  if (info.dangerouslySkipPermissions) {
-    printUnrestrictedWarning(options.stderr);
-  }
 }
 
 /**
@@ -153,35 +236,49 @@ export function printRunSummary(
  * sequence is ever written, so piped streams stay clean.
  */
 export function createTerminalDisplay(options: DisplayOptions): Display {
-  const useColor = options.isTTY && !options.noColor;
-  const paint = (text: string, code: Ansi): string =>
-    useColor ? `${ANSI[code]}${text}${ANSI.reset}` : text;
+  const paint = createPainter(options);
+
+  /** Write harness output behind the agent gutter, so it never reads as an
+   * executor line. The gutter and the requested style are applied per line, so
+   * multi-line output keeps both all the way down. */
+  const emitAgent = (text: string, ...codes: Ansi[]): void => {
+    const gutter = paint(AGENT_GUTTER, "dim");
+    emit(
+      options.stdout,
+      text
+        .split("\n")
+        .map((line) => `${gutter}${paint(line, ...codes)}`)
+        .join("\n"),
+    );
+  };
 
   return {
     attemptStarted(info) {
+      // A first attempt is the ordinary case and says nothing worth a reader's
+      // attention; a retry is the exception the header should surface.
+      const retry = info.attempt > 1 ? ` · attempt ${info.attempt}` : "";
+      const title = `Stage ${info.stagePosition} · ${info.stageId}${retry}`;
+      const width = keyWidth("Harness", "Model", "Log");
       emit(
         options.stdout,
         [
-          paint(
-            `▶ Stage ${info.stagePosition} [${info.stageId}]`,
-            "cyan",
-          ),
-          `  Harness: ${info.harness}/${info.model}`,
-          `  Attempt: ${info.attempt}`,
-          `  Log:     ${info.logAbsPath}`,
+          "",
+          paint(title, ...STAGE_STYLE),
+          infoLine(paint, "", "Harness", info.harness, width),
+          infoLine(paint, "", "Model", info.model, width),
+          infoLine(paint, "", "Log", info.logAbsPath, width),
+          "",
         ].join("\n"),
       );
     },
 
     harnessEvent(event: HarnessEvent) {
       if (event.type === "text") {
-        emit(options.stdout, event.text);
+        emitAgent(event.text, ...AGENT_STYLE);
         return;
       }
-      emit(
-        options.stdout,
-        `${paint("→", "dim")} ${event.name}(${truncateArgs(event.args)})`,
-      );
+      const call = `${event.name}(${truncateArgs(event.args)})`;
+      emitAgent(`${paint("→", "dim")} ${paint(call, ...AGENT_STYLE)}`);
     },
 
     heartbeat(elapsedMs) {
@@ -194,10 +291,13 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
     stageSucceeded(info) {
       emit(
         options.stdout,
-        paint(
-          `✓ Stage ${info.stagePosition} succeeded in ${formatDuration(info.durationMs)}`,
-          "green",
-        ),
+        [
+          "",
+          paint(
+            `Stage ${info.stagePosition} succeeded in ${formatDuration(info.durationMs)} ✓`,
+            "green",
+          ),
+        ].join("\n"),
       );
     },
 
@@ -208,41 +308,52 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       resumeCommand: string;
       checkpointPath: string;
     }) {
+      const width = keyWidth("Reason", "Pending", "Log", "Run", "Resume");
+      const line = (key: string, value: string): string =>
+        infoLine(paint, "  ", key, value, width);
+
       const lines: string[] = [
         paint("Waiting for user", "yellow"),
-        `  Reason: ${info.waiting.message}`,
+        line("Reason", info.waiting.message),
       ];
       if (info.waiting.pendingFiles && info.waiting.pendingFiles.length > 0) {
-        lines.push("  Pending:");
+        lines.push(`  ${paint("Pending:", ...KEY_STYLE)}`);
         for (const file of info.waiting.pendingFiles) {
           lines.push(`    - ${file}`);
         }
       }
       if (info.logAbsPath !== null) {
-        lines.push(`  Log: ${info.logAbsPath}`);
+        lines.push(line("Log", info.logAbsPath));
       }
-      lines.push(`  Run: ${info.runId}`);
-      lines.push(`  Resume: ${info.resumeCommand}`);
+      lines.push(line("Run", info.runId));
+      lines.push(line("Resume", info.resumeCommand));
       emit(options.stdout, lines.join("\n"));
 
-      // Echo any candidate outcome line raw so a human sees exactly what the
-      // harness produced; `emit`'s per-line guard keeps it from ever beginning
-      // the rendered line with `Outcome:`.
+      // Echo any candidate outcome line verbatim so a human sees exactly what
+      // the harness produced, behind the gutter that marks it as quoted.
       if (info.waiting.candidateLine !== undefined) {
-        emit(options.stdout, "  Candidate outcome line:");
-        emit(options.stdout, info.waiting.candidateLine);
+        emit(
+          options.stdout,
+          `  ${paint("Candidate outcome line:", ...KEY_STYLE)}`,
+        );
+        emitAgent(info.waiting.candidateLine, ...AGENT_STYLE);
       }
     },
 
     runCompleted(info) {
+      const width = keyWidth("Run ID", "Recipe", "Elapsed", "Checkpoint");
+      const line = (key: string, value: string): string =>
+        infoLine(paint, "  ", key, value, width);
+
       emit(
         options.stdout,
         [
-          paint("Completed", "green"),
-          `  Run:        ${info.runId}`,
-          `  Recipe:     ${info.recipeName}`,
-          `  Elapsed:    ${formatDuration(info.totalElapsedMs)}`,
-          `  Checkpoint: ${info.checkpointPath}`,
+          "",
+          paint("Run completed", "bold"),
+          line("Run ID", info.runId),
+          line("Recipe", info.recipeName),
+          line("Elapsed", formatDuration(info.totalElapsedMs)),
+          line("Checkpoint", info.checkpointPath),
         ].join("\n"),
       );
     },

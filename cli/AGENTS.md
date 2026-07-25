@@ -149,7 +149,7 @@ terminal renders them like real agent output) and appends the same lines to the
 attempt log under a `Scripted Harness Run` frame naming the agent, case, and
 attempt. Progress lines describe only filesystem work the case genuinely
 performs, and the frame fabricates no sandbox, branch, or timing. Scripted mode
-announces itself in exactly one dim line printed ahead of the run summary.
+announces itself in exactly one dim line printed ahead of the run details block.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
 gate. It reads but never modifies the developer's resolved default config,
