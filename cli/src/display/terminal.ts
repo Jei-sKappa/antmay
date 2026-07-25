@@ -138,6 +138,13 @@ const REASON_BANNER: Record<
   },
 };
 
+/**
+ * The label over the lines that close a stopped run. It sits quietly at the same
+ * indent as the keys beneath it, marking where a reason stops being described
+ * and the run's own instructions begin without breaking the block in two.
+ */
+const ACTION_HEADER = "What to do";
+
 /** Every `key:` label a closing block can print, so one alignment column serves
  * the identity block, the reason banners, and the closing action lines alike. */
 const CLOSING_KEYS = [
@@ -502,8 +509,9 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       }
 
       // The instruction and the command close the run, so the last thing on
-      // screen is the thing to type next.
-      lines.push("");
+      // screen is the thing to type next. They belong to the run rather than to
+      // any one reason above them, and the label is what says so.
+      lines.push(`  ${paint(ACTION_HEADER, "dim")}`);
       if (info.waiting.nextAction !== undefined) {
         lines.push(line("Next", info.waiting.nextAction));
       }
@@ -538,7 +546,7 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
           "Reason",
           `Stopped by ${info.signal} between stages; the checkpoint is unchanged.`,
         ),
-        "",
+        `  ${paint(ACTION_HEADER, "dim")}`,
         line("Resume", info.resumeCommand),
       );
       emit(options.stdout, lines.join("\n"));

@@ -279,6 +279,29 @@ describe("runPaused", () => {
     expect(out.text).not.toContain("reasons:");
   });
 
+  it("labels the closing lines in place, leaving no unexplained gap", () => {
+    const { out } = paused({
+      waiting: {
+        kind: "outcome-blocked",
+        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
+        detail: "needs input",
+        nextAction: "Revert or commit the changes before resuming.",
+      },
+    });
+    const lines = out.lines;
+    // Every blank line is a block opener: the line after it introduces a
+    // section, never a bare `key: value` continuation of the block above.
+    lines.forEach((line, index) => {
+      if (line.length > 0 || index === lines.length - 1) return;
+      const next = lines[index + 1];
+      expect(next.startsWith("  ")).toBe(false);
+      expect(next.length).toBeGreaterThan(0);
+    });
+    // The label sits at the keys' own indent and needs no gap to set it apart.
+    expect(lines).toContain("  What to do");
+    expect(out.text.indexOf("What to do")).toBeLessThan(out.text.indexOf("Next:"));
+  });
+
   it("gives the agent's reason and the human's next action their own lines", () => {
     const { out } = paused({
       waiting: {
