@@ -163,7 +163,7 @@ describe("stageSucceeded", () => {
       stagePosition: "1/5",
       durationMs: 90_000,
     });
-    expect(out.text).toContain("Stage 1/5 done in 1m 30s ✓");
+    expect(out.text).toContain("Stage 1/5 done in 1m 30s ✅");
   });
 });
 
@@ -179,15 +179,15 @@ describe("stageStopped", () => {
   };
 
   it("names each disposition with its own word and mark", () => {
-    expect(stopped("refused")).toContain("Stage 2/6 refused in 41s !");
-    expect(stopped("blocked")).toContain("Stage 2/6 blocked in 41s ⊘");
-    expect(stopped("failed")).toContain("Stage 2/6 failed in 41s ✖");
-    expect(stopped("interrupted")).toContain("Stage 2/6 interrupted in 41s ■");
+    expect(stopped("refused")).toContain("Stage 2/6 refused in 41s ⛔");
+    expect(stopped("blocked")).toContain("Stage 2/6 blocked in 41s 🛑");
+    expect(stopped("failed")).toContain("Stage 2/6 failed in 41s ❌");
+    expect(stopped("interrupted")).toContain("Stage 2/6 interrupted in 41s ⏹️");
   });
 
   it("gives blocked and failed distinguishable marks", () => {
-    expect(stopped("blocked")).not.toContain("✖");
-    expect(stopped("failed")).not.toContain("⊘");
+    expect(stopped("blocked")).not.toContain("❌");
+    expect(stopped("failed")).not.toContain("🛑");
   });
 });
 
@@ -217,7 +217,7 @@ describe("runPaused", () => {
 
   it("names the Waiting for user banner and prints reason, pending, log, run, resume", () => {
     const { out, err } = paused();
-    expect(out.text).toContain("WAITING FOR USER ⏸");
+    expect(out.text).toContain("WAITING FOR USER ⏸️");
     expect(out.text).toContain(waiting.message);
     expect(out.text).toContain("docs/threads/t/.pending-decisions/a.md");
     expect(out.text).toContain("/runs/r1/logs/1-x-1.log");
@@ -264,13 +264,13 @@ describe("runPaused", () => {
       },
     });
     expect(out.text).toContain("Run stopped for 2 reasons:");
-    expect(out.text).toContain("REFUSED !");
-    expect(out.text).toContain("WAITING FOR USER ⏸");
+    expect(out.text).toContain("REFUSED ⛔");
+    expect(out.text).toContain("WAITING FOR USER ⏸️");
     expect(out.text).toContain("Spec section 3 contradicts the seed");
     // The stage's own result is read first; the queue reason sits next to the
     // command that acts on it.
-    expect(out.text.indexOf("REFUSED !")).toBeLessThan(
-      out.text.indexOf("WAITING FOR USER ⏸"),
+    expect(out.text.indexOf("REFUSED ⛔")).toBeLessThan(
+      out.text.indexOf("WAITING FOR USER ⏸️"),
     );
   });
 
@@ -357,7 +357,7 @@ describe("runCompleted", () => {
     expect(out.text).toContain("1h 2m 3s");
     expect(out.text).toContain("/runs/run-1/state.json");
     const lines = out.text.trimEnd().split("\n");
-    expect(lines[lines.length - 1]).toBe("SUCCESS — 6/6 stages completed ✓");
+    expect(lines[lines.length - 1]).toBe("SUCCESS — 6/6 stages completed ✅");
   });
 
   it("paints the success banner green on a color-enabled TTY", () => {
@@ -385,7 +385,7 @@ describe("runInterrupted", () => {
       signal: "SIGINT",
     });
     expect(out.text).toContain("Run summary");
-    expect(out.text).toContain("INTERRUPTED ■");
+    expect(out.text).toContain("INTERRUPTED ⏹️");
     expect(out.text).toContain("SIGINT");
     expect(out.text).toContain("checkpoint is unchanged");
     const lines = out.text.trimEnd().split("\n");
@@ -403,7 +403,7 @@ describe("runFailed", () => {
       checkpointPath: "/runs/run-3/state.json",
       message: "ENOSPC writing state.json",
     });
-    expect(out.text).toContain("FAILED — checkpoint write ✖");
+    expect(out.text).toContain("FAILED — checkpoint write ❌");
     expect(out.text).toContain("ENOSPC writing state.json");
     // The state on disk is not known to reflect the run, so no resume is offered.
     expect(out.text).not.toContain("Resume:");

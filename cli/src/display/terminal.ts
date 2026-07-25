@@ -75,10 +75,10 @@ const STAGE_DISPOSITION: Record<
   StageDisposition,
   { verb: string; icon: string; color: Ansi }
 > = {
-  refused: { verb: "refused", icon: "!", color: "red" },
-  blocked: { verb: "blocked", icon: "⊘", color: "red" },
-  failed: { verb: "failed", icon: "✖", color: "red" },
-  interrupted: { verb: "interrupted", icon: "■", color: "yellow" },
+  refused: { verb: "refused", icon: "⛔", color: "red" },
+  blocked: { verb: "blocked", icon: "🛑", color: "red" },
+  failed: { verb: "failed", icon: "❌", color: "red" },
+  interrupted: { verb: "interrupted", icon: "⏹️", color: "yellow" },
 };
 
 /**
@@ -91,48 +91,48 @@ const REASON_BANNER: Record<
   WaitingKind,
   { label: string; icon: string; color: Ansi; group: "stage" | "queue" }
 > = {
-  "outcome-refused": { label: "REFUSED", icon: "!", color: "red", group: "stage" },
-  "outcome-blocked": { label: "BLOCKED", icon: "⊘", color: "red", group: "stage" },
+  "outcome-refused": { label: "REFUSED", icon: "⛔", color: "red", group: "stage" },
+  "outcome-blocked": { label: "BLOCKED", icon: "🛑", color: "red", group: "stage" },
   "malformed-outcome": {
     label: "FAILED — no terminal outcome",
-    icon: "✖",
+    icon: "❌",
     color: "red",
     group: "stage",
   },
   "harness-error": {
     label: "FAILED — harness error",
-    icon: "✖",
+    icon: "❌",
     color: "red",
     group: "stage",
   },
   "idle-timeout": {
     label: "FAILED — idle timeout",
-    icon: "✖",
+    icon: "❌",
     color: "red",
     group: "stage",
   },
   "git-policy-violation": {
     label: "FAILED — git policy violation",
-    icon: "✖",
+    icon: "❌",
     color: "red",
     group: "stage",
   },
   "commit-error": {
     label: "FAILED — commit failed",
-    icon: "✖",
+    icon: "❌",
     color: "red",
     group: "stage",
   },
-  interrupted: { label: "INTERRUPTED", icon: "■", color: "yellow", group: "stage" },
+  interrupted: { label: "INTERRUPTED", icon: "⏹️", color: "yellow", group: "stage" },
   "pending-queues": {
     label: "WAITING FOR USER",
-    icon: "⏸",
+    icon: "⏸️",
     color: "yellow",
     group: "queue",
   },
   "gate-error": {
     label: "FAILED — queue scan error",
-    icon: "✖",
+    icon: "❌",
     color: "red",
     group: "queue",
   },
@@ -465,7 +465,7 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
         [
           "",
           `${STAGE_INDENT}${paint(
-            `Stage ${info.stagePosition} done in ${formatDuration(info.durationMs)} ✓`,
+            `Stage ${info.stagePosition} done in ${formatDuration(info.durationMs)} ✅`,
             "green",
           )}`,
         ].join("\n"),
@@ -519,7 +519,7 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       lines.push(
         "",
         paint(
-          `SUCCESS — ${info.stageCount}/${info.stageCount} stages completed ✓`,
+          `SUCCESS — ${info.stageCount}/${info.stageCount} stages completed ✅`,
           "bold",
           "green",
         ),
@@ -533,7 +533,7 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       const lines = runSummaryBlock(paint, info);
       lines.push(
         "",
-        paint("INTERRUPTED ■", "bold", "yellow"),
+        paint("INTERRUPTED ⏹️", "bold", "yellow"),
         line(
           "Reason",
           `Stopped by ${info.signal} between stages; the checkpoint is unchanged.`,
@@ -550,7 +550,7 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       const lines = runSummaryBlock(paint, info);
       lines.push(
         "",
-        paint("FAILED — checkpoint write ✖", "bold", "red"),
+        paint("FAILED — checkpoint write ❌", "bold", "red"),
         line("Reason", info.message),
       );
       emit(options.stdout, lines.join("\n"));
