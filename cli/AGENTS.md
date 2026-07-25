@@ -142,6 +142,15 @@ scenario-supplied operations outside the fixed catalog in
 `harness/scripted/scenario.ts`. Help, version, grammar errors, and `list` never
 interpret the toggle or touch scenario/state/Git/harness modules.
 
+Scripted output imitates an ordinary attempt rather than announcing itself. Each
+case reports a transcript of progress lines plus a final message ending in its
+terminal outcome; the invoker streams every line through `onEvent` (so the
+terminal renders them like real agent output) and appends the same lines to the
+attempt log under a `Scripted Harness Run` frame naming the agent, case, and
+attempt. Progress lines describe only filesystem work the case genuinely
+performs, and the frame fabricates no sandbox, branch, or timing. Scripted mode
+announces itself in exactly one dim line printed ahead of the run summary.
+
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
 gate. It reads but never modifies the developer's resolved default config,
 requires the exact happy-path scenario, injects the scripted toggle only into

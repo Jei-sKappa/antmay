@@ -85,9 +85,10 @@ export function printUnrestrictedWarning(stderr: NodeJS.WritableStream): void {
 }
 
 /**
- * Conspicuous scripted-test-mode banner printed on new-run and resume startup
- * before any harness invocation. Includes the resolved scenario path; logical
- * harness/model remain in the ordinary summaries and attempt headers.
+ * The single dim line noting scripted-test mode, printed on new-run and resume
+ * startup ahead of the ordinary run summary so it reads as one added note
+ * before otherwise-unchanged output. Carries the resolved scenario path; logical
+ * harness/model stay in the ordinary summaries and attempt headers.
  */
 export function printScriptedModeStartup(
   options: DisplayOptions,
@@ -99,14 +100,7 @@ export function printScriptedModeStartup(
 
   emit(
     options.stdout,
-    [
-      paint("*** SCRIPTED TEST HARNESS MODE ***", "yellow"),
-      `  Scenario: ${scenarioPath}`,
-      paint(
-        "  Logical harness profiles are unchanged; no Codex or Claude Code process runs.",
-        "dim",
-      ),
-    ].join("\n"),
+    paint(`SCRIPTED HARNESS ENABLED — ${scenarioPath}`, "dim"),
   );
 }
 

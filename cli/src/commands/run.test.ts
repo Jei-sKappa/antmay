@@ -614,8 +614,12 @@ describe("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(0);
-    expect(result.out).toContain("SCRIPTED TEST HARNESS MODE");
+    expect(result.out).toContain("SCRIPTED HARNESS ENABLED");
     expect(result.out).toContain(scenarioPath);
+    // The scripted note precedes the otherwise-unchanged startup output.
+    expect(result.out.indexOf("SCRIPTED HARNESS ENABLED")).toBeLessThan(
+      result.out.indexOf("Run summary"),
+    );
 
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);

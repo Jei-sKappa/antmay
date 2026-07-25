@@ -400,6 +400,9 @@ export async function runCommand(
     // The initial checkpoint exists. Print the startup summary (with the
     // unrestricted warning when applicable), drive the run, map the runner
     // outcome to an exit code, and release the lock unconditionally.
+    if (scenarioPath !== undefined) {
+      printScriptedModeStartup(displayOptions, scenarioPath);
+    }
     printRunSummary(displayOptions, {
       runId: checkpoint.runId,
       recipeName: recipe.name,
@@ -408,9 +411,6 @@ export async function runCommand(
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,
       stageCount: stages.length,
     });
-    if (scenarioPath !== undefined) {
-      printScriptedModeStartup(displayOptions, scenarioPath);
-    }
 
     const display = createTerminalDisplay(displayOptions);
     try {

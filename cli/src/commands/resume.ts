@@ -430,6 +430,9 @@ export async function resumeCommand(
 
       // Startup summary; re-print the unrestricted warning when the persisted
       // permission choice is unrestricted (DR56).
+      if (scenarioPath !== undefined) {
+        printScriptedModeStartup(displayOptions, scenarioPath);
+      }
       printRunSummary(displayOptions, {
         runId,
         recipeName,
@@ -438,9 +441,6 @@ export async function resumeCommand(
         dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,
         stageCount,
       });
-      if (scenarioPath !== undefined) {
-        printScriptedModeStartup(displayOptions, scenarioPath);
-      }
 
       sig = signalCode();
       if (sig !== null) return sig;

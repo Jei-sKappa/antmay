@@ -84,3 +84,57 @@ All four plan tasks completed. The CLI now supports developer-only scripted harn
 - The finalized checklist output was exercised with an intentionally wrong
   review case (14 passes and one explicit expected/actual failure) and the
   complete happy path (38 passes, zero failures).
+
+## Follow-up change: scripted output imitates an ordinary attempt
+
+- Motivation: scripted mode read as a distinct product feature rather than a
+  mock. Its terminal stream carried a single meta line (`[scripted-harness]
+  case=<name>`) and no agent-like output at all, and its attempt log carried one
+  meta summary line whose `effect=` field was the sole purpose of the
+  `effectSummary` value each case returned.
+- Change: each case now reports a transcript of progress lines plus a final
+  message ending in its terminal outcome. The invoker streams every line through
+  `onEvent`, so the terminal renders scripted output exactly as it renders real
+  agent output, and appends the same lines to the attempt log beneath a
+  `Scripted Harness Run` frame naming the agent, model, case, and attempt.
+  `effectSummary` is removed: an effect such as `write plan.md` is now the
+  progress line `Writing plan.md.`, visible in both places.
+- Honesty constraints held deliberately: every progress line corresponds to a
+  filesystem operation the case genuinely performs (`Checking plan.md.` is its
+  prerequisite `lstat`, `Listing plan-tasks/.` its `readdir`), the log frame
+  fabricates no sandbox, branch, or timing, and outcome details name themselves
+  fake (e.g. `Outcome: DONE — Fake spec written: spec.md`). A drafted
+  `--- Run started: <ISO> ---` frame line was dropped because it duplicated the
+  header's `Started at` and made log content non-deterministic.
+- The startup announcement became one dim line carrying the scenario path,
+  printed ahead of the run summary instead of after it, so scripted mode reads
+  as a note preceding otherwise-unchanged output.
+- Verification: the full `npm --prefix cli run check` gate passed typechecking,
+  all 437 tests across 32 files, and the production build. `npm run demo`
+  completed all six Standard stages with 40 of 40 checks passing, producing the
+  expected boundary commits, fixed artifacts, clean worktree, and completed
+  scripted checkpoint.
+
+### Spec divergences introduced by this change
+
+This change knowingly departs from three pinned items in `spec.md`. They are
+recorded here rather than reconciled, because reconciliation is the thread
+owner's call:
+
+- **AC-4.8 and the `## Cases` body rule** require each case to keep terminal
+  `Outcome:` text in `finalText` rather than emitting a live text line beginning
+  with `Outcome:`. Streaming the final message — the change that surfaces the
+  outcome line on screen — violates this. Rendered-output safety (AC-1.5) still
+  holds: the display's `guardLine` prefixes such a line with a space, exactly as
+  it does for a real harness, so the invoker-level rule was redundant with it.
+- **The `## Cases` body rule** requiring at least one text event that identifies
+  the selected case is no longer met; case identity now lives in the attempt
+  log's frame only, and the terminal never names it.
+- **The startup-message requirement** in `## Scripted override` calls for a
+  conspicuous message; the replacement is deliberately non-invasive. It still
+  identifies scripted mode and the resolved scenario path before the first
+  possible harness invocation.
+- Within granted freedom: degree of freedom 5 covers event count, optional
+  tool-call events, and verbose-log formatting provided case, stage, attempt,
+  effects, and outcome stay inspectable — which the log frame preserves. The log
+  reshaping therefore needs no reconciliation.

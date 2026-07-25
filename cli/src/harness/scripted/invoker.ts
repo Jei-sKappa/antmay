@@ -45,8 +45,14 @@ const ABORTED_OUTCOME: AttemptOutcome = {
   errorMessage: "The attempt was aborted by a signal.",
 };
 
+/**
+ * A successful case reports the progress lines it produced while doing its work
+ * and the final message that ends with the terminal outcome line. Every progress
+ * line describes a filesystem operation the case genuinely performed, so the
+ * transcript never claims work that did not happen.
+ */
 type CaseHandlerResult =
-  | { ok: true; finalText: string; effectSummary: string }
+  | { ok: true; progress: readonly string[]; finalText: string }
   | { ok: false; error: string };
 
 type CaseHandler = (ctx: CaseContext) => Promise<CaseHandlerResult>;
@@ -457,41 +463,53 @@ function selectCase(
   return { ok: true, caseName };
 }
 
-function emitCaseEvent(
+/**
+ * Stream the attempt's transcript to the display: every progress line, then the
+ * final message. These are the lines a real attempt shares between the terminal
+ * and its log; the session framing around them is written to the log alone.
+ */
+function emitTranscript(
   request: AttemptRequest,
-  caseName: ScriptedCaseName,
+  transcript: readonly string[],
 ): { ok: true } | { ok: false; error: string } {
-  const event: HarnessEvent = {
-    type: "text",
-    text: `[scripted-harness] case=${caseName}`,
-  };
-  try {
-    request.onEvent(event);
-  } catch (error) {
-    return {
-      ok: false,
-      error: `event callback failed: ${(error as Error).message}`,
-    };
+  for (const text of transcript) {
+    const event: HarnessEvent = { type: "text", text };
+    try {
+      request.onEvent(event);
+    } catch (error) {
+      return {
+        ok: false,
+        error: `event callback failed: ${(error as Error).message}`,
+      };
+    }
   }
   return { ok: true };
 }
 
-async function appendVerboseLog(
+/**
+ * Append the attempt's session log beneath the header Antmay already wrote: an
+ * opening frame naming the agent, case, and attempt, the same transcript the
+ * display received, and a closing frame. The frame reports only what this
+ * harness actually did — it fabricates no sandbox, branch, or timing.
+ */
+async function appendSessionLog(
   request: AttemptRequest,
   caseName: ScriptedCaseName,
-  effectSummary: string,
-  outcomeLine: string,
+  transcript: readonly string[],
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const details = [
-    "scripted-harness verbose",
-    `stage=${request.stage.id}`,
-    `attempt=${request.stage.attemptNumber}`,
-    `case=${caseName}`,
-    `effect=${effectSummary}`,
-    `outcome=${outcomeLine}`,
-  ].join(" ");
+  const body = [
+    "Scripted Harness Run",
+    `  Agent: ${request.harness}`,
+    `  Model: ${request.model}`,
+    `  Case: ${caseName}`,
+    `  Attempt: ${request.stage.attemptNumber}`,
+    "Agent started",
+    ...transcript,
+    "Agent stopped",
+    "Run complete: the scripted agent finished after 1 iteration(s).",
+  ].join("\n");
   try {
-    await appendFile(request.logFilePath, `${details}\n`, "utf8");
+    await appendFile(request.logFilePath, `${body}\n`, "utf8");
   } catch (error) {
     return {
       ok: false,
@@ -504,18 +522,18 @@ async function appendVerboseLog(
 const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
   "outcome-done": async () => ({
     ok: true,
-    finalText: "Scripted completion.\nOutcome: DONE",
-    effectSummary: "no-change",
+    progress: ["Making no changes."],
+    finalText: "Outcome: DONE — Fake completion; no files changed",
   }),
   "outcome-blocked": async () => ({
     ok: true,
-    finalText: "Scripted pause.\nOutcome: BLOCKED",
-    effectSummary: "no-change",
+    progress: ["Making no changes."],
+    finalText: "Outcome: BLOCKED — Fake pause; no files changed",
   }),
   "outcome-refused": async () => ({
     ok: true,
-    finalText: "Scripted refusal.\nOutcome: REFUSED",
-    effectSummary: "no-change",
+    progress: ["Making no changes."],
+    finalText: "Outcome: REFUSED — Fake refusal; no files changed",
   }),
   "spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
     const result = await writeOwnedFile(
@@ -529,8 +547,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      finalText: "Scripted spec write.\nOutcome: DONE",
-      effectSummary: "write spec.md",
+      progress: ["Writing spec.md."],
+      finalText: "Outcome: DONE — Fake spec written: spec.md",
     };
   },
   "reconcile-spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
@@ -554,8 +572,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      finalText: "Scripted spec reconcile.\nOutcome: DONE",
-      effectSummary: "append spec.md",
+      progress: ["Checking spec.md.", "Appending a fake note to spec.md."],
+      finalText: "Outcome: DONE — Fake reconciliation appended: spec.md",
     };
   },
   "plan-strict-correct": async ({ threadRelPath, threadAbsRoot }) => {
@@ -576,16 +594,18 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       }
       preparedWrites.push(prepared.write);
     }
+    const progress: string[] = [];
     for (const write of preparedWrites) {
       const applied = await applyOwnedFileWrite(write);
       if (!applied.ok) {
         return applied;
       }
+      progress.push(`Writing ${write.threadRelativePath}.`);
     }
     return {
       ok: true,
-      finalText: "Scripted plan write.\nOutcome: DONE",
-      effectSummary: "write plan.md and owned plan-tasks files",
+      progress,
+      finalText: "Outcome: DONE — Fake plan written: plan.md",
     };
   },
   "reconcile-plan-correct": async ({ threadRelPath, threadAbsRoot }) => {
@@ -610,6 +630,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       return tasks;
     }
 
+    const progress: string[] = ["Checking plan.md.", "Listing plan-tasks/."];
+
     const planAppend = await appendOwnedFile(
       threadRelPath,
       threadAbsRoot,
@@ -619,6 +641,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     if (!planAppend.ok) {
       return planAppend;
     }
+    progress.push("Appending a fake note to plan.md.");
 
     for (const taskRelPath of tasks.paths) {
       const taskAppend = await appendOwnedFile(
@@ -630,12 +653,13 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       if (!taskAppend.ok) {
         return taskAppend;
       }
+      progress.push(`Appending a fake note to ${taskRelPath}.`);
     }
 
     return {
       ok: true,
-      finalText: "Scripted plan reconcile.\nOutcome: DONE",
-      effectSummary: `append plan.md and ${tasks.paths.length} task file(s)`,
+      progress,
+      finalText: "Outcome: DONE — Fake reconciliation appended: plan.md",
     };
   },
 
@@ -654,8 +678,9 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      finalText: "Scripted implementation report write.\nOutcome: DONE",
-      effectSummary: "write implementation-report.md",
+      progress: ["Writing implementation-report.md."],
+      finalText:
+        "Outcome: DONE — Fake implementation report written: implementation-report.md",
     };
   },
 };
@@ -697,18 +722,14 @@ async function invokeScripted(
     return scriptedProviderError(effect.error);
   }
 
-  const event = emitCaseEvent(request, selected.caseName);
-  if (!event.ok) {
-    return scriptedProviderError(event.error);
+  const transcript = [...effect.progress, effect.finalText];
+
+  const streamed = emitTranscript(request, transcript);
+  if (!streamed.ok) {
+    return scriptedProviderError(streamed.error);
   }
 
-  const outcomeLine = effect.finalText.split("\n").at(-1) ?? "Outcome: DONE";
-  const log = await appendVerboseLog(
-    request,
-    selected.caseName,
-    effect.effectSummary,
-    outcomeLine,
-  );
+  const log = await appendSessionLog(request, selected.caseName, transcript);
   if (!log.ok) {
     return scriptedProviderError(log.error);
   }

@@ -914,7 +914,7 @@ describe("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(0);
-    expect(result.out).toContain("SCRIPTED TEST HARNESS MODE");
+    expect(result.out).toContain("SCRIPTED HARNESS ENABLED");
   });
 
   it("pauses with harness-error when the stage case array is exhausted on resume", async () => {

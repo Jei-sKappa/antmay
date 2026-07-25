@@ -277,11 +277,12 @@ describe("printUnrestrictedWarning", () => {
 });
 
 describe("printScriptedModeStartup", () => {
-  it("prints a prominent scripted banner with the scenario path and no Outcome: prefix", () => {
+  it("prints one scripted-mode line with the scenario path and no Outcome: prefix", () => {
     const { options, out } = makeOptions();
     printScriptedModeStartup(options, "/cfg/scripted-harness.json");
-    expect(out.text).toContain("SCRIPTED TEST HARNESS MODE");
+    expect(out.text).toContain("SCRIPTED HARNESS ENABLED");
     expect(out.text).toContain("/cfg/scripted-harness.json");
+    expect(out.lines.filter((line) => line.length > 0)).toHaveLength(1);
     expect(out.lines.every((line) => !line.startsWith("Outcome:"))).toBe(true);
   });
 });

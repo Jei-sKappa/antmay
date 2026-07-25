@@ -175,7 +175,7 @@ describe("createScriptedInvoker", () => {
     const firstOutcome = await invoker.invoke(first);
     expect(firstOutcome).toEqual({
       kind: "completed",
-      finalText: "Scripted completion.\nOutcome: DONE",
+      finalText: "Outcome: DONE — Fake completion; no files changed",
     });
 
     const second = buildRequest(fixture, stage, {
@@ -186,7 +186,7 @@ describe("createScriptedInvoker", () => {
     const secondOutcome = await invoker.invoke(second);
     expect(secondOutcome).toEqual({
       kind: "completed",
-      finalText: "Scripted pause.\nOutcome: BLOCKED",
+      finalText: "Outcome: BLOCKED — Fake pause; no files changed",
     });
   });
 
@@ -343,7 +343,7 @@ describe("createScriptedInvoker", () => {
       expect(after).toBe(before);
       expect(outcome.kind).toBe("completed");
       if (outcome.kind !== "completed") throw new Error("expected completion");
-      expect(outcome.finalText.endsWith(token)).toBe(true);
+      expect(outcome.finalText.split("\n").at(-1)!.startsWith(token)).toBe(true);
     });
   });
 
@@ -412,7 +412,7 @@ describe("createScriptedInvoker", () => {
 
     expect(outcome).toEqual({
       kind: "completed",
-      finalText: "Scripted plan write.\nOutcome: DONE",
+      finalText: "Outcome: DONE — Fake plan written: plan.md",
     });
     expect(await readFile(path.join(fixture.threadPath!, "plan.md"), "utf8")).toBe(
       PLAN_STRICT_PLAN_CONTENT,
@@ -569,7 +569,8 @@ describe("createScriptedInvoker", () => {
     await initAttemptLog(fixture, first);
     expect(await invoker.invoke(first)).toEqual({
       kind: "completed",
-      finalText: "Scripted implementation report write.\nOutcome: DONE",
+      finalText:
+        "Outcome: DONE — Fake implementation report written: implementation-report.md",
     });
     expect(await readFile(reportPath, "utf8")).toBe(IMPLEMENT_REPORT_CONTENT);
 
@@ -687,42 +688,10 @@ describe("createScriptedInvoker", () => {
     expect((await lstat(linkPath)).isSymbolicLink()).toBe(true);
   });
 
-  it("emits a deterministic text event naming the case", async () => {
+  it("streams a deterministic transcript ending in the final message", async () => {
     const fixture = await newFixture();
     const events: string[] = [];
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
-    const request = buildRequest(fixture, stageById("spec"), {
-      onEvent: (event) => {
-        if (event.type === "text") events.push(event.text);
-      },
-    });
-    await initAttemptLog(fixture, request);
-
-    await invoker.invoke(request);
-    expect(events).toEqual(["[scripted-harness] case=outcome-done"]);
-  });
-
-  it("appends verbose details without truncating the log header", async () => {
-    const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
-    const request = buildRequest(fixture, stageById("spec"));
-    const logPath = await initAttemptLog(fixture, request);
-
-    await invoker.invoke(request);
-    const log = await readFile(logPath, "utf8");
-    expect(log.startsWith("Run: run-test\n")).toBe(true);
-    expect(log).toContain("Harness version: scripted-harness 1.0.0");
-    expect(log).toContain("scripted-harness verbose");
-    expect(log).toContain("stage=spec");
-    expect(log).toContain("attempt=1");
-    expect(log).toContain("case=outcome-done");
-    expect(log).toContain("outcome=Outcome: DONE");
-  });
-
-  it("keeps terminal Outcome text only in finalText", async () => {
-    const fixture = await newFixture();
-    const events: string[] = [];
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const invoker = createScriptedInvoker(makeScenario({ spec: ["spec-correct"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       onEvent: (event) => {
         if (event.type === "text") events.push(event.text);
@@ -731,10 +700,31 @@ describe("createScriptedInvoker", () => {
     await initAttemptLog(fixture, request);
 
     const outcome = await invoker.invoke(request);
-    expect(events.every((line) => !line.startsWith("Outcome:"))).toBe(true);
+    expect(events).toEqual([
+      "Writing spec.md.",
+      "Outcome: DONE — Fake spec written: spec.md",
+    ]);
     expect(outcome.kind).toBe("completed");
     if (outcome.kind !== "completed") throw new Error("expected completion");
-    expect(outcome.finalText.endsWith("Outcome: DONE")).toBe(true);
+    expect(events.at(-1)).toBe(outcome.finalText);
+  });
+
+  it("appends the session transcript without truncating the log header", async () => {
+    const fixture = await newFixture();
+    const invoker = createScriptedInvoker(makeScenario({ spec: ["spec-correct"] }));
+    const request = buildRequest(fixture, stageById("spec"));
+    const logPath = await initAttemptLog(fixture, request);
+
+    await invoker.invoke(request);
+    const log = await readFile(logPath, "utf8");
+    expect(log.startsWith("Run: run-test\n")).toBe(true);
+    expect(log).toContain("Harness version: scripted-harness 1.0.0");
+    expect(log).toContain("Stage: spec");
+    expect(log).toContain("  Case: spec-correct");
+    expect(log).toContain("  Attempt: 1");
+    expect(log).toContain("Writing spec.md.");
+    expect(log).toContain("Outcome: DONE — Fake spec written: spec.md");
+    expect(log.trimEnd().endsWith("iteration(s).")).toBe(true);
   });
 
   it("normalizes event callback failures to provider-error", async () => {
