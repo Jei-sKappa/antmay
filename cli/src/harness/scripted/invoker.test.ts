@@ -20,6 +20,8 @@ import {
   PLAN_STRICT_PLAN_CONTENT,
   RECONCILE_PLAN_APPEND_LINE,
   RECONCILE_SPEC_APPEND_LINE,
+  RECONCILE_SPEC_PENDING_DECISION_CONTENT,
+  RECONCILE_SPEC_PENDING_DECISION_PATH,
   SCRIPTED_HARNESS_ERROR_CLASS,
   SPEC_CORRECT_CONTENT,
 } from "./invoker.js";
@@ -147,7 +149,7 @@ async function initAttemptLog(
 }
 
 describe("createScriptedInvoker", () => {
-  it("exposes exactly the eight built-in scripted cases", () => {
+  it("exposes exactly the nine built-in scripted cases", () => {
     expect([...SCRIPTED_CASE_NAMES].sort()).toEqual(
       [
         "outcome-done",
@@ -155,6 +157,7 @@ describe("createScriptedInvoker", () => {
         "outcome-refused",
         "spec-correct",
         "reconcile-spec-correct",
+        "reconcile-spec-pending-decision",
         "plan-strict-correct",
         "reconcile-plan-correct",
         "implement-plan-with-subagents-correct",
@@ -379,6 +382,60 @@ describe("createScriptedInvoker", () => {
     expect(second).toBe(
       `# Existing\n${RECONCILE_SPEC_APPEND_LINE}${RECONCILE_SPEC_APPEND_LINE}`,
     );
+  });
+
+  it("queues one decision file and reports DONE for reconcile-spec-pending-decision", async () => {
+    const fixture = await newFixture();
+    const specPath = path.join(fixture.threadPath!, "spec.md");
+    await writeFile(specPath, "# Existing\n", "utf8");
+
+    const invoker = createScriptedInvoker(
+      makeScenario({ "reconcile-spec": ["reconcile-spec-pending-decision"] }),
+    );
+    const request = buildRequest(fixture, stageById("reconcile-spec"));
+    await initAttemptLog(fixture, request);
+
+    const outcome = await invoker.invoke(request);
+    expect(outcome.kind).toBe("completed");
+    if (outcome.kind !== "completed") throw new Error("expected completion");
+    expect(outcome.finalText.startsWith("Outcome: DONE — ")).toBe(true);
+    expect(outcome.finalText).toContain(RECONCILE_SPEC_PENDING_DECISION_PATH);
+
+    expect(await readFile(specPath, "utf8")).toBe(
+      `# Existing\n${RECONCILE_SPEC_APPEND_LINE}`,
+    );
+    const queuedPath = path.join(
+      fixture.threadPath!,
+      ...RECONCILE_SPEC_PENDING_DECISION_PATH.split("/"),
+    );
+    expect(await readFile(queuedPath, "utf8")).toBe(
+      RECONCILE_SPEC_PENDING_DECISION_CONTENT,
+    );
+  });
+
+  it("rejects reconcile-spec-pending-decision without a safe regular spec.md", async () => {
+    const fixture = await newFixture();
+    const invoker = createScriptedInvoker(
+      makeScenario({ "reconcile-spec": ["reconcile-spec-pending-decision"] }),
+    );
+    const request = buildRequest(fixture, stageById("reconcile-spec"));
+    await initAttemptLog(fixture, request);
+
+    const outcome = await invoker.invoke(request);
+    expect(outcome).toMatchObject({
+      kind: "failed",
+      category: "provider-error",
+      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+    });
+    await expect(
+      readFile(
+        path.join(
+          fixture.threadPath!,
+          ...RECONCILE_SPEC_PENDING_DECISION_PATH.split("/"),
+        ),
+        "utf8",
+      ),
+    ).rejects.toThrow();
   });
 
   it("rejects reconcile-spec-correct without a safe regular spec.md", async () => {

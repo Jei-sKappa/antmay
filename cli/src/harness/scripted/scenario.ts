@@ -20,6 +20,7 @@ export const SCRIPTED_CASE_NAMES = [
   "outcome-refused",
   "spec-correct",
   "reconcile-spec-correct",
+  "reconcile-spec-pending-decision",
   "plan-strict-correct",
   "reconcile-plan-correct",
   "implement-plan-with-subagents-correct",
@@ -38,6 +39,7 @@ const STAGE_SPECIFIC_CASE_STAGE: Readonly<
 > = {
   "spec-correct": "spec",
   "reconcile-spec-correct": "reconcile-spec",
+  "reconcile-spec-pending-decision": "reconcile-spec",
   "plan-strict-correct": "plan-strict",
   "reconcile-plan-correct": "reconcile-plan",
   "implement-plan-with-subagents-correct": "implement-plan-with-subagents",

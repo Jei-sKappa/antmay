@@ -22,6 +22,18 @@ export const SPEC_CORRECT_CONTENT = "# Spec: Fake\n\nPlaceholder\n";
 export const RECONCILE_SPEC_APPEND_LINE =
   "<!-- scripted reconcile-spec append -->\n";
 
+/**
+ * Thread-relative path of the queued decision file written by
+ * `reconcile-spec-pending-decision`. A direct file of the queue directory, which
+ * is what a pending-queue scan counts.
+ */
+export const RECONCILE_SPEC_PENDING_DECISION_PATH =
+  ".pending-decisions/reconcile-spec-fake-decision.md";
+
+/** Exact bytes of that queued decision file. */
+export const RECONCILE_SPEC_PENDING_DECISION_CONTENT =
+  "# Pending decision: Fake\n\nPlaceholder decision awaiting a human.\n";
+
 /** Fixed `plan.md` body for `plan-strict-correct`. */
 export const PLAN_STRICT_PLAN_CONTENT = "# Plan: Fake\n\nPlaceholder plan.\n";
 
@@ -519,6 +531,40 @@ async function appendSessionLog(
   return { ok: true };
 }
 
+/**
+ * Check the thread's `spec.md` and append the fixed reconcile note to it,
+ * reporting the progress lines for the work performed.
+ */
+async function appendFakeSpecNote(
+  threadRelPath: string,
+  threadAbsRoot: string,
+): Promise<
+  { ok: true; progress: readonly string[] } | { ok: false; error: string }
+> {
+  const specAbs = joinThreadAbs(threadAbsRoot, "spec.md");
+  const prerequisite = await assertLexicalPrerequisiteFile(specAbs);
+  if (!prerequisite.ok) {
+    return prerequisite;
+  }
+  const contained = await assertPathContainedInThread(threadAbsRoot, specAbs);
+  if (!contained.ok) {
+    return contained;
+  }
+  const append = await appendOwnedFile(
+    threadRelPath,
+    threadAbsRoot,
+    "spec.md",
+    RECONCILE_SPEC_APPEND_LINE,
+  );
+  if (!append.ok) {
+    return append;
+  }
+  return {
+    ok: true,
+    progress: ["Checking spec.md.", "Appending a fake note to spec.md."],
+  };
+}
+
 const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
   "outcome-done": async () => ({
     ok: true,
@@ -552,28 +598,40 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     };
   },
   "reconcile-spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
-    const specAbs = joinThreadAbs(threadAbsRoot, "spec.md");
-    const prerequisite = await assertLexicalPrerequisiteFile(specAbs);
-    if (!prerequisite.ok) {
-      return prerequisite;
-    }
-    const contained = await assertPathContainedInThread(threadAbsRoot, specAbs);
-    if (!contained.ok) {
-      return contained;
-    }
-    const append = await appendOwnedFile(
-      threadRelPath,
-      threadAbsRoot,
-      "spec.md",
-      RECONCILE_SPEC_APPEND_LINE,
-    );
+    const append = await appendFakeSpecNote(threadRelPath, threadAbsRoot);
     if (!append.ok) {
       return append;
     }
     return {
       ok: true,
-      progress: ["Checking spec.md.", "Appending a fake note to spec.md."],
+      progress: [...append.progress],
       finalText: "Outcome: DONE — Fake reconciliation appended: spec.md",
+    };
+  },
+  "reconcile-spec-pending-decision": async ({
+    threadRelPath,
+    threadAbsRoot,
+  }) => {
+    const append = await appendFakeSpecNote(threadRelPath, threadAbsRoot);
+    if (!append.ok) {
+      return append;
+    }
+    const queued = await writeOwnedFile(
+      threadRelPath,
+      threadAbsRoot,
+      RECONCILE_SPEC_PENDING_DECISION_PATH,
+      RECONCILE_SPEC_PENDING_DECISION_CONTENT,
+    );
+    if (!queued.ok) {
+      return queued;
+    }
+    return {
+      ok: true,
+      progress: [
+        ...append.progress,
+        `Writing ${RECONCILE_SPEC_PENDING_DECISION_PATH}.`,
+      ],
+      finalText: `Outcome: DONE — Fake reconciliation appended: spec.md; one fake decision queued: ${RECONCILE_SPEC_PENDING_DECISION_PATH}`,
     };
   },
   "plan-strict-correct": async ({ threadRelPath, threadAbsRoot }) => {
