@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import type { Display } from "../display/types.js";
 import { nullDisplay } from "../display/types.js";
@@ -25,20 +25,20 @@ import type { RunnerContext } from "./runner.js";
 import { executeRun } from "./runner.js";
 import { SignalInterruption } from "./signals.js";
 
+/**
+ * Temporary resources are collected for the whole file and released once every
+ * case has finished. The cases here run concurrently, so nothing may be torn
+ * down between tests: a per-test hook would reach into a repository or run
+ * directory another in-flight case is still using.
+ */
 const fixtures: RepoFixture[] = [];
 const runDirs: string[] = [];
 
-afterEach(async () => {
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
-  while (runDirs.length > 0) {
-    const dir = runDirs.pop();
-    if (dir) {
-      await fs.chmod(dir, 0o700).catch(() => undefined);
-      await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
-    }
+afterAll(async () => {
+  for (const fixture of fixtures) await fixture.cleanup().catch(() => undefined);
+  for (const dir of runDirs) {
+    await fs.chmod(dir, 0o700).catch(() => undefined);
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 });
 
@@ -221,7 +221,7 @@ async function lastSubject(fixture: RepoFixture): Promise<string> {
   return result.stdout.trim();
 }
 
-describe("executeRun — full completion (AC-6.3, AC-13.3)", () => {
+describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
   it("runs a synthetic two-stage recipe to completion with per-stage transitions", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -287,7 +287,7 @@ describe("executeRun — full completion (AC-6.3, AC-13.3)", () => {
   });
 });
 
-describe("executeRun — DONE with a pending-queue pause (AC-11.3, AC-12.1, AC-12.7)", () => {
+describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC-12.1, AC-12.7)", () => {
   it("finalizes the boundary first, records the attempt done, then pauses pending-queues", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -321,7 +321,7 @@ describe("executeRun — DONE with a pending-queue pause (AC-11.3, AC-12.1, AC-1
   });
 });
 
-describe("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)", () => {
+describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)", () => {
   const cases: Array<{
     name: string;
     step: FakeHarnessStep;
@@ -400,7 +400,7 @@ describe("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)", () => {
   }
 });
 
-describe("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)", () => {
+describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)", () => {
   it("pauses pending-queues before allocating any attempt or log", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -444,7 +444,7 @@ describe("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)", () => {
   });
 });
 
-describe("executeRun — boundary failures preserve the attempt (AC-11.6, AC-12.2, AC-12.4)", () => {
+describe.concurrent("executeRun — boundary failures preserve the attempt (AC-11.6, AC-12.2, AC-12.4)", () => {
   it("pauses git-policy-violation for an out-of-bounds change", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -519,7 +519,7 @@ describe("executeRun — boundary failures preserve the attempt (AC-11.6, AC-12.
   });
 });
 
-describe("executeRun — interruption (AC-17.3)", () => {
+describe.concurrent("executeRun — interruption (AC-17.3)", () => {
   it("records the attempt interrupted when the abort signal fires", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -541,7 +541,7 @@ describe("executeRun — interruption (AC-17.3)", () => {
   });
 });
 
-describe("executeRun — signal interruption (AC-17.1, AC-17.3)", () => {
+describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () => {
   it("finishes the reserved attempt interrupted when a signal arrives before launch", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -644,7 +644,7 @@ describe("executeRun — signal interruption (AC-17.1, AC-17.3)", () => {
   });
 });
 
-describe("executeRun — persistence and log failures (AC-13.3)", () => {
+describe.concurrent("executeRun — persistence and log failures (AC-13.3)", () => {
   it("creates no log and launches nothing when the pre-launch checkpoint write fails", async () => {
     const fixture = await newFixture();
     const runDir = path.join(await makeRunDir(), "missing-child");
@@ -697,7 +697,7 @@ describe("executeRun — persistence and log failures (AC-13.3)", () => {
   });
 });
 
-describe("executeRun — no artifact preconditions (AC-6.4)", () => {
+describe.concurrent("executeRun — no artifact preconditions (AC-6.4)", () => {
   it("launches a stage whose target file does not exist", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -713,7 +713,7 @@ describe("executeRun — no artifact preconditions (AC-6.4)", () => {
   });
 });
 
-describe("executeRun — harness stage context", () => {
+describe.concurrent("executeRun — harness stage context", () => {
   it("passes snapshotted stage metadata and attempt number on the first attempt", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../config/settings.js";
 import type { ProbeResult } from "../harness/probe.js";
@@ -46,22 +46,21 @@ class Capture extends Writable {
   }
 }
 
+/**
+ * Temporary resources are collected for the whole file and released once every
+ * case has finished. The cases here run concurrently, so nothing may be torn
+ * down between tests: a per-test hook would reach into a repository or state
+ * root another in-flight case is still using.
+ */
 const fixtures: RepoFixture[] = [];
 const tempDirs: string[] = [];
 const heldLocks: LockHandle[] = [];
 
-afterEach(async () => {
-  while (heldLocks.length > 0) {
-    const lock = heldLocks.pop();
-    if (lock) await lock.release().catch(() => undefined);
-  }
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (dir) await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+afterAll(async () => {
+  for (const lock of heldLocks) await lock.release().catch(() => undefined);
+  for (const fixture of fixtures) await fixture.cleanup().catch(() => undefined);
+  for (const dir of tempDirs) {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 });
 
@@ -262,7 +261,7 @@ function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
   ];
 }
 
-describe("runCommand — happy path (AC-1.3, AC-20.2)", () => {
+describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
   it("runs the standard recipe to completion, committing only the boundaries that changed", async () => {
     const h = await setup();
     const folder = h.fixture.threadFolder as string;
@@ -329,7 +328,7 @@ describe("runCommand — happy path (AC-1.3, AC-20.2)", () => {
   });
 });
 
-describe("runCommand — preflight failures leave no run, no checkpoint, no lock (AC-7.1)", () => {
+describe.concurrent("runCommand — preflight failures leave no run, no checkpoint, no lock (AC-7.1)", () => {
   async function expectClean(h: Harness, result: RunResult): Promise<void> {
     expect(result.code).toBe(1);
     expect(await runDirNames(h.stateRoot)).toEqual([]);
@@ -438,7 +437,7 @@ describe("runCommand — preflight failures leave no run, no checkpoint, no lock
   });
 });
 
-describe("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
+describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
   it("re-checks the queues under the lock and creates nothing when one fills mid-allocation", async () => {
     const h = await setup();
     // generateId runs after the initial preflight scan but before lock
@@ -480,7 +479,7 @@ describe("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
   });
 });
 
-describe("runCommand — non-blocking and pause behavior (AC-7.6, AC-1.3)", () => {
+describe.concurrent("runCommand — non-blocking and pause behavior (AC-7.6, AC-1.3)", () => {
   it("warns about a corrupt sibling checkpoint without blocking creation (AC-7.6)", async () => {
     const h = await setup();
     const corrupt = await createRunDirectory(h.stateRoot, "corrupt-run-000000");
@@ -507,7 +506,7 @@ describe("runCommand — non-blocking and pause behavior (AC-7.6, AC-1.3)", () =
   });
 });
 
-describe("runCommand — signal interruption (AC-17.1, AC-17.2)", () => {
+describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () => {
   it("returns the signal exit code and creates no run when interrupted before allocation", async () => {
     const h = await setup();
     const result = await run(h, standardSteps(h.fixture), {
@@ -588,7 +587,7 @@ function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
   };
 }
 
-describe("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
+describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
   it("rejects a non-exact toggle before allocation", async () => {
     const h = await setup();
     const result = await run(h, [], {

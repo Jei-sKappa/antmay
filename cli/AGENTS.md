@@ -98,6 +98,29 @@ never touch config, state, Git, or harnesses.
   that builds the CLI and drives a selected scripted scenario through a unique
   `/tmp` repository.
 
+### Test suite shape
+
+The suite drives real `git` subprocesses and real fsynced checkpoints, which
+dominates its runtime on macOS. Two conventions keep it fast; both are load
+bearing.
+
+- `createRepoFixture` returns a **filesystem copy of a cached template
+  repository**, built once per distinct set of fixture options. Do not
+  reintroduce a per-test `init`/`config`/`add`/`commit` path — that was ~400 ms
+  of subprocess time per test case.
+- `commands/resume.test.ts`, `commands/run.test.ts`, and `runner/runner.test.ts`
+  declare their suites with **`describe.concurrent`**, so their cases overlap.
+  Each case owns an independent repository, config root, and state root, and
+  every temporary resource is collected in a module-level array released by a
+  single `afterAll`. In these files, teardown must never run between cases: an
+  `afterEach` hook would delete a repository a still-running case is using, and
+  `onTestFinished` is unusable because Vitest 2 attributes it to the wrong test
+  when cases run concurrently. Any new case in these files allocates through the
+  existing helpers and registers no teardown of its own.
+- `testTimeout`/`hookTimeout` in `vitest.config.ts` are deliberately generous.
+  A Git-backed case needs seconds of wall clock under concurrent load; the
+  budget exists so contention alone never fails a test.
+
 ### Contracts to preserve
 
 - **Exit codes** are fixed in `src/cli/exit-codes.ts` and must not be

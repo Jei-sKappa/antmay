@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { promises as fs, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -51,17 +51,75 @@ export type RepoFixture = {
 };
 
 /**
- * Create a disposable Git repository under the OS temp directory: initialize
- * it, configure a committer identity with signing disabled, and commit
- * `.gitignore` rules for the workflow's operational directories. Optionally
- * create one thread with seed/decision content and commit it. Every Git-backed
- * test reuses this helper.
+ * The genesis content of a fixture repository with every option default already
+ * resolved: the thread folder to create and the exact seed/decisions bytes, or
+ * `null` for a file that must not exist. A spec fully determines the committed
+ * repository, so its serialization doubles as the template cache key.
  */
-export async function createRepoFixture(
-  options: RepoFixtureOptions = {},
-): Promise<RepoFixture> {
-  const rawDir = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-git-"));
-  const root = await fs.realpath(rawDir);
+type TemplateSpec = {
+  thread: {
+    folder: string;
+    seed: string | null;
+    decisions: string | null;
+  } | null;
+};
+
+function templateSpecFor(options: RepoFixtureOptions): TemplateSpec {
+  const threadOpts = options.thread;
+  if (threadOpts === undefined) {
+    return { thread: null };
+  }
+  return {
+    thread: {
+      folder: threadOpts.folder ?? DEFAULT_THREAD_FOLDER,
+      seed:
+        threadOpts.createSeed === false
+          ? null
+          : (threadOpts.seed ?? DEFAULT_SEED),
+      decisions:
+        threadOpts.createDecisions === false
+          ? null
+          : (threadOpts.decisions ?? DEFAULT_DECISIONS),
+    },
+  };
+}
+
+/**
+ * Built templates keyed by serialized `TemplateSpec`. The map stores the
+ * in-flight promise rather than the resolved path so concurrent callers asking
+ * for the same spec await one build instead of racing to create duplicates.
+ */
+const templates = new Map<string, Promise<string>>();
+
+let templatesDir: Promise<string> | undefined;
+
+/**
+ * The one directory holding this worker's templates, created on first use and
+ * removed when the process exits. Templates outlive individual fixtures, so
+ * they are deliberately not owned by any test's cleanup.
+ */
+function templatesDirectory(): Promise<string> {
+  if (templatesDir === undefined) {
+    templatesDir = fs
+      .mkdtemp(path.join(os.tmpdir(), "antmay-git-template-"))
+      .then((dir) => {
+        process.once("exit", () => {
+          rmSync(dir, { recursive: true, force: true });
+        });
+        return dir;
+      });
+  }
+  return templatesDir;
+}
+
+/**
+ * Build the pristine repository a spec describes: initialize it, configure a
+ * committer identity with signing disabled, write the workflow's operational
+ * ignore rules plus any thread content, and commit the lot as genesis. Runs at
+ * most once per distinct spec; `createRepoFixture` copies the result.
+ */
+async function buildTemplate(spec: TemplateSpec): Promise<string> {
+  const root = await fs.mkdtemp(path.join(await templatesDirectory(), "t-"));
 
   await gitOrThrow(root, ["init"]);
   await gitOrThrow(root, ["config", "user.email", "afk@example.com"]);
@@ -74,6 +132,57 @@ export async function createRepoFixture(
     "utf8",
   );
 
+  if (spec.thread !== null) {
+    const threadPath = path.join(root, "docs", "threads", spec.thread.folder);
+    await fs.mkdir(threadPath, { recursive: true });
+    if (spec.thread.seed !== null) {
+      await fs.writeFile(
+        path.join(threadPath, "seed.md"),
+        spec.thread.seed,
+        "utf8",
+      );
+    }
+    if (spec.thread.decisions !== null) {
+      await fs.writeFile(
+        path.join(threadPath, "decisions.md"),
+        spec.thread.decisions,
+        "utf8",
+      );
+    }
+  }
+
+  await gitOrThrow(root, ["add", "-A"]);
+  await gitOrThrow(root, ["commit", "-m", "chore: fixture genesis"]);
+
+  return root;
+}
+
+/**
+ * Create a disposable Git repository under the OS temp directory holding the
+ * workflow's operational ignore rules and, unless `thread` is omitted, one
+ * thread with seed/decision content — all already committed as genesis.
+ *
+ * The repository is a filesystem copy of a cached template built once per
+ * distinct set of options, which keeps a suite of Git-backed tests off the
+ * `init`/`config`/`add`/`commit` subprocess path for every single case. The copy
+ * is a fully independent worktree: tests commit into it and mutate it freely.
+ * Every Git-backed test reuses this helper.
+ */
+export async function createRepoFixture(
+  options: RepoFixtureOptions = {},
+): Promise<RepoFixture> {
+  const spec = templateSpecFor(options);
+  const key = JSON.stringify(spec);
+  let template = templates.get(key);
+  if (template === undefined) {
+    template = buildTemplate(spec);
+    templates.set(key, template);
+  }
+
+  const rawDir = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-git-"));
+  const root = await fs.realpath(rawDir);
+  await fs.cp(await template, root, { recursive: true });
+
   const fixture: RepoFixture = {
     root,
     git: (args: string[]) => runGit(root, args),
@@ -82,34 +191,15 @@ export async function createRepoFixture(
     },
   };
 
-  const threadOpts = options.thread;
-  if (threadOpts !== undefined) {
-    const folder = threadOpts.folder ?? DEFAULT_THREAD_FOLDER;
-    const threadPath = path.join(root, "docs", "threads", folder);
-    await fs.mkdir(threadPath, { recursive: true });
-
-    if (threadOpts.createSeed !== false) {
-      await fs.writeFile(
-        path.join(threadPath, "seed.md"),
-        threadOpts.seed ?? DEFAULT_SEED,
-        "utf8",
-      );
-    }
-    if (threadOpts.createDecisions !== false) {
-      await fs.writeFile(
-        path.join(threadPath, "decisions.md"),
-        threadOpts.decisions ?? DEFAULT_DECISIONS,
-        "utf8",
-      );
-    }
-
-    fixture.threadFolder = folder;
-    fixture.threadPath = threadPath;
-    fixture.threadRelPath = path.posix.join("docs", "threads", folder);
+  if (spec.thread !== null) {
+    fixture.threadFolder = spec.thread.folder;
+    fixture.threadPath = path.join(root, "docs", "threads", spec.thread.folder);
+    fixture.threadRelPath = path.posix.join(
+      "docs",
+      "threads",
+      spec.thread.folder,
+    );
   }
-
-  await gitOrThrow(root, ["add", "-A"]);
-  await gitOrThrow(root, ["commit", "-m", "chore: fixture genesis"]);
 
   return fixture;
 }

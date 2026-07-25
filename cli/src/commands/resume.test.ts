@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
 import type { HarnessId } from "../config/settings.js";
@@ -48,22 +48,21 @@ class Capture extends Writable {
   }
 }
 
+/**
+ * Temporary resources are collected for the whole file and released once every
+ * case has finished. The cases here run concurrently, so nothing may be torn
+ * down between tests: a per-test hook would reach into a repository or state
+ * root another in-flight case is still using.
+ */
 const fixtures: RepoFixture[] = [];
 const tempDirs: string[] = [];
 const heldLocks: LockHandle[] = [];
 
-afterEach(async () => {
-  while (heldLocks.length > 0) {
-    const lock = heldLocks.pop();
-    if (lock) await lock.release().catch(() => undefined);
-  }
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (dir) await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+afterAll(async () => {
+  for (const lock of heldLocks) await lock.release().catch(() => undefined);
+  for (const fixture of fixtures) await fixture.cleanup().catch(() => undefined);
+  for (const dir of tempDirs) {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 });
 
@@ -311,7 +310,7 @@ async function seedScriptedBlocked(
   return soleRunId(h);
 }
 
-describe("resumeCommand — preflight rejections (AC-15.2)", () => {
+describe.concurrent("resumeCommand — preflight rejections (AC-15.2)", () => {
   it("rejects an unknown run with exit 1", async () => {
     const h = await setup();
     const result = await resume(h, "no-such-run-000000", []);
@@ -365,7 +364,7 @@ describe("resumeCommand — preflight rejections (AC-15.2)", () => {
   });
 });
 
-describe("resumeCommand — clean-worktree rule (AC-15.1)", () => {
+describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
   it("refuses a dirty worktree for an outcome-blocked pause, leaving the checkpoint unchanged", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
@@ -403,7 +402,7 @@ describe("resumeCommand — clean-worktree rule (AC-15.1)", () => {
   });
 });
 
-describe("resumeCommand — queue handling under the lock (AC-15.3, AC-11.6)", () => {
+describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, AC-11.6)", () => {
   it("leaves a waiting run with non-empty queues byte-for-byte unchanged, prints files, exits 2", async () => {
     const h = await setup();
     await seed(h, [{ before: () => dropPendingSync(h.fixture, "q.md"), outcome: BLOCKED }]);
@@ -465,7 +464,7 @@ describe("resumeCommand — queue handling under the lock (AC-15.3, AC-11.6)", (
   });
 });
 
-describe("resumeCommand — pending-queues resolution (AC-15.3, DR53)", () => {
+describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3, DR53)", () => {
   it("re-attempts the same stage for a non-DONE pending-queues pause", async () => {
     const h = await setup();
     await seed(h, [{ before: () => dropPendingSync(h.fixture, "q.md"), outcome: BLOCKED }]);
@@ -529,7 +528,7 @@ describe("resumeCommand — pending-queues resolution (AC-15.3, DR53)", () => {
   });
 });
 
-describe("resumeCommand — harness-free Git-boundary finalization (AC-15.3, DR50)", () => {
+describe.concurrent("resumeCommand — harness-free Git-boundary finalization (AC-15.3, DR50)", () => {
   it("commits the preserved diff without any harness call, then advances", async () => {
     const h = await setup();
     await seed(h, [
@@ -662,7 +661,7 @@ describe("resumeCommand — harness-free Git-boundary finalization (AC-15.3, DR5
   });
 });
 
-describe("resumeCommand — ready and executing recovery (AC-15.3, AC-15.4)", () => {
+describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC-15.4)", () => {
   /** Seed a durable ready checkpoint (post-allocation, pre-launch signal). */
   async function seedReady(h: Harness): Promise<string> {
     let calls = 0;
@@ -742,7 +741,6 @@ describe("resumeCommand — ready and executing recovery (AC-15.3, AC-15.4)", ()
     // Manual stale-lock removal, then recovery marks the attempt interrupted and
     // runs a fresh attempt.
     await held.handle.release();
-    heldLocks.pop();
     const recovered = await resume(h, runId, standardSteps(h.fixture));
     expect(recovered.code).toBe(0);
     const cp = await readCp(h, runId);
@@ -752,7 +750,7 @@ describe("resumeCommand — ready and executing recovery (AC-15.3, AC-15.4)", ()
   });
 });
 
-describe("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1, DR48)", () => {
+describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1, DR48)", () => {
   it("probes only the current stage's harness and keeps retained versions for later stages", async () => {
     const h = await setup({
       afk: {
@@ -824,7 +822,7 @@ describe("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1, DR4
   });
 });
 
-describe("resumeCommand — signals during resumed execution (AC-17)", () => {
+describe.concurrent("resumeCommand — signals during resumed execution (AC-17)", () => {
   it("persists interruption, releases the lock, and returns the conventional code", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
@@ -852,7 +850,7 @@ describe("resumeCommand — signals during resumed execution (AC-17)", () => {
   });
 });
 
-describe("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
+describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
   it("rejects a non-exact toggle on an unmarked checkpoint before probe or lock", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
