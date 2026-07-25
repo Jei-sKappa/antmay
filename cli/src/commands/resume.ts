@@ -28,6 +28,7 @@ import type {
   RunCheckpoint,
   WaitingInfo,
 } from "../state/checkpoint.js";
+import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
@@ -35,14 +36,6 @@ import { scanPendingQueues } from "../thread/queues.js";
 import { resolveThreadTarget } from "../thread/resolve.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
 import type { RunDeps } from "./run.js";
-
-/**
- * The unvalidated-changes note every non-DONE and boundary pause carries: the
- * user must revert or deliberately commit before resuming (DR54).
- */
-const COMMIT_OR_REVERT_NOTE =
-  "The attempt's file changes are unvalidated: revert them or deliberately " +
-  "commit them before resuming.";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -341,6 +334,24 @@ export async function resumeCommand(
     const attemptLogAbs = (attempt: AttemptRecord | undefined): string | null =>
       attempt === undefined ? null : path.join(runDir, attempt.logPath);
 
+    // Render the durable pause. None of resume's own pause paths runs an attempt
+    // in this process, so none of them closes a stage — only the run-level block
+    // is printed.
+    const renderPause = (
+      waiting: WaitingInfo,
+      logAbsPath: string | null,
+    ): void => {
+      display.runPaused({
+        waiting,
+        runId,
+        recipeName,
+        totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
+        logAbsPath,
+        resumeCommand: resumeCommandLine,
+        checkpointPath,
+      });
+    };
+
     const continueRun = async (cursor: RunCheckpoint): Promise<number> => {
       const result = await executeRun({
         checkpoint: cursor,
@@ -459,10 +470,8 @@ export async function resumeCommand(
         if (boundaryPause && originalWaiting !== null) {
           const message = `${originalWaiting.message} The pending-queue scan failed again and must be repeated before finalizing: ${scan.message}`;
           const waiting: WaitingInfo = {
-            kind: originalWaiting.kind,
+            ...originalWaiting,
             message,
-            pendingFiles: originalWaiting.pendingFiles,
-            candidateLine: originalWaiting.candidateLine,
             diagnostics: {
               ...(originalWaiting.diagnostics ?? {
                 category: originalWaiting.kind,
@@ -476,13 +485,7 @@ export async function resumeCommand(
             waiting,
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          display.runPaused({
-            waiting,
-            runId,
-            logAbsPath: attemptLogAbs(lastAttempt),
-            resumeCommand: resumeCommandLine,
-            checkpointPath,
-          });
+          renderPause(waiting, attemptLogAbs(lastAttempt));
           return EXIT_WAITING;
         }
         const waiting: WaitingInfo = {
@@ -496,13 +499,7 @@ export async function resumeCommand(
           waiting,
         });
         if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        display.runPaused({
-          waiting,
-          runId,
-          logAbsPath: null,
-          resumeCommand: resumeCommandLine,
-          checkpointPath,
-        });
+        renderPause(waiting, null);
         return EXIT_WAITING;
       }
 
@@ -514,13 +511,7 @@ export async function resumeCommand(
             ...originalWaiting,
             pendingFiles: scan.pendingFiles,
           };
-          display.runPaused({
-            waiting,
-            runId,
-            logAbsPath: attemptLogAbs(lastAttempt),
-            resumeCommand: resumeCommandLine,
-            checkpointPath,
-          });
+          renderPause(waiting, attemptLogAbs(lastAttempt));
           return EXIT_WAITING;
         }
         // A ready or recovered-executing cursor persists a tokenless pre-attempt
@@ -536,13 +527,7 @@ export async function resumeCommand(
           waiting,
         });
         if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        display.runPaused({
-          waiting,
-          runId,
-          logAbsPath: null,
-          resumeCommand: resumeCommandLine,
-          checkpointPath,
-        });
+        renderPause(waiting, null);
         return EXIT_WAITING;
       }
 
@@ -579,7 +564,8 @@ export async function resumeCommand(
           const newHead = await readHead(repoRoot);
           const waiting: WaitingInfo = {
             kind: "git-policy-violation",
-            message: `${evaluation.message}. ${COMMIT_OR_REVERT_NOTE}`,
+            message: `${evaluation.message}.`,
+            nextAction: UNVALIDATED_CHANGES_NOTE,
             candidateLine,
             diagnostics: { category: "git-policy-violation" },
           };
@@ -590,13 +576,7 @@ export async function resumeCommand(
             gitCursor: { ...checkpoint.gitCursor, observedHead: newHead },
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          display.runPaused({
-            waiting,
-            runId,
-            logAbsPath: attemptLogAbs(preserved),
-            resumeCommand: resumeCommandLine,
-            checkpointPath,
-          });
+          renderPause(waiting, attemptLogAbs(preserved));
           return EXIT_WAITING;
         }
 
@@ -610,7 +590,8 @@ export async function resumeCommand(
         if (finalized.kind === "commit-error") {
           const waiting: WaitingInfo = {
             kind: "commit-error",
-            message: `${finalized.message}. ${COMMIT_OR_REVERT_NOTE}`,
+            message: `${finalized.message}.`,
+            nextAction: UNVALIDATED_CHANGES_NOTE,
             candidateLine,
             diagnostics: { category: "commit-error" },
           };
@@ -621,13 +602,7 @@ export async function resumeCommand(
             gitCursor: { ...checkpoint.gitCursor, observedHead: newHead },
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          display.runPaused({
-            waiting,
-            runId,
-            logAbsPath: attemptLogAbs(preserved),
-            resumeCommand: resumeCommandLine,
-            checkpointPath,
-          });
+          renderPause(waiting, attemptLogAbs(preserved));
           return EXIT_WAITING;
         }
 

@@ -182,7 +182,10 @@ describe("classifyAttempt", () => {
     );
     expect(result.kind).toBe("outcome-blocked");
     expect(result.message).toContain("BLOCKED");
-    expect(result.message).toContain("— needs input");
+    // The agent's own reason travels separately from the classification
+    // sentence, stripped of the dash that separated it from the token.
+    expect(result.action === "pause" && result.detail).toBe("needs input");
+    expect(result.message).not.toContain("—");
   });
 
   it("BLOCKED with pending files pauses as pending-queues (waiting)", () => {

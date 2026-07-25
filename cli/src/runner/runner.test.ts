@@ -164,12 +164,14 @@ function recorder(): {
   display: Display;
   attemptStarted: Array<Parameters<Display["attemptStarted"]>[0]>;
   stageSucceeded: Array<Parameters<Display["stageSucceeded"]>[0]>;
+  stageStopped: Array<Parameters<Display["stageStopped"]>[0]>;
   runPaused: Array<Parameters<Display["runPaused"]>[0]>;
   runCompleted: Array<Parameters<Display["runCompleted"]>[0]>;
   warns: string[];
 } {
   const attemptStarted: Array<Parameters<Display["attemptStarted"]>[0]> = [];
   const stageSucceeded: Array<Parameters<Display["stageSucceeded"]>[0]> = [];
+  const stageStopped: Array<Parameters<Display["stageStopped"]>[0]> = [];
   const runPaused: Array<Parameters<Display["runPaused"]>[0]> = [];
   const runCompleted: Array<Parameters<Display["runCompleted"]>[0]> = [];
   const warns: string[] = [];
@@ -178,11 +180,20 @@ function recorder(): {
     harnessEvent: () => undefined,
     heartbeat: () => undefined,
     stageSucceeded: (info) => stageSucceeded.push(info),
+    stageStopped: (info) => stageStopped.push(info),
     runPaused: (info) => runPaused.push(info),
     runCompleted: (info) => runCompleted.push(info),
     warn: (message) => warns.push(message),
   };
-  return { display, attemptStarted, stageSucceeded, runPaused, runCompleted, warns };
+  return {
+    display,
+    attemptStarted,
+    stageSucceeded,
+    stageStopped,
+    runPaused,
+    runCompleted,
+    warns,
+  };
 }
 
 async function loadCheckpoint(runDir: string): Promise<RunCheckpoint> {
@@ -301,11 +312,16 @@ describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC
         },
       },
     ]);
+    const rec = recorder();
     const result = await executeRun(
-      makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness),
+      makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness, rec.display),
     );
 
     expect(result.status).toBe("paused");
+    // The stage reported DONE and its boundary committed: it succeeded, and only
+    // the pending bundle keeps the run from advancing.
+    expect(rec.stageSucceeded.length).toBe(1);
+    expect(rec.stageStopped.length).toBe(0);
     const commitHead = await readHead(fixture.root);
 
     const cp = await loadCheckpoint(runDir);
@@ -380,15 +396,23 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
       const runDir = await makeRunDir();
       const headBefore = await readHead(fixture.root);
 
+      const rec = recorder();
       const result = await executeRun(
-        makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, createFakeHarness([testCase.step])),
+        makeContext(
+          buildCheckpoint(fixture, [cleanStage]),
+          runDir,
+          createFakeHarness([testCase.step]),
+          rec.display,
+        ),
       );
 
       expect(result.status).toBe("paused");
+      expect(rec.stageSucceeded.length).toBe(0);
+      expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["problem"]);
       const cp = await loadCheckpoint(runDir);
       expect(cp.condition).toBe("waiting-for-user");
       expect(cp.waiting?.kind).toBe(testCase.kind);
-      expect(cp.waiting?.message).toContain("unvalidated");
+      expect(cp.waiting?.nextAction).toContain("unvalidated");
       expect(cp.attempts[0].result).toBe("waiting");
       expect(cp.gitCursor.observedHead).toBe(headBefore);
       if (testCase.candidateLine === null) {
@@ -407,12 +431,17 @@ describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)",
     const pendingRel = await dropPendingDecision(fixture, "d1.md");
     const harness = createFakeHarness([{}]);
 
+    const rec = recorder();
     const result = await executeRun(
-      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, rec.display),
     );
 
     expect(result.status).toBe("paused");
     expect(harness.calls.length).toBe(0);
+    // No attempt was announced, so no stage is closed: only the run-level pause.
+    expect(rec.attemptStarted.length).toBe(0);
+    expect(rec.stageStopped.length).toBe(0);
+    expect(rec.stageSucceeded.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
     expect(cp.waiting?.kind).toBe("pending-queues");
@@ -460,7 +489,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     expect(result.status).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.kind).toBe("git-policy-violation");
-    expect(cp.waiting?.message).toContain("unvalidated");
+    expect(cp.waiting?.nextAction).toContain("unvalidated");
     expect(cp.attempts[0].result).toBe("waiting");
     expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
     expect(await commitCount(fixture)).toBe(before);
@@ -528,16 +557,19 @@ describe.concurrent("executeRun — interruption (AC-17.3)", () => {
     const harness = createFakeHarness([
       { before: () => controller.abort("SIGINT"), hangUntilAbort: true },
     ]);
+    const rec = recorder();
     const result = await executeRun(
-      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, nullDisplay, controller.signal),
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, rec.display, controller.signal),
     );
 
     expect(result.status).toBe("paused");
+    // An interrupted stage is stopped, not "finished with problems".
+    expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["interrupted"]);
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.kind).toBe("interrupted");
     expect(cp.waiting?.diagnostics?.origin).toBe("SIGINT");
     expect(cp.attempts[0].result).toBe("interrupted");
-    expect(cp.waiting?.message).toContain("unvalidated");
+    expect(cp.waiting?.nextAction).toContain("unvalidated");
   });
 });
 
@@ -577,17 +609,23 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
       {}, // A second attempt must never start after the first signal.
     ]);
 
+    const rec = recorder();
     const result = await executeRun(
-      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, nullDisplay, controller.signal),
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, rec.display, controller.signal),
     );
 
     expect(result).toEqual({ status: "interrupted", signal: "SIGTERM" });
     expect(harness.calls.length).toBe(1);
+    // The announced stage is closed exactly once, naming its real position.
+    expect(rec.attemptStarted.length).toBe(1);
+    expect(rec.stageStopped.length).toBe(1);
+    expect(rec.stageStopped[0].stagePosition).toBe("1/1");
+    expect(rec.stageStopped[0].disposition).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
     expect(cp.waiting?.kind).toBe("interrupted");
     expect(cp.waiting?.diagnostics?.origin).toBe("SIGTERM");
-    expect(cp.waiting?.message).toContain("unvalidated");
+    expect(cp.waiting?.nextAction).toContain("unvalidated");
     expect(cp.attempts.length).toBe(1);
     expect(cp.attempts[0].result).toBe("interrupted");
     // The attempt's log file survives the interruption.
@@ -639,6 +677,7 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
     expect(result).toEqual({ status: "interrupted", signal: "SIGHUP" });
     expect(harness.calls.length).toBe(0);
     expect(rec.runPaused.length).toBe(0);
+    expect(rec.stageStopped.length).toBe(0);
     const after = await fs.readFile(path.join(runDir, "state.json"));
     expect(after.equals(before)).toBe(true);
   });

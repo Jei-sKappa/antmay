@@ -50,13 +50,25 @@ export type WaitingDiagnostics = {
 };
 
 /**
+ * The instruction every non-DONE and boundary pause carries: the attempt's file
+ * changes never passed the terminal-outcome gate, so a human must dispose of
+ * them deliberately before the stage runs again (DR54).
+ */
+export const UNVALIDATED_CHANGES_NOTE =
+  "The attempt's file changes are unvalidated: revert them or deliberately " +
+  "commit them before resuming.";
+
+/**
  * The single waiting object a `waiting-for-user` checkpoint carries. It always
- * names a kind and a complete human message; pending paths, a candidate outcome
- * line, and structured diagnostics are present when applicable.
+ * names a kind and a complete human message describing what happened; the
+ * agent's own reason text, the human's next action, pending paths, a candidate
+ * outcome line, and structured diagnostics are present when applicable.
  */
 export type WaitingInfo = {
   kind: WaitingKind;
   message: string;
+  detail?: string;
+  nextAction?: string;
   pendingFiles?: string[];
   candidateLine?: string;
   diagnostics?: WaitingDiagnostics;
@@ -443,6 +455,11 @@ function validateWaiting(value: unknown, errors: string[]): void {
   }
   if (!isNonEmptyString(value.message)) {
     errors.push(`waiting.message must be a non-empty string.`);
+  }
+  for (const key of ["detail", "nextAction"] as const) {
+    if (value[key] !== undefined && !isNonEmptyString(value[key])) {
+      errors.push(`waiting.${key} must be a non-empty string.`);
+    }
   }
   if (value.pendingFiles !== undefined) {
     validateSortedUniquePending(value.pendingFiles, "waiting.pendingFiles", errors);

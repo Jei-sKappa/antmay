@@ -36,11 +36,13 @@ export type ClassificationInput = {
 /**
  * The single next action for a classified attempt. `advance` moves to the next
  * stage; `pause` records the attempt as `waiting`; `pause-done` is the
- * DONE-finalized queue pause whose attempt records `done`.
+ * DONE-finalized queue pause whose attempt records `done`. `detail` carries the
+ * agent's own reason text, separate from the classification's own sentence, and
+ * is present only when the attempt supplied one.
  */
 export type Classification =
   | { action: "advance" }
-  | { action: "pause"; kind: WaitingKind; message: string }
+  | { action: "pause"; kind: WaitingKind; message: string; detail?: string }
   | { action: "pause-done"; kind: "pending-queues"; message: string };
 
 const EXPECTED_PREFIXES =
@@ -66,6 +68,16 @@ function harnessMessage(
   outcome: Extract<AttemptOutcome, { kind: "failed" }>,
 ): string {
   return `The harness attempt failed (${outcome.category}): ${outcome.errorClass}: ${outcome.errorMessage}.`;
+}
+
+/**
+ * The agent's own reason text, ready to stand on its own line: the verbatim
+ * remainder after the outcome token, stripped of the dash that separated it from
+ * that token. Absent when the attempt supplied no reason.
+ */
+function detailOf(detail: string): string | undefined {
+  const clean = detail.replace(/^[—–-]+\s*/, "").trim();
+  return clean.length > 0 ? clean : undefined;
 }
 
 function malformedMessage(candidateLine: string | null): string {
@@ -145,19 +157,19 @@ export function classifyAttempt(input: ClassificationInput): Classification {
   // 7. The parsed token: BLOCKED, REFUSED, or a missing/unrecognizable token.
   if (parse !== null && parse.token !== null) {
     if (parse.token === "BLOCKED") {
-      const detail = parse.detail.length > 0 ? ` ${parse.detail}` : "";
       return {
         action: "pause",
         kind: "outcome-blocked",
-        message: `The stage reported Outcome: BLOCKED and paused for human attention.${detail}`,
+        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
+        detail: detailOf(parse.detail),
       };
     }
     if (parse.token === "REFUSED") {
-      const detail = parse.detail.length > 0 ? ` ${parse.detail}` : "";
       return {
         action: "pause",
         kind: "outcome-refused",
-        message: `The stage reported Outcome: REFUSED and paused for human attention.${detail}`,
+        message: "The stage reported Outcome: REFUSED and paused for human attention.",
+        detail: detailOf(parse.detail),
       };
     }
   }

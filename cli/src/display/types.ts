@@ -21,13 +21,24 @@ export interface Display {
   harnessEvent(event: HarnessEvent): void;
   /** The five-minute elapsed-time heartbeat for the live attempt. */
   heartbeat(elapsedMs: number): void;
-  /** A stage finalized and the run advanced past it. */
+  /** A stage finalized. Emitted both when the run advances past it and when a
+   * DONE-finalized stage holds for a pending-queue bundle. */
   stageSucceeded(info: { stagePosition: string; durationMs: number }): void;
+  /** A stage ended without finalizing: `problem` for any non-DONE settlement,
+   * `interrupted` for a signal. Exactly one `stageSucceeded` or `stageStopped`
+   * follows every `attemptStarted`. */
+  stageStopped(info: {
+    stagePosition: string;
+    durationMs: number;
+    disposition: "problem" | "interrupted";
+  }): void;
   /** The run durably paused for a human. `logAbsPath` is null for a pause taken
    * before any attempt was allocated. */
   runPaused(info: {
     waiting: WaitingInfo;
     runId: string;
+    recipeName: string;
+    totalElapsedMs: number;
     logAbsPath: string | null;
     resumeCommand: string;
     checkpointPath: string;
@@ -52,6 +63,7 @@ export const nullDisplay: Display = {
   harnessEvent: () => undefined,
   heartbeat: () => undefined,
   stageSucceeded: () => undefined,
+  stageStopped: () => undefined,
   runPaused: () => undefined,
   runCompleted: () => undefined,
   warn: () => undefined,

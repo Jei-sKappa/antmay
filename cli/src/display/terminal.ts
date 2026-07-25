@@ -58,6 +58,12 @@ const AGENT_STYLE: readonly Ansi[] = ["brightWhite"];
 /** The style a stage header carries, marking the start of a stage. */
 const STAGE_STYLE: readonly Ansi[] = ["bold", "cyan"];
 
+/** How a stage that ended without finalizing is described. */
+const STOPPED_VERB: Record<"problem" | "interrupted", string> = {
+  problem: "finished with problems",
+  interrupted: "stopped",
+};
+
 /** Paints text in the requested styles, or returns it unchanged when color is
  * off. Every renderer in this module gets its painter from here. */
 type Painter = (text: string, ...codes: Ansi[]) => string;
@@ -301,42 +307,87 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       );
     },
 
+    stageStopped(info) {
+      emit(
+        options.stdout,
+        [
+          "",
+          paint(
+            `Stage ${info.stagePosition} ${STOPPED_VERB[info.disposition]} in ` +
+              `${formatDuration(info.durationMs)} ⚠`,
+            "yellow",
+          ),
+        ].join("\n"),
+      );
+    },
+
     runPaused(info: {
       waiting: WaitingInfo;
       runId: string;
+      recipeName: string;
+      totalElapsedMs: number;
       logAbsPath: string | null;
       resumeCommand: string;
       checkpointPath: string;
     }) {
-      const width = keyWidth("Reason", "Pending", "Log", "Run", "Resume");
+      const { waiting } = info;
+      const width = keyWidth(
+        "Reason",
+        "Detail",
+        "Next",
+        "Pending",
+        "Resume",
+        "Log",
+        "Run ID",
+        "Recipe",
+        "Elapsed",
+        "Checkpoint",
+      );
       const line = (key: string, value: string): string =>
         infoLine(paint, "  ", key, value, width);
 
+      // What happened, then what to do about it, then the reference identity of
+      // the run that is now waiting.
       const lines: string[] = [
-        paint("Waiting for user", "yellow"),
-        line("Reason", info.waiting.message),
+        "",
+        paint("Run paused — Waiting for user", "bold"),
+        line("Reason", waiting.message),
       ];
-      if (info.waiting.pendingFiles && info.waiting.pendingFiles.length > 0) {
+      if (waiting.detail !== undefined) {
+        lines.push(line("Detail", waiting.detail));
+      }
+      if (waiting.pendingFiles && waiting.pendingFiles.length > 0) {
         lines.push(`  ${paint("Pending:", ...KEY_STYLE)}`);
-        for (const file of info.waiting.pendingFiles) {
+        for (const file of waiting.pendingFiles) {
           lines.push(`    - ${file}`);
         }
       }
+      if (waiting.nextAction !== undefined) {
+        lines.push(line("Next", waiting.nextAction));
+      }
+      lines.push(line("Resume", info.resumeCommand));
       if (info.logAbsPath !== null) {
         lines.push(line("Log", info.logAbsPath));
       }
-      lines.push(line("Run", info.runId));
-      lines.push(line("Resume", info.resumeCommand));
+      lines.push("");
+      lines.push(line("Run ID", info.runId));
+      lines.push(line("Recipe", info.recipeName));
+      lines.push(line("Elapsed", formatDuration(info.totalElapsedMs)));
+      lines.push(line("Checkpoint", info.checkpointPath));
       emit(options.stdout, lines.join("\n"));
 
-      // Echo any candidate outcome line verbatim so a human sees exactly what
-      // the harness produced, behind the gutter that marks it as quoted.
-      if (info.waiting.candidateLine !== undefined) {
+      // A malformed outcome is the one pause whose whole complaint is the line
+      // itself, so it is echoed verbatim behind the gutter that marks it quoted.
+      // Every other kind already carries its reason in the block above.
+      if (
+        waiting.kind === "malformed-outcome" &&
+        waiting.candidateLine !== undefined
+      ) {
         emit(
           options.stdout,
           `  ${paint("Candidate outcome line:", ...KEY_STYLE)}`,
         );
-        emitAgent(info.waiting.candidateLine, ...AGENT_STYLE);
+        emitAgent(waiting.candidateLine, ...AGENT_STYLE);
       }
     },
 

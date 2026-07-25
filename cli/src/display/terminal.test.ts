@@ -3,6 +3,7 @@ import { Writable } from "node:stream";
 import { describe, expect, it } from "vitest";
 
 import type { WaitingInfo } from "../state/checkpoint.js";
+import type { Display } from "./types.js";
 import {
   createTerminalDisplay,
   printRunSummary,
@@ -131,6 +132,29 @@ describe("stageSucceeded", () => {
   });
 });
 
+describe("stageStopped", () => {
+  it("describes a non-DONE settlement as finished with problems", () => {
+    const { options, out } = makeOptions();
+    createTerminalDisplay(options).stageStopped({
+      stagePosition: "2/6",
+      durationMs: 41_000,
+      disposition: "problem",
+    });
+    expect(out.text).toContain("Stage 2/6 finished with problems in 41s ⚠");
+  });
+
+  it("describes a signal as stopped rather than as a problem", () => {
+    const { options, out } = makeOptions();
+    createTerminalDisplay(options).stageStopped({
+      stagePosition: "2/6",
+      durationMs: 0,
+      disposition: "interrupted",
+    });
+    expect(out.text).toContain("Stage 2/6 stopped in 0s ⚠");
+    expect(out.text).not.toContain("problems");
+  });
+});
+
 describe("runPaused", () => {
   const waiting: WaitingInfo = {
     kind: "pending-queues",
@@ -138,15 +162,25 @@ describe("runPaused", () => {
     pendingFiles: ["docs/threads/t/.pending-decisions/a.md"],
   };
 
-  it("names the Waiting for user condition and prints reason, pending, log, run, resume", () => {
+  const paused = (
+    info: Partial<Parameters<Display["runPaused"]>[0]> = {},
+  ): { out: Capture; err: Capture } => {
     const { options, out, err } = makeOptions();
     createTerminalDisplay(options).runPaused({
       waiting,
       runId: "260723T00Z-run",
+      recipeName: "standard",
+      totalElapsedMs: 64_000,
       logAbsPath: "/runs/r1/logs/1-x-1.log",
       resumeCommand: "antmay afk resume 260723T00Z-run",
       checkpointPath: "/runs/r1/state.json",
+      ...info,
     });
+    return { out, err };
+  };
+
+  it("names the Waiting for user condition and prints reason, pending, log, run, resume", () => {
+    const { out, err } = paused();
     expect(out.text).toContain("Waiting for user");
     expect(out.text).toContain(waiting.message);
     expect(out.text).toContain("docs/threads/t/.pending-decisions/a.md");
@@ -156,34 +190,74 @@ describe("runPaused", () => {
     expect(err.text).toBe("");
   });
 
+  it("closes the run with the same identity a completed run reports", () => {
+    const { out } = paused();
+    expect(out.text).toContain("Run paused");
+    expect(out.text).toContain("Recipe:");
+    expect(out.text).toContain("standard");
+    expect(out.text).toContain("1m 4s");
+    expect(out.text).toContain("/runs/r1/state.json");
+  });
+
+  it("gives the agent's reason and the human's next action their own lines", () => {
+    const { out } = paused({
+      waiting: {
+        kind: "outcome-blocked",
+        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
+        detail: "Fake pause; no files changed",
+        nextAction: "Revert or commit the changes before resuming.",
+      },
+    });
+    expect(out.text).toContain("Detail:");
+    expect(out.text).toContain("Fake pause; no files changed");
+    expect(out.text).toContain("Next:");
+    expect(out.text).toContain("Revert or commit the changes before resuming.");
+    // The reason states what happened and nothing else.
+    const reason = out.lines.find((line) => line.includes("Reason:"));
+    expect(reason).toContain("paused for human attention.");
+    expect(reason).not.toContain("Fake pause");
+    expect(reason).not.toContain("Revert or commit");
+  });
+
+  it("omits detail and next-action lines when the pause carries neither", () => {
+    const { out } = paused({ waiting: { kind: "gate-error", message: "gate failed" } });
+    expect(out.text).not.toContain("Detail:");
+    expect(out.text).not.toContain("Next:");
+  });
+
   it("omits the log line when no attempt was allocated", () => {
-    const { options, out } = makeOptions();
-    createTerminalDisplay(options).runPaused({
+    const { out } = paused({
       waiting: { kind: "gate-error", message: "gate failed" },
-      runId: "r",
       logAbsPath: null,
-      resumeCommand: "antmay afk resume r",
-      checkpointPath: "/runs/r/state.json",
     });
     expect(out.text).not.toContain("Log:");
   });
 
-  it("echoes a candidate outcome line verbatim, behind the gutter that marks it as quoted", () => {
-    const { options, out } = makeOptions();
-    createTerminalDisplay(options).runPaused({
+  it("echoes a malformed candidate line verbatim, behind the gutter that marks it as quoted", () => {
+    const { out } = paused({
       waiting: {
         kind: "malformed-outcome",
         message: "The final line was not a recognized outcome.",
         candidateLine: "Outcome: DONEish",
       },
-      runId: "r",
-      logAbsPath: null,
-      resumeCommand: "antmay afk resume r",
-      checkpointPath: "/runs/r/state.json",
     });
     // The candidate text is surfaced verbatim, quoted rather than authored: it
     // is never a line antmay appears to have written itself.
     expect(out.text).toContain("│ Outcome: DONEish");
+    expect(out.lines.some((line) => line.startsWith("Outcome:"))).toBe(false);
+  });
+
+  it("does not echo a candidate line the reason already accounts for", () => {
+    const { out } = paused({
+      waiting: {
+        kind: "outcome-blocked",
+        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
+        detail: "needs input",
+        candidateLine: "Outcome: BLOCKED — needs input",
+      },
+    });
+    expect(out.text).not.toContain("Candidate outcome line:");
+    expect(out.text).not.toContain("│ Outcome: BLOCKED");
   });
 });
 

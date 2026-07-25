@@ -17,6 +17,7 @@ import type {
   WaitingDiagnostics,
   WaitingInfo,
 } from "../state/checkpoint.js";
+import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
 import { attemptLogPaths, createAttemptLog } from "../state/logs.js";
 import type { AttemptLogHeader } from "../state/logs.js";
 import { writeCheckpoint } from "../state/persist.js";
@@ -59,10 +60,6 @@ export type RunnerResult =
   | { status: "fatal-checkpoint"; message: string };
 
 type PersistOutcome = { ok: true } | { ok: false; message: string };
-
-const DR54_WARNING =
-  "The attempt's file changes are unvalidated: revert them or deliberately " +
-  "commit them before resuming.";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -166,8 +163,23 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     return { status: "fatal-checkpoint", message };
   }
 
+  // Render the durable pause. `createdAt` never changes across a persist, so the
+  // run's total elapsed time is derived at call time from the live checkpoint.
+  function renderPause(waiting: WaitingInfo, logAbsPath: string | null): void {
+    display.runPaused({
+      waiting,
+      runId,
+      recipeName,
+      totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
+      logAbsPath,
+      resumeCommand,
+      checkpointPath,
+    });
+  }
+
   // Finish a reserved attempt as a signal interruption: persist a durable
-  // `interrupted` waiting pause carrying the signal origin, the DR54 warning,
+  // `interrupted` waiting pause carrying the signal origin, the unvalidated-
+  // changes note (DR54),
   // and any pending paths retained as evidence, then return `interrupted`.
   async function finishInterrupted(args: {
     sig: NodeJS.Signals;
@@ -195,7 +207,8 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       : { category: "interrupted", origin: args.sig };
     const waiting: WaitingInfo = {
       kind: "interrupted",
-      message: `${baseMessage} ${DR54_WARNING}`,
+      message: baseMessage,
+      nextAction: UNVALIDATED_CHANGES_NOTE,
       pendingFiles: pending,
       diagnostics,
     };
@@ -215,13 +228,12 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       gitCursor: args.finalCursor,
     });
     if (!persisted.ok) return fatal(persisted.message);
-    display.runPaused({
-      waiting,
-      runId,
-      logAbsPath: args.logAbsPath,
-      resumeCommand,
-      checkpointPath,
+    display.stageStopped({
+      stagePosition: `${args.executingAttempt.stageIndex + 1}/${stageCount}`,
+      durationMs: Date.parse(endedAt) - Date.parse(args.executingAttempt.startedAt),
+      disposition: "interrupted",
     });
+    renderPause(waiting, args.logAbsPath);
     return { status: "interrupted", signal: args.sig };
   }
 
@@ -256,7 +268,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         waiting,
       });
       if (!persisted.ok) return fatal(persisted.message);
-      display.runPaused({ waiting, runId, logAbsPath: null, resumeCommand, checkpointPath });
+      renderPause(waiting, null);
       return { status: "paused", waiting };
     }
     if (preScan.pendingFiles.length > 0) {
@@ -272,7 +284,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         waiting,
       });
       if (!persisted.ok) return fatal(persisted.message);
-      display.runPaused({ waiting, runId, logAbsPath: null, resumeCommand, checkpointPath });
+      renderPause(waiting, null);
       return { status: "paused", waiting };
     }
 
@@ -484,6 +496,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     // 5. Transition. Persist the final HEAD observation on the git cursor so a
     //    later resume compares against the actual pause-time boundary.
     const endedAt = clock().toISOString();
+    const durationMs = Date.parse(endedAt) - Date.parse(startedAt);
     const finalCursor = {
       stageIndex,
       headAtStageEntry: cursorEntry,
@@ -509,10 +522,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         gitCursor: { stageIndex: nextIndex, headAtStageEntry: null, observedHead: null },
       });
       if (!persisted.ok) return fatal(persisted.message);
-      display.stageSucceeded({
-        stagePosition,
-        durationMs: Date.parse(endedAt) - Date.parse(startedAt),
-      });
+      display.stageSucceeded({ stagePosition, durationMs });
       if (completed) {
         display.runCompleted({
           runId,
@@ -547,13 +557,10 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         gitCursor: finalCursor,
       });
       if (!persisted.ok) return fatal(persisted.message);
-      display.runPaused({
-        waiting,
-        runId,
-        logAbsPath: logPaths.absPath,
-        resumeCommand,
-        checkpointPath,
-      });
+      // The stage itself succeeded — it reported DONE and its boundary was
+      // finalized. Only the pending bundle keeps the run from advancing.
+      display.stageSucceeded({ stagePosition, durationMs });
+      renderPause(waiting, logPaths.absPath);
       return { status: "paused", waiting };
     }
 
@@ -564,7 +571,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const baseMessage = aborted
       ? "The attempt was interrupted before producing a terminal outcome."
       : classification.message;
-    const message = `${baseMessage} ${DR54_WARNING}`;
 
     let diagnostics: WaitingDiagnostics | undefined;
     if (outcome.kind === "failed") {
@@ -584,7 +590,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
 
     const waiting: WaitingInfo = {
       kind,
-      message,
+      message: baseMessage,
+      detail: aborted ? undefined : classification.detail,
+      nextAction: UNVALIDATED_CHANGES_NOTE,
       pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
       candidateLine: candidateLineOf(parse),
       diagnostics,
@@ -605,13 +613,12 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       gitCursor: finalCursor,
     });
     if (!persisted.ok) return fatal(persisted.message);
-    display.runPaused({
-      waiting,
-      runId,
-      logAbsPath: logPaths.absPath,
-      resumeCommand,
-      checkpointPath,
+    display.stageStopped({
+      stagePosition,
+      durationMs,
+      disposition: aborted ? "interrupted" : "problem",
     });
+    renderPause(waiting, logPaths.absPath);
     return { status: "paused", waiting };
   }
 
