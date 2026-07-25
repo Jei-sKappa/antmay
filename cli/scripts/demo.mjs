@@ -10,7 +10,6 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { createInterface } from "node:readline/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -134,30 +133,42 @@ async function selectScenario(scenarios, requestedId) {
     const marker = scenario === fallback ? " (default)" : "";
     console.log(`  ${index + 1}) ${scenario.id} — ${scenario.label}${marker}`);
   }
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    let answer;
-    try {
-      answer = (
-        await rl.question(
-          `Scenario [1-${choices.length}, default ${fallback.id}]: `,
-        )
-      ).trim();
-    } catch {
-      // Ctrl+D closes the prompt without an answer.
-      fail("\nCancelled.");
-    }
-    if (answer === "") {
-      return fallback;
-    }
-    const picked = choices[Number.parseInt(answer, 10) - 1];
-    if (picked === undefined) {
-      fail(`Not a listed choice: ${answer}`);
-    }
-    return picked;
-  } finally {
-    rl.close();
+  const key = await readKey(
+    `Scenario [1-${choices.length}, Enter for ${fallback.id}]: `,
+  );
+  if (key === "\x03" || key === "\x04") {
+    // Ctrl+C / Ctrl+D dismiss the prompt.
+    fail("\nCancelled.");
   }
+  if (key === "\r" || key === "\n") {
+    console.log(fallback.id);
+    return fallback;
+  }
+  const picked = choices[Number.parseInt(key, 10) - 1];
+  if (picked === undefined) {
+    console.log();
+    fail(`Not a listed choice: ${JSON.stringify(key)}`);
+  }
+  console.log(picked.id);
+  return picked;
+}
+
+// Resolves with the first key pressed, so a choice needs no Enter. The caller
+// echoes what it understood, because raw mode prints nothing itself.
+function readKey(prompt) {
+  process.stdout.write(prompt);
+  return new Promise((resolve) => {
+    const { stdin } = process;
+    stdin.setRawMode(true);
+    stdin.setEncoding("utf8");
+    stdin.resume();
+    stdin.once("data", (chunk) => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      // A pasted or buffered burst arrives as one chunk; only its head counts.
+      resolve(chunk.slice(0, 1));
+    });
+  });
 }
 
 function resolveRealConfigRoot() {

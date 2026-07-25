@@ -180,7 +180,9 @@ scenario declaring the scripted-harness document plus the ordered `run`/`resume`
 invocations and the exit code each must produce; the id is the filename stem and
 discovery is automatic, so a new scenario is a new file and nothing else.
 `happy-path` sorts first wherever scenarios are listed and is what the
-selection prompt takes when answered with Enter. Each
+selection prompt takes when answered with Enter. That prompt reads a single
+raw-mode keypress — a digit selects its listed scenario immediately, with no
+Enter — so it supports at most nine listed scenarios. Each
 demo run allocates a unique `/tmp` directory holding an isolated config root, an
 isolated state root, and the disposable repository, and injects
 `ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the scripted toggle only into the
