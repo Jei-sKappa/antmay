@@ -91,8 +91,9 @@ plus the CLI invocations to make against it. `--list` prints the available ids:
 
 Adding a scenario means adding one `scripts/scenarios/<id>.mjs` file;
 `happy-path` is always listed first, and the rest follow alphabetically. Without
-`--scenario`, the demo prompts on a terminal — answering with Enter picks
-`happy-path` — and otherwise exits non-zero listing the ids.
+`--scenario`, the demo prompts on a terminal — one keypress selects, so a digit
+picks its listed scenario immediately and Enter picks `happy-path` — and
+otherwise exits non-zero listing the ids.
 
 Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding
 an isolated config root, an isolated state root, and the disposable Git
@@ -104,10 +105,10 @@ touched.
 The only thing the demo verifies is each invocation's exit code, reported as one
 `[PASS]` or `[FAIL]` line; a `[FAIL]` skips the remaining invocations and exits
 non-zero. Behavior beyond the exit code is covered by the automated suite. Every
-built-CLI stream is enclosed by `— STARTED` and `— FINISHED` separator lines
-naming the invocation, and the closing summary prints the commit list, the
-working-tree state, and the paths (plus a copy-pasteable environment) you need
-to keep poking at the result by hand.
+built-CLI stream is enclosed by `ANTMAY DEMO STARTED` and `ANTMAY DEMO FINISHED`
+separator lines. Pass `--show-demo-summary` for a closing summary printing the
+commit list, the working-tree state, and the paths (plus a copy-pasteable
+environment) you need to keep poking at the result by hand.
 The demo is developer-run and is not part of `npm run check` or CI.
 
 ## Manual smoke checklist

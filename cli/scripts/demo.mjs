@@ -20,7 +20,8 @@ const SCENARIO_DIR = path.join(SCRIPT_DIR, "scenarios");
 // Listed first everywhere, and picked when the prompt is answered with Enter.
 const DEFAULT_SCENARIO_ID = "happy-path";
 const SCRIPTED_TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
-const USAGE = "Usage: node scripts/demo.mjs [--scenario <id>] [--list]";
+const USAGE =
+  "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--show-demo-summary]";
 
 class DemoError extends Error {}
 
@@ -84,11 +85,15 @@ async function loadScenarios() {
 }
 
 function parseArgs(argv) {
-  const parsed = { scenarioId: undefined, list: false };
+  const parsed = { scenarioId: undefined, list: false, showSummary: false };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--list") {
       parsed.list = true;
+      continue;
+    }
+    if (argument === "--show-demo-summary") {
+      parsed.showSummary = true;
       continue;
     }
     if (argument === "--scenario" || argument === "-s") {
@@ -391,9 +396,11 @@ async function main() {
     }
   }
 
-  const runIds = listRunIds(stateRoot);
-  context.runId = runIds.length === 1 ? runIds[0] : undefined;
-  printSummary(context);
+  if (args.showSummary) {
+    const runIds = listRunIds(stateRoot);
+    context.runId = runIds.length === 1 ? runIds[0] : undefined;
+    printSummary(context);
+  }
   if (results.some((ok) => !ok)) {
     process.exitCode = 1;
   }
