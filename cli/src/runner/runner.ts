@@ -460,10 +460,17 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           boundary = { evaluated: true, ok: false, kind: "commit-error", message: finalized.message };
         } else {
           boundary = { evaluated: true, ok: true };
+          if (finalized.kind === "committed") {
+            // The executor's boundary commit moved the tip, so re-read HEAD to
+            // make that commit the pause-time observation. Every other path
+            // leaves the tip where the post-attempt read already observed it: a
+            // failed evaluation runs no Git command at all, an
+            // `advanced-without-commit` finalization stages and commits nothing,
+            // and a `commit-error` never produced a commit object.
+            observedHead = await readHead(repoRoot);
+          }
         }
       }
-      // Re-read HEAD so an executor commit becomes the pause-time observation.
-      observedHead = await readHead(repoRoot);
     }
 
     const classification = classifyAttempt({
