@@ -21,7 +21,7 @@ files.
 
 ## Purpose
 
-The suite is the reference implementation of the Modular Agentic Workflow — refined `SKILL.md` files authored by Jei-sKappa that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Skills are distributed via [skills.sh](https://skills.sh) and installed by end users with:
+The suite is the reference implementation of the Antmay workflow — refined `SKILL.md` files authored by Jei-sKappa that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Skills are distributed via [skills.sh](https://skills.sh) and installed by end users with:
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill <skill-name>

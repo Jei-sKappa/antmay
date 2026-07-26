@@ -6,7 +6,7 @@
 
 # Antmay
 
-**antmay** is the reference repository for the Modular Agentic Workflow — a collection of composable, harness-agnostic `SKILL.md` skills that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Every unit of work lives in its own thread under `docs/threads/<thread>/`, holding a self-contained seed, a running decision log, and whatever artifacts the work produces — so a teammate reviewing a PR or a fresh agent session resuming work reads the same durable truth. Skills work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads `SKILL.md` files.
+**antmay** is the reference repository for the Antmay workflow — a collection of composable, harness-agnostic `SKILL.md` skills that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Every unit of work lives in its own thread under `docs/threads/<thread>/`, holding a self-contained seed, a running decision log, and whatever artifacts the work produces — so a teammate reviewing a PR or a fresh agent session resuming work reads the same durable truth. Skills work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads `SKILL.md` files.
 
 Skills are not a CLI, a runtime, or a project-local state file. They are individual capabilities you install and compose — either one at a time for a single job, or arranged into one of three built-in workflows that walk a change end-to-end.
 

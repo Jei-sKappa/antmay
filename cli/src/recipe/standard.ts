@@ -12,7 +12,7 @@ const implementationReportFile: PathSelector = {
 };
 
 /**
- * The built-in `standard` recipe: the six Modular Agentic Workflow stages in
+ * The built-in `standard` recipe: the six Antmay workflow stages in
  * order, each carrying its declarative target, three-part Git policy, and
  * queue-resolution behavior. Commit-subject templates carry the literal
  * placeholder `<thread-folder>`, resolved by the boundary engine.

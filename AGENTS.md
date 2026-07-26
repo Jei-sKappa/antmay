@@ -20,7 +20,7 @@ lives in exactly one of the three files.
 
 ## Repository purpose
 
-`antmay` is the reference repository for the Modular Agentic Workflow: a way of
+`antmay` is the reference repository for the Antmay workflow: a way of
 carrying a unit of work from a rough idea to shipped code through reviewable
 Markdown artifacts on disk, kept in a thread folder under `docs/threads/`.
 
@@ -84,7 +84,7 @@ Changes that span modules or touch shared root files (`README.md`, `.claude-plug
 
 ## Workflow Conventions
 
-This repository is the reference home of the Modular Agentic Workflow, the ruleset for newly opened threads and their workflow artifacts.
+This repository is the reference home of the Antmay workflow, the ruleset for newly opened threads and their workflow artifacts.
 
 The canonical reference — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/thread-model.md`, `docs/skill-authoring.md`, and the three workflow docs under `docs/workflows/`. Read it before editing the workflow itself or writing/editing an artifact that belongs to an existing thread.
 

@@ -21,7 +21,7 @@ three files.
 ## Antmay CLI
 
 `antmay` is a strict, non-interactive command-line executor that drives the
-Modular Agentic Workflow unattended. It runs a built-in recipe stage by stage
+Antmay workflow unattended. It runs a built-in recipe stage by stage
 against one selected thread through an agentic harness (Codex or Claude Code),
 with durable checkpoints, workspace locking, and per-stage Git boundaries. See
 `README.md` for the user-facing contract (settings, lock recovery, the manual

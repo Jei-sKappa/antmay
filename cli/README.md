@@ -1,7 +1,7 @@
 # antmay
 
 `antmay` is a strict, non-interactive command-line executor that drives the
-Modular Agentic Workflow unattended: it runs a built-in recipe stage by stage
+Antmay workflow unattended: it runs a built-in recipe stage by stage
 against one selected thread through an agentic harness, with durable
 checkpoints, workspace locking, and per-stage Git boundaries.
 

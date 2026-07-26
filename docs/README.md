@@ -1,6 +1,6 @@
-# Modular Agentic Workflow
+# The Antmay Workflow
 
-The Modular Agentic Workflow is a suite of reusable, independently invokable capability skills together with a small set of documented workflows that compose those skills into easy-to-discover paths. Skills are the tools; workflows are the recommended ways of arranging them.
+The Antmay workflow is a suite of reusable, independently invokable capability skills together with a small set of documented workflows that compose those skills into easy-to-discover paths. Skills are the tools; workflows are the recommended ways of arranging them.
 
 ## Architecture
 
