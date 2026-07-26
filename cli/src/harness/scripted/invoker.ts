@@ -34,6 +34,44 @@ export const RECONCILE_SPEC_PENDING_DECISION_PATH =
 export const RECONCILE_SPEC_PENDING_DECISION_CONTENT =
   "# Pending decision: Fake\n\nPlaceholder decision awaiting a human.\n";
 
+/**
+ * Thread-relative path of the queued decision file written by
+ * `outcome-blocked-pending-decision`, distinct from the reconcile-spec one so a
+ * scenario can use both without either overwriting the other.
+ */
+export const BLOCKED_PENDING_DECISION_PATH =
+  ".pending-decisions/blocked-fake-decision.md";
+
+/**
+ * Thread-relative paths of the queued files written by
+ * `outcome-blocked-long-detail`, spanning both queues with deliberately long
+ * names so the rendered pending list is wide enough to expose wrapping.
+ */
+export const LONG_DETAIL_PENDING_PATHS: readonly string[] = [
+  ".pending-decisions/whether-to-normalize-thread-relative-paths-before-comparison.md",
+  ".pending-decisions/which-harness-owns-the-retry-budget-when-a-stage-reruns.md",
+  ".pending-reviews/boundary-engine-selector-resolution-findings-severity-ordered.md",
+];
+
+/** Exact bytes of every file `outcome-blocked-long-detail` queues. */
+export const LONG_DETAIL_PENDING_CONTENT =
+  "# Pending: Fake\n\nPlaceholder awaiting a human.\n";
+
+/**
+ * The deliberately long reason `outcome-blocked-long-detail` reports, sized to
+ * overflow one terminal line so the closing block's alignment column and
+ * wrapping are visible.
+ */
+export const LONG_DETAIL_TEXT =
+  "The stage cannot proceed because the thread's spec contradicts the roadmap " +
+  "it descends from: the roadmap allocates this thread the read path only, " +
+  "while the spec as written also claims the write path, and nothing in either " +
+  "artifact records which of the two the human intended.";
+
+/** The final line `outcome-malformed` ends on: prose that parses to no token. */
+export const MALFORMED_FINAL_TEXT =
+  "I think that covers it — let me know if you want anything adjusted.";
+
 /** Fixed `plan.md` body for `plan-strict-correct`. */
 export const PLAN_STRICT_PLAN_CONTENT = "# Plan: Fake\n\nPlaceholder plan.\n";
 
@@ -58,13 +96,36 @@ const ABORTED_OUTCOME: AttemptOutcome = {
 };
 
 /**
+ * One line of a case's progress: prose the agent narrated, or a tool call it
+ * made. A tool line names the operation the case genuinely performed and the
+ * arguments it performed it with, so the rendered call describes real work.
+ */
+export type TranscriptLine = string | { tool: string; args: string };
+
+/**
+ * How a case ends once its progress lines are out: a normalized harness failure
+ * the provider returned instead of a result, or a wait that only an abort ends.
+ * A case that ends ordinarily reports `finalText` instead.
+ */
+type CaseEnding =
+  | {
+      kind: "failed";
+      category: "idle-timeout" | "provider-error";
+      errorClass: string;
+      errorMessage: string;
+    }
+  | { kind: "await-abort" };
+
+/**
  * A successful case reports the progress lines it produced while doing its work
- * and the final message that ends with the terminal outcome line. Every progress
- * line describes a filesystem operation the case genuinely performed, so the
- * transcript never claims work that did not happen.
+ * and how it ended: the final message carrying the terminal outcome line, or an
+ * ending that produced no result at all. Every progress line describes an
+ * operation the case genuinely performed, so the transcript never claims work
+ * that did not happen.
  */
 type CaseHandlerResult =
-  | { ok: true; progress: readonly string[]; finalText: string }
+  | { ok: true; progress: readonly TranscriptLine[]; finalText: string }
+  | { ok: true; progress: readonly TranscriptLine[]; ending: CaseEnding }
   | { ok: false; error: string };
 
 type CaseHandler = (ctx: CaseContext) => Promise<CaseHandlerResult>;
@@ -82,6 +143,35 @@ type OwnedFileWrite = {
   parentAbs: string;
   content: string;
 };
+
+/**
+ * How often the waiting case wakes to keep the process alive. An abort listener
+ * alone holds nothing open, so without a referenced timer the event loop drains
+ * and Node exits before any signal can arrive.
+ */
+const AWAIT_ABORT_TICK_MS = 250;
+
+/**
+ * Wait until the attempt is aborted, then report the abort. The returned promise
+ * settles on nothing else, so a case that ends this way stands in for an agent
+ * that is still working when a signal arrives.
+ */
+function awaitAbort(signal: AbortSignal): Promise<AttemptOutcome> {
+  if (signal.aborted) {
+    return Promise.resolve(ABORTED_OUTCOME);
+  }
+  return new Promise((resolve) => {
+    const tick = setInterval(() => {}, AWAIT_ABORT_TICK_MS);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearInterval(tick);
+        resolve(ABORTED_OUTCOME);
+      },
+      { once: true },
+    );
+  });
+}
 
 function scriptedProviderError(message: string): AttemptOutcome {
   return {
@@ -475,6 +565,35 @@ function selectCase(
   return { ok: true, caseName };
 }
 
+/** The tool line describing a whole-file write the case performed. */
+function writeToolLine(threadRelativePath: string, content: string): TranscriptLine {
+  return {
+    tool: "write_file",
+    args: `{"path":"${threadRelativePath}","bytes":${content.length},"encoding":"utf8"}`,
+  };
+}
+
+/** The tool line describing an append the case performed. */
+function appendToolLine(threadRelativePath: string, content: string): TranscriptLine {
+  return {
+    tool: "append_file",
+    args: `{"path":"${threadRelativePath}","bytes":${content.length},"encoding":"utf8"}`,
+  };
+}
+
+/** The normalized stream event one transcript line is surfaced as. */
+function eventFor(line: TranscriptLine): HarnessEvent {
+  return typeof line === "string"
+    ? { type: "text", text: line }
+    : { type: "tool-call", name: line.tool, args: line.args };
+}
+
+/** One transcript line as the attempt log records it. A tool call is written in
+ * the same call-and-arguments form the terminal renders. */
+function logTextFor(line: TranscriptLine): string {
+  return typeof line === "string" ? line : `${line.tool}(${line.args})`;
+}
+
 /**
  * Stream the attempt's transcript to the display: every progress line, then the
  * final message. These are the lines a real attempt shares between the terminal
@@ -482,12 +601,11 @@ function selectCase(
  */
 function emitTranscript(
   request: AttemptRequest,
-  transcript: readonly string[],
+  transcript: readonly TranscriptLine[],
 ): { ok: true } | { ok: false; error: string } {
-  for (const text of transcript) {
-    const event: HarnessEvent = { type: "text", text };
+  for (const line of transcript) {
     try {
-      request.onEvent(event);
+      request.onEvent(eventFor(line));
     } catch (error) {
       return {
         ok: false,
@@ -507,7 +625,8 @@ function emitTranscript(
 async function appendSessionLog(
   request: AttemptRequest,
   caseName: ScriptedCaseName,
-  transcript: readonly string[],
+  transcript: readonly TranscriptLine[],
+  closing: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const body = [
     "Scripted Harness Run",
@@ -516,9 +635,9 @@ async function appendSessionLog(
     `  Case: ${caseName}`,
     `  Attempt: ${request.stage.attemptNumber}`,
     "Agent started",
-    ...transcript,
+    ...transcript.map(logTextFor),
     "Agent stopped",
-    "Run complete: the scripted agent finished after 1 iteration(s).",
+    closing,
   ].join("\n");
   try {
     await appendFile(request.logFilePath, `${body}\n`, "utf8");
@@ -539,7 +658,8 @@ async function appendFakeSpecNote(
   threadRelPath: string,
   threadAbsRoot: string,
 ): Promise<
-  { ok: true; progress: readonly string[] } | { ok: false; error: string }
+  | { ok: true; progress: readonly TranscriptLine[] }
+  | { ok: false; error: string }
 > {
   const specAbs = joinThreadAbs(threadAbsRoot, "spec.md");
   const prerequisite = await assertLexicalPrerequisiteFile(specAbs);
@@ -561,7 +681,12 @@ async function appendFakeSpecNote(
   }
   return {
     ok: true,
-    progress: ["Checking spec.md.", "Appending a fake note to spec.md."],
+    progress: [
+      { tool: "read_file", args: `{"path":"spec.md"}` },
+      "Checking spec.md.",
+      appendToolLine("spec.md", RECONCILE_SPEC_APPEND_LINE),
+      "Appending a fake note to spec.md.",
+    ],
   };
 }
 
@@ -581,6 +706,80 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     progress: ["Making no changes."],
     finalText: "Outcome: REFUSED — Fake refusal; no files changed",
   }),
+  "outcome-malformed": async () => ({
+    ok: true,
+    progress: ["Making no changes."],
+    finalText: MALFORMED_FINAL_TEXT,
+  }),
+  "outcome-blocked-pending-decision": async ({
+    threadRelPath,
+    threadAbsRoot,
+  }) => {
+    const queued = await writeOwnedFile(
+      threadRelPath,
+      threadAbsRoot,
+      BLOCKED_PENDING_DECISION_PATH,
+      RECONCILE_SPEC_PENDING_DECISION_CONTENT,
+    );
+    if (!queued.ok) {
+      return queued;
+    }
+    return {
+      ok: true,
+      progress: [`Writing ${BLOCKED_PENDING_DECISION_PATH}.`],
+      finalText: `Outcome: BLOCKED — Fake pause; one fake decision queued: ${BLOCKED_PENDING_DECISION_PATH}`,
+    };
+  },
+  "outcome-blocked-long-detail": async ({ threadRelPath, threadAbsRoot }) => {
+    const progress: TranscriptLine[] = [];
+    for (const queuePath of LONG_DETAIL_PENDING_PATHS) {
+      const queued = await writeOwnedFile(
+        threadRelPath,
+        threadAbsRoot,
+        queuePath,
+        LONG_DETAIL_PENDING_CONTENT,
+      );
+      if (!queued.ok) {
+        return queued;
+      }
+      progress.push({
+        tool: "write_file",
+        args: `{"path":"${queuePath}","bytes":${LONG_DETAIL_PENDING_CONTENT.length},"encoding":"utf8","create_parents":true,"overwrite":true,"reason":"queue the pending bundle this stage cannot settle on its own"}`,
+      });
+      progress.push(`Writing ${queuePath}.`);
+    }
+    return {
+      ok: true,
+      progress,
+      finalText: `Outcome: BLOCKED — ${LONG_DETAIL_TEXT}`,
+    };
+  },
+  "harness-provider-error": async () => ({
+    ok: true,
+    progress: ["Making no changes."],
+    ending: {
+      kind: "failed",
+      category: "provider-error",
+      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorMessage:
+        "the provider closed the stream before the agent returned a result",
+    },
+  }),
+  "harness-idle-timeout": async () => ({
+    ok: true,
+    progress: ["Making no changes."],
+    ending: {
+      kind: "failed",
+      category: "idle-timeout",
+      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorMessage: "the agent produced no output within the idle timeout",
+    },
+  }),
+  "harness-hang": async () => ({
+    ok: true,
+    progress: ["Making no changes."],
+    ending: { kind: "await-abort" },
+  }),
   "spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
     const result = await writeOwnedFile(
       threadRelPath,
@@ -593,7 +792,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      progress: ["Writing spec.md."],
+      progress: [writeToolLine("spec.md", SPEC_CORRECT_CONTENT), "Writing spec.md."],
       finalText: "Outcome: DONE — Fake spec written: spec.md",
     };
   },
@@ -629,6 +828,10 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       ok: true,
       progress: [
         ...append.progress,
+        writeToolLine(
+          RECONCILE_SPEC_PENDING_DECISION_PATH,
+          RECONCILE_SPEC_PENDING_DECISION_CONTENT,
+        ),
         `Writing ${RECONCILE_SPEC_PENDING_DECISION_PATH}.`,
       ],
       finalText: `Outcome: DONE — Fake reconciliation appended: spec.md; one fake decision queued: ${RECONCILE_SPEC_PENDING_DECISION_PATH}`,
@@ -652,12 +855,13 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       }
       preparedWrites.push(prepared.write);
     }
-    const progress: string[] = [];
+    const progress: TranscriptLine[] = [];
     for (const write of preparedWrites) {
       const applied = await applyOwnedFileWrite(write);
       if (!applied.ok) {
         return applied;
       }
+      progress.push(writeToolLine(write.threadRelativePath, write.content));
       progress.push(`Writing ${write.threadRelativePath}.`);
     }
     return {
@@ -688,7 +892,12 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       return tasks;
     }
 
-    const progress: string[] = ["Checking plan.md.", "Listing plan-tasks/."];
+    const progress: TranscriptLine[] = [
+      { tool: "read_file", args: `{"path":"plan.md"}` },
+      "Checking plan.md.",
+      { tool: "list_dir", args: `{"path":"plan-tasks"}` },
+      "Listing plan-tasks/.",
+    ];
 
     const planAppend = await appendOwnedFile(
       threadRelPath,
@@ -699,6 +908,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     if (!planAppend.ok) {
       return planAppend;
     }
+    progress.push(appendToolLine("plan.md", RECONCILE_PLAN_APPEND_LINE));
     progress.push("Appending a fake note to plan.md.");
 
     for (const taskRelPath of tasks.paths) {
@@ -711,6 +921,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       if (!taskAppend.ok) {
         return taskAppend;
       }
+      progress.push(appendToolLine(taskRelPath, RECONCILE_PLAN_APPEND_LINE));
       progress.push(`Appending a fake note to ${taskRelPath}.`);
     }
 
@@ -736,7 +947,10 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      progress: ["Writing implementation-report.md."],
+      progress: [
+        writeToolLine("implementation-report.md", IMPLEMENT_REPORT_CONTENT),
+        "Writing implementation-report.md.",
+      ],
       finalText:
         "Outcome: DONE — Fake implementation report written: implementation-report.md",
     };
@@ -780,19 +994,45 @@ async function invokeScripted(
     return scriptedProviderError(effect.error);
   }
 
-  const transcript = [...effect.progress, effect.finalText];
+  // A case that ends ordinarily streams its final message as the last line of
+  // the transcript; one that fails or waits streams only the work it did.
+  const ordinary = "finalText" in effect;
+  const transcript: TranscriptLine[] = ordinary
+    ? [...effect.progress, effect.finalText]
+    : [...effect.progress];
 
   const streamed = emitTranscript(request, transcript);
   if (!streamed.ok) {
     return scriptedProviderError(streamed.error);
   }
 
-  const log = await appendSessionLog(request, selected.caseName, transcript);
+  const closing = ordinary
+    ? "Run complete: the scripted agent finished after 1 iteration(s)."
+    : effect.ending.kind === "failed"
+      ? `Run failed: ${effect.ending.category}: ${effect.ending.errorMessage}.`
+      : "Run aborted: the scripted agent was waiting when the attempt was aborted.";
+  const log = await appendSessionLog(
+    request,
+    selected.caseName,
+    transcript,
+    closing,
+  );
   if (!log.ok) {
     return scriptedProviderError(log.error);
   }
 
-  return { kind: "completed", finalText: effect.finalText };
+  if (ordinary) {
+    return { kind: "completed", finalText: effect.finalText };
+  }
+  if (effect.ending.kind === "failed") {
+    return {
+      kind: "failed",
+      category: effect.ending.category,
+      errorClass: effect.ending.errorClass,
+      errorMessage: effect.ending.errorMessage,
+    };
+  }
+  return awaitAbort(request.signal);
 }
 
 /**

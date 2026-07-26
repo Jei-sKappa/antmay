@@ -18,6 +18,12 @@ export const SCRIPTED_CASE_NAMES = [
   "outcome-done",
   "outcome-blocked",
   "outcome-refused",
+  "outcome-malformed",
+  "outcome-blocked-pending-decision",
+  "outcome-blocked-long-detail",
+  "harness-provider-error",
+  "harness-idle-timeout",
+  "harness-hang",
   "spec-correct",
   "reconcile-spec-correct",
   "reconcile-spec-pending-decision",
@@ -32,7 +38,7 @@ const SCRIPTED_CASE_NAME_SET: ReadonlySet<string> = new Set(SCRIPTED_CASE_NAMES)
 
 /**
  * Stage-specific cases accept only their identically named stage. Generic
- * outcome cases accept every stage.
+ * cases accept every stage.
  */
 const STAGE_SPECIFIC_CASE_STAGE: Readonly<
   Partial<Record<ScriptedCaseName, string>>
@@ -45,10 +51,16 @@ const STAGE_SPECIFIC_CASE_STAGE: Readonly<
   "implement-plan-with-subagents-correct": "implement-plan-with-subagents",
 };
 
-const OUTCOME_CASES: ReadonlySet<ScriptedCaseName> = new Set([
+const GENERIC_CASES: ReadonlySet<ScriptedCaseName> = new Set([
   "outcome-done",
   "outcome-blocked",
   "outcome-refused",
+  "outcome-malformed",
+  "outcome-blocked-pending-decision",
+  "outcome-blocked-long-detail",
+  "harness-provider-error",
+  "harness-idle-timeout",
+  "harness-hang",
 ]);
 
 export type ScriptedHarnessToggleMode =
@@ -130,7 +142,7 @@ export function isCaseCompatibleWithStage(
   caseName: ScriptedCaseName,
   stageId: string,
 ): boolean {
-  if (OUTCOME_CASES.has(caseName)) {
+  if (GENERIC_CASES.has(caseName)) {
     return true;
   }
   const requiredStage = STAGE_SPECIFIC_CASE_STAGE[caseName];

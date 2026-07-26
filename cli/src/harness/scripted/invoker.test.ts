@@ -149,12 +149,18 @@ async function initAttemptLog(
 }
 
 describe("createScriptedInvoker", () => {
-  it("exposes exactly the nine built-in scripted cases", () => {
+  it("exposes exactly the fifteen built-in scripted cases", () => {
     expect([...SCRIPTED_CASE_NAMES].sort()).toEqual(
       [
         "outcome-done",
         "outcome-blocked",
         "outcome-refused",
+        "outcome-malformed",
+        "outcome-blocked-pending-decision",
+        "outcome-blocked-long-detail",
+        "harness-provider-error",
+        "harness-idle-timeout",
+        "harness-hang",
         "spec-correct",
         "reconcile-spec-correct",
         "reconcile-spec-pending-decision",

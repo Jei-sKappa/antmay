@@ -201,13 +201,22 @@ scenario-supplied operations outside the fixed catalog in
 interpret the toggle or touch scenario/state/Git/harness modules.
 
 Scripted output imitates an ordinary attempt rather than announcing itself. Each
-case reports a transcript of progress lines plus a final message ending in its
-terminal outcome; the invoker streams every line through `onEvent` (so the
-terminal renders them like real agent output) and appends the same lines to the
-attempt log under a `Scripted Harness Run` frame naming the agent, case, and
-attempt. Progress lines describe only filesystem work the case genuinely
-performs, and the frame fabricates no sandbox, branch, or timing. Scripted mode
-announces itself in exactly one dim line printed ahead of the run details block.
+case reports a transcript of progress lines plus how it ended; the invoker
+streams every line through `onEvent` (so the terminal renders them like real
+agent output) and appends the same lines to the attempt log under a
+`Scripted Harness Run` frame naming the agent, case, and attempt. A progress line
+is either prose or a tool call, and describes only filesystem work the case
+genuinely performs; the frame fabricates no sandbox, branch, or timing. Scripted
+mode announces itself in exactly one dim line printed ahead of the run details
+block.
+
+A case ends in one of three ways. Most report a `finalText` carrying the terminal
+outcome line. A case may instead report a `CaseEnding`: `failed` returns a
+normalized `idle-timeout` or `provider-error` outcome, and `await-abort` settles
+only when the attempt is aborted — the seam that lets a signal land mid-attempt.
+`await-abort` holds a referenced timer open while it waits, because an abort
+listener alone keeps nothing alive and the process would otherwise drain its
+event loop and exit before any signal arrived.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
 gate. Its scenarios are checked in under `scripts/scenarios/`, one file per

@@ -130,11 +130,17 @@ describe("resolveScriptedScenarioPath", () => {
 });
 
 describe("case catalog", () => {
-  it("exposes exactly the nine built-in names", () => {
+  it("exposes exactly the fifteen built-in names", () => {
     expect([...SCRIPTED_CASE_NAMES]).toEqual([
       "outcome-done",
       "outcome-blocked",
       "outcome-refused",
+      "outcome-malformed",
+      "outcome-blocked-pending-decision",
+      "outcome-blocked-long-detail",
+      "harness-provider-error",
+      "harness-idle-timeout",
+      "harness-hang",
       "spec-correct",
       "reconcile-spec-correct",
       "reconcile-spec-pending-decision",
