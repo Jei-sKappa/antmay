@@ -566,20 +566,59 @@ function selectCase(
   return { ok: true, caseName };
 }
 
-/** The tool line describing a whole-file write the case performed. */
-function writeToolLine(threadRelativePath: string, content: string): TranscriptLine {
-  return {
-    tool: "write_file",
-    args: `{"path":"${threadRelativePath}","bytes":${content.length},"encoding":"utf8"}`,
-  };
+/** One argument value a rendered tool call can carry. */
+type ToolArgValue = string | number | boolean;
+
+/**
+ * The tool line for one operation, with its arguments rendered as compact JSON
+ * in the order given. Every case builds its tool lines through this, so no
+ * handler hand-writes the argument string and no path escapes rendering.
+ */
+function toolLine(
+  tool: string,
+  args: Readonly<Record<string, ToolArgValue>>,
+): TranscriptLine {
+  return { tool, args: JSON.stringify(args) };
+}
+
+/** The tool line describing a file read the case performed. */
+function readFileToolLine(threadRelativePath: string): TranscriptLine {
+  return toolLine("read_file", { path: threadRelativePath });
+}
+
+/** The tool line describing a directory listing the case performed. */
+function listDirToolLine(threadRelativePath: string): TranscriptLine {
+  return toolLine("list_dir", { path: threadRelativePath });
+}
+
+/**
+ * The tool line describing a whole-file write the case performed. A case that
+ * genuinely passed further arguments supplies them in `extraArgs`, appended
+ * after the shared ones.
+ */
+function writeFileToolLine(
+  threadRelativePath: string,
+  content: string,
+  extraArgs: Readonly<Record<string, ToolArgValue>> = {},
+): TranscriptLine {
+  return toolLine("write_file", {
+    path: threadRelativePath,
+    bytes: content.length,
+    encoding: "utf8",
+    ...extraArgs,
+  });
 }
 
 /** The tool line describing an append the case performed. */
-function appendToolLine(threadRelativePath: string, content: string): TranscriptLine {
-  return {
-    tool: "append_file",
-    args: `{"path":"${threadRelativePath}","bytes":${content.length},"encoding":"utf8"}`,
-  };
+function appendFileToolLine(
+  threadRelativePath: string,
+  content: string,
+): TranscriptLine {
+  return toolLine("append_file", {
+    path: threadRelativePath,
+    bytes: content.length,
+    encoding: "utf8",
+  });
 }
 
 /** The normalized stream event one transcript line is surfaced as. */
@@ -684,9 +723,9 @@ async function appendFakeSpecNote(
     ok: true,
     progress: [
       "Checking spec.md.",
-      { tool: "read_file", args: `{"path":"spec.md"}` },
+      readFileToolLine("spec.md"),
       "Appending a fake note to spec.md.",
-      appendToolLine("spec.md", RECONCILE_SPEC_APPEND_LINE),
+      appendFileToolLine("spec.md", RECONCILE_SPEC_APPEND_LINE),
     ],
   };
 }
@@ -744,10 +783,14 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
         return queued;
       }
       progress.push(`Writing ${queuePath}.`);
-      progress.push({
-        tool: "write_file",
-        args: `{"path":"${queuePath}","bytes":${LONG_DETAIL_PENDING_CONTENT.length},"encoding":"utf8","create_parents":true,"overwrite":true,"reason":"queue the pending bundle this stage cannot settle on its own"}`,
-      });
+      progress.push(
+        writeFileToolLine(queuePath, LONG_DETAIL_PENDING_CONTENT, {
+          create_parents: true,
+          overwrite: true,
+          reason:
+            "queue the pending bundle this stage cannot settle on its own",
+        }),
+      );
     }
     return {
       ok: true,
@@ -793,7 +836,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      progress: ["Writing spec.md.", writeToolLine("spec.md", SPEC_CORRECT_CONTENT)],
+      progress: ["Writing spec.md.", writeFileToolLine("spec.md", SPEC_CORRECT_CONTENT)],
       finalText: "Outcome: DONE — Fake spec written: spec.md",
     };
   },
@@ -830,7 +873,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       progress: [
         ...append.progress,
         `Writing ${RECONCILE_SPEC_PENDING_DECISION_PATH}.`,
-        writeToolLine(
+        writeFileToolLine(
           RECONCILE_SPEC_PENDING_DECISION_PATH,
           RECONCILE_SPEC_PENDING_DECISION_CONTENT,
         ),
@@ -863,7 +906,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
         return applied;
       }
       progress.push(`Writing ${write.threadRelativePath}.`);
-      progress.push(writeToolLine(write.threadRelativePath, write.content));
+      progress.push(writeFileToolLine(write.threadRelativePath, write.content));
     }
     return {
       ok: true,
@@ -895,9 +938,9 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
 
     const progress: TranscriptLine[] = [
       "Checking plan.md.",
-      { tool: "read_file", args: `{"path":"plan.md"}` },
+      readFileToolLine("plan.md"),
       "Listing plan-tasks/.",
-      { tool: "list_dir", args: `{"path":"plan-tasks"}` },
+      listDirToolLine("plan-tasks"),
     ];
 
     const planAppend = await appendOwnedFile(
@@ -910,7 +953,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       return planAppend;
     }
     progress.push("Appending a fake note to plan.md.");
-    progress.push(appendToolLine("plan.md", RECONCILE_PLAN_APPEND_LINE));
+    progress.push(appendFileToolLine("plan.md", RECONCILE_PLAN_APPEND_LINE));
 
     for (const taskRelPath of tasks.paths) {
       const taskAppend = await appendOwnedFile(
@@ -923,7 +966,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
         return taskAppend;
       }
       progress.push(`Appending a fake note to ${taskRelPath}.`);
-      progress.push(appendToolLine(taskRelPath, RECONCILE_PLAN_APPEND_LINE));
+      progress.push(appendFileToolLine(taskRelPath, RECONCILE_PLAN_APPEND_LINE));
     }
 
     return {
@@ -950,7 +993,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       ok: true,
       progress: [
         "Writing implementation-report.md.",
-        writeToolLine("implementation-report.md", IMPLEMENT_REPORT_CONTENT),
+        writeFileToolLine("implementation-report.md", IMPLEMENT_REPORT_CONTENT),
       ],
       finalText:
         "Outcome: DONE — Fake implementation report written: implementation-report.md",
