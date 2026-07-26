@@ -17,6 +17,9 @@ skills/finish-navigate/whats-next:
   - recipes/standard.md
   - recipes/roadmap.md
 
+skills/capture-discussion/open-ticket:
+  - trackers/github.md
+
 skills/capture-discussion/discussion:
   - formats/discussion-point.md
   - formats/decision-record.md

@@ -37,7 +37,7 @@ Skills live under `skills/`, grouped into eleven capability groups. Each skill i
 
 ```
 skills/
-├── capture-discussion/      discussion, open-thread, resolve-pending-decisions
+├── capture-discussion/      discussion, open-thread, open-ticket, resolve-pending-decisions
 ├── finish-navigate/         archive-thread, finish, whats-next
 ├── implement/               implement, implement-plan, implement-plan-with-subagents
 ├── merge/                   merge-artifacts

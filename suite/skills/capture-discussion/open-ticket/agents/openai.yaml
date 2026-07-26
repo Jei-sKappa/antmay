@@ -1,0 +1,5 @@
+interface:
+  display_name: Open Ticket
+  short_description: File a rough idea as a tracker ticket
+policy:
+  allow_implicit_invocation: false
