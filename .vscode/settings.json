@@ -5,6 +5,7 @@
     "allocate-thread",
     "append-roadmap-feedback",
     "archive-thread",
+    "cli",
     "discussion",
     "emit-pending-decisions",
     "emit-pending-review",

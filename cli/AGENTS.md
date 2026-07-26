@@ -25,6 +25,41 @@ smoke checklist); this section is the map for agents editing the code.
 > **Platform support (v0):** macOS only. Linux/Windows behavior is incidental
 > and undocumented.
 
+### ⚠️ Pre-release: no backward-compatibility obligation
+
+**The CLI is in active development and has no users.** The author is the only
+person running it, on throwaway state they can delete at any time. Until it is
+marked released and stable, nothing it writes to disk is a compatibility
+surface, and no past version has to keep working.
+
+So design each change for the shape the code should have now:
+
+- **Redesign any schema, config key, or on-disk format outright.** Every schema
+  sits at `schemaVersion: 0` and stays there while it is unstable. Renumber it
+  only once the format actually settles.
+- **Write no migrations, no compatibility shims, no deprecation windows.** An
+  executor that reads a document it does not recognize reports that clearly and
+  stops. That is the intended behavior, not a gap to fill.
+- **Add required fields as required.** Never weaken a field to optional just so
+  a previously written checkpoint still validates. Such a checkpoint is one
+  `rm -rf` away and is worth nothing next to a type that states the truth.
+- **Rename and remove freely.** Settings keys, fields, and state layout are all
+  fair game.
+
+Treat "but this might invalidate existing state" as a non-argument, and spend no
+design budget on hypothetical users who do not exist. A change that makes
+existing run directories unreadable is fine — say so plainly in the commit
+message and move on. When this notice is removed, all of the above reverses at
+once.
+
+**This licenses redesign, never disrepair.** `npm run check` must pass on every
+change: no failing tests, no type errors, no half-migrated code left behind, no
+scenario left red. Freedom from old formats is not freedom from a working build.
+
+This section covers the CLI only. The skills under `skills/` **are** published
+and installed by real users through `npx skills add`, so their formats and
+behavior stay stable.
+
 ### Toolchain
 
 - TypeScript, ESM, Node `>=22`. Bundled with `tsup`, tested with `vitest`.
