@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import type { WaitingInfo, WaitingReason } from "../state/checkpoint.js";
+import { governedBy } from "../test-helpers/waiting.js";
 import type { Display, StageDisposition } from "./types.js";
 import {
   createTerminalDisplay,
@@ -192,15 +192,6 @@ describe("stageStopped", () => {
 });
 
 describe("runPaused", () => {
-  /**
-   * A pause stopped for its governing reason alone — the ordinary single-reason
-   * shape, spelled once here so each case states only what it is testing.
-   */
-  const governedBy = (
-    reason: WaitingReason,
-    extra: Omit<Partial<WaitingInfo>, "kind" | "reasons"> = {},
-  ): WaitingInfo => ({ ...reason, ...extra, reasons: [reason] });
-
   const waiting = governedBy({
     kind: "pending-queues",
     message: "Two pending decisions must be settled before continuing.",
@@ -227,7 +218,7 @@ describe("runPaused", () => {
   it("names the Waiting for user banner and prints reason, pending, log, run, resume", () => {
     const { out, err } = paused();
     expect(out.text).toContain("WAITING FOR USER ⏸️");
-    expect(out.text).toContain(waiting.message);
+    expect(out.text).toContain(waiting.reasons[0].message);
     expect(out.text).toContain("docs/threads/t/.pending-decisions/a.md");
     expect(out.text).toContain("/runs/r1/logs/1-x-1.log");
     expect(out.text).toContain("260723T00Z-run");
@@ -255,9 +246,6 @@ describe("runPaused", () => {
   it("announces every reason a pause stopped for, stage reason before queue reason", () => {
     const { out } = paused({
       waiting: {
-        kind: "pending-queues",
-        message: "A pending bundle file awaits human resolution.",
-        pendingFiles: ["docs/threads/t/.pending-decisions/a.md"],
         reasons: [
           {
             kind: "pending-queues",

@@ -13,6 +13,7 @@ import type {
 import { validateCheckpoint } from "../state/checkpoint.js";
 import { writeCheckpoint } from "../state/persist.js";
 import { runsDirectory } from "../state/runs.js";
+import { governedBy } from "../test-helpers/waiting.js";
 import { listCommand, type ListDeps } from "./list.js";
 
 class Capture extends Writable {
@@ -106,11 +107,10 @@ function makeCheckpoint(overrides: {
     gitCursor: { stageIndex: overrides.stageIndex, headAtStageEntry: null, observedHead: null },
   };
   if (overrides.condition === "waiting-for-user") {
-    checkpoint.waiting = {
+    checkpoint.waiting = governedBy({
       kind: "idle-timeout",
       message: "The stage idled out.",
-      reasons: [{ kind: "idle-timeout", message: "The stage idled out." }],
-    };
+    });
   }
   // Guard the fixtures themselves: a test-authored invalid checkpoint would
   // otherwise silently exercise the warning path instead of the row path.

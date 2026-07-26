@@ -40,10 +40,10 @@ export type WaitingKind =
   | "commit-error";
 
 /**
- * Structured harness/gate diagnostics kept on a waiting object.
+ * Structured harness/gate diagnostics about the reason that carries them. They
+ * are recorded for later inspection of the checkpoint and are never rendered.
  */
 export type WaitingDiagnostics = {
-  category: string;
   errorClass?: string;
   errorMessage?: string;
   origin?: string;
@@ -70,6 +70,7 @@ export type WaitingReason = {
   detail?: string;
   pendingFiles?: string[];
   candidateLine?: string;
+  diagnostics?: WaitingDiagnostics;
 };
 
 /**
@@ -79,26 +80,22 @@ export type WaitingReason = {
 export type WaitingReasons = [WaitingReason, ...WaitingReason[]];
 
 /**
- * The single waiting object a `waiting-for-user` checkpoint carries. It always
- * names a kind and a complete human message describing what happened; the
- * agent's own reason text, the human's next action, pending paths, a candidate
- * outcome line, and structured diagnostics are present when applicable.
- *
- * `kind`, `message`, and `detail` describe the **governing** reason — the one
- * that decides how `resume` behaves. `reasons` lists every reason the pause
- * observed, in precedence order, so the governing one is always `reasons[0]`
- * and its kind always equals `kind`.
+ * The single waiting object a `waiting-for-user` checkpoint carries. Everything
+ * about why the run stopped lives in `reasons`; `nextAction` is the one thing
+ * that belongs to the run as a whole rather than to any single reason.
  */
 export type WaitingInfo = {
-  kind: WaitingKind;
-  message: string;
   reasons: WaitingReasons;
-  detail?: string;
   nextAction?: string;
-  pendingFiles?: string[];
-  candidateLine?: string;
-  diagnostics?: WaitingDiagnostics;
 };
+
+/**
+ * The reason that decides how `resume` behaves: always the first one recorded,
+ * because `reasons` is written in precedence order.
+ */
+export function governingReason(waiting: WaitingInfo): WaitingReason {
+  return waiting.reasons[0];
+}
 
 /**
  * The parsed terminal text result of an attempt. `token` is the recognized
@@ -480,16 +477,11 @@ function validateAttempt(value: unknown, label: string, errors: string[]): void 
 }
 
 /**
- * Validate the recorded reason list. It must be non-empty, each entry must name
- * a known kind and carry a complete message, and the first entry must be the
- * governing reason the surrounding waiting object already names — that identity
- * is what lets `resume` keep dispatching on `waiting.kind` alone.
+ * Validate the recorded reason list. It must be non-empty — the first entry is
+ * the reason that governs the resume path — and each entry must name a known
+ * kind and carry a complete message.
  */
-function validateWaitingReasons(
-  value: unknown,
-  governingKind: unknown,
-  errors: string[],
-): void {
+function validateWaitingReasons(value: unknown, errors: string[]): void {
   if (!Array.isArray(value) || value.length === 0) {
     errors.push(`waiting.reasons must be a non-empty array.`);
     return;
@@ -515,11 +507,19 @@ function validateWaitingReasons(
     if (entry.candidateLine !== undefined && typeof entry.candidateLine !== "string") {
       errors.push(`${label}.candidateLine must be a string.`);
     }
+    if (entry.diagnostics !== undefined) {
+      const d = entry.diagnostics;
+      if (!isPlainObject(d)) {
+        errors.push(`${label}.diagnostics must be an object.`);
+      } else {
+        for (const key of ["errorClass", "errorMessage", "origin"] as const) {
+          if (d[key] !== undefined && typeof d[key] !== "string") {
+            errors.push(`${label}.diagnostics.${key} must be a string.`);
+          }
+        }
+      }
+    }
   });
-  const first = value[0];
-  if (isPlainObject(first) && first.kind !== governingKind) {
-    errors.push(`waiting.reasons[0].kind must equal waiting.kind.`);
-  }
 }
 
 function validateWaiting(value: unknown, errors: string[]): void {
@@ -527,39 +527,10 @@ function validateWaiting(value: unknown, errors: string[]): void {
     errors.push(`waiting object must be an object.`);
     return;
   }
-  if (typeof value.kind !== "string" || !WAITING_KINDS.has(value.kind)) {
-    errors.push(`waiting.kind must be a known waiting kind.`);
+  if (value.nextAction !== undefined && !isNonEmptyString(value.nextAction)) {
+    errors.push(`waiting.nextAction must be a non-empty string.`);
   }
-  if (!isNonEmptyString(value.message)) {
-    errors.push(`waiting.message must be a non-empty string.`);
-  }
-  for (const key of ["detail", "nextAction"] as const) {
-    if (value[key] !== undefined && !isNonEmptyString(value[key])) {
-      errors.push(`waiting.${key} must be a non-empty string.`);
-    }
-  }
-  if (value.pendingFiles !== undefined) {
-    validateSortedUniquePending(value.pendingFiles, "waiting.pendingFiles", errors);
-  }
-  if (value.candidateLine !== undefined && typeof value.candidateLine !== "string") {
-    errors.push(`waiting.candidateLine must be a string.`);
-  }
-  validateWaitingReasons(value.reasons, value.kind, errors);
-  if (value.diagnostics !== undefined) {
-    const d = value.diagnostics;
-    if (!isPlainObject(d)) {
-      errors.push(`waiting.diagnostics must be an object.`);
-    } else {
-      if (!isNonEmptyString(d.category)) {
-        errors.push(`waiting.diagnostics.category must be a non-empty string.`);
-      }
-      for (const key of ["errorClass", "errorMessage", "origin"] as const) {
-        if (d[key] !== undefined && typeof d[key] !== "string") {
-          errors.push(`waiting.diagnostics.${key} must be a string.`);
-        }
-      }
-    }
-  }
+  validateWaitingReasons(value.reasons, errors);
 }
 
 function validateWorkspace(value: unknown, errors: string[]): void {

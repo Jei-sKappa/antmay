@@ -94,11 +94,6 @@ function terminalResultFrom(parse: OutcomeParse | null): TerminalResult | null {
   return { token: parse.token, candidateLine: parse.candidateLine, detail: parse.detail };
 }
 
-function candidateLineOf(parse: OutcomeParse | null): string | undefined {
-  if (parse === null) return undefined;
-  return parse.candidateLine === null ? undefined : parse.candidateLine;
-}
-
 /**
  * How the stage itself ended, read from the attempt's own terminal token rather
  * than from the reason that governs the run's pause: a stage can be refused
@@ -225,15 +220,16 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const pending = args.pendingFiles.length > 0 ? args.pendingFiles : undefined;
     const diagnostics: WaitingDiagnostics = args.failure
       ? {
-          category: "interrupted",
           errorClass: args.failure.errorClass,
           errorMessage: args.failure.errorMessage,
           origin: args.sig,
         }
-      : { category: "interrupted", origin: args.sig };
+      : { origin: args.sig };
     // The interruption is what stopped the run; pending paths observed on the
     // way out are a second, independent reason it cannot simply resume.
-    const reasons: WaitingReasons = [{ kind: "interrupted", message: baseMessage }];
+    const reasons: WaitingReasons = [
+      { kind: "interrupted", message: baseMessage, diagnostics },
+    ];
     if (pending !== undefined) {
       reasons.push({
         kind: "pending-queues",
@@ -242,12 +238,8 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       });
     }
     const waiting: WaitingInfo = {
-      kind: "interrupted",
-      message: baseMessage,
       reasons,
       nextAction: UNVALIDATED_CHANGES_NOTE,
-      pendingFiles: pending,
-      diagnostics,
     };
     const settled: AttemptRecord = {
       ...args.executingAttempt,
@@ -303,10 +295,13 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     if (!preScan.ok) {
       const message = gateErrorMessage(preScan.message);
       const waiting: WaitingInfo = {
-        kind: "gate-error",
-        message,
-        reasons: [{ kind: "gate-error", message }],
-        diagnostics: { category: "gate-error", errorMessage: preScan.message },
+        reasons: [
+          {
+            kind: "gate-error",
+            message,
+            diagnostics: { errorMessage: preScan.message },
+          },
+        ],
       };
       const persisted = await persist({
         ...checkpoint,
@@ -321,10 +316,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       const pendingFiles = preScan.pendingFiles;
       const message = pendingQueuesMessage(pendingFiles);
       const waiting: WaitingInfo = {
-        kind: "pending-queues",
-        message,
         reasons: [{ kind: "pending-queues", message, pendingFiles }],
-        pendingFiles,
       };
       const persisted = await persist({
         ...checkpoint,
@@ -592,13 +584,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         terminalResult,
         pendingFiles,
       };
-      const waiting: WaitingInfo = {
-        kind: "pending-queues",
-        message: classification.reasons[0].message,
-        reasons: classification.reasons,
-        pendingFiles,
-        candidateLine: candidateLineOf(parse),
-      };
+      const waiting: WaitingInfo = { reasons: classification.reasons };
       const persisted = await persist({
         ...checkpoint,
         attempts: replaceLast(checkpoint.attempts, done),
@@ -622,43 +608,40 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const baseMessage = aborted
       ? "The attempt was interrupted before producing a terminal outcome."
       : governing.message;
+    let diagnostics: WaitingDiagnostics | undefined;
+    if (outcome.kind === "failed") {
+      diagnostics = aborted
+        ? {
+            errorClass: outcome.errorClass,
+            errorMessage: outcome.errorMessage,
+            origin: abortOrigin(signal),
+          }
+        : { errorClass: outcome.errorClass, errorMessage: outcome.errorMessage };
+    }
+
     // An abort replaces the stage's own reason with the interruption, but the
-    // queue-level reasons it observed still hold and are still reported.
+    // queue-level reasons it observed still hold and are still reported. Either
+    // way the attempt's failure telemetry rides on the reason that reports that
+    // failure, which is the only reason it describes.
     const reasons: WaitingReasons = aborted
       ? [
-          { kind: "interrupted", message: baseMessage },
+          { kind: "interrupted", message: baseMessage, diagnostics },
           ...classification.reasons.filter(
             (reason) =>
               reason.kind === "pending-queues" || reason.kind === "gate-error",
           ),
         ]
-      : classification.reasons;
-
-    let diagnostics: WaitingDiagnostics | undefined;
-    if (outcome.kind === "failed") {
-      diagnostics = aborted
-        ? {
-            category: "interrupted",
-            errorClass: outcome.errorClass,
-            errorMessage: outcome.errorMessage,
-            origin: abortOrigin(signal),
-          }
-        : {
-            category: outcome.category,
-            errorClass: outcome.errorClass,
-            errorMessage: outcome.errorMessage,
-          };
-    }
+      : diagnostics === undefined
+        ? classification.reasons
+        : (classification.reasons.map((reason) =>
+            reason.kind === "harness-error" || reason.kind === "idle-timeout"
+              ? { ...reason, diagnostics }
+              : reason,
+          ) as WaitingReasons);
 
     const waiting: WaitingInfo = {
-      kind,
-      message: baseMessage,
       reasons,
-      detail: aborted ? undefined : governing.detail,
       nextAction: UNVALIDATED_CHANGES_NOTE,
-      pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
-      candidateLine: candidateLineOf(parse),
-      diagnostics,
     };
     const settled: AttemptRecord = {
       ...executingAttempt,

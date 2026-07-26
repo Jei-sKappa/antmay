@@ -536,7 +536,7 @@ describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () 
     expect(cp.ok).toBe(true);
     if (cp.ok) {
       expect(cp.checkpoint.condition).toBe("waiting-for-user");
-      expect(cp.checkpoint.waiting?.kind).toBe("interrupted");
+      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("interrupted");
     }
     // The lock is released before the command returns the signal exit code.
     expect(await lockNames(h.stateRoot)).toEqual([]);
@@ -646,7 +646,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     const cp = await readCheckpoint(runDir);
     expect(cp.ok).toBe(true);
     if (cp.ok) {
-      expect(cp.checkpoint.waiting?.kind).toBe("git-policy-violation");
+      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("git-policy-violation");
     }
   });
 
@@ -664,8 +664,8 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     expect(cp.ok).toBe(true);
     if (cp.ok) {
       expect(cp.checkpoint.stageIndex).toBe(5);
-      expect(cp.checkpoint.waiting?.kind).toBe("git-policy-violation");
-      expect(cp.checkpoint.waiting?.message).toContain(
+      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("git-policy-violation");
+      expect(cp.checkpoint.waiting?.reasons[0].message).toContain(
         "at least one allowed change",
       );
     }

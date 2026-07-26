@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { governedBy } from "../test-helpers/waiting.js";
 import type { RunCheckpoint } from "./checkpoint.js";
 import { validateCheckpoint } from "./checkpoint.js";
 
@@ -78,18 +79,11 @@ function validCheckpoint(): RunCheckpoint {
         logPath: "logs/00-spec-attempt-01.log",
       },
     ],
-    waiting: {
+    waiting: governedBy({
       kind: "outcome-blocked",
       message: "The spec stage reported BLOCKED.",
-      reasons: [
-        {
-          kind: "outcome-blocked",
-          message: "The spec stage reported BLOCKED.",
-          candidateLine: "Outcome: BLOCKED — x",
-        },
-      ],
       candidateLine: "Outcome: BLOCKED — x",
-    },
+    }),
     gitCursor: { stageIndex: 0, headAtStageEntry: "abc123", observedHead: "abc123" },
   };
 }
@@ -130,13 +124,10 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
       candidateLine: "outcome: maybe done?",
       detail: "no token parsed",
     };
-    doc.waiting = {
+    doc.waiting = governedBy({
       kind: "malformed-outcome",
       message: "No valid outcome token.",
-      reasons: [
-        { kind: "malformed-outcome", message: "No valid outcome token." },
-      ],
-    };
+    });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -244,14 +235,41 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     }
   });
 
+  it("rejects non-string diagnostics on a reason", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "harness-error",
+      message: "The provider returned an error.",
+      diagnostics: { errorClass: 503 as unknown as string },
+    });
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) =>
+          /reasons\[0\]\.diagnostics\.errorClass must be a string/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("accepts diagnostics recorded on the reason they describe", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "harness-error",
+      message: "The provider returned an error.",
+      diagnostics: { errorClass: "HttpError", errorMessage: "503", origin: "SIGINT" },
+    });
+    expect(validateCheckpoint(doc).ok).toBe(true);
+  });
+
   it("rejects unsorted pending paths", () => {
     const doc = validCheckpoint();
-    doc.waiting = {
+    doc.waiting = governedBy({
       kind: "pending-queues",
       message: "queues",
-      reasons: [{ kind: "pending-queues", message: "queues" }],
       pendingFiles: ["b.md", "a.md"],
-    };
+    });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /lexically sorted/.test(e))).toBe(true);
@@ -259,12 +277,11 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("rejects duplicate pending paths", () => {
     const doc = validCheckpoint();
-    doc.waiting = {
+    doc.waiting = governedBy({
       kind: "pending-queues",
       message: "queues",
-      reasons: [{ kind: "pending-queues", message: "queues" }],
       pendingFiles: ["a.md", "a.md"],
-    };
+    });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /duplicate/.test(e))).toBe(true);
@@ -433,20 +450,12 @@ describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => 
         ...validCheckpoint(),
         startedScripted: true,
         condition: "waiting-for-user",
-        waiting: {
+        waiting: governedBy({
           kind: "outcome-blocked",
           message:
             "The spec stage reported BLOCKED and paused for human attention.",
-          reasons: [
-            {
-              kind: "outcome-blocked",
-              message:
-                "The spec stage reported BLOCKED and paused for human attention.",
-              candidateLine: "Outcome: BLOCKED — x",
-            },
-          ],
           candidateLine: "Outcome: BLOCKED — x",
-        },
+        }),
         attempts: [
           {
             attempt: 1,
@@ -468,16 +477,10 @@ describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => 
         ...validCheckpoint(),
         startedScripted: true,
         condition: "waiting-for-user",
-        waiting: {
+        waiting: governedBy({
           kind: "interrupted",
           message: "The harness attempt was interrupted by a signal.",
-          reasons: [
-            {
-              kind: "interrupted",
-              message: "The harness attempt was interrupted by a signal.",
-            },
-          ],
-        },
+        }),
         attempts: [
           {
             attempt: 1,

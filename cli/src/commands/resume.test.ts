@@ -376,7 +376,7 @@ describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
     expect(result.err).toContain("not clean");
     const after = await readCp(h, runId);
     expect(after.condition).toBe("waiting-for-user");
-    expect(after.waiting?.kind).toBe("outcome-blocked");
+    expect(after.waiting?.reasons[0].kind).toBe("outcome-blocked");
     expect(after.updatedAt).toBe(before.updatedAt);
   });
 
@@ -391,7 +391,7 @@ describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
     ]);
     const runId = await soleRunId(h);
     const seededCp = await readCp(h, runId);
-    expect(seededCp.waiting?.kind).toBe("commit-error");
+    expect(seededCp.waiting?.reasons[0].kind).toBe("commit-error");
 
     await fs.rm(hook, { force: true });
     const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
@@ -425,7 +425,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     // why this resume cannot proceed and the reader is owed its name.
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.kind).toBe("outcome-blocked");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("outcome-blocked");
     dropPendingSync(h.fixture, "appeared.md");
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(2);
@@ -448,7 +448,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
-    expect(cp.waiting?.kind).toBe("gate-error");
+    expect(cp.waiting?.reasons[0].kind).toBe("gate-error");
   });
 
   it("keeps a git-policy-violation kind on a scan failure, folding the diagnostic in (DR57)", async () => {
@@ -463,7 +463,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
       },
     ]);
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.kind).toBe("git-policy-violation");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("git-policy-violation");
     // Revert the disallowed change so only the boundary diff remains, then break
     // the queue scan by putting a regular file where the queue directory is
     // expected (ENOTDIR).
@@ -476,13 +476,11 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const result = await resume(h, runId, []);
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
-    expect(cp.waiting?.kind).toBe("git-policy-violation");
-    expect(cp.waiting?.message).toContain("scan failed again");
     // The governing reason is what the pause renders, so the folded-in scan
-    // failure has to reach it too — carrying it on the waiting object alone
-    // would keep it off the screen.
-    expect(cp.waiting?.reasons?.[0]?.kind).toBe("git-policy-violation");
-    expect(cp.waiting?.reasons?.[0]?.message).toContain("scan failed again");
+    // failure has to reach it for the reader to ever see it.
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
+    expect(cp.waiting?.reasons[0].diagnostics?.errorMessage).toBeDefined();
     expect(result.out).toContain("scan failed again");
   });
 });
@@ -492,7 +490,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3, DR53)
     const h = await setup();
     await seed(h, [{ before: () => dropPendingSync(h.fixture, "q.md"), outcome: BLOCKED }]);
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.kind).toBe("pending-queues");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("pending-queues");
     await removePending(h.fixture, "q.md");
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(0);
@@ -513,7 +511,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3, DR53)
     ]);
     const runId = await soleRunId(h);
     const seededCp = await readCp(h, runId);
-    expect(seededCp.waiting?.kind).toBe("pending-queues");
+    expect(seededCp.waiting?.reasons[0].kind).toBe("pending-queues");
     expect(seededCp.attempts[0]?.result).toBe("done");
 
     await removePending(h.fixture, "q.md");
@@ -540,7 +538,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3, DR53)
     const runId = await soleRunId(h);
     const seededCp = await readCp(h, runId);
     expect(seededCp.stageIndex).toBe(1);
-    expect(seededCp.waiting?.kind).toBe("pending-queues");
+    expect(seededCp.waiting?.reasons[0].kind).toBe("pending-queues");
 
     await removePending(h.fixture, "q.md");
     const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
@@ -564,7 +562,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
       },
     ]);
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.kind).toBe("git-policy-violation");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("git-policy-violation");
 
     await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
     const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
@@ -618,8 +616,11 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     const runId = await soleRunId(h);
     const seededCp = await readCp(h, runId);
     expect(seededCp.stageIndex).toBe(1);
-    expect(seededCp.waiting?.kind).toBe("git-policy-violation");
-    expect(seededCp.waiting?.pendingFiles?.length).toBeGreaterThan(0);
+    expect(seededCp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(
+      seededCp.waiting?.reasons.find((r) => r.kind === "pending-queues")?.pendingFiles
+        ?.length,
+    ).toBeGreaterThan(0);
 
     await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
     await removePending(h.fixture, "q.md");
@@ -668,7 +669,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     const runId = await soleRunId(h);
     const seededCp = await readCp(h, runId);
     expect(seededCp.stageIndex).toBe(5);
-    expect(seededCp.waiting?.kind).toBe("git-policy-violation");
+    expect(seededCp.waiting?.reasons[0].kind).toBe("git-policy-violation");
 
     await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
     const result = await resume(h, runId, []);
@@ -707,7 +708,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
     expect(first.code).toBe(2);
     const paused = await readCp(h, runId);
     expect(paused.condition).toBe("waiting-for-user");
-    expect(paused.waiting?.kind).toBe("pending-queues");
+    expect(paused.waiting?.reasons[0].kind).toBe("pending-queues");
     expect(paused.attempts.length).toBe(0);
 
     // Second resume: queues empty, the pre-gate pause re-attempts the stage.
@@ -868,7 +869,7 @@ describe.concurrent("resumeCommand — signals during resumed execution (AC-17)"
     expect(result.code).toBe(EXIT_SIGINT);
     const cp = await readCp(h, runId);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.kind).toBe("interrupted");
+    expect(cp.waiting?.reasons[0].kind).toBe("interrupted");
     expect(await lockNames(h.stateRoot)).toEqual([]);
   });
 });
@@ -947,7 +948,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     const seeded = await seed(h, [], { env: scriptedEnv(h) });
     expect(seeded.code).toBe(2);
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.kind).toBe("outcome-blocked");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("outcome-blocked");
 
     const result = await resume(h, runId, standardSteps(h.fixture), {
       env: scriptedEnv(h),
@@ -955,9 +956,9 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     expect(result.code).toBe(2);
     expect(result.out).toContain(`antmay afk resume ${runId}`);
     const cp = await readCp(h, runId);
-    expect(cp.waiting?.kind).toBe("harness-error");
-    expect(cp.waiting?.message).toContain("provider-error");
-    expect(cp.waiting?.message).toContain("exhausted");
+    expect(cp.waiting?.reasons[0].kind).toBe("harness-error");
+    expect(cp.waiting?.reasons[0].message).toContain("provider-error");
+    expect(cp.waiting?.reasons[0].message).toContain("exhausted");
     expect(attemptCountAt(cp, 0)).toBe(2);
     expect(cp.attempts[1]?.result).toBe("waiting");
   });
@@ -983,7 +984,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     );
     await seed(h, [], { env: scriptedEnv(h) });
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.kind).toBe("git-policy-violation");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("git-policy-violation");
     await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
 
     const result = await resume(h, runId, standardSteps(h.fixture).slice(1), {

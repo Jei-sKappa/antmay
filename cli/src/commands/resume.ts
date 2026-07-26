@@ -29,7 +29,7 @@ import type {
   WaitingInfo,
   WaitingReasons,
 } from "../state/checkpoint.js";
-import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
+import { governingReason, UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
@@ -288,8 +288,8 @@ export async function resumeCommand(
     const boundaryPause =
       originalCondition === "waiting-for-user" &&
       originalWaiting !== null &&
-      (originalWaiting.kind === "git-policy-violation" ||
-        originalWaiting.kind === "commit-error");
+      (governingReason(originalWaiting).kind === "git-policy-violation" ||
+        governingReason(originalWaiting).kind === "commit-error");
     const requiresClean = !boundaryPause;
     if (requiresClean) {
       let clean: boolean;
@@ -491,21 +491,18 @@ export async function resumeCommand(
         // DR57: a scan failure while a Git-boundary pause awaits finalization
         // keeps that boundary kind, folding the scan diagnostic in.
         if (boundaryPause && originalWaiting !== null) {
-          const message = `${originalWaiting.message} The pending-queue scan failed again and must be repeated before finalizing: ${scan.message}`;
-          // The governing reason carries the same folded-in text, because that
-          // reason is what the pause renders — leaving it behind would drop the
-          // scan failure from the screen entirely.
           const [governing, ...rest] = originalWaiting.reasons;
+          const message = `${governing.message} The pending-queue scan failed again and must be repeated before finalizing: ${scan.message}`;
           const waiting: WaitingInfo = {
             ...originalWaiting,
-            message,
-            reasons: [{ ...governing, message }, ...rest],
-            diagnostics: {
-              ...(originalWaiting.diagnostics ?? {
-                category: originalWaiting.kind,
-              }),
-              errorMessage: scan.message,
-            },
+            reasons: [
+              {
+                ...governing,
+                message,
+                diagnostics: { ...governing.diagnostics, errorMessage: scan.message },
+              },
+              ...rest,
+            ],
           };
           const persisted = await persist({
             ...checkpoint,
@@ -518,10 +515,13 @@ export async function resumeCommand(
         }
         const message = `The advancement invariant could not be evaluated because the pending-queue scan failed: ${scan.message}`;
         const waiting: WaitingInfo = {
-          kind: "gate-error",
-          message,
-          reasons: [{ kind: "gate-error", message }],
-          diagnostics: { category: "gate-error", errorMessage: scan.message },
+          reasons: [
+            {
+              kind: "gate-error",
+              message,
+              diagnostics: { errorMessage: scan.message },
+            },
+          ],
         };
         const persisted = await persist({
           ...checkpoint,
@@ -537,17 +537,10 @@ export async function resumeCommand(
         if (originalCondition === "waiting-for-user" && originalWaiting !== null) {
           // A waiting run with non-empty queues keeps its durable checkpoint
           // byte-for-byte unchanged; only what is printed reflects the files
-          // that are still there. The queue reason carries them, because that
-          // reason is what renders the list — refreshing the top-level copy
-          // alone would print the stale one.
-          const refreshed = refreshPendingReason(
-            originalWaiting.reasons,
-            scan.pendingFiles,
-          );
+          // that are still there.
           const waiting: WaitingInfo = {
             ...originalWaiting,
-            reasons: refreshed,
-            pendingFiles: scan.pendingFiles,
+            reasons: refreshPendingReason(originalWaiting.reasons, scan.pendingFiles),
           };
           renderPause(waiting, attemptLogAbs(lastAttempt));
           return EXIT_WAITING;
@@ -556,8 +549,6 @@ export async function resumeCommand(
         // pending-queues pause without allocating an attempt.
         const message = pendingQueuesMessage(scan.pendingFiles);
         const waiting: WaitingInfo = {
-          kind: "pending-queues",
-          message,
           reasons: [
             {
               kind: "pending-queues",
@@ -565,7 +556,6 @@ export async function resumeCommand(
               pendingFiles: scan.pendingFiles,
             },
           ],
-          pendingFiles: scan.pendingFiles,
         };
         const persisted = await persist({
           ...checkpoint,
@@ -610,12 +600,8 @@ export async function resumeCommand(
           const newHead = await readHead(repoRoot);
           const message = `${evaluation.message}.`;
           const waiting: WaitingInfo = {
-            kind: "git-policy-violation",
-            message,
             reasons: [{ kind: "git-policy-violation", message, candidateLine }],
             nextAction: UNVALIDATED_CHANGES_NOTE,
-            candidateLine,
-            diagnostics: { category: "git-policy-violation" },
           };
           const persisted = await persist({
             ...checkpoint,
@@ -638,12 +624,8 @@ export async function resumeCommand(
         if (finalized.kind === "commit-error") {
           const message = `${finalized.message}.`;
           const waiting: WaitingInfo = {
-            kind: "commit-error",
-            message,
             reasons: [{ kind: "commit-error", message, candidateLine }],
             nextAction: UNVALIDATED_CHANGES_NOTE,
-            candidateLine,
-            diagnostics: { category: "commit-error" },
           };
           const persisted = await persist({
             ...checkpoint,
@@ -663,9 +645,12 @@ export async function resumeCommand(
           preserved !== undefined
             ? replaceLast(checkpoint.attempts, { ...preserved, result: "done" })
             : checkpoint.attempts;
-        const hadPending =
-          originalWaiting.pendingFiles !== undefined &&
-          originalWaiting.pendingFiles.length > 0;
+        const hadPending = originalWaiting.reasons.some(
+          (reason) =>
+            reason.kind === "pending-queues" &&
+            reason.pendingFiles !== undefined &&
+            reason.pendingFiles.length > 0,
+        );
         if (hadPending && stage.queueResolution === "rerun") {
           const persisted = await persist({
             ...checkpoint,
@@ -688,7 +673,7 @@ export async function resumeCommand(
       if (
         originalCondition === "waiting-for-user" &&
         originalWaiting !== null &&
-        originalWaiting.kind === "pending-queues"
+        governingReason(originalWaiting).kind === "pending-queues"
       ) {
         const doneFinalized =
           lastAttempt !== undefined &&

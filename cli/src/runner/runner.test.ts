@@ -17,6 +17,7 @@ import {
   createFakeHarness,
   type FakeHarnessStep,
 } from "../test-helpers/fake-harness.js";
+import { governedBy } from "../test-helpers/waiting.js";
 import {
   createRepoFixture,
   type RepoFixture,
@@ -336,8 +337,8 @@ describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
     expect(cp.stageIndex).toBe(0);
-    expect(cp.waiting?.kind).toBe("pending-queues");
-    expect(cp.waiting?.pendingFiles).toEqual([pendingRel]);
+    expect(cp.waiting?.reasons[0].kind).toBe("pending-queues");
+    expect(cp.waiting?.reasons[0].pendingFiles).toEqual([pendingRel]);
     expect(cp.attempts[0].result).toBe("done");
     expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
     // The executor commit's HEAD is the stored pause-time observation.
@@ -430,7 +431,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
       ]);
       const cp = await loadCheckpoint(runDir);
       expect(cp.condition).toBe("waiting-for-user");
-      expect(cp.waiting?.kind).toBe(testCase.kind);
+      expect(cp.waiting?.reasons[0].kind).toBe(testCase.kind);
       expect(cp.waiting?.nextAction).toContain("unvalidated");
       expect(cp.attempts[0].result).toBe("waiting");
       expect(cp.gitCursor.observedHead).toBe(headBefore);
@@ -463,8 +464,8 @@ describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)",
     expect(rec.stageSucceeded.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.kind).toBe("pending-queues");
-    expect(cp.waiting?.pendingFiles).toEqual([pendingRel]);
+    expect(cp.waiting?.reasons[0].kind).toBe("pending-queues");
+    expect(cp.waiting?.reasons[0].pendingFiles).toEqual([pendingRel]);
     expect(cp.attempts.length).toBe(0);
     await expect(fs.access(path.join(runDir, "logs"))).rejects.toThrow();
   });
@@ -487,7 +488,7 @@ describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)",
     expect(result.status).toBe("paused");
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.kind).toBe("gate-error");
+    expect(cp.waiting?.reasons[0].kind).toBe("gate-error");
     expect(cp.attempts.length).toBe(0);
   });
 });
@@ -507,7 +508,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
 
     expect(result.status).toBe("paused");
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
     expect(cp.waiting?.nextAction).toContain("unvalidated");
     expect(cp.attempts[0].result).toBe("waiting");
     expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
@@ -539,7 +540,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     const cp = await loadCheckpoint(runDir);
     // The boundary still decides the resume path, and the scan failure it holds
     // alongside is reported rather than folded into the boundary's own message.
-    expect(cp.waiting?.kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
     expect(cp.waiting?.reasons?.map((reason) => reason.kind)).toEqual([
       "git-policy-violation",
       "gate-error",
@@ -569,7 +570,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
 
     expect(result.status).toBe("paused");
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.kind).toBe("commit-error");
+    expect(cp.waiting?.reasons[0].kind).toBe("commit-error");
     expect(cp.attempts[0].result).toBe("waiting");
     expect(await commitCount(fixture)).toBe(before);
   });
@@ -593,8 +594,8 @@ describe.concurrent("executeRun — interruption (AC-17.3)", () => {
     // An interrupted stage is stopped, not "finished with problems".
     expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["interrupted"]);
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.kind).toBe("interrupted");
-    expect(cp.waiting?.diagnostics?.origin).toBe("SIGINT");
+    expect(cp.waiting?.reasons[0].kind).toBe("interrupted");
+    expect(cp.waiting?.reasons[0].diagnostics?.origin).toBe("SIGINT");
     expect(cp.attempts[0].result).toBe("interrupted");
     expect(cp.waiting?.nextAction).toContain("unvalidated");
   });
@@ -621,8 +622,8 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.kind).toBe("interrupted");
-    expect(cp.waiting?.diagnostics?.origin).toBe("SIGINT");
+    expect(cp.waiting?.reasons[0].kind).toBe("interrupted");
+    expect(cp.waiting?.reasons[0].diagnostics?.origin).toBe("SIGINT");
     expect(cp.attempts.length).toBe(1);
     expect(cp.attempts[0].result).toBe("interrupted");
   });
@@ -650,8 +651,8 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
     expect(rec.stageStopped[0].disposition).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.kind).toBe("interrupted");
-    expect(cp.waiting?.diagnostics?.origin).toBe("SIGTERM");
+    expect(cp.waiting?.reasons[0].kind).toBe("interrupted");
+    expect(cp.waiting?.reasons[0].diagnostics?.origin).toBe("SIGTERM");
     expect(cp.waiting?.nextAction).toContain("unvalidated");
     expect(cp.attempts.length).toBe(1);
     expect(cp.attempts[0].result).toBe("interrupted");
@@ -680,8 +681,8 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
 
     expect(result.status).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.kind).toBe("interrupted");
-    expect(cp.waiting?.pendingFiles).toEqual([pendingRel]);
+    expect(cp.waiting?.reasons[0].kind).toBe("interrupted");
+    expect(cp.waiting?.reasons[1].pendingFiles).toEqual([pendingRel]);
     expect(cp.attempts[0].pendingFiles).toEqual([pendingRel]);
   });
 
@@ -821,11 +822,7 @@ describe.concurrent("executeRun — harness stage context", () => {
         logPath: "logs/01-solo-attempt-1.log",
       },
     ];
-    checkpoint.waiting = {
-      kind: "outcome-blocked",
-      message: "blocked",
-      reasons: [{ kind: "outcome-blocked", message: "blocked" }],
-    };
+    checkpoint.waiting = governedBy({ kind: "outcome-blocked", message: "blocked" });
     checkpoint.gitCursor = {
       stageIndex: 0,
       headAtStageEntry: await readHead(fixture.root),
