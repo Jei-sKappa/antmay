@@ -1,3 +1,6 @@
+# macOS filesystem cruft
+.DS_Store
+
 temp/
 
 .library/
