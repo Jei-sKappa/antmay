@@ -67,8 +67,8 @@ behavior stay stable.
   agentic harness invoker.
 - Commands: `npm --prefix cli run check` (typecheck + test + build) is the full
   gate; `npm run build`, `npm run typecheck`, `npm run test` run the pieces.
-  `npm run demo` builds without tests and executes the scripted Standard happy
-  path in a unique disposable repository under `/tmp`.
+  `npm run demo` builds without tests and executes one scripted scenario in a
+  unique disposable repository under `/tmp`.
   The binary is `dist/main.js`, exposed as `antmay` via the `bin` field.
 
 ### Command surface
@@ -129,9 +129,10 @@ never touch config, state, Git, or harnesses.
 - `thread/`, `workspace/`, `display/` — thread resolution and queue gates,
   current-checkout detection, and the curated terminal stream.
 - `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
-- `scripts/demo.mjs` + `scripts/scenarios/` — dependency-free developer demo
-  that builds the CLI and drives a selected scripted scenario through a unique
-  `/tmp` repository.
+- `scripts/demo.mjs` + `scripts/demo/` + `scripts/scenarios/` —
+  dependency-free developer demo: a generic driver, its step/fixture/recipe
+  helpers, and one self-contained file per scenario, driving a selected scripted
+  scenario through a unique `/tmp` repository.
 
 ### Test suite shape
 
@@ -219,16 +220,47 @@ listener alone keeps nothing alive and the process would otherwise drain its
 event loop and exit before any signal arrived.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
-gate. Its scenarios are checked in under `scripts/scenarios/`, one file per
-scenario declaring the scripted-harness document plus the ordered `run`/`resume`
-invocations and the exit code each must produce; the id is the filename stem and
-discovery is automatic, so a new scenario is a new file and nothing else.
-`happy-path` sorts first wherever scenarios are listed and is what the
-selection prompt takes when answered with Enter. That prompt reads a single
-raw-mode keypress — a digit selects its listed scenario immediately, with no
-Enter — so it supports at most nine listed scenarios. Each
-demo run allocates a unique `/tmp` directory holding an isolated config root, an
-isolated state root, and the disposable repository, and injects
+gate. It exists to exhibit the terminal interface: each scenario drives the run
+to one distinct visual state — a closing block, a reason banner, a stage
+disposition — and stops there, so the state under inspection is the last thing on
+screen and needs no scrolling to find. Scenarios are therefore organized by what
+the renderer draws, not by what the executor can do; two behaviors that render
+identically do not need two scenarios, and one behavior that renders four ways
+needs four.
+
+The driver is generic and holds no scenario-specific knowledge. It builds the
+CLI, stands up the fixture, executes an ordered step list, and compares exit
+codes. The step vocabulary lives in `scripts/demo/steps.mjs`: `run`, `resume` and
+`list` are invocations checked against an expected exit code, and `action` runs
+scenario-owned code against the fixture between invocations. A `run` or `resume`
+step may carry a `during` hook fired once the child has been alive for `afterMs`,
+which is how a scenario signals a live run or changes the world underneath one.
+Anything a single scenario needs — a rejecting Git hook, an unreadable queue, a
+revoked permission — belongs in that scenario's own file, never in the driver.
+`scripts/demo/fixture.mjs` holds the helpers those actions share, and
+`scripts/demo/recipe.mjs` supplies the all-correct scripted document a scenario
+overrides one stage of, so each file reads as "the standard run, except this".
+
+Besides `label`, `scenario` and `steps`, a scenario may declare `note` — printed
+before the run, for a scenario whose shape is not self-evident, so a reader
+learns why it takes two invocations without opening the file — and
+`settingsDefaults`, merged over `afk.defaults` in the copied settings file. A
+scenario that needs different executor configuration uses that field rather than
+a demo-only hook, so the demo exercises the same path a user would.
+
+Scenarios are checked in under `scripts/scenarios/`, one file per scenario; the
+id is the filename stem and discovery is automatic, so a new scenario is a new
+file and nothing else. Each id carries a zero-padded ordering prefix
+(`03-refused`), which is what puts the catalog in reading order everywhere it
+appears — on disk, in `--list`, and in the prompt — rather than in the
+alphabetical order the names alone would give. A new scenario is numbered where
+it belongs in that order; renumbering neighbours to make room is expected and
+costs nothing. `01-all-done` leads, and is what the selection prompt takes when
+answered with Enter. A scenario is selectable by number, by name without the
+prefix, or by full id, so nobody has to memorize a number. That prompt reads a
+whole line confirmed with Enter, so the catalog has no size limit. Each demo run
+allocates a unique `/tmp` directory holding an isolated
+config root, an isolated state root, and the disposable repository, and injects
 `ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the scripted toggle only into the
 child CLI processes. The developer's real `settings.json` is copied in so their
 harness and model profiles are exercised; that copy is the only read of real
@@ -239,10 +271,13 @@ The demo verifies exactly one thing per invocation — the exit code — as a si
 `[PASS]`/`[FAIL]` line, and stops at the first `[FAIL]`. Broader behavioral
 assertions belong in the `*.test.ts` suite, which already covers the scripted
 seams end to end. `ANTMAY DEMO STARTED` / `ANTMAY DEMO FINISHED` separator
-lines bracket each child CLI's terminal stream. `--show-demo-summary` adds a
-closing summary printing the commit list, the working-tree state, and the paths
-and environment needed to keep driving the result by hand; without the flag the
-demo ends at the last `[PASS]`/`[FAIL]` line.
+lines bracket each child CLI's terminal stream, and an `[SETUP]` line names each
+action step so the transcript says what changed between two invocations.
+`--show-demo-summary` adds a closing summary printing the commit list, the
+working-tree state, and the paths and environment needed to keep driving the
+result by hand; without the flag the demo ends at the last `[PASS]`/`[FAIL]`
+line. `--no-color` strips color from the child's output, which is the way to
+check that the rendering still reads correctly when color carries nothing.
 
 ## Engineering Principles
 

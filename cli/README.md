@@ -74,29 +74,34 @@ then executes the scenario you pick.
 From `cli/` run:
 
 ```sh
-npm run demo -- --scenario happy-path
+npm run demo -- --scenario 01-all-done
 ```
 
 From the repository root, the equivalent command is:
 
 ```sh
-npm --prefix cli run demo -- --scenario happy-path
+npm --prefix cli run demo -- --scenario 01-all-done
 ```
 
-Scenarios live in `scripts/scenarios/`; each one is a scripted-harness document
-plus the CLI invocations to make against it. `--list` prints the available ids:
+Each scenario drives the run to one distinct visual state and stops there, so
+whatever it exists to show is the last thing on screen. Ids carry an ordering
+prefix, so `--list` prints them in reading order.
 
-- `happy-path` — the six Standard stages, no pauses; one `afk run` expected to
-  exit `0`.
-- `blocked-reconcile-spec` — `reconcile-spec` reports `Outcome: BLOCKED`, so
-  `afk run` is expected to exit `2`, and the demo then runs `afk resume`, which
-  is expected to complete the recipe at exit `0`.
-
-Adding a scenario means adding one `scripts/scenarios/<id>.mjs` file;
-`happy-path` is always listed first, and the rest follow alphabetically. Without
-`--scenario`, the demo prompts on a terminal — one keypress selects, so a digit
-picks its listed scenario immediately and Enter picks `happy-path` — and
+Adding a scenario means adding one `scripts/scenarios/<NN>-<name>.mjs` file
+exporting `{ label, scenario, steps }`, numbered where it belongs in the reading
+order. Without `--scenario`, the demo prompts on a terminal — type a number, a
+name, or an id and press Enter, or press Enter alone for `01-all-done` — and
 otherwise exits non-zero listing the ids.
+
+A scenario's steps are `run`, `resume` and `list` invocations, each checked
+against an expected exit code, interleaved with `action` steps holding whatever
+setup that one scenario needs. Only `06-retry`, `12-failed-queue-scan` and
+`14-checkpoint-write-failure` invoke `resume` at all; everything else is a single
+invocation. A scenario whose shape is not self-evident carries a `note` the demo
+prints before running, so the reason for a second invocation is on screen rather
+than in the source. A scenario may also declare `settingsDefaults`, merged over
+`afk.defaults` in the copied settings file — how `16-heartbeat` shortens its
+interval, using the same field a real user would set.
 
 Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding
 an isolated config root, an isolated state root, and the disposable Git
@@ -109,9 +114,11 @@ The only thing the demo verifies is each invocation's exit code, reported as one
 `[PASS]` or `[FAIL]` line; a `[FAIL]` skips the remaining invocations and exits
 non-zero. Behavior beyond the exit code is covered by the automated suite. Every
 built-CLI stream is enclosed by `ANTMAY DEMO STARTED` and `ANTMAY DEMO FINISHED`
-separator lines. Pass `--show-demo-summary` for a closing summary printing the
-commit list, the working-tree state, and the paths (plus a copy-pasteable
-environment) you need to keep poking at the result by hand.
+separator lines, and an `[SETUP]` line names each action step. Pass
+`--show-demo-summary` for a closing summary printing the commit list, the
+working-tree state, and the paths (plus a copy-pasteable environment) you need
+to keep poking at the result by hand. Pass `--no-color` to strip color from the
+CLI's output and check that the rendering still reads without it.
 The demo is developer-run and is not part of `npm run check` or CI.
 
 ## Manual smoke checklist

@@ -1,27 +1,42 @@
 #!/usr/bin/env node
 
+/**
+ * Developer demo driver. Builds the CLI, stands up a disposable repository under
+ * `/tmp`, and executes one scenario's ordered steps against it.
+ *
+ * The driver is deliberately generic: it knows how to run the built CLI, how to
+ * run a scenario-supplied action, and how to compare exit codes. Everything a
+ * particular scenario needs — which scripted cases run, what the fixture looks
+ * like partway through, which flags a command carries — lives in that scenario's
+ * own file under `scripts/scenarios/`.
+ */
+
+import { spawn, spawnSync } from "node:child_process";
 import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   realpathSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { createInterface } from "node:readline/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLI_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DIST_MAIN = path.join(CLI_ROOT, "dist", "main.js");
 const SCENARIO_DIR = path.join(SCRIPT_DIR, "scenarios");
-// Listed first everywhere, and picked when the prompt is answered with Enter.
-const DEFAULT_SCENARIO_ID = "happy-path";
+// Picked when the prompt is answered with Enter. Scenario ids carry an ordering
+// prefix, so this is also the one that sorts first.
+const DEFAULT_SCENARIO_ID = "01-all-done";
 const SCRIPTED_TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
+const DEFAULT_RECIPE = "standard";
 const USAGE =
-  "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--show-demo-summary]";
+  "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--no-color] [--show-demo-summary]";
 
 class DemoError extends Error {}
 
@@ -54,6 +69,45 @@ function command(commandName, args, options = {}) {
   };
 }
 
+/**
+ * Run the built CLI to completion, inheriting the terminal so its stream is what
+ * the developer sees. When the step carries a `during` hook it is fired once the
+ * child has been alive for `afterMs`, so a scenario can act on a live run.
+ */
+function runChild(step, ctx, childEnv) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [DIST_MAIN, ...step.argv(ctx)], {
+      cwd: ctx.repoRoot,
+      env: childEnv,
+      stdio: "inherit",
+    });
+    let timer;
+    if (step.during !== undefined) {
+      timer = setTimeout(() => {
+        Promise.resolve(step.during(ctx, child)).catch((error) => {
+          console.error(`  during-hook failed: ${error.message}`);
+        });
+      }, step.afterMs);
+      timer.unref();
+    }
+    child.on("error", (error) => {
+      if (timer !== undefined) clearTimeout(timer);
+      resolve({ actual: error.message });
+    });
+    child.on("close", (code, signal) => {
+      if (timer !== undefined) clearTimeout(timer);
+      // A child killed outright reports the conventional 128 + signum, which is
+      // what the CLI's own handlers would have exited with had they won the
+      // race; either way the number is what the scenario is checked against.
+      resolve({ actual: code === null ? 128 + signalNumber(signal) : code });
+    });
+  });
+}
+
+function signalNumber(signal) {
+  return { SIGHUP: 1, SIGINT: 2, SIGTERM: 15 }[signal] ?? 0;
+}
+
 async function loadScenarios() {
   let entries;
   try {
@@ -61,16 +115,13 @@ async function loadScenarios() {
   } catch (error) {
     fail(`Cannot read ${SCENARIO_DIR}: ${error.message}`);
   }
+  // Every id carries a zero-padded ordering prefix, so plain lexical order is
+  // the intended reading order: a normal run, then the pauses a user meets
+  // routinely, then the ways a stage fails, then the rare and the cosmetic.
   const ids = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".mjs"))
     .map((entry) => entry.name.slice(0, -".mjs".length))
-    .sort((left, right) =>
-      left === DEFAULT_SCENARIO_ID
-        ? -1
-        : right === DEFAULT_SCENARIO_ID
-          ? 1
-          : left.localeCompare(right),
-    );
+    .sort((left, right) => left.localeCompare(right));
   if (ids.length === 0) {
     fail(`No scenario modules found under ${SCENARIO_DIR}.`);
   }
@@ -85,7 +136,12 @@ async function loadScenarios() {
 }
 
 function parseArgs(argv) {
-  const parsed = { scenarioId: undefined, list: false, showSummary: false };
+  const parsed = {
+    scenarioId: undefined,
+    list: false,
+    showSummary: false,
+    noColor: false,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--list") {
@@ -94,6 +150,10 @@ function parseArgs(argv) {
     }
     if (argument === "--show-demo-summary") {
       parsed.showSummary = true;
+      continue;
+    }
+    if (argument === "--no-color") {
+      parsed.noColor = true;
       continue;
     }
     if (argument === "--scenario" || argument === "-s") {
@@ -115,9 +175,34 @@ function describeScenarios(scenarios) {
     .join("\n");
 }
 
+/**
+ * Resolve one scenario from what a human typed: the whole id (`03-refused`),
+ * its ordering number alone (`3`), or just its name (`refused`). Naming a
+ * scenario should not require remembering which number it sits at.
+ */
+function findScenario(scenarios, answer) {
+  const exact = scenarios.get(answer);
+  if (exact !== undefined) {
+    return exact;
+  }
+  const asNumber = Number.parseInt(answer, 10);
+  if (String(asNumber) === answer.replace(/^0+(?=\d)/, "")) {
+    const padded = String(asNumber).padStart(2, "0");
+    const numbered = [...scenarios.values()].find((scenario) =>
+      scenario.id.startsWith(`${padded}-`),
+    );
+    if (numbered !== undefined) {
+      return numbered;
+    }
+  }
+  return [...scenarios.values()].find(
+    (scenario) => scenario.id.replace(/^\d+-/, "") === answer,
+  );
+}
+
 async function selectScenario(scenarios, requestedId) {
   if (requestedId !== undefined) {
-    const scenario = scenarios.get(requestedId);
+    const scenario = findScenario(scenarios, requestedId);
     if (scenario === undefined) {
       fail(
         `Unknown scenario: ${requestedId}\nAvailable scenarios:\n${describeScenarios(scenarios)}`,
@@ -134,46 +219,31 @@ async function selectScenario(scenarios, requestedId) {
   const choices = [...scenarios.values()];
   const fallback = scenarios.get(DEFAULT_SCENARIO_ID) ?? choices[0];
   console.log("Available scenarios:");
-  for (const [index, scenario] of choices.entries()) {
+  for (const scenario of choices) {
     const marker = scenario === fallback ? " (default)" : "";
-    console.log(`  ${index + 1}) ${scenario.id} — ${scenario.label}${marker}`);
+    // The id already carries its number, so it is not printed twice.
+    console.log(`  ${scenario.id} — ${scenario.label}${marker}`);
   }
-  const key = await readKey(
-    `Scenario [1-${choices.length}, Enter for ${fallback.id}]: `,
-  );
-  if (key === "\x03" || key === "\x04") {
-    // Ctrl+C / Ctrl+D dismiss the prompt.
-    fail("\nCancelled.");
+
+  // A whole line rather than one keypress: the catalog is longer than a single
+  // digit can address, and naming what you want beats counting down the list.
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  let answer;
+  try {
+    answer = (
+      await rl.question(`Scenario [number, name, or id — Enter for ${fallback.id}]: `)
+    ).trim();
+  } finally {
+    rl.close();
   }
-  if (key === "\r" || key === "\n") {
-    console.log(fallback.id);
+  if (answer === "") {
     return fallback;
   }
-  const picked = choices[Number.parseInt(key, 10) - 1];
+  const picked = findScenario(scenarios, answer);
   if (picked === undefined) {
-    console.log();
-    fail(`Not a listed choice: ${JSON.stringify(key)}`);
+    fail(`Not a listed choice: ${JSON.stringify(answer)}`);
   }
-  console.log(picked.id);
   return picked;
-}
-
-// Resolves with the first key pressed, so a choice needs no Enter. The caller
-// echoes what it understood, because raw mode prints nothing itself.
-function readKey(prompt) {
-  process.stdout.write(prompt);
-  return new Promise((resolve) => {
-    const { stdin } = process;
-    stdin.setRawMode(true);
-    stdin.setEncoding("utf8");
-    stdin.resume();
-    stdin.once("data", (chunk) => {
-      stdin.setRawMode(false);
-      stdin.pause();
-      // A pasted or buffered burst arrives as one chunk; only its head counts.
-      resolve(chunk.slice(0, 1));
-    });
-  });
 }
 
 function resolveRealConfigRoot() {
@@ -210,8 +280,8 @@ function separator(label) {
   console.log(`\n==================== ${label} ====================`);
 }
 
-function prepareFixtureRepo(repoRoot) {
-  const threadName = `${threadTimestamp()}-demo`;
+function prepareFixtureRepo(repoRoot, threadSlug) {
+  const threadName = `${threadTimestamp()}-${threadSlug}`;
   const threadRoot = path.join(repoRoot, "docs", "threads", threadName);
   mkdirSync(threadRoot, { recursive: true });
   writeFileSync(
@@ -251,7 +321,24 @@ function prepareFixtureRepo(repoRoot) {
       fail(`Cannot prepare the fixture repository (${label}): ${result.error}`);
     }
   }
-  return threadName;
+  return { threadName, threadRoot };
+}
+
+/**
+ * Merge a scenario's profile overrides into the copied settings file's
+ * `afk.defaults`. The developer's own harness and model survive; only the fields
+ * the scenario names are replaced.
+ */
+function applySettingsDefaults(settingsPath, overrides) {
+  let document;
+  try {
+    document = JSON.parse(readFileSync(settingsPath, "utf8"));
+  } catch (error) {
+    fail(`Cannot read the demo settings at ${settingsPath}: ${error.message}`);
+  }
+  document.afk ??= {};
+  document.afk.defaults = { ...(document.afk.defaults ?? {}), ...overrides };
+  writeFileSync(settingsPath, `${JSON.stringify(document, null, 2)}\n`);
 }
 
 function listRunIds(stateRoot) {
@@ -333,9 +420,7 @@ async function main() {
     fail(`The CLI build failed: ${build.error}`);
   }
 
-  const demoRoot = realpathSync(
-    mkdtempSync(`/tmp/antmay-demo-${scenario.id}-`),
-  );
+  const demoRoot = realpathSync(mkdtempSync(`/tmp/antmay-demo-${scenario.id}-`));
   const configRoot = path.join(demoRoot, "config");
   const stateRoot = path.join(demoRoot, "state");
   const repoRoot = path.join(demoRoot, "repo");
@@ -343,65 +428,107 @@ async function main() {
   mkdirSync(stateRoot);
   mkdirSync(repoRoot);
 
+  const demoSettings = path.join(configRoot, "settings.json");
   try {
-    copyFileSync(realSettings, path.join(configRoot, "settings.json"));
+    copyFileSync(realSettings, demoSettings);
   } catch (error) {
     fail(
       `Cannot copy ${realSettings} into the demo config root: ${error.message}\nCreate that settings file before running the demo.`,
     );
+  }
+  // A scenario that needs a different profile than the developer's own says so
+  // in `settingsDefaults`, which is merged over the copied `afk.defaults`.
+  if (scenario.settingsDefaults !== undefined) {
+    applySettingsDefaults(demoSettings, scenario.settingsDefaults);
   }
   writeFileSync(
     path.join(configRoot, "scripted-harness.json"),
     `${JSON.stringify(scenario.scenario, null, 2)}\n`,
   );
 
-  const threadName = prepareFixtureRepo(repoRoot);
-  const context = { repoRoot, threadName, stateRoot, configRoot };
+  const { threadName, threadRoot } = prepareFixtureRepo(repoRoot, scenario.id);
 
   console.log(`\nScenario:   ${scenario.id} — ${scenario.label}`);
   console.log(`Repository: ${repoRoot}`);
   console.log(`Thread:     ${threadName}`);
+  // Scenarios whose shape is not self-evident explain themselves here, so the
+  // reason for an extra invocation is on screen rather than in the source.
+  if (scenario.note !== undefined) {
+    console.log(`\nNote: ${scenario.note}`);
+  }
 
   const childEnv = {
     ...process.env,
     ANTMAY_CONFIG_HOME: configRoot,
     ANTMAY_STATE_HOME: stateRoot,
     [SCRIPTED_TOGGLE]: "1",
+    ...(args.noColor ? { NO_COLOR: "1" } : {}),
   };
-  const results = [];
-  for (const step of scenario.steps) {
-    const args =
-      step.command === "run"
-        ? ["afk", "run", "standard", "--thread", threadName]
-        : ["afk", "resume", soleRunId(stateRoot)];
-    const label = `antmay ${args.join(" ")}`;
 
-    separator("ANTMAY DEMO STARTED");
-    const child = command(process.execPath, [DIST_MAIN, ...args], {
-      cwd: repoRoot,
-      env: childEnv,
-    });
-    separator("ANTMAY DEMO FINISHED");
+  // Everything a scenario's own action steps are given. The run identifiers are
+  // resolved lazily, because the earliest steps run before any run exists.
+  const cleanups = [];
+  const ctx = {
+    repoRoot,
+    threadRoot,
+    threadName,
+    stateRoot,
+    configRoot,
+    demoRoot,
+    recipe: scenario.recipe ?? DEFAULT_RECIPE,
+    runId: () => soleRunId(stateRoot),
+    runDir: () => path.join(stateRoot, "afk-runs", soleRunId(stateRoot)),
+    // Registered by an action that made something unreadable or unwritable, so
+    // the temporary tree is still inspectable after the demo ends.
+    onCleanup: (restore) => cleanups.push(restore),
+  };
 
-    const actual = child.status ?? child.error;
-    const ok = actual === step.expectExit;
-    results.push(ok);
-    console.log(
-      ok
-        ? `[PASS] ${label} exited ${step.expectExit}`
-        : `[FAIL] ${label} — expected exit ${step.expectExit}, got ${JSON.stringify(actual)}`,
-    );
-    if (!ok) {
-      break;
+  let failed = false;
+  try {
+    for (const step of scenario.steps) {
+      if (step.kind === "action") {
+        console.log(`\n[SETUP] ${step.describe}`);
+        await step.perform(ctx);
+        continue;
+      }
+
+      const label = `antmay ${step.argv(ctx).join(" ")}`;
+      separator("ANTMAY DEMO STARTED");
+      const { actual } = await runChild(step, ctx, childEnv);
+      separator("ANTMAY DEMO FINISHED");
+
+      const ok = actual === step.expectExit;
+      console.log(
+        ok
+          ? `[PASS] ${label} exited ${step.expectExit}`
+          : `[FAIL] ${label} — expected exit ${step.expectExit}, got ${JSON.stringify(actual)}`,
+      );
+      if (!ok) {
+        failed = true;
+        break;
+      }
+    }
+  } finally {
+    for (const restore of cleanups.reverse()) {
+      try {
+        restore();
+      } catch (error) {
+        console.error(`  cleanup failed: ${error.message}`);
+      }
     }
   }
 
   if (args.showSummary) {
     const runIds = listRunIds(stateRoot);
-    context.runId = runIds.length === 1 ? runIds[0] : undefined;
-    printSummary(context);
+    printSummary({
+      repoRoot,
+      threadName,
+      stateRoot,
+      configRoot,
+      runId: runIds.length === 1 ? runIds[0] : undefined,
+    });
   }
-  if (results.some((ok) => !ok)) {
+  if (failed) {
     process.exitCode = 1;
   }
 }
