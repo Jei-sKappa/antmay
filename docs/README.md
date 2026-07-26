@@ -6,7 +6,7 @@ The vocabulary this documentation uses is defined once in [glossary.md](glossary
 
 ## Architecture
 
-The repository offers a catalog of self-contained capability skills — opening a thread, discussion, proposing, specifying, planning, implementing, reconciling artifacts, reviewing delivered work, roadmapping, materializing child threads, finishing, navigating, and archiving. Each skill owns one capability with a fixed output contract and does not inspect a recipe name to decide how to behave.
+The repository offers a catalog of self-contained capability skills — filing a tracker ticket, opening a thread, discussion, proposing, specifying, planning, implementing, reconciling artifacts, reviewing delivered work, roadmapping, materializing child threads, finishing, navigating, and archiving. Each skill owns one capability with a fixed output contract and does not inspect a recipe name to decide how to behave.
 
 A **recipe** is a documented composition over those skills: a named, human-readable path that arranges capabilities into a coherent process. Composition lives in documentation — the recipe documents and their published templates — not in orchestration hidden inside skills. The same skill is reused across recipes without renamed copies.
 

@@ -60,6 +60,16 @@ queue is non-empty.
 | **implementation report** | `implementation-report.md`, the singleton artifact describing the current delivered outcome. Not a per-run history. |
 | **final deliverable** | What a completed *thread* leaves behind — the implementation report for Quick and Standard, the roadmap and its materialized children for Roadmap. Distinct from a terminal outcome. |
 
+## Trackers and tickets
+
+| Term | Meaning |
+| --- | --- |
+| **tracker** | The external issue tracker a project's work is filed in. GitHub is the one implemented tracker; the vocabulary and the skills stay tracker-neutral, and a skill resolves which tracker applies from a reference's host. |
+| **ticket** | One entry in a tracker. The reserved word for the concept across the suite, the CLI, and these documents — on GitHub a ticket is an issue, and only tracker-specific reference material says so. |
+| **ticket reference** | A ticket's identity as recorded in the seed's `External:` field: its real URL. Two references denote one ticket when their parts match, so references are compared by meaning rather than as raw strings. |
+| **marker label** | The `antmay` label on a ticket, meaning its body is written as a genesis narrative and the ticket is therefore ready to open a thread from. Carries nothing about ownership or progress, and no skill branches on its presence. |
+| **tracker mutation** | Any write to a tracker — filing a ticket, labelling, commenting, transitioning, closing. Authorized only by a deliberate user-invoked operation that confirms the specific write, never by holding a reference. [thread-model.md](thread-model.md) |
+
 ## Running and reporting
 
 | Term | Meaning |
@@ -117,6 +127,7 @@ queue is non-empty.
 | Word | Rule |
 | --- | --- |
 | **workflow** | Not a term of art here. Write **method** for the whole approach, **recipe** for one of the three named paths, **thread artifact** for the artifact domain, and **process** for process-level intent. |
+| **issue** | Two unrelated senses, both live. GitHub's word for a **ticket**: write **ticket** for the concept, and `issue` only where a GitHub-specific reference, command, or accepted input form is being named. Also the middle **review severity** (`blocker`, `issue`, `nit`), which keeps its name. |
 | **status** | Never used for a run's end state. That is the **terminal outcome**. There is no status field, status token, or status layer anywhere in the method. |
 | **outcome** | On its own, means the terminal outcome. For a thread's lasting artifact write **final deliverable**; for the seed's goal write **intended goal**; for the delivered result write **implementation report**. |
 | **recipe** vs **pipeline** | A **recipe** is the documented advisory path; a **pipeline** is the CLI's enforced stage sequence. They are not two fidelities of one thing — never use either name for the other. |

@@ -82,7 +82,11 @@ Archiving is the explicit act that ends a thread's active lifecycle. Before movi
 
 ## External references
 
-External tracker references are passive. Supplying a ticket or other external source authorizes an operation to read it for context and to record its real URL in the seed's `External:` field. It does not authorize any ordinary thread operation to comment on, update, transition, or close the external item. Creating an external ticket, or any other tracker mutation, requires explicit user intent rather than being implied by the presence of an `External:` line. A delivery handoff may surface a linked reference and place a non-closing mention such as `Related to <ticket>` in a pull-request description, but does not use auto-closing syntax or close the ticket unless the user explicitly asks.
+External tracker references are passive. Supplying a ticket or other external source authorizes an operation to read it for context and to record its real URL in the seed's `External:` field. It does not authorize any ordinary thread operation to comment on, update, transition, or close the external item.
+
+This is a rule about what authorizes a tracker mutation, not a prohibition on mutating a tracker. A mutation requires explicit user intent, and it is never implied by the presence of an `External:` line. The sanctioned path is an operation the user deliberately invokes for that purpose, which then confirms the specific write before performing it: filing a ticket from a rough idea, or linking and closing a ticket at delivery. Two mutations are therefore ordinary and expected — the ticket-opening operation creates a ticket and applies its marker label, and the delivery handoff either places a closing keyword in a pull-request description or closes a ticket outright after a direct merge, whichever the chosen branch disposition calls for. Both are offers the user accepts; a decline leaves the tracker untouched.
+
+Everything outside a mutation the user accepted stays passive. No operation infers permission from a reference it happens to hold, and no operation performs a tracker write that the user did not select.
 
 ## Cross-thread references
 
