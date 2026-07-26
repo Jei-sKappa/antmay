@@ -135,12 +135,47 @@ async function loadScenarios() {
   return scenarios;
 }
 
+// npm's own parser claims every `-`-prefixed token that precedes `--`, so
+// `npm run demo --list` never forwards the flag: npm keeps it as one of its
+// configs and it reaches us only as an `npm_config_*` variable. Left
+// undetected, that invocation looks exactly like a bare `npm run demo` and
+// silently opens the selection prompt instead.
+const NPM_SWALLOWED_FLAGS = new Map([
+  ["npm_config_list", "--list"],
+  ["npm_config_scenario", "--scenario"],
+  ["npm_config_show_demo_summary", "--show-demo-summary"],
+]);
+
+function assertFlagsWereForwarded() {
+  const swallowed = [...NPM_SWALLOWED_FLAGS]
+    .filter(([variable]) => process.env[variable] !== undefined)
+    .map(([, flag]) => flag);
+  if (swallowed.length === 0) {
+    return;
+  }
+  fail(
+    `npm kept ${swallowed.join(" and ")} for itself instead of passing ${
+      swallowed.length === 1 ? "it" : "them"
+    } to the demo.\n` +
+      "Put `--` before the demo's own flags:\n" +
+      "  npm run demo -- --list\n" +
+      USAGE,
+  );
+}
+
+// `--no-color` is the one flag npm both swallows and answers itself, so take
+// npm's answer rather than insisting on the `--` form for it.
+function npmDisabledColor() {
+  const color = process.env.npm_config_color;
+  return color === "" || color === "false";
+}
+
 function parseArgs(argv) {
   const parsed = {
     scenarioId: undefined,
     list: false,
     showSummary: false,
-    noColor: false,
+    noColor: npmDisabledColor(),
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -403,6 +438,7 @@ function printSummary(context) {
 }
 
 async function main() {
+  assertFlagsWereForwarded();
   const args = parseArgs(process.argv.slice(2));
   const scenarios = await loadScenarios();
   if (args.list) {
