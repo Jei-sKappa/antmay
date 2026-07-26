@@ -16,7 +16,7 @@ import type {
   TerminalResult,
   WaitingDiagnostics,
   WaitingInfo,
-  WaitingReason,
+  WaitingReasons,
 } from "../state/checkpoint.js";
 import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
 import { attemptLogPaths, createAttemptLog } from "../state/logs.js";
@@ -233,7 +233,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       : { category: "interrupted", origin: args.sig };
     // The interruption is what stopped the run; pending paths observed on the
     // way out are a second, independent reason it cannot simply resume.
-    const reasons: WaitingReason[] = [{ kind: "interrupted", message: baseMessage }];
+    const reasons: WaitingReasons = [{ kind: "interrupted", message: baseMessage }];
     if (pending !== undefined) {
       reasons.push({
         kind: "pending-queues",
@@ -305,6 +305,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       const waiting: WaitingInfo = {
         kind: "gate-error",
         message,
+        reasons: [{ kind: "gate-error", message }],
         diagnostics: { category: "gate-error", errorMessage: preScan.message },
       };
       const persisted = await persist({
@@ -318,9 +319,11 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     }
     if (preScan.pendingFiles.length > 0) {
       const pendingFiles = preScan.pendingFiles;
+      const message = pendingQueuesMessage(pendingFiles);
       const waiting: WaitingInfo = {
         kind: "pending-queues",
-        message: pendingQueuesMessage(pendingFiles),
+        message,
+        reasons: [{ kind: "pending-queues", message, pendingFiles }],
         pendingFiles,
       };
       const persisted = await persist({
@@ -621,7 +624,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       : governing.message;
     // An abort replaces the stage's own reason with the interruption, but the
     // queue-level reasons it observed still hold and are still reported.
-    const reasons: WaitingReason[] = aborted
+    const reasons: WaitingReasons = aborted
       ? [
           { kind: "interrupted", message: baseMessage },
           ...classification.reasons.filter(

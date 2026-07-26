@@ -1,6 +1,5 @@
 import type { HarnessEvent } from "../harness/types.js";
 import type { WaitingInfo, WaitingKind, WaitingReason } from "../state/checkpoint.js";
-import { waitingReasons } from "../state/checkpoint.js";
 import type { Display, StageDisposition } from "./types.js";
 
 /**
@@ -365,9 +364,8 @@ function runSummaryBlock(
  * the governing reason still leads its own group.
  */
 function orderedReasons(waiting: WaitingInfo): WaitingReason[] {
-  const all = waitingReasons(waiting);
   const inGroup = (group: "stage" | "queue"): WaitingReason[] =>
-    all.filter((reason) => REASON_BANNER[reason.kind].group === group);
+    waiting.reasons.filter((reason) => REASON_BANNER[reason.kind].group === group);
   return [...inGroup("stage"), ...inGroup("queue")];
 }
 

@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import type { WaitingInfo } from "../state/checkpoint.js";
+import type { WaitingInfo, WaitingReason } from "../state/checkpoint.js";
 import type { Display, StageDisposition } from "./types.js";
 import {
   createTerminalDisplay,
@@ -192,11 +192,20 @@ describe("stageStopped", () => {
 });
 
 describe("runPaused", () => {
-  const waiting: WaitingInfo = {
+  /**
+   * A pause stopped for its governing reason alone — the ordinary single-reason
+   * shape, spelled once here so each case states only what it is testing.
+   */
+  const governedBy = (
+    reason: WaitingReason,
+    extra: Omit<Partial<WaitingInfo>, "kind" | "reasons"> = {},
+  ): WaitingInfo => ({ ...reason, ...extra, reasons: [reason] });
+
+  const waiting = governedBy({
     kind: "pending-queues",
     message: "Two pending decisions must be settled before continuing.",
     pendingFiles: ["docs/threads/t/.pending-decisions/a.md"],
-  };
+  });
 
   const paused = (
     info: Partial<Parameters<Display["runPaused"]>[0]> = {},
@@ -281,12 +290,15 @@ describe("runPaused", () => {
 
   it("labels the closing lines in place, leaving no unexplained gap", () => {
     const { out } = paused({
-      waiting: {
-        kind: "outcome-blocked",
-        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
-        detail: "needs input",
-        nextAction: "Revert or commit the changes before resuming.",
-      },
+      waiting: governedBy(
+        {
+          kind: "outcome-blocked",
+          message:
+            "The stage reported Outcome: BLOCKED and paused for human attention.",
+          detail: "needs input",
+        },
+        { nextAction: "Revert or commit the changes before resuming." },
+      ),
     });
     const lines = out.lines;
     // Every blank line is a block opener: the line after it introduces a
@@ -304,12 +316,15 @@ describe("runPaused", () => {
 
   it("gives the agent's reason and the human's next action their own lines", () => {
     const { out } = paused({
-      waiting: {
-        kind: "outcome-blocked",
-        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
-        detail: "Fake pause; no files changed",
-        nextAction: "Revert or commit the changes before resuming.",
-      },
+      waiting: governedBy(
+        {
+          kind: "outcome-blocked",
+          message:
+            "The stage reported Outcome: BLOCKED and paused for human attention.",
+          detail: "Fake pause; no files changed",
+        },
+        { nextAction: "Revert or commit the changes before resuming." },
+      ),
     });
     expect(out.text).toContain("Detail:");
     expect(out.text).toContain("Fake pause; no files changed");
@@ -323,14 +338,16 @@ describe("runPaused", () => {
   });
 
   it("omits detail and next-action lines when the pause carries neither", () => {
-    const { out } = paused({ waiting: { kind: "gate-error", message: "gate failed" } });
+    const { out } = paused({
+      waiting: governedBy({ kind: "gate-error", message: "gate failed" }),
+    });
     expect(out.text).not.toContain("Detail:");
     expect(out.text).not.toContain("Next:");
   });
 
   it("omits the log line when no attempt was allocated", () => {
     const { out } = paused({
-      waiting: { kind: "gate-error", message: "gate failed" },
+      waiting: governedBy({ kind: "gate-error", message: "gate failed" }),
       logAbsPath: null,
     });
     expect(out.text).not.toContain("Log:");
@@ -338,11 +355,11 @@ describe("runPaused", () => {
 
   it("echoes a malformed candidate line verbatim, behind the gutter that marks it as quoted", () => {
     const { out } = paused({
-      waiting: {
+      waiting: governedBy({
         kind: "malformed-outcome",
         message: "The final line was not a recognized outcome.",
         candidateLine: "Outcome: DONEish",
-      },
+      }),
     });
     // The candidate text is surfaced verbatim, quoted rather than authored: it
     // is never a line antmay appears to have written itself.
@@ -352,12 +369,13 @@ describe("runPaused", () => {
 
   it("does not echo a candidate line the reason already accounts for", () => {
     const { out } = paused({
-      waiting: {
+      waiting: governedBy({
         kind: "outcome-blocked",
-        message: "The stage reported Outcome: BLOCKED and paused for human attention.",
+        message:
+          "The stage reported Outcome: BLOCKED and paused for human attention.",
         detail: "needs input",
         candidateLine: "Outcome: BLOCKED — needs input",
-      },
+      }),
     });
     expect(out.text).not.toContain("Candidate outcome line:");
     expect(out.text).not.toContain("│ Outcome: BLOCKED");

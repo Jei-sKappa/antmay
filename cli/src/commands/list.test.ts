@@ -105,7 +105,11 @@ function makeCheckpoint(overrides: {
     gitCursor: { stageIndex: overrides.stageIndex, headAtStageEntry: null, observedHead: null },
   };
   if (overrides.condition === "waiting-for-user") {
-    checkpoint.waiting = { kind: "idle-timeout", message: "The stage idled out." };
+    checkpoint.waiting = {
+      kind: "idle-timeout",
+      message: "The stage idled out.",
+      reasons: [{ kind: "idle-timeout", message: "The stage idled out." }],
+    };
   }
   // Guard the fixtures themselves: a test-authored invalid checkpoint would
   // otherwise silently exercise the warning path instead of the row path.

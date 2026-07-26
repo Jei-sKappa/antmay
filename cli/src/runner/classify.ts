@@ -1,9 +1,10 @@
 import type { AttemptOutcome } from "../harness/types.js";
-import type { WaitingKind, WaitingReason } from "../state/checkpoint.js";
+import type {
+  WaitingKind,
+  WaitingReason,
+  WaitingReasons,
+} from "../state/checkpoint.js";
 import type { OutcomeParse } from "./outcome.js";
-
-/** An array guaranteed by construction to hold at least one element. */
-type NonEmpty<T> = [T, ...T[]];
 
 /**
  * The outcome of evaluating a stage's per-stage Git boundary. `evaluated: false`
@@ -47,8 +48,8 @@ export type ClassificationInput = {
  */
 export type Classification =
   | { action: "advance" }
-  | { action: "pause"; reasons: NonEmpty<WaitingReason> }
-  | { action: "pause-done"; reasons: NonEmpty<WaitingReason> };
+  | { action: "pause"; reasons: WaitingReasons }
+  | { action: "pause-done"; reasons: WaitingReasons };
 
 const EXPECTED_PREFIXES =
   "Outcome: DONE, Outcome: BLOCKED, or Outcome: REFUSED";
@@ -181,7 +182,7 @@ export function classifyAttempt(input: ClassificationInput): Classification {
   // 2. Otherwise a failed queue scan governs, because nothing downstream of it
   //    can be evaluated. A stage that also failed on its own terms says so.
   if (queueScanError !== null) {
-    const [governing, ...rest] = queues as NonEmpty<WaitingReason>;
+    const [governing, ...rest] = queues as WaitingReasons;
     return {
       action: "pause",
       reasons: isDone

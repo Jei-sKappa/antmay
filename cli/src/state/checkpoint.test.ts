@@ -79,6 +79,13 @@ function validCheckpoint(): RunCheckpoint {
     waiting: {
       kind: "outcome-blocked",
       message: "The spec stage reported BLOCKED.",
+      reasons: [
+        {
+          kind: "outcome-blocked",
+          message: "The spec stage reported BLOCKED.",
+          candidateLine: "Outcome: BLOCKED — x",
+        },
+      ],
       candidateLine: "Outcome: BLOCKED — x",
     },
     gitCursor: { stageIndex: 0, headAtStageEntry: "abc123", observedHead: "abc123" },
@@ -121,7 +128,13 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
       candidateLine: "outcome: maybe done?",
       detail: "no token parsed",
     };
-    doc.waiting = { kind: "malformed-outcome", message: "No valid outcome token." };
+    doc.waiting = {
+      kind: "malformed-outcome",
+      message: "No valid outcome token.",
+      reasons: [
+        { kind: "malformed-outcome", message: "No valid outcome token." },
+      ],
+    };
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -197,11 +210,24 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     if (!result.ok) expect(result.errors.some((e) => /waiting to be null/.test(e))).toBe(true);
   });
 
+  it("rejects a waiting object that records no reasons", () => {
+    const doc = validCheckpoint();
+    delete (doc.waiting as Record<string, unknown>).reasons;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /reasons must be a non-empty array/.test(e))).toBe(
+        true,
+      );
+    }
+  });
+
   it("rejects unsorted pending paths", () => {
     const doc = validCheckpoint();
     doc.waiting = {
       kind: "pending-queues",
       message: "queues",
+      reasons: [{ kind: "pending-queues", message: "queues" }],
       pendingFiles: ["b.md", "a.md"],
     };
     const result = validateCheckpoint(doc);
@@ -214,6 +240,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     doc.waiting = {
       kind: "pending-queues",
       message: "queues",
+      reasons: [{ kind: "pending-queues", message: "queues" }],
       pendingFiles: ["a.md", "a.md"],
     };
     const result = validateCheckpoint(doc);
@@ -386,7 +413,16 @@ describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => 
         condition: "waiting-for-user",
         waiting: {
           kind: "outcome-blocked",
-          message: "The spec stage reported BLOCKED and paused for human attention.",
+          message:
+            "The spec stage reported BLOCKED and paused for human attention.",
+          reasons: [
+            {
+              kind: "outcome-blocked",
+              message:
+                "The spec stage reported BLOCKED and paused for human attention.",
+              candidateLine: "Outcome: BLOCKED — x",
+            },
+          ],
           candidateLine: "Outcome: BLOCKED — x",
         },
         attempts: [
@@ -413,6 +449,12 @@ describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => 
         waiting: {
           kind: "interrupted",
           message: "The harness attempt was interrupted by a signal.",
+          reasons: [
+            {
+              kind: "interrupted",
+              message: "The harness attempt was interrupted by a signal.",
+            },
+          ],
         },
         attempts: [
           {

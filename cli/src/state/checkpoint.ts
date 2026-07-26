@@ -73,6 +73,12 @@ export type WaitingReason = {
 };
 
 /**
+ * Every reason one pause stopped for, in precedence order and never empty: a
+ * pause always has at least the reason that governs it, which is `[0]`.
+ */
+export type WaitingReasons = [WaitingReason, ...WaitingReason[]];
+
+/**
  * The single waiting object a `waiting-for-user` checkpoint carries. It always
  * names a kind and a complete human message describing what happened; the
  * agent's own reason text, the human's next action, pending paths, a candidate
@@ -80,40 +86,19 @@ export type WaitingReason = {
  *
  * `kind`, `message`, and `detail` describe the **governing** reason — the one
  * that decides how `resume` behaves. `reasons` lists every reason the pause
- * observed, in precedence order, so the governing one is always `reasons[0]`.
- * A checkpoint written before reasons were recorded carries none, and reads
- * back as the single governing reason.
+ * observed, in precedence order, so the governing one is always `reasons[0]`
+ * and its kind always equals `kind`.
  */
 export type WaitingInfo = {
   kind: WaitingKind;
   message: string;
-  reasons?: WaitingReason[];
+  reasons: WaitingReasons;
   detail?: string;
   nextAction?: string;
   pendingFiles?: string[];
   candidateLine?: string;
   diagnostics?: WaitingDiagnostics;
 };
-
-/**
- * Every reason a pause stopped for, in precedence order. A pause that recorded
- * no list yields its governing reason alone, so a reader never has to special-
- * case one against the other.
- */
-export function waitingReasons(waiting: WaitingInfo): WaitingReason[] {
-  if (waiting.reasons !== undefined && waiting.reasons.length > 0) {
-    return waiting.reasons;
-  }
-  return [
-    {
-      kind: waiting.kind,
-      message: waiting.message,
-      detail: waiting.detail,
-      pendingFiles: waiting.pendingFiles,
-      candidateLine: waiting.candidateLine,
-    },
-  ];
-}
 
 /**
  * The parsed terminal text result of an attempt. `token` is the recognized
@@ -551,9 +536,7 @@ function validateWaiting(value: unknown, errors: string[]): void {
   if (value.candidateLine !== undefined && typeof value.candidateLine !== "string") {
     errors.push(`waiting.candidateLine must be a string.`);
   }
-  if (value.reasons !== undefined) {
-    validateWaitingReasons(value.reasons, value.kind, errors);
-  }
+  validateWaitingReasons(value.reasons, value.kind, errors);
   if (value.diagnostics !== undefined) {
     const d = value.diagnostics;
     if (!isPlainObject(d)) {

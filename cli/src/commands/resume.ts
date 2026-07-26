@@ -489,9 +489,11 @@ export async function resumeCommand(
           renderPause(waiting, attemptLogAbs(lastAttempt));
           return EXIT_WAITING;
         }
+        const message = `The advancement invariant could not be evaluated because the pending-queue scan failed: ${scan.message}`;
         const waiting: WaitingInfo = {
           kind: "gate-error",
-          message: `The advancement invariant could not be evaluated because the pending-queue scan failed: ${scan.message}`,
+          message,
+          reasons: [{ kind: "gate-error", message }],
           diagnostics: { category: "gate-error", errorMessage: scan.message },
         };
         const persisted = await persist({
@@ -517,9 +519,17 @@ export async function resumeCommand(
         }
         // A ready or recovered-executing cursor persists a tokenless pre-attempt
         // pending-queues pause without allocating an attempt.
+        const message = pendingQueuesMessage(scan.pendingFiles);
         const waiting: WaitingInfo = {
           kind: "pending-queues",
-          message: pendingQueuesMessage(scan.pendingFiles),
+          message,
+          reasons: [
+            {
+              kind: "pending-queues",
+              message,
+              pendingFiles: scan.pendingFiles,
+            },
+          ],
           pendingFiles: scan.pendingFiles,
         };
         const persisted = await persist({
@@ -563,9 +573,11 @@ export async function resumeCommand(
 
         if (!evaluation.ok) {
           const newHead = await readHead(repoRoot);
+          const message = `${evaluation.message}.`;
           const waiting: WaitingInfo = {
             kind: "git-policy-violation",
-            message: `${evaluation.message}.`,
+            message,
+            reasons: [{ kind: "git-policy-violation", message, candidateLine }],
             nextAction: UNVALIDATED_CHANGES_NOTE,
             candidateLine,
             diagnostics: { category: "git-policy-violation" },
@@ -589,9 +601,11 @@ export async function resumeCommand(
         );
         const newHead = await readHead(repoRoot);
         if (finalized.kind === "commit-error") {
+          const message = `${finalized.message}.`;
           const waiting: WaitingInfo = {
             kind: "commit-error",
-            message: `${finalized.message}.`,
+            message,
+            reasons: [{ kind: "commit-error", message, candidateLine }],
             nextAction: UNVALIDATED_CHANGES_NOTE,
             candidateLine,
             diagnostics: { category: "commit-error" },

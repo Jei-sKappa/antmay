@@ -823,6 +823,7 @@ describe.concurrent("executeRun — harness stage context", () => {
     checkpoint.waiting = {
       kind: "outcome-blocked",
       message: "blocked",
+      reasons: [{ kind: "outcome-blocked", message: "blocked" }],
     };
     checkpoint.gitCursor = {
       stageIndex: 0,
