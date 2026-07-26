@@ -153,10 +153,10 @@ export type SnapshottedStage = StageDescriptor & {
 };
 
 /**
- * The full `state.json` document at `schemaVersion: 1`.
+ * The full `state.json` document at `schemaVersion: 0`.
  */
 export type RunCheckpoint = {
-  schemaVersion: 1;
+  schemaVersion: 0;
   runId: string;
   executor: { pid: number; version: string };
   createdAt: string;
@@ -599,7 +599,7 @@ function validateWorkspace(value: unknown, errors: string[]): void {
 }
 
 /**
- * Validate an untrusted document against the `schemaVersion: 1` checkpoint
+ * Validate an untrusted document against the `schemaVersion: 0` checkpoint
  * schema. Reports every field-shape and cross-field invariant problem at once.
  * An unknown `schemaVersion` is a distinct clear error; no migration is
  * attempted.
@@ -612,10 +612,10 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
   }
 
   if (!("schemaVersion" in doc)) {
-    errors.push(`schemaVersion is required and must be 1.`);
-  } else if (doc.schemaVersion !== 1) {
+    errors.push(`schemaVersion is required and must be 0.`);
+  } else if (doc.schemaVersion !== 0) {
     errors.push(
-      `Unsupported schemaVersion ${JSON.stringify(doc.schemaVersion)}; this executor only reads schemaVersion 1 and performs no migration.`,
+      `Unsupported schemaVersion ${JSON.stringify(doc.schemaVersion)}; this executor only reads schemaVersion 0 and performs no migration.`,
     );
   }
 

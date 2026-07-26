@@ -1,7 +1,7 @@
 export default {
   label: "BLOCKED at reconcile-spec, then resumed to completion",
   scenario: {
-    schemaVersion: 1,
+    schemaVersion: 0,
     stages: {
       spec: ["spec-correct"],
       "reconcile-spec": ["outcome-blocked", "reconcile-spec-correct"],

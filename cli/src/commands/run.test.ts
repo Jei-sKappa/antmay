@@ -556,7 +556,7 @@ function standardScriptedScenario(
   overrides: Partial<Record<string, string[]>> = {},
 ): Record<string, unknown> {
   return {
-    schemaVersion: 1,
+    schemaVersion: 0,
     stages: {
       spec: ["spec-correct"],
       "reconcile-spec": ["reconcile-spec-correct"],

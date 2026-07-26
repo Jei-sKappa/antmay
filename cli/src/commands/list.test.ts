@@ -82,7 +82,7 @@ function makeCheckpoint(overrides: {
     [makeStage("spec", "gpt-spec"), makeStage("plan", "gpt-plan"), makeStage("impl", "gpt-impl")];
   const repoRoot = overrides.repoRoot ?? "/Users/dev/repo";
   const checkpoint: RunCheckpoint = {
-    schemaVersion: 1,
+    schemaVersion: 0,
     runId: overrides.runId,
     executor: { pid: 4242, version: "0.1.0" },
     createdAt: "2026-07-23T12:00:00.000Z",

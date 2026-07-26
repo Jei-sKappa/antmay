@@ -188,9 +188,9 @@ the executable probe are swapped for `createScriptedInvoker` and
 harness id and configured model) stay unchanged in settings, snapshots, prompts,
 and attempt headers; only the provider contact is bypassed.
 
-A scripted `run` may write optional `startedScripted: true` on the initial
-checkpoint (`schemaVersion` stays `1`). Marker-less checkpoints remain valid.
-Resume is fail-closed: a marked checkpoint refuses to continue unless the toggle
+A scripted `run` writes `startedScripted: true` on the initial checkpoint; a run
+started against a real harness omits it. Resume is fail-closed: a marked
+checkpoint refuses to continue unless the toggle
 is exactly `1`, before probe, lock acquisition, or mutation. Scripted resume
 still requires a valid live scenario even on queue/boundary paths that make no
 harness call.

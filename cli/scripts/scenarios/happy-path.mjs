@@ -1,7 +1,7 @@
 export default {
   label: "Standard happy path — six stages, no pauses",
   scenario: {
-    schemaVersion: 1,
+    schemaVersion: 0,
     stages: {
       spec: ["spec-correct"],
       "reconcile-spec": ["reconcile-spec-correct"],

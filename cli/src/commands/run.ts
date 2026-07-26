@@ -345,7 +345,7 @@ export async function runCommand(
 
         const now = clock().toISOString();
         const checkpoint: RunCheckpoint = {
-          schemaVersion: 1,
+          schemaVersion: 0,
           runId: candidate,
           executor: { pid: process.pid, version: VERSION },
           createdAt: now,

@@ -54,7 +54,7 @@ function makeScenario(
     frozen[stageId] = Object.freeze([...cases]);
   }
   return Object.freeze({
-    schemaVersion: 1 as const,
+    schemaVersion: 0 as const,
     stages: Object.freeze(frozen),
   });
 }

@@ -21,7 +21,7 @@ import {
 const STANDARD_STAGE_IDS = standardRecipe.stages.map((stage) => stage.id);
 
 const VALID_STANDARD_SCENARIO = {
-  schemaVersion: 1,
+  schemaVersion: 0,
   stages: {
     spec: ["spec-correct"],
     "reconcile-spec": ["reconcile-spec-correct"],
@@ -180,7 +180,7 @@ describe("case catalog", () => {
 describe("validateScriptedScenario — accepted Standard input", () => {
   it("accepts the spec example and preserves array order", () => {
     const document = {
-      schemaVersion: 1,
+      schemaVersion: 0,
       stages: {
         spec: ["outcome-blocked", "spec-correct"],
         "reconcile-spec": ["reconcile-spec-correct"],
@@ -193,7 +193,7 @@ describe("validateScriptedScenario — accepted Standard input", () => {
     const result = validateScriptedScenario(document, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.scenario.schemaVersion).toBe(1);
+    expect(result.scenario.schemaVersion).toBe(0);
     expect(result.scenario.stages.spec).toEqual([
       "outcome-blocked",
       "spec-correct",
@@ -223,41 +223,41 @@ describe("validateScriptedScenario — invalid shape classes (AC-2.2)", () => {
 
   it("rejects unknown and missing root fields", () => {
     expectRejected(
-      { schemaVersion: 1 },
+      { schemaVersion: 0 },
       "stages must be present and an object.",
     );
     expectRejected({ stages: {} }, "schemaVersion must be present.");
     expectRejected(
-      { schemaVersion: 1, stages: {}, extra: true },
+      { schemaVersion: 0, stages: {}, extra: true },
       "extra is not a recognized top-level field.",
     );
   });
 
-  it("rejects non-1 schemaVersion without coercion", () => {
+  it("rejects non-0 schemaVersion without coercion", () => {
     expectRejected(
       { ...VALID_STANDARD_SCENARIO, schemaVersion: 2 },
-      "schemaVersion must be the number 1.",
+      "schemaVersion must be the number 0.",
     );
     expectRejected(
-      { ...VALID_STANDARD_SCENARIO, schemaVersion: "1" },
-      "schemaVersion must be the number 1.",
+      { ...VALID_STANDARD_SCENARIO, schemaVersion: "0" },
+      "schemaVersion must be the number 0.",
     );
   });
 
   it("rejects a non-object stages value", () => {
     expectRejected(
-      { schemaVersion: 1, stages: [] },
+      { schemaVersion: 0, stages: [] },
       "stages must be an object.",
     );
     expectRejected(
-      { schemaVersion: 1, stages: "spec" },
+      { schemaVersion: 0, stages: "spec" },
       "stages must be an object.",
     );
   });
 
   it("rejects missing and unknown stage keys", () => {
     const missingReview = {
-      schemaVersion: 1,
+      schemaVersion: 0,
       stages: {
         spec: ["spec-correct"],
         "reconcile-spec": ["reconcile-spec-correct"],

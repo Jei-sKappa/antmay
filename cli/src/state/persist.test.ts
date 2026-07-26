@@ -25,7 +25,7 @@ async function tempDir(): Promise<string> {
 
 function checkpoint(): RunCheckpoint {
   return {
-    schemaVersion: 1,
+    schemaVersion: 0,
     runId: "20260723T121500123Z-0a1b2c3d",
     executor: { pid: 1, version: "0.1.0" },
     createdAt: "2026-07-23T12:15:00.123Z",

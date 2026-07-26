@@ -61,7 +61,7 @@ export type ScriptedHarnessToggleMode =
  * source file.
  */
 export type ScriptedScenario = {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 0;
   readonly stages: Readonly<Record<string, readonly ScriptedCaseName[]>>;
 };
 
@@ -189,8 +189,8 @@ export function validateScriptedScenario(
 
   if (!("schemaVersion" in parsed)) {
     errors.push("schemaVersion must be present.");
-  } else if (parsed.schemaVersion !== 1) {
-    errors.push("schemaVersion must be the number 1.");
+  } else if (parsed.schemaVersion !== 0) {
+    errors.push("schemaVersion must be the number 0.");
   }
 
   if (!("stages" in parsed)) {
@@ -268,7 +268,7 @@ export function validateScriptedScenario(
   return {
     ok: true,
     scenario: Object.freeze({
-      schemaVersion: 1 as const,
+      schemaVersion: 0 as const,
       stages: Object.freeze(frozenStages),
     }),
   };

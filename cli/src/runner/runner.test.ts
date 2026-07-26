@@ -117,7 +117,7 @@ function buildCheckpoint(
   });
   const now = "2026-07-24T00:00:00.000Z";
   return {
-    schemaVersion: 1,
+    schemaVersion: 0,
     runId: "20260724T000000000Z-0a1b2c3d",
     executor: { pid: 4242, version: "0.1.0" },
     createdAt: now,
