@@ -99,6 +99,7 @@ const ABORTED_OUTCOME: AttemptOutcome = {
  * One line of a case's progress: prose the agent narrated, or a tool call it
  * made. A tool line names the operation the case genuinely performed and the
  * arguments it performed it with, so the rendered call describes real work.
+ * Narration comes before the call it announces, the order a real agent produces.
  */
 export type TranscriptLine = string | { tool: string; args: string };
 
@@ -682,10 +683,10 @@ async function appendFakeSpecNote(
   return {
     ok: true,
     progress: [
-      { tool: "read_file", args: `{"path":"spec.md"}` },
       "Checking spec.md.",
-      appendToolLine("spec.md", RECONCILE_SPEC_APPEND_LINE),
+      { tool: "read_file", args: `{"path":"spec.md"}` },
       "Appending a fake note to spec.md.",
+      appendToolLine("spec.md", RECONCILE_SPEC_APPEND_LINE),
     ],
   };
 }
@@ -742,11 +743,11 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       if (!queued.ok) {
         return queued;
       }
+      progress.push(`Writing ${queuePath}.`);
       progress.push({
         tool: "write_file",
         args: `{"path":"${queuePath}","bytes":${LONG_DETAIL_PENDING_CONTENT.length},"encoding":"utf8","create_parents":true,"overwrite":true,"reason":"queue the pending bundle this stage cannot settle on its own"}`,
       });
-      progress.push(`Writing ${queuePath}.`);
     }
     return {
       ok: true,
@@ -792,7 +793,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
     return {
       ok: true,
-      progress: [writeToolLine("spec.md", SPEC_CORRECT_CONTENT), "Writing spec.md."],
+      progress: ["Writing spec.md.", writeToolLine("spec.md", SPEC_CORRECT_CONTENT)],
       finalText: "Outcome: DONE — Fake spec written: spec.md",
     };
   },
@@ -828,11 +829,11 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       ok: true,
       progress: [
         ...append.progress,
+        `Writing ${RECONCILE_SPEC_PENDING_DECISION_PATH}.`,
         writeToolLine(
           RECONCILE_SPEC_PENDING_DECISION_PATH,
           RECONCILE_SPEC_PENDING_DECISION_CONTENT,
         ),
-        `Writing ${RECONCILE_SPEC_PENDING_DECISION_PATH}.`,
       ],
       finalText: `Outcome: DONE — Fake reconciliation appended: spec.md; one fake decision queued: ${RECONCILE_SPEC_PENDING_DECISION_PATH}`,
     };
@@ -861,8 +862,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       if (!applied.ok) {
         return applied;
       }
-      progress.push(writeToolLine(write.threadRelativePath, write.content));
       progress.push(`Writing ${write.threadRelativePath}.`);
+      progress.push(writeToolLine(write.threadRelativePath, write.content));
     }
     return {
       ok: true,
@@ -893,10 +894,10 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     }
 
     const progress: TranscriptLine[] = [
-      { tool: "read_file", args: `{"path":"plan.md"}` },
       "Checking plan.md.",
-      { tool: "list_dir", args: `{"path":"plan-tasks"}` },
+      { tool: "read_file", args: `{"path":"plan.md"}` },
       "Listing plan-tasks/.",
+      { tool: "list_dir", args: `{"path":"plan-tasks"}` },
     ];
 
     const planAppend = await appendOwnedFile(
@@ -908,8 +909,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     if (!planAppend.ok) {
       return planAppend;
     }
-    progress.push(appendToolLine("plan.md", RECONCILE_PLAN_APPEND_LINE));
     progress.push("Appending a fake note to plan.md.");
+    progress.push(appendToolLine("plan.md", RECONCILE_PLAN_APPEND_LINE));
 
     for (const taskRelPath of tasks.paths) {
       const taskAppend = await appendOwnedFile(
@@ -921,8 +922,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
       if (!taskAppend.ok) {
         return taskAppend;
       }
-      progress.push(appendToolLine(taskRelPath, RECONCILE_PLAN_APPEND_LINE));
       progress.push(`Appending a fake note to ${taskRelPath}.`);
+      progress.push(appendToolLine(taskRelPath, RECONCILE_PLAN_APPEND_LINE));
     }
 
     return {
@@ -948,8 +949,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress: [
-        writeToolLine("implementation-report.md", IMPLEMENT_REPORT_CONTENT),
         "Writing implementation-report.md.",
+        writeToolLine("implementation-report.md", IMPLEMENT_REPORT_CONTENT),
       ],
       finalText:
         "Outcome: DONE — Fake implementation report written: implementation-report.md",
