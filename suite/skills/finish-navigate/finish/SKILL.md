@@ -3,7 +3,7 @@ name: finish
 description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.2.0
 disable-model-invocation: true
 ---
 
@@ -60,10 +60,20 @@ Creating a PR or merging requires the relevant work to be committed. Finish must
 
 This is a deliberate authorization of a specific mutation, obtained before any commit is made.
 
-## Tracker references stay passive
+## The ticket step
 
-A linked external ticket is context, not a mutation target. Finish may place a NON-closing reference such as `Related to <ticket>` in a pull-request body. It does NOT use auto-closing keywords, comment on the ticket, transition its status, close it, or post a backlink — any of those require an explicit user request.
+This step exists only when the thread's `seed.md` carries an `External:` value naming a tracker ticket AND that tracker is reachable. When there is no such value, when the tracker's tooling or credentials are unavailable, or when the ticket is already closed, say nothing about tickets and deliver the branch exactly as the sections above describe.
+
+When it does apply, determine the tracker from the `External:` value's host and read the matching reference under `references/trackers/` — for a `github.com` ticket that is `references/trackers/github.md`. It carries the availability check, the default-branch lookup, the reference forms, and the exact linking and closing mechanics.
+
+What you offer depends on the disposition the user chose, because the two paths close a ticket by different means:
+
+- **create PR** — offer to place a closing keyword for the ticket in the pull-request body. Settle this BEFORE drafting the body, since the keyword is part of what gets pushed. When the PR's base is the repository's default branch, the keyword is the whole job: it links the ticket to the PR on both objects and the tracker closes the ticket when the PR merges. When the base is NOT the default branch, say so plainly — the keyword will link the ticket but nothing will close it — and offer a non-closing `Related to <ticket>` mention instead. Do not close the ticket yourself on this path: the work is not merged yet, and a closed ticket over an unmerged PR misreports the state of the work.
+- **merge into a confirmed target** — no pull request exists to carry a keyword, so after the merge succeeds, offer to close the ticket with a comment citing the merge commit, so the closed ticket still leads back to the code.
+- **leave as-is** — offer nothing. No work was delivered.
+
+Every one of these is an offer the user accepts or declines, and a decline leaves the ticket untouched. Beyond the offer the user accepted, perform no tracker writes: no label changes, no status transitions, no backlink comments, no closing a ticket the chosen path did not close.
 
 ## After the branch action
 
-Report the outcome of the disposition, then offer `/archive-thread` as the normal optional next action for a thread whose work has been delivered. Never archive automatically — finish owns the repository handoff, and archival is a separate act the user chooses. No closing remark.
+Report the outcome of the disposition, including what happened to a linked ticket — that it was closed, that a closing keyword will close it when the PR merges, that it was linked without closing, or that the user declined — then offer `/archive-thread` as the normal optional next action for a thread whose work has been delivered. Never archive automatically — finish owns the repository handoff, and archival is a separate act the user chooses. No closing remark.

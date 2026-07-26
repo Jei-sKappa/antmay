@@ -12,6 +12,9 @@
 # rerun the script; never hand-edit the generated copies. Removing an entry
 # below does not delete its previously generated copy — delete that by hand.
 
+skills/finish-navigate/finish:
+  - trackers/github.md
+
 skills/finish-navigate/whats-next:
   - recipes/quick.md
   - recipes/standard.md
