@@ -27,6 +27,7 @@ import type {
   AttemptRecord,
   RunCheckpoint,
   WaitingInfo,
+  WaitingReasons,
 } from "../state/checkpoint.js";
 import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
@@ -54,6 +55,27 @@ function pendingQueuesMessage(sorted: string[]): string {
       ? "a pending bundle file awaits"
       : "pending bundle files await";
   return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
+}
+
+/**
+ * The pause's reasons with the queue reason restated over the files a fresh scan
+ * just found. A pause that recorded no queue reason gains one, because files
+ * present now are the reason this resume cannot proceed and the reader is owed
+ * that list either way.
+ */
+function refreshPendingReason(
+  reasons: WaitingReasons,
+  pendingFiles: string[],
+): WaitingReasons {
+  const message = pendingQueuesMessage(pendingFiles);
+  let replaced = false;
+  const next = reasons.map((reason) => {
+    if (reason.kind !== "pending-queues") return reason;
+    replaced = true;
+    return { ...reason, message, pendingFiles };
+  }) as WaitingReasons;
+  if (replaced) return next;
+  return [...next, { kind: "pending-queues", message, pendingFiles }];
 }
 
 /**
@@ -470,9 +492,14 @@ export async function resumeCommand(
         // keeps that boundary kind, folding the scan diagnostic in.
         if (boundaryPause && originalWaiting !== null) {
           const message = `${originalWaiting.message} The pending-queue scan failed again and must be repeated before finalizing: ${scan.message}`;
+          // The governing reason carries the same folded-in text, because that
+          // reason is what the pause renders — leaving it behind would drop the
+          // scan failure from the screen entirely.
+          const [governing, ...rest] = originalWaiting.reasons;
           const waiting: WaitingInfo = {
             ...originalWaiting,
             message,
+            reasons: [{ ...governing, message }, ...rest],
             diagnostics: {
               ...(originalWaiting.diagnostics ?? {
                 category: originalWaiting.kind,
@@ -508,10 +535,18 @@ export async function resumeCommand(
 
       if (scan.pendingFiles.length > 0) {
         if (originalCondition === "waiting-for-user" && originalWaiting !== null) {
-          // A waiting run with non-empty queues stays byte-for-byte unchanged;
-          // print the remaining files and exit 2.
+          // A waiting run with non-empty queues keeps its durable checkpoint
+          // byte-for-byte unchanged; only what is printed reflects the files
+          // that are still there. The queue reason carries them, because that
+          // reason is what renders the list — refreshing the top-level copy
+          // alone would print the stale one.
+          const refreshed = refreshPendingReason(
+            originalWaiting.reasons,
+            scan.pendingFiles,
+          );
           const waiting: WaitingInfo = {
             ...originalWaiting,
+            reasons: refreshed,
             pendingFiles: scan.pendingFiles,
           };
           renderPause(waiting, attemptLogAbs(lastAttempt));

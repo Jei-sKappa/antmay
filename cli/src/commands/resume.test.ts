@@ -410,9 +410,26 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const before = await readCp(h, runId);
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(2);
+    // The printed list comes from the pause's queue reason, so a file still
+    // present has to be named there — the durable checkpoint stays untouched.
     expect(result.out).toContain("q.md");
     const after = await readCp(h, runId);
     expect(after.updatedAt).toBe(before.updatedAt);
+    expect(JSON.stringify(after)).toBe(JSON.stringify(before));
+  });
+
+  it("names a bundle that appeared while the run was paused for another reason", async () => {
+    const h = await setup();
+    // Pause on the stage's own verdict with both queues empty, then queue a
+    // bundle by hand: the pause never recorded a queue reason, but the file is
+    // why this resume cannot proceed and the reader is owed its name.
+    await seed(h, [{ outcome: BLOCKED }]);
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).waiting?.kind).toBe("outcome-blocked");
+    dropPendingSync(h.fixture, "appeared.md");
+    const result = await resume(h, runId, standardSteps(h.fixture));
+    expect(result.code).toBe(2);
+    expect(result.out).toContain("appeared.md");
   });
 
   it("downgrades a locked queue-scan failure to a durable gate-error and exits 2", async () => {
@@ -461,6 +478,12 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const cp = await readCp(h, runId);
     expect(cp.waiting?.kind).toBe("git-policy-violation");
     expect(cp.waiting?.message).toContain("scan failed again");
+    // The governing reason is what the pause renders, so the folded-in scan
+    // failure has to reach it too — carrying it on the waiting object alone
+    // would keep it off the screen.
+    expect(cp.waiting?.reasons?.[0]?.kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons?.[0]?.message).toContain("scan failed again");
+    expect(result.out).toContain("scan failed again");
   });
 });
 
