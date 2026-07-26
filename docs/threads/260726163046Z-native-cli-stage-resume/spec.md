@@ -32,7 +32,7 @@ In scope:
 - Persisting the session on the attempt record in the run checkpoint, plus its validation.
 - One new line in the pause block, and one new column in `antmay afk list`.
 - A synthetic session in the scripted test harness so both new renderings are demo-reachable.
-- Two drift guards: a CI test pinning Antmay's matcher against Sandcastle's own parser, and an opt-in real-provider verifier.
+- Two drift guards: a CI test pinning Antmay's matcher against Sandcastle's own parser, and an opt-in real-provider verifier with its own vitest config.
 - Living documentation under `cli/`.
 
 Explicitly **out** of scope:
@@ -93,7 +93,7 @@ export type AttemptOutcome = {
 
 Hoisting `session` out of the union is what makes it true by construction that a session is independent of how the attempt ended. `sessionWarning` is a sibling, not a field inside `session`, because it describes the health of Antmay's capture mechanism rather than the identity of a conversation — the recorded ID stays correct in both diagnostic cases — and it is never persisted.
 
-No new callback and no new `HarnessEvent` variant is added. The adapter writes the diagnostic's prose; the runner forwards it verbatim to `display.warn` exactly once per attempt that carries one. The runner's classifier consumes only the `result` half and must not be able to reach a session through its input.
+No new callback and no new `HarnessEvent` variant is added. The adapter writes the diagnostic's prose; the runner forwards it verbatim to `display.warn` exactly once per attempt that carries one. Classification consumes only the `result` half, which is unchanged.
 
 Every consumer moves with the shape: `cli/src/harness/sandcastle.ts`, `cli/src/harness/scripted/invoker.ts`, `cli/src/test-helpers/fake-harness.ts`, `cli/src/runner/classify.ts`, and `cli/src/runner/runner.ts`, where `outcome.kind` becomes `outcome.result.kind`.
 
@@ -154,13 +154,15 @@ Antmay's matcher can silently stop working in two independent ways, and they nee
 
 **Sandcastle-side drift** — Sandcastle changes which shape it maps to a session ID. Guarded in CI by a case in `cli/src/harness/sandcastle.test.ts` that asserts one fixture line per provider *twice over*: that Antmay's matcher extracts the expected ID, and that `codex(model).parseStreamLine(line)` / `claudeCode(model).parseStreamLine(line)` yields a `session_id` event carrying the same value. `parseStreamLine` is part of Sandcastle's public `AgentProvider` interface and needs no provider binary, credentials, or network. This runs inside `npm run check`.
 
-**Provider-side drift** — a provider renames the field, so Antmay *and* Sandcastle both stop finding it and still agree on any fixture. No offline test can detect this, because the fixture encodes the same assumption. Guarded by `cli/src/harness/session-id.manual.ts`, run by a new `npm run verify:session` and never collected by `npm test`. It holds two independent cases, one per provider — independent so that whoever has only one provider authenticated gets one clear pass and one clear failure rather than an ambiguous half-run. Each invokes `createSandcastleInvoker()` in a throwaway temporary directory with a trivial prompt, `dangerouslySkipPermissions: true` so a no-op prompt cannot hang on an approval, and a short idle timeout. Each asserts that an ID was captured and that the two sources agree, then prints the native resume command for a human to paste. Missing credentials **fail** the case rather than skipping it, because a silent skip is how this guard would rot.
+**Provider-side drift** — a provider renames the field, so Antmay *and* Sandcastle both stop finding it and still agree on any fixture. No offline test can detect this, because the fixture encodes the same assumption. Guarded by `cli/src/harness/session-id.manual.ts`, run by a new `npm run verify:session` — `vitest run --config vitest.manual.config.ts` (per `decisions.md` DR10). That new config declares `include: ["src/**/*.manual.ts"]`, `environment: "node"`, and its own `testTimeout`/`hookTimeout` sized for real provider round trips rather than the 30 s default that `cli/vitest.config.ts` budgets for concurrent Git-backed cases. `cli/vitest.config.ts` is not modified: the manual file stays out of `npm test` and `npm run check` because the default config's `include` never matches it, not because an exclusion holds it back, so no later edit can pull live provider calls into the gate by deleting a line. `cli/tsconfig.json` includes all of `src`, so the file is typechecked either way. It holds two independent cases, one per provider — independent so that whoever has only one provider authenticated gets one clear pass and one clear failure rather than an ambiguous half-run. Each invokes `createSandcastleInvoker()` in a throwaway temporary directory with a trivial prompt, `dangerouslySkipPermissions: true` so a no-op prompt cannot hang on an approval, and a short idle timeout. Each asserts that an ID was captured and that the two sources agree, then prints the native resume command for a human to paste. Missing credentials **fail** the case rather than skipping it, because a silent skip is how this guard would rot.
 
 Asserting the last mile — that `codex resume <id>` genuinely reopens the conversation — needs an interactive terminal and stays a human step, pointed at from the manual smoke checklist in `cli/README.md`.
 
 ## Constraints
 
 **Toolchain and dependency.** TypeScript, ESM, Node `>=22`, bundled with `tsup`, tested with `vitest` 2.1.9. The sole runtime dependency is `@ai-hero/sandcastle` 0.12.0, pinned. `npm --prefix cli run check` (typecheck + test + build) must pass.
+
+**Test selection is config-only.** Vitest 2.1.9 exposes `-c, --config <path>`, `--dir <path>`, and `--exclude <glob>`, and no `--include`; passing one aborts with `CACError: Unknown option --include`. Positional arguments filter *within* the configured `include` rather than widening it, `--dir` narrows the scan while `include` still applies, and `--exclude` only appends to the resolved exclude list. No command line can reach a file the config's `include` misses, or lift an exclusion the config declares.
 
 **Pre-release policy (`cli/AGENTS.md`).** The checkpoint schema stays at `schemaVersion: 0`. Write no migration, no compatibility shim, no deprecation window. Making existing run directories unreadable is acceptable and should simply be stated in the commit message. A field is optional only when its absence is a real state — which is the case for `agentSession` — never to let previously written state validate.
 
@@ -181,8 +183,6 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 **Every distinct terminal rendering has a demo scenario** (`cli/AGENTS.md`). Two new renderings arrive here; both must be reachable, per the scenario section above.
 
 **Platform:** macOS only for v0.
-
-**Risk note, not a decision:** `decisions.md` DR2 names `vitest run --include 'src/**/*.manual.ts'` as the invocation for the manual verifier. **Vitest 2.1.9 has no `--include` CLI flag** — it exposes `--exclude` and `-c, --config <path>` only, and positional arguments are filters applied *within* the configured `include`, so they cannot reach a file the config does not match. The interface `npm run verify:session` and the exclusion of the file from `npm test` are pinned; the selection mechanism is left open below. A separate `vitest.manual.config.ts` selected with `--config` is the known-working route, and it also gives the manual cases their own timeout, which real provider calls need well beyond the 30 s default.
 
 ## Acceptance criteria
 
@@ -214,7 +214,7 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 *Enforces `decisions.md` DR7.*
 
 - **AC-3.1** `AttemptOutcome` is an object with optional `session`, optional `sessionWarning`, and a required `result` holding the unchanged `completed`/`failed` union.
-- **AC-3.2** The classifier's input type exposes no session or warning field, so a session is unreachable from classification.
+- **AC-3.2** Classification depends only on the outcome's `result`: no classification path reads `session` or `sessionWarning`.
 - **AC-3.3** `npm --prefix cli run check` passes: no type errors, no failing tests, no unmigrated call site.
 
 ### FR-4 — The session is durable on the attempt record
@@ -264,7 +264,7 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 *Enforces `decisions.md` DR2.*
 
 - **AC-8.1** A case in `cli/src/harness/sandcastle.test.ts` asserts, per provider and on one shared fixture line, both that Antmay's matcher extracts the ID and that Sandcastle's `parseStreamLine` yields a `session_id` event with the same value. It requires no network, credentials, or provider binary.
-- **AC-8.2** `npm test` and `npm run check` do not collect `session-id.manual.ts`; `npm run verify:session` does.
+- **AC-8.2** `npm test` and `npm run check` do not collect `session-id.manual.ts`; `npm run verify:session` does. `cli/vitest.config.ts` is unchanged, so the exclusion holds by non-match rather than by an exclude rule.
 - **AC-8.3** Each manual case fails, rather than skipping, when its provider's credentials are absent.
 - **AC-8.4** Each manual case asserts that an ID was captured and that the two sources agree, then prints the provider's native resume command.
 
@@ -281,7 +281,6 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 
 The *what* above is pinned. These *hows* are deliberately left to the implementer — each satisfies every AC unchanged, changes nothing a reader of the terminal would weigh in on, and is reversible without revising this spec:
 
-- **How the manual verifier is selected by the runner.** A dedicated `vitest.manual.config.ts` chosen with `--config` is the known-working route given that Vitest 2.1.9 has no `--include` flag (see the risk note in Constraints), but any mechanism satisfying AC-8.2 is acceptable, including a different filename convention or an added `exclude` in the default config. The `npm run verify:session` interface is not free.
 - **Where the harness → native-command mapping lives**, provided it lives in exactly one module (see Constraints) and both consumers use it.
 - **How the raw-line matcher is factored** — a helper function, a closure over the attempt, or a small stateful object — and whether it is exported, provided AC-8.1 can call it.
 - **Where the `display.warn` call sits** in the runner relative to classification and persistence, provided AC-2.5 holds on every settle path.
@@ -291,4 +290,4 @@ The *what* above is pinned. These *hows* are deliberately left to the implemente
 - **The trivial prompt text, temporary-directory strategy, idle timeout, and timeout budget** of the manual verifier.
 - **Test file organization** for the new cases, subject to the concurrent-file constraint above.
 
-Not free, and worth restating because each is a settled decision rather than an implementation detail: the `Continue` key label and the two command spellings; `agentSession`'s field names and its optionality; `schemaVersion: 0`; the `<harness>/<session-id>` column format and the most-recent-attempt selection rule; the `scripted-session-<stage-id>-<attempt>` form; and Sandcastle's precedence over the matcher on the resolve path.
+Not free, and worth restating because each is pinned above rather than left to the implementer: the `Continue` key label and the two command spellings; `agentSession`'s field names and its optionality; `schemaVersion: 0`; the `<harness>/<session-id>` column format and the most-recent-attempt selection rule; the `scripted-session-<stage-id>-<attempt>` form; Sandcastle's precedence over the matcher on the resolve path; and `npm run verify:session` selecting the manual verifier through its own `vitest.manual.config.ts` while `cli/vitest.config.ts` stays untouched.
