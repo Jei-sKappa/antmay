@@ -8,7 +8,7 @@ import type {
   HarnessEvent,
   HarnessInvoker,
 } from "../types.js";
-import { resolveStageTarget } from "../../recipe/targets.js";
+import { resolveStageTarget } from "../../pipeline/targets.js";
 import type { ScriptedCaseName, ScriptedScenario } from "./scenario.js";
 import { isCaseCompatibleWithStage } from "./scenario.js";
 

@@ -11,7 +11,7 @@
  */
 
 /**
- * Run `antmay afk run <recipe> --thread <thread>` and require `expectExit`.
+ * Run `antmay afk run <pipeline> --thread <thread>` and require `expectExit`.
  *
  * `flags` are appended to the command line. `during` is an optional hook fired
  * once the child has been running for `afterMs`, receiving the fixture context
@@ -22,7 +22,7 @@ export function run({ expectExit, flags = [], during, afterMs = 400 } = {}) {
   assertExit(expectExit, "run");
   return {
     kind: "invoke",
-    argv: (ctx) => ["afk", "run", ctx.recipe, "--thread", ctx.threadName, ...flags],
+    argv: (ctx) => ["afk", "run", ctx.pipeline, "--thread", ctx.threadName, ...flags],
     expectExit,
     during,
     afterMs,

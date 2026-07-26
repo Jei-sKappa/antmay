@@ -38,7 +38,7 @@ function checkpoint(): RunCheckpoint {
       execution: { cwd: "/tmp/repo", sandbox: "none", branchStrategy: "head" },
     },
     dangerouslySkipPermissions: false,
-    recipeName: "standard",
+    pipelineName: "standard",
     stages: [
       {
         id: "spec",

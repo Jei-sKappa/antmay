@@ -19,9 +19,9 @@ import {
   loadScriptedScenario,
 } from "../harness/scripted/scenario.js";
 import type { HarnessInvoker } from "../harness/types.js";
-import { resolveStageProfiles } from "../recipe/profiles.js";
-import { builtInRecipes, knownStageIds } from "../recipe/standard.js";
-import { resolveStageTarget } from "../recipe/targets.js";
+import { resolveStageProfiles } from "../pipeline/profiles.js";
+import { builtInPipelines, knownStageIds } from "../pipeline/standard.js";
+import { resolveStageTarget } from "../pipeline/targets.js";
 import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint.js";
@@ -91,7 +91,7 @@ type Allocated = {
  * return path.
  */
 export async function runCommand(
-  args: { recipe: string; thread: string; dangerouslySkipPermissions: boolean },
+  args: { pipeline: string; thread: string; dangerouslySkipPermissions: boolean },
   deps: RunDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
@@ -117,11 +117,11 @@ export async function runCommand(
   });
 
   try {
-    // Preflight 1: exact built-in recipe resolution.
-    const recipe = builtInRecipes[args.recipe];
-    if (recipe === undefined) {
-      const known = Object.keys(builtInRecipes).sort().join(", ");
-      return fail(`Unknown recipe "${args.recipe}". Known recipes: ${known}.`);
+    // Preflight 1: exact built-in pipeline resolution.
+    const pipeline = builtInPipelines[args.pipeline];
+    if (pipeline === undefined) {
+      const known = Object.keys(builtInPipelines).sort().join(", ");
+      return fail(`Unknown pipeline "${args.pipeline}". Known pipelines: ${known}.`);
     }
 
     const toggleResult = interpretScriptedHarnessToggle(deps.env);
@@ -142,17 +142,17 @@ export async function runCommand(
     if (!roots.ok) {
       return fail(roots.message);
     }
-    const settings = loadSettings(roots.configRoot, knownStageIds(builtInRecipes));
+    const settings = loadSettings(roots.configRoot, knownStageIds(builtInPipelines));
     if (!settings.ok) {
       return fail(settings.errors.join("\n"));
     }
-    const profilesResult = resolveStageProfiles(recipe, settings.settings);
+    const profilesResult = resolveStageProfiles(pipeline, settings.settings);
     if (!profilesResult.ok) {
       return fail(profilesResult.errors.join("\n"));
     }
     const stages: SnapshottedStage[] = [];
     const targetErrors: string[] = [];
-    recipe.stages.forEach((stage, index) => {
+    pipeline.stages.forEach((stage, index) => {
       const target = resolveStageTarget(stage.target, thread.threadRelPath);
       if (!target.ok) {
         targetErrors.push(`Stage "${stage.id}": ${target.error}`);
@@ -174,7 +174,7 @@ export async function runCommand(
     if (useScripted) {
       const loaded = await loadScriptedScenario(
         roots.configRoot,
-        recipe.stages.map((stage) => stage.id),
+        pipeline.stages.map((stage) => stage.id),
       );
       if (!loaded.ok) {
         return fail(loaded.errors.join("\n"));
@@ -354,7 +354,7 @@ export async function runCommand(
           threadRelPath: thread.threadRelPath,
           workspace,
           dangerouslySkipPermissions: args.dangerouslySkipPermissions,
-          recipeName: recipe.name,
+          pipelineName: pipeline.name,
           stages,
           observedHarnessVersions,
           stageIndex: 0,
@@ -405,7 +405,7 @@ export async function runCommand(
     }
     printRunSummary(displayOptions, {
       runId: checkpoint.runId,
-      recipeName: recipe.name,
+      pipelineName: pipeline.name,
       threadRelPath: thread.threadRelPath,
       workspacePath: workspace.path,
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,

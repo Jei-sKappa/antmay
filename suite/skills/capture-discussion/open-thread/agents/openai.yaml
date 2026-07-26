@@ -1,5 +1,5 @@
 interface:
   display_name: Open Thread
-  short_description: Open a durable workflow thread
+  short_description: Open a durable thread on disk
 policy:
   allow_implicit_invocation: false

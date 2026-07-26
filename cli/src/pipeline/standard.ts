@@ -1,4 +1,4 @@
-import type { PathSelector, Recipe } from "./types.js";
+import type { PathSelector, Pipeline } from "./types.js";
 
 const specFile: PathSelector = { kind: "exact-file", threadRelativePath: "spec.md" };
 const planFile: PathSelector = { kind: "exact-file", threadRelativePath: "plan.md" };
@@ -12,12 +12,18 @@ const implementationReportFile: PathSelector = {
 };
 
 /**
- * The built-in `standard` recipe: the six Antmay workflow stages in
- * order, each carrying its declarative target, three-part Git policy, and
- * queue-resolution behavior. Commit-subject templates carry the literal
- * placeholder `<thread-folder>`, resolved by the boundary engine.
+ * The built-in `standard` pipeline: it automates the automatable core of the
+ * Standard recipe (`docs/recipes/standard.md`) as six stages in order, each
+ * carrying its declarative target, three-part Git policy, and queue-resolution
+ * behavior. Commit-subject templates carry the literal placeholder
+ * `<thread-folder>`, resolved by the boundary engine.
+ *
+ * The pipeline is not a transcription of the recipe: it starts at an existing
+ * thread, omits every step needing a human (discussion, finish, archival), and
+ * runs `implement-plan-with-subagents` where the recipe's step 9 names
+ * `implement-plan`.
  */
-export const standardRecipe: Recipe = {
+export const standardPipeline: Pipeline = {
   name: "standard",
   stages: [
     {
@@ -96,22 +102,22 @@ export const standardRecipe: Recipe = {
 };
 
 /**
- * Every built-in recipe keyed by name. V0 ships only `standard`.
+ * Every built-in pipeline keyed by name. V0 ships only `standard`.
  */
-export const builtInRecipes: Record<string, Recipe> = {
-  standard: standardRecipe,
+export const builtInPipelines: Record<string, Pipeline> = {
+  standard: standardPipeline,
 };
 
 /**
- * The set of every stage ID across the supplied recipes, for the settings
- * validator to reject stage overrides that target no installed recipe.
+ * The set of every stage ID across the supplied pipelines, for the settings
+ * validator to reject stage overrides that target no installed pipeline.
  */
 export function knownStageIds(
-  recipes: Record<string, Recipe>,
+  pipelines: Record<string, Pipeline>,
 ): ReadonlySet<string> {
   const ids = new Set<string>();
-  for (const recipe of Object.values(recipes)) {
-    for (const stage of recipe.stages) {
+  for (const pipeline of Object.values(pipelines)) {
+    for (const stage of pipeline.stages) {
       ids.add(stage.id);
     }
   }

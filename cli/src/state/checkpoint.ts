@@ -7,7 +7,7 @@ import type {
   StageDescriptor,
   StageProfile,
   StageTarget,
-} from "../recipe/types.js";
+} from "../pipeline/types.js";
 import type { WorkspaceConfig } from "../workspace/types.js";
 
 /**
@@ -147,7 +147,7 @@ export type RunCheckpoint = {
   threadRelPath: string;
   workspace: WorkspaceConfig;
   dangerouslySkipPermissions: boolean;
-  recipeName: string;
+  pipelineName: string;
   stages: SnapshottedStage[];
   observedHarnessVersions: Partial<Record<HarnessId, string>>;
   stageIndex: number;
@@ -617,8 +617,8 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
   if (typeof doc.dangerouslySkipPermissions !== "boolean") {
     errors.push(`dangerouslySkipPermissions must be a boolean.`);
   }
-  if (!isNonEmptyString(doc.recipeName)) {
-    errors.push(`recipeName must be a non-empty string.`);
+  if (!isNonEmptyString(doc.pipelineName)) {
+    errors.push(`pipelineName must be a non-empty string.`);
   }
 
   const stageInfos: Array<{ id: string; harness: string } | undefined> = [];

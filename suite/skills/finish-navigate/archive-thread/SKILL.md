@@ -1,15 +1,15 @@
 ---
 name: archive-thread
-description: Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread.
+description: Relocate a thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.1.1
 disable-model-invocation: true
 ---
 
 # Archive Thread
 
-Archive a workflow thread by relocating its folder from the active `docs/threads/` listing into `docs/threads/archive/`. This is the act that ends a thread's active lifecycle: once its folder sits under `archive/`, the thread is no longer live work.
+Archive a thread by relocating its folder from the active `docs/threads/` listing into `docs/threads/archive/`. This is the act that ends a thread's active lifecycle: once its folder sits under `archive/`, the thread is no longer live work.
 
 Archiving happens on **explicit user intent only**. Never scan for archivable threads on your own initiative, and run **no completion checks of any kind** — you do not inspect any status or report to decide whether the thread "deserves" archival. If the user asks to archive a thread, that intent is the whole authorization.
 
@@ -27,7 +27,7 @@ Before moving, look inside the target thread for three workspace folders that ho
 
 If any of these is non-empty, **name what it contains** — the bundle titles or headers in `.pending-decisions/` and `.pending-reviews/`, the interrupted run identifiers in `.implementation-runs/` — and ask the user for **one** confirmation to archive anyway. This is an advisory signal so the user archives with eyes open, not a gate: a single confirmation is enough, and the user may always proceed.
 
-On confirmed archival these folders move along with the thread, **untouched**. Never delete them or anything inside them, and never empty them "to tidy up" — inside an archived thread they are inert residue with no remaining workflow meaning, and removing them destroys durable record for no benefit.
+On confirmed archival these folders move along with the thread, **untouched**. Never delete them or anything inside them, and never empty them "to tidy up" — inside an archived thread they are inert residue with no remaining operational meaning, and removing them destroys durable record for no benefit.
 
 ## Recording an abandonment first
 

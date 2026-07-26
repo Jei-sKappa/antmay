@@ -21,7 +21,7 @@ three files.
 ## Antmay CLI
 
 `antmay` is a strict, non-interactive command-line executor that drives the
-Antmay workflow unattended. It runs a built-in recipe stage by stage
+Antmay method unattended. It runs a built-in pipeline stage by stage
 against one selected thread through an agentic harness (Codex or Claude Code),
 with durable checkpoints, workspace locking, and per-stage Git boundaries. See
 `README.md` for the user-facing contract (settings, lock recovery, the manual
@@ -80,7 +80,7 @@ behavior stay stable.
 
 One top-level namespace, three subcommands:
 
-- `antmay afk run <recipe> --thread <path> [--dangerously-skip-permissions]`
+- `antmay afk run <pipeline> --thread <path> [--dangerously-skip-permissions]`
 - `antmay afk resume <run-id>`
 - `antmay afk list`
 
@@ -89,17 +89,23 @@ never touch config, state, Git, or harnesses.
 
 ### Execution model
 
-- A **recipe** (`src/recipe/`) is an ordered array of serializable
-  `StageDescriptor`s. V0 ships one built-in recipe, `standard`, whose six stages
-  map to workflow skills (`spec`, `reconcile-spec`, `review-spec`,
+- A **pipeline** (`src/pipeline/`) is an ordered array of serializable
+  `StageDescriptor`s. V0 ships one built-in pipeline, `standard`, whose six
+  stages map to suite skills (`spec`, `reconcile-spec`, `review-spec`,
   `plan-strict`, `reconcile-plan`, `implement-plan-with-subagents`).
+- A pipeline automates the automatable core of a **recipe** — one of the three
+  documented paths under `docs/recipes/`. The two are deliberately not 1:1: the
+  `standard` pipeline starts at an existing thread, omits every recipe step that
+  needs a human, and substitutes `implement-plan-with-subagents` for the
+  recipe's `implement-plan`. A recipe guides and never governs; a pipeline
+  enforces Git boundaries and queue gates. Never call a pipeline a recipe.
 - Each stage carries a declarative **target**, a three-part **Git policy**
   (`headMayChange`, `allowedChanges` selectors, `changeRequired`,
   `commitSubjectTemplate` with the literal `<thread-folder>` placeholder), and a
   **queue resolution** (`advance` vs `rerun`). Descriptors hold no functions so
   the checkpoint can persist them verbatim.
 - The generic **runner** (`src/runner/`) drives a stage through the harness,
-  classifies the session, and recognizes the skill's terminal `Outcome:` line.
+  classifies the attempt, and recognizes the skill's terminal `Outcome:` line.
   On a recognized `DONE`, the **boundary engine** (`src/gitops/`) validates that
   post-DONE changes fall within the stage's allowed selectors and produces the
   declared boundary commit. This includes the implement stage: the skill makes
@@ -123,9 +129,9 @@ never touch config, state, Git, or harnesses.
 - `commands/` — the three subcommand implementations (`run`, `resume`, `list`).
 - `config/` — settings loading/validation (`settings.ts`) and root path
   resolution (`roots.ts`).
-- `recipe/` — recipe/stage types, the `standard` recipe, and profile/target
-  resolution.
-- `runner/` — the generic stage runner, session classification, outcome
+- `pipeline/` — pipeline/stage types, the `standard` pipeline, and
+  profile/target resolution.
+- `runner/` — the generic stage runner, attempt classification, outcome
   recognition, and signal handling.
 - `gitops/` — Git wrapper, working-tree status, and the boundary engine.
 - `harness/` — the Sandcastle invoker, executable probing, and prompt assembly.
@@ -135,7 +141,7 @@ never touch config, state, Git, or harnesses.
   current-checkout detection, and the curated terminal stream.
 - `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
 - `scripts/demo.mjs` + `scripts/demo/` + `scripts/scenarios/` —
-  dependency-free developer demo: a generic driver, its step/fixture/recipe
+  dependency-free developer demo: a generic driver, its step/fixture/pipeline
   helpers, and one self-contained file per scenario, driving a selected scripted
   scenario through a unique `/tmp` repository.
 
@@ -246,7 +252,7 @@ which is how a scenario signals a live run or changes the world underneath one.
 Anything a single scenario needs — a rejecting Git hook, an unreadable queue, a
 revoked permission — belongs in that scenario's own file, never in the driver.
 `scripts/demo/fixture.mjs` holds the helpers those actions share, and
-`scripts/demo/recipe.mjs` supplies the all-correct scripted document a scenario
+`scripts/demo/pipeline.mjs` supplies the all-correct scripted document a scenario
 overrides one stage of, so each file reads as "the standard run, except this".
 
 Besides `label`, `scenario` and `steps`, a scenario may declare `note` — printed

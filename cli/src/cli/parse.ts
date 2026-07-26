@@ -23,7 +23,7 @@ export type CliCommand =
   | { kind: "version" }
   | {
       kind: "run";
-      recipe: string;
+      pipeline: string;
       thread: string;
       dangerouslySkipPermissions: boolean;
     }
@@ -126,7 +126,7 @@ function parseRun(args: string[]): CliCommand {
     return { kind: "version" };
   }
   if (parsed.positionals.length === 0) {
-    return usageError("Missing required <recipe> argument.", RUN_USAGE);
+    return usageError("Missing required <pipeline> argument.", RUN_USAGE);
   }
   if (parsed.positionals.length > 1) {
     return usageError(
@@ -140,7 +140,7 @@ function parseRun(args: string[]): CliCommand {
   }
   return {
     kind: "run",
-    recipe: parsed.positionals[0]!,
+    pipeline: parsed.positionals[0]!,
     thread,
     dangerouslySkipPermissions:
       parsed.values["dangerously-skip-permissions"] === true,

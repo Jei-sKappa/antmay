@@ -1,6 +1,6 @@
 # Roadmap
 
-Roadmap explores and structures a larger direction, then decomposes it into independently executable child threads — and then it is done. Its purpose is direction and decomposition, not ongoing coordination. A Roadmap thread is not a long-lived umbrella: once it has set the direction and materialized its children, it finishes like any other thread. It tracks no child status, aggregates no progress, holds no checkboxes or completion markers, and never becomes a coordinator its children report to. The children are ordinary threads that run their own workflows to completion on their own.
+Roadmap explores and structures a larger direction, then decomposes it into independently executable child threads — and then it is done. Its purpose is direction and decomposition, not ongoing coordination. A Roadmap thread is not a long-lived umbrella: once it has set the direction and materialized its children, it finishes like any other thread. It tracks no child status, aggregates no progress, holds no checkboxes or completion markers, and never becomes a coordinator its children report to. The children are ordinary threads that run their own recipes to completion on their own.
 
 ## Sequence
 
@@ -37,7 +37,7 @@ Feedback flows in both directions between a Roadmap and its descendants.
 
 `materialize-roadmap-threads` creates the child threads from the `CB<N>` briefs. It is idempotent: it creates a thread for each brief that has no materialized reference yet, skips and verifies each brief already materialized, and adds each `Materialized thread:` reference immediately after creating the corresponding child.
 
-A materialized child is an ordinary thread. When a child itself proves to need further decomposition, it may in turn follow the Roadmap workflow — but parent–child cycles are not meaningful and must never be created; a descendant never becomes an ancestor of its own parent.
+A materialized child is an ordinary thread. When a child itself proves to need further decomposition, it may in turn follow the Roadmap recipe — but parent–child cycles are not meaningful and must never be created; a descendant never becomes an ancestor of its own parent.
 
 ## Resolving pending decisions
 
@@ -61,4 +61,4 @@ A Roadmap thread completes at `finish` once the direction is set and the childre
 
 ## Template
 
-The exact recommended sequence is also published at [`suite/shared/references/workflows/roadmap.md`](../../suite/shared/references/workflows/roadmap.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.
+The exact recommended sequence is also published at [`suite/shared/references/recipes/roadmap.md`](../../suite/shared/references/recipes/roadmap.md), the canonical copy that recipe-aware skills mirror into their references; this document describes the path rather than reproducing that list.

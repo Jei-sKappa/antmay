@@ -1,4 +1,4 @@
-import { standardScenario } from "../demo/recipe.mjs";
+import { standardScenario } from "../demo/pipeline.mjs";
 import { chmodPath } from "../demo/fixture.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
 

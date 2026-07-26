@@ -1,4 +1,4 @@
-# Standard workflow
+# Standard recipe
 
 1. Discuss the change with `discussion` to settle open questions.
 2. Sketch the direction with `propose`, then align it against existing decisions with `reconcile-proposal`. *(optional)*

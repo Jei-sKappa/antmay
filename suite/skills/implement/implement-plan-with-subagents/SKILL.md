@@ -106,7 +106,7 @@ When authorization is present, the pre-existing dirty changes are unavoidably pi
 
 ## Procedure
 
-Steps 1–5 are preflight. They complete in full — with no workflow artifact written, no run workspace allocated, no project file edited, no subagent dispatched, and no commit made — before execution begins at step 6. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–5 are preflight. They complete in full — with no thread artifact written, no run workspace allocated, no project file edited, no subagent dispatched, and no commit made — before execution begins at step 6. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
 
 1. **Safety preflight: dirty worktree.** Per `## Dirty Worktree Handling`, the orchestrator runs this check first. On a dirty tree without valid advance authorization, refuse now — write nothing, spawn no subagent, name the dirty paths, give the exact re-invocation authorization, and end `Outcome: REFUSED — <…>`. Do not ask, do not wait.
 
@@ -296,7 +296,7 @@ If the plan itself needs revision (the plan calls for an outdated approach, a ta
 
 ## Immutability
 
-Plan artifacts are IMMUTABLE. The orchestrator reads them READ-ONLY; the implementer subagent reads them READ-ONLY; the merged reviewer subagent reads them READ-ONLY. The plan is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
+Plan artifacts are IMMUTABLE. The orchestrator reads them READ-ONLY; the implementer subagent reads them READ-ONLY; the merged reviewer subagent reads them READ-ONLY. The plan is not edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any file that is not a thread artifact — not to the plan.
 
 If during the orchestration cycle the implementer or the reviewer discovers that the plan is wrong (a plan task contradicts the observed code state, a plan task references a file that has been renamed, a plan task's verification block is built on a wrong assumption), the correct move is to surface the finding in the cycle's factual progress block as a concern (if the implementer routed around the issue and finished the task and both lanes passed), or to route the required human decision per `## Blocked` (if the issue is structural and the fix loop did not converge), and record it in the implementation report. The orchestrator does not revise the plan inside this run; plan revision happens upstream — the living plan is revised (re-run planning, or edit it in place as a living document) or its spec is fixed and the plan recompiled — and handed back on a fresh run.
 

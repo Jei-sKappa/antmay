@@ -19,7 +19,7 @@ function validCheckpoint(): RunCheckpoint {
       execution: { cwd: "/Users/dev/repo", sandbox: "none", branchStrategy: "head" },
     },
     dangerouslySkipPermissions: false,
-    recipeName: "standard",
+    pipelineName: "standard",
     stages: [
       {
         id: "spec",

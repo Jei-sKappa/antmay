@@ -1,4 +1,4 @@
-import { standardScenario } from "../demo/recipe.mjs";
+import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
 /**

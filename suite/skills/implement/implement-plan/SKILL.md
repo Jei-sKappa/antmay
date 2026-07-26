@@ -92,7 +92,7 @@ This skill is SINGLE-AGENT. The current session reads the plan, executes each pl
 
 ## Procedure
 
-Steps 1–4 are preflight. They complete in full — with no workflow artifact written, no run workspace allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–4 are preflight. They complete in full — with no thread artifact written, no run workspace allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
 
 1. **Safety preflight: dirty worktree.** Per `## Dirty worktree handling`, run this check first. On a dirty tree without valid advance authorization, refuse now — write nothing, name the dirty paths, give the exact re-invocation authorization, and end `Outcome: REFUSED — <…>`. Do not ask, do not wait.
 
@@ -187,6 +187,6 @@ If the plan itself needs revision (the plan calls for an outdated approach, a ta
 
 ## Immutability
 
-Plan artifacts are IMMUTABLE. The implementer reads the index and every task file READ-ONLY. Nothing in the plan is edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any non-workflow file in the repository — not to the plan.
+Plan artifacts are IMMUTABLE. The implementer reads the index and every task file READ-ONLY. Nothing in the plan is edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any file that is not a thread artifact — not to the plan.
 
 What the implementer DOES modify is source code, plus the thread's singleton implementation report per `## Implementation report`; it also writes the run progress file per `## Run workspace`. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.

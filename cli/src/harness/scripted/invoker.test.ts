@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { renderStagePrompt } from "../prompt.js";
 import type { AttemptRequest } from "../types.js";
-import { resolveStageTarget } from "../../recipe/targets.js";
-import { standardRecipe } from "../../recipe/standard.js";
-import type { StageDescriptor, StageTarget } from "../../recipe/types.js";
+import { resolveStageTarget } from "../../pipeline/targets.js";
+import { standardPipeline } from "../../pipeline/standard.js";
+import type { StageDescriptor, StageTarget } from "../../pipeline/types.js";
 import { createAttemptLog, type AttemptLogHeader } from "../../state/logs.js";
 import {
   createRepoFixture,
@@ -60,7 +60,7 @@ function makeScenario(
 }
 
 function stageById(id: string): StageDescriptor {
-  const stage = standardRecipe.stages.find((entry) => entry.id === id);
+  const stage = standardPipeline.stages.find((entry) => entry.id === id);
   if (stage === undefined) {
     throw new Error(`missing stage ${id}`);
   }

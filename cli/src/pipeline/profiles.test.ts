@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AfkSettings } from "../config/settings.js";
 import { DEFAULT_HEARTBEAT_SECONDS, resolveStageProfiles } from "./profiles.js";
-import type { Recipe } from "./types.js";
+import type { Pipeline } from "./types.js";
 
 const dummyPolicy = {
   headMayChange: false,
@@ -21,7 +21,7 @@ function stage(id: string) {
   };
 }
 
-const recipe: Recipe = {
+const pipeline: Pipeline = {
   name: "synthetic",
   stages: [stage("alpha"), stage("beta")],
 };
@@ -39,7 +39,7 @@ describe("resolveStageProfiles (AC-4.1)", () => {
       idleTimeoutSeconds: 86400,
       heartbeatSeconds: DEFAULT_HEARTBEAT_SECONDS,
     };
-    const result = resolveStageProfiles(recipe, settings);
+    const result = resolveStageProfiles(pipeline, settings);
     expect(result).toEqual({ ok: true, profiles: [seeded, seeded] });
   });
 
@@ -61,7 +61,7 @@ describe("resolveStageProfiles (AC-4.1)", () => {
         },
       },
     };
-    const result = resolveStageProfiles(recipe, settings);
+    const result = resolveStageProfiles(pipeline, settings);
     expect(result).toEqual({
       ok: true,
       profiles: [
@@ -93,7 +93,7 @@ describe("resolveStageProfiles (AC-4.1)", () => {
         beta: { harness: "claude-code", model: "b" },
       },
     };
-    const result = resolveStageProfiles(recipe, settings);
+    const result = resolveStageProfiles(pipeline, settings);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.profiles[0].harness).toBe("codex");
@@ -102,7 +102,7 @@ describe("resolveStageProfiles (AC-4.1)", () => {
 
   it("aggregates errors for every unresolved stage", () => {
     const settings: AfkSettings = { defaults: {}, stages: {} };
-    const result = resolveStageProfiles(recipe, settings);
+    const result = resolveStageProfiles(pipeline, settings);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     // missing harness + missing model for each of two stages
@@ -116,7 +116,7 @@ describe("resolveStageProfiles (AC-4.1)", () => {
       defaults: { harness: "codex" },
       stages: {},
     };
-    const result = resolveStageProfiles(recipe, settings);
+    const result = resolveStageProfiles(pipeline, settings);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.errors.every((e) => e.includes("model"))).toBe(true);
@@ -127,7 +127,7 @@ describe("resolveStageProfiles (AC-4.1)", () => {
       defaults: { harness: "codex", model: "m", prompt: "shared" },
       stages: { alpha: { prompt: "" } },
     };
-    const result = resolveStageProfiles(recipe, settings);
+    const result = resolveStageProfiles(pipeline, settings);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.profiles[0].prompt).toBe("");

@@ -147,7 +147,7 @@ async function seed(
   };
   const code = await runCommand(
     {
-      recipe: "standard",
+      pipeline: "standard",
       thread: h.fixture.threadFolder as string,
       dangerouslySkipPermissions: overrides.dangerouslySkipPermissions ?? false,
     },

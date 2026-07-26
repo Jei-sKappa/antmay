@@ -142,7 +142,7 @@ async function run(
   h: Harness,
   steps: FakeHarnessStep[],
   overrides: Partial<{
-    recipe: string;
+    pipeline: string;
     thread: string;
     dangerouslySkipPermissions: boolean;
     env: NodeJS.ProcessEnv;
@@ -177,7 +177,7 @@ async function run(
   };
   const code = await runCommand(
     {
-      recipe: overrides.recipe ?? "standard",
+      pipeline: overrides.pipeline ?? "standard",
       thread: overrides.thread ?? (h.fixture.threadFolder as string),
       dangerouslySkipPermissions: overrides.dangerouslySkipPermissions ?? false,
     },
@@ -243,7 +243,7 @@ async function soleCheckpointDir(stateRoot: string): Promise<string> {
 }
 
 /**
- * Standard-recipe script: the two authoring stages (spec, plan-strict), the
+ * Standard-pipeline script: the two authoring stages (spec, plan-strict), the
  * first reconciliation stage, and the implementation stage change their
  * boundary; review-spec and reconcile-plan change nothing.
  */
@@ -262,7 +262,7 @@ function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
 }
 
 describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
-  it("runs the standard recipe to completion, committing only the boundaries that changed", async () => {
+  it("runs the standard pipeline to completion, committing only the boundaries that changed", async () => {
     const h = await setup();
     const folder = h.fixture.threadFolder as string;
     const before = (await commitSubjects(h.fixture)).length;
@@ -335,11 +335,11 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     expect(await lockNames(h.stateRoot)).toEqual([]);
   }
 
-  it("rejects an unknown recipe", async () => {
+  it("rejects an unknown pipeline", async () => {
     const h = await setup();
-    const result = await run(h, [], { recipe: "nope" });
+    const result = await run(h, [], { pipeline: "nope" });
     await expectClean(h, result);
-    expect(result.err).toContain("Unknown recipe");
+    expect(result.err).toContain("Unknown pipeline");
   });
 
   it("rejects an unresolvable thread", async () => {
@@ -551,7 +551,7 @@ function dropPendingDecisionSync(fixture: RepoFixture, name: string): void {
   writeFileSync(path.join(dir, name), "open decision", "utf8");
 }
 
-/** Happy-path scripted scenario for the built-in standard recipe. */
+/** Happy-path scripted scenario for the built-in standard pipeline. */
 function standardScriptedScenario(
   overrides: Partial<Record<string, string[]>> = {},
 ): Record<string, unknown> {

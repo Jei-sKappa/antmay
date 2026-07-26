@@ -34,7 +34,7 @@ const SCENARIO_DIR = path.join(SCRIPT_DIR, "scenarios");
 // prefix, so this is also the one that sorts first.
 const DEFAULT_SCENARIO_ID = "01-all-done";
 const SCRIPTED_TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
-const DEFAULT_RECIPE = "standard";
+const DEFAULT_PIPELINE = "standard";
 const USAGE =
   "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--no-color] [--show-demo-summary]";
 
@@ -516,7 +516,7 @@ async function main() {
     stateRoot,
     configRoot,
     demoRoot,
-    recipe: scenario.recipe ?? DEFAULT_RECIPE,
+    pipeline: scenario.pipeline ?? DEFAULT_PIPELINE,
     runId: () => soleRunId(stateRoot),
     runDir: () => path.join(stateRoot, "afk-runs", soleRunId(stateRoot)),
     // Registered by an action that made something unreadable or unwritable, so

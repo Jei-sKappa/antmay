@@ -5,7 +5,7 @@ import type { HarnessId } from "../config/settings.js";
  * content: `$<skill>` for Codex, `/<skill>` for Claude Code, followed by a
  * space and the resolved target in backticks and a period. The resolved profile
  * prompt is appended after a single space only when it is non-empty. No generic
- * or workflow-specific instructions are added.
+ * or pipeline-specific instructions are added.
  */
 export function renderStagePrompt(
   harness: HarnessId,

@@ -1,6 +1,6 @@
 # Thread model
 
-A thread is one unit of work at one moment: a durable home on disk for the decisions, artifacts, and outcome of a single change or direction. This document defines the substrate every workflow shares — the layout, the decision log, the archive lifecycle, write authority, cross-thread references, and the temporary workspaces.
+A thread is one unit of work at one moment: a durable home on disk for the decisions, artifacts, and outcome of a single change or direction. This document defines the substrate every recipe shares — the layout, the decision log, the archive lifecycle, write authority, cross-thread references, and the temporary workspaces.
 
 ## Layout
 
@@ -37,7 +37,7 @@ Metadata is sparse and contextual: a field appears only when it carries real inf
 - A materialized Roadmap child additionally carries a reference to its parent Roadmap and to the child brief it was created from.
 - `Supersedes:` appears only when a known supersession relationship is useful.
 
-The folder timestamp records opening time, so the seed does not duplicate it. No owner, workflow name, disposition, or lifecycle status is added.
+The folder timestamp records opening time, so the seed does not duplicate it. No owner, recipe name, disposition, or lifecycle status is added.
 
 ## Decisions
 
@@ -45,7 +45,7 @@ The folder timestamp records opening time, so the seed does not duplicate it. No
 
 The log is append-only. A changed decision is recorded by appending a new superseding record that names the record it supersedes; prior records are never rewritten. `seed.md` plus `decisions.md` are designed to be sufficient on their own to author the next artifact without recovering the original chat.
 
-Any skill — regardless of its interaction posture — that obtains a new human decision during execution appends it to `decisions.md` as an ordinary `DR<N>` record **before** acting on it. A genuine decision is an answer that settles product or workflow intent; trivial input clarifications (such as which file was meant) need no record. This holds equally whether the decision was elicited in an interactive dialogue or settled through a pending-decision bundle: every human decision that shapes an artifact exists in `decisions.md` before the artifact depends on it.
+Any skill — regardless of its interaction posture — that obtains a new human decision during execution appends it to `decisions.md` as an ordinary `DR<N>` record **before** acting on it. A genuine decision is an answer that settles product or process intent; trivial input clarifications (such as which file was meant) need no record. This holds equally whether the decision was elicited in an interactive dialogue or settled through a pending-decision bundle: every human decision that shapes an artifact exists in `decisions.md` before the artifact depends on it.
 
 ## Historical artifacts versus living documentation
 
@@ -75,10 +75,10 @@ Archive location is the only terminal lifecycle signal. A thread directly under 
 
 Completed and abandoned threads are distinguished by their durable content:
 
-- **Completed** work carries its workflow's final deliverable — the implementation report for Quick and Standard, or the roadmap and its materialized children for Roadmap.
+- **Completed** work carries its recipe's final deliverable — the implementation report for Quick and Standard, or the roadmap and its materialized children for Roadmap.
 - **Abandonment** is recorded as a decision in `decisions.md`, with its rationale.
 
-Archiving is the explicit act that ends a thread's active lifecycle. Before moving a thread, the archival operation inspects the three temporary workspaces and, if any are non-empty, names their contents — bundle titles or headers, interrupted run identifiers — and asks the user to confirm archival anyway. This is an advisory warning and a single meaningful confirmation, not a gate. On confirmed archival the workspaces are carried along untouched; archival never deletes them or their contents. In an archived thread these folders are inert local residue with no workflow meaning — the pending-state semantics below apply only to active threads. The user may delete the residue manually at any time.
+Archiving is the explicit act that ends a thread's active lifecycle. Before moving a thread, the archival operation inspects the three temporary workspaces and, if any are non-empty, names their contents — bundle titles or headers, interrupted run identifiers — and asks the user to confirm archival anyway. This is an advisory warning and a single meaningful confirmation, not a gate. On confirmed archival the workspaces are carried along untouched; archival never deletes them or their contents. In an archived thread these folders are inert local residue with no operational meaning — the pending-state semantics below apply only to active threads. The user may delete the residue manually at any time.
 
 ## External references
 
@@ -90,11 +90,11 @@ Cross-thread references use plain repo-relative thread-root directory paths, for
 
 ### Accepted limitation
 
-Moving a thread into `docs/threads/archive/` changes its literal path, so parent, child, decision-record, external, and other repo-relative references to a thread may break when that thread is archived. This is a known and accepted limitation of the workflow. Archival performs a simple location move and does not attempt to preserve, discover, or rewrite cross-thread references, and this document promises no repair mechanism for it. The timestamp-and-slug embedded in every thread path keeps post-archival recovery a trivial search even when a literal path no longer resolves.
+Moving a thread into `docs/threads/archive/` changes its literal path, so parent, child, decision-record, external, and other repo-relative references to a thread may break when that thread is archived. This is a known and accepted limitation of the method. Archival performs a simple location move and does not attempt to preserve, discover, or rewrite cross-thread references, and this document promises no repair mechanism for it. The timestamp-and-slug embedded in every thread path keeps post-archival recovery a trivial search even when a literal path no longer resolves.
 
 ## Branch-agnosticism
 
-The workflow defines no thread-to-branch mapping. Thread identity lives entirely in the thread folder, never in a branch name. No workflow skill creates, switches, or names a branch on its own initiative. Implementation commits land on the current branch as found, and branch dispositions at delivery are user-selected. The user may work directly on the default branch, use one branch per thread, or share a branch across threads — the workflow neither knows nor cares.
+The method defines no thread-to-branch mapping. Thread identity lives entirely in the thread folder, never in a branch name. No skill creates, switches, or names a branch on its own initiative. Implementation commits land on the current branch as found, and branch dispositions at delivery are user-selected. The user may work directly on the default branch, use one branch per thread, or share a branch across threads — the method neither knows nor cares.
 
 ## Temporary workspaces
 
@@ -102,7 +102,7 @@ Three gitignored, dot-prefixed workspaces hold thread-local operational state. E
 
 ### `.pending-decisions/`
 
-The bridge from in-progress completion-oriented work back to human judgment. It holds only missing human intent discovered after substantive execution has begun — a genuine product or workflow decision the run cannot safely derive on its own. A completion-oriented operation first completes everything it can derive or fix safely, then queues the irreducible judgment here rather than waiting in chat or inventing an answer; emitting a bundle ends the run `BLOCKED`. This queue is distinct from the two situations that never write here: a preflight refusal — an unresolved thread or target, an unmet prerequisite, or a failed safety gate — ends the run `REFUSED` before any artifact is written, and an unfixable operational defect ends the run `BLOCKED` with a diagnosis and no decision bundle.
+The bridge from in-progress completion-oriented work back to human judgment. It holds only missing human intent discovered after substantive execution has begun — a genuine product or process decision the run cannot safely derive on its own. A completion-oriented operation first completes everything it can derive or fix safely, then queues the irreducible judgment here rather than waiting in chat or inventing an answer; emitting a bundle ends the run `BLOCKED`. This queue is distinct from the two situations that never write here: a preflight refusal — an unresolved thread or target, an unmet prerequisite, or a failed safety gate — ends the run `REFUSED` before any artifact is written, and an unfixable operational defect ends the run `BLOCKED` with a diagnosis and no decision bundle.
 
 One file is a **resumption bundle**: one or more human decisions produced by the same operation that share a coherent target and should be settled before the same follow-up action runs once. The normal case is one bundle per producing invocation; an invocation emits separate bundles only when subsets of its questions have meaningfully different targets or follow-ups. Each bundle opens with a routing header naming the producing skill, the target artifact or operation, the originating user request, the creation time, the point count, and a one-line summary — the originating request is carried so a clarification is answerable from the file alone — followed by a required `## Suggested action after resolving the decisions` paragraph — advisory follow-up written by the producer while it still holds the domain context — and then one canonical discussion point per unresolved question. The bundle carries no executable resume contract.
 

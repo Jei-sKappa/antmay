@@ -8,9 +8,9 @@ import type { Display, StageDisposition } from "../display/types.js";
 import { nullDisplay } from "../display/types.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import { readHead } from "../gitops/status.js";
-import { standardRecipe } from "../recipe/standard.js";
-import { resolveStageTarget } from "../recipe/targets.js";
-import type { StageDescriptor } from "../recipe/types.js";
+import { standardPipeline } from "../pipeline/standard.js";
+import { resolveStageTarget } from "../pipeline/targets.js";
+import type { StageDescriptor } from "../pipeline/types.js";
 import type { RunCheckpoint } from "../state/checkpoint.js";
 import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import {
@@ -55,7 +55,7 @@ async function makeRunDir(): Promise<string> {
   return raw;
 }
 
-// Synthetic (non-`standard`) descriptors that prove recipe-agnosticism.
+// Synthetic (non-`standard`) descriptors that prove pipeline-agnosticism.
 const alphaStage: StageDescriptor = {
   id: "alpha",
   skill: "alpha-skill",
@@ -98,7 +98,7 @@ const cleanStage: StageDescriptor = {
 function buildCheckpoint(
   fixture: RepoFixture,
   stages: StageDescriptor[],
-  recipeName = "synthetic",
+  pipelineName = "synthetic",
 ): RunCheckpoint {
   const threadRelPath = fixture.threadRelPath as string;
   const root = fixture.root;
@@ -132,7 +132,7 @@ function buildCheckpoint(
       execution: { cwd: root, sandbox: "none", branchStrategy: "head" },
     },
     dangerouslySkipPermissions: false,
-    recipeName,
+    pipelineName,
     stages: snapshotted,
     observedHarnessVersions: { codex: "codex 1.2.3" },
     stageIndex: 0,
@@ -243,7 +243,7 @@ async function lastSubject(fixture: RepoFixture): Promise<string> {
 }
 
 describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
-  it("runs a synthetic two-stage recipe to completion with per-stage transitions", async () => {
+  it("runs a synthetic two-stage pipeline to completion with per-stage transitions", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const before = await commitCount(fixture);
@@ -275,7 +275,7 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     expect(await lastSubject(fixture)).toBe(`chore(${fixture.threadFolder}): alpha`);
   });
 
-  it("runs the standard recipe through the identical code path", async () => {
+  it("runs the standard pipeline through the identical code path", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const before = await commitCount(fixture);
@@ -293,7 +293,7 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     ];
     const result = await executeRun(
       makeContext(
-        buildCheckpoint(fixture, standardRecipe.stages, standardRecipe.name),
+        buildCheckpoint(fixture, standardPipeline.stages, standardPipeline.name),
         runDir,
         createFakeHarness(steps),
       ),

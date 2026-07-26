@@ -19,7 +19,7 @@ const COMMON_OPTIONS = `Options:
 export const TOP_USAGE = `Usage: antmay <command> [options]
 
 Commands:
-  afk    Run AFK workflow commands unattended
+  afk    Run a pipeline unattended
 
 ${COMMON_OPTIONS}`;
 
@@ -27,17 +27,17 @@ ${COMMON_OPTIONS}`;
 export const AFK_USAGE = `Usage: antmay afk <subcommand> [options]
 
 Subcommands:
-  run <recipe> --thread <path> [--dangerously-skip-permissions]
+  run <pipeline> --thread <path> [--dangerously-skip-permissions]
   resume <run-id>
   list
 
 ${COMMON_OPTIONS}`;
 
 /** Usage shown for `antmay afk run` grammar errors. */
-export const RUN_USAGE = `Usage: antmay afk run <recipe> --thread <path> [--dangerously-skip-permissions]
+export const RUN_USAGE = `Usage: antmay afk run <pipeline> --thread <path> [--dangerously-skip-permissions]
 
 Options:
-      --thread <path>                 Thread to run the recipe against (required)
+      --thread <path>                 Thread to run the pipeline against (required)
       --dangerously-skip-permissions  Grant the run unrestricted host access
   -h, --help                          Show help
       --version                       Show version`;

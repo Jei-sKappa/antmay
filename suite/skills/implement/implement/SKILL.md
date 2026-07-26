@@ -63,7 +63,7 @@ When authorization is present, the pre-existing dirty changes are unavoidably pi
 
 ## Procedure
 
-Steps 1–4 are preflight. They complete in full — with no workflow artifact written, no run workspace allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–4 are preflight. They complete in full — with no thread artifact written, no run workspace allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
 
 1. **Safety preflight: dirty worktree.** Run the `## Dirty worktree handling` check first, before any other preflight step; it refuses a dirty tree that lacks valid advance authorization.
 

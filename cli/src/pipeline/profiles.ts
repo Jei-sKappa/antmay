@@ -1,9 +1,9 @@
 import type { AfkSettings, HarnessId, ProfileFields } from "../config/settings.js";
-import type { Recipe, StageProfile } from "./types.js";
+import type { Pipeline, StageProfile } from "./types.js";
 
 /**
  * The result of resolving every stage's execution profile. On success the
- * `profiles` array is index-aligned with `recipe.stages`; on failure every
+ * `profiles` array is index-aligned with `pipeline.stages`; on failure every
  * stage problem is reported together.
  */
 export type ProfilesResult =
@@ -41,7 +41,7 @@ function mergeLayer(base: ProfileFields, layer: ProfileFields): ProfileFields {
 }
 
 /**
- * Resolve the execution profile for every stage of `recipe`. For each stage,
+ * Resolve the execution profile for every stage of `pipeline`. For each stage,
  * resolution seeds `{ prompt: "", idleTimeoutSeconds: 86400, heartbeatSeconds:
  * 300 }`, shallow-merges
  * `settings.defaults`, then the matching `settings.stages[stage.id]` override,
@@ -50,13 +50,13 @@ function mergeLayer(base: ProfileFields, layer: ProfileFields): ProfileFields {
  * errors are reported together.
  */
 export function resolveStageProfiles(
-  recipe: Recipe,
+  pipeline: Pipeline,
   settings: AfkSettings,
 ): ProfilesResult {
   const profiles: StageProfile[] = [];
   const errors: string[] = [];
 
-  for (const stage of recipe.stages) {
+  for (const stage of pipeline.stages) {
     const seed: ProfileFields = {
       prompt: "",
       idleTimeoutSeconds: 86400,

@@ -13,9 +13,9 @@
 # below does not delete its previously generated copy — delete that by hand.
 
 skills/finish-navigate/whats-next:
-  - workflows/quick.md
-  - workflows/standard.md
-  - workflows/roadmap.md
+  - recipes/quick.md
+  - recipes/standard.md
+  - recipes/roadmap.md
 
 skills/capture-discussion/discussion:
   - formats/discussion-point.md

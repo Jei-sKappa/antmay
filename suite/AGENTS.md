@@ -21,7 +21,7 @@ files.
 
 ## Purpose
 
-The suite is the reference implementation of the Antmay workflow — refined `SKILL.md` files authored by Jei-sKappa that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Skills are distributed via [skills.sh](https://skills.sh) and installed by end users with:
+The suite is the reference implementation of the Antmay method — refined `SKILL.md` files authored by Jei-sKappa that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Skills are distributed via [skills.sh](https://skills.sh) and installed by end users with:
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill <skill-name>
@@ -29,7 +29,7 @@ npx skills add Jei-sKappa/antmay --skill <skill-name>
 
 The skill content has no build or lint pipeline: validation happens by reading the markdown and confirming the skill's instructions are coherent and progressively disclosed. Its one mechanical gate is `node scripts/check-marketplace-skills.mjs`, which protects the distribution manifest (see Layout).
 
-General-purpose, context-agnostic skills (meta-prompting, handoff drafts, research helpers, and the like) live in the separate companion repository `Jei-sKappa/skills`, not here. This repository holds only the skills that serve the thread-based workflow.
+General-purpose, context-agnostic skills (meta-prompting, handoff drafts, research helpers, and the like) live in the separate companion repository `Jei-sKappa/skills`, not here. This repository holds only the skills that serve the thread-based method.
 
 ## Layout
 
@@ -56,7 +56,7 @@ Canonical shared references, the sync tooling that mirrors them into individual 
 
 ```
 shared/
-├── references/                  canonical shared reference sources (e.g. workflows/{quick,standard,roadmap}.md)
+├── references/                  canonical shared reference sources (e.g. recipes/{quick,standard,roadmap}.md)
 └── manifest.yaml                flat map: skill path → list of shared/references/ sources to mirror into it
 scripts/
 ├── sync-shared-references.mjs   mirrors the canonical sources into each declaring skill's references/
@@ -116,14 +116,14 @@ Authoring guidance for every skill body:
 - Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections — routing belongs in the frontmatter description.
 - When a skill body points at one of its own reference files, cite the full direct skill-relative path (e.g. `references/formats/discussion-point.md`) — never an indirect description like "the `discussion-point.md` format under `references/formats/`", and never a bare folder.
 - Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, internal version labels, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `DR<N>` are allowed when they are part of the skill's emitted artifact format.
-- Status naming is fixed suite-wide. The closing `Outcome: DONE | BLOCKED | REFUSED — <reason or pointer>` line a completion-oriented skill ends with is the **terminal outcome** — never call it a "run status", "workflow status", or any other status phrase. A vocabulary a skill defines for its own caller/callee topology (e.g. an orchestrator's subagent reply tokens and lane verdicts) is **skill-local return tokens** — never called a status or an outcome, never emitted in the terminal outcome, and never reused outside the owning skill. A completed *thread's* lasting artifact is its **final deliverable**, not its "terminal outcome". Canonical definition: the repo-root `docs/skill-authoring.md` (`## Terminal outcome` and `## Internal progress and local return contracts`).
+- Status naming is fixed suite-wide. The closing `Outcome: DONE | BLOCKED | REFUSED — <reason or pointer>` line a completion-oriented skill ends with is the **terminal outcome** — never call it a "run status", "stage status", or any other status phrase. A vocabulary a skill defines for its own caller/callee topology (e.g. an orchestrator's subagent reply tokens and lane verdicts) is **skill-local return tokens** — never called a status or an outcome, never emitted in the terminal outcome, and never reused outside the owning skill. A completed *thread's* lasting artifact is its **final deliverable**, not its "terminal outcome". Canonical definition: the repo-root `docs/skill-authoring.md` (`## Terminal outcome` and `## Internal progress and local return contracts`).
 - Only skills that emit the terminal outcome mention it. A skill with none (dialogue-driven, one-shot deliverable, every primitive) stays silent about the protocol AND about its own posture label — no "emit no outcome line" negation, no "this is a dialogue-driven skill" framing: an agent never told the vocabulary exists cannot emit it, and a negation only teaches the concept it forbids.
 
 Skill bodies and every document in this repository also follow "Describe the current state, never the diff" — see the root `AGENTS.md`.
 
 ## Shared references
 
-Some skills ship copies of the same canonical reference (for example the workflow templates under `workflows/` that `whats-next` uses, or the discussion formats). These are NOT hand-maintained per skill:
+Some skills ship copies of the same canonical reference (for example the recipe templates under `recipes/` that `whats-next` uses, or the discussion formats). These are NOT hand-maintained per skill:
 
 - Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
 - Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script mirrors each declared source to the same relative path under the skill's `references/` folder, owning exactly the files the manifest names: it deletes and rewrites precisely those, leaving hand-authored skill-local references untouched. Removing a manifest entry does not delete its previously generated copy — delete that orphan by hand.

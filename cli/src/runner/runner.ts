@@ -140,8 +140,8 @@ function pendingQueuesMessage(sorted: string[]): string {
 
 /**
  * Drive one run from its checkpoint cursor through the generic stage loop until
- * a durable pause, a fatal checkpoint error, or recipe completion. Consumes only
- * snapshotted stage data and typed inputs — never a recipe, stage, or skill
+ * a durable pause, a fatal checkpoint error, or pipeline completion. Consumes only
+ * snapshotted stage data and typed inputs — never a pipeline, stage, or skill
  * identity. The caller releases the lock.
  */
 export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
@@ -154,7 +154,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   const threadFolder = path.posix.basename(threadRelPath);
   const stageCount = checkpoint.stages.length;
   const runId = checkpoint.runId;
-  const recipeName = checkpoint.recipeName;
+  const pipelineName = checkpoint.pipelineName;
   const checkpointPath = path.join(runDir, "state.json");
   const resumeCommand = `antmay afk resume ${runId}`;
 
@@ -176,7 +176,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   function fatal(message: string): RunnerResult {
     display.runFailed({
       runId,
-      recipeName,
+      pipelineName,
       totalElapsedMs: elapsedMs(),
       checkpointPath,
       message,
@@ -190,7 +190,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     display.runPaused({
       waiting,
       runId,
-      recipeName,
+      pipelineName,
       totalElapsedMs: elapsedMs(),
       logAbsPath,
       resumeCommand,
@@ -274,7 +274,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     if (readySig !== null) {
       display.runInterrupted({
         runId,
-        recipeName,
+        pipelineName,
         totalElapsedMs: elapsedMs(),
         checkpointPath,
         resumeCommand,
@@ -566,7 +566,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       if (completed) {
         display.runCompleted({
           runId,
-          recipeName,
+          pipelineName,
           totalElapsedMs: elapsedMs(),
           checkpointPath,
           stageCount,
@@ -671,7 +671,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   // The cursor already sat at (or past) the final stage on entry.
   display.runCompleted({
     runId,
-    recipeName,
+    pipelineName,
     totalElapsedMs: elapsedMs(),
     checkpointPath,
     stageCount,

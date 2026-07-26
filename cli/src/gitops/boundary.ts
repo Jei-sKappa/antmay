@@ -1,11 +1,11 @@
-import { resolveSelector } from "../recipe/targets.js";
-import type { GitPolicy } from "../recipe/types.js";
+import { resolveSelector } from "../pipeline/targets.js";
+import type { GitPolicy } from "../pipeline/types.js";
 import { runGit } from "./git.js";
 
 /**
  * The literal placeholder a commit-subject template carries for the thread
  * folder name. The engine substitutes it with the caller-supplied folder name;
- * it never derives, parses, or branches on recipe/stage/skill identity.
+ * it never derives, parses, or branches on pipeline/stage/skill identity.
  */
 const THREAD_FOLDER_TOKEN = "<thread-folder>";
 
@@ -71,7 +71,7 @@ function selectorMatches(
  * rules are checked: the `HEAD` rule (judged attempt-start → boundary only,
  * when enforced), path selectors bounding the observed changes, and the
  * change-required rule. The engine reads only policy data and paths — never
- * recipe, stage, or skill names.
+ * pipeline, stage, or skill names.
  */
 export function evaluateBoundary(
   policy: GitPolicy,

@@ -71,7 +71,7 @@ async function runHandler(command: RunCommand): Promise<number> {
 
   return runCommand(
     {
-      recipe: command.recipe,
+      pipeline: command.pipeline,
       thread: command.thread,
       dangerouslySkipPermissions: command.dangerouslySkipPermissions,
     },
@@ -94,8 +94,8 @@ async function runHandler(command: RunCommand): Promise<number> {
  * The real `resume` handler. Like `run`, it dynamically imports the command
  * implementation and the concrete harness dependencies only when `resume` was
  * selected. `resume` accepts no execution overrides and never rereads settings
- * or recipe definitions, so it imports neither `loadSettings` nor
- * `builtInRecipes` for resolution.
+ * or pipeline definitions, so it imports neither `loadSettings` nor
+ * `builtInPipelines` for resolution.
  */
 async function resumeHandler(command: ResumeCommand): Promise<number> {
   const [

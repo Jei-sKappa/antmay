@@ -6,9 +6,13 @@
 
 # Antmay
 
-**antmay** is the reference repository for the Antmay workflow — a collection of composable, harness-agnostic `SKILL.md` skills that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk. Every unit of work lives in its own thread under `docs/threads/<thread>/`, holding a self-contained seed, a running decision log, and whatever artifacts the work produces — so a teammate reviewing a PR or a fresh agent session resuming work reads the same durable truth. Skills work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads `SKILL.md` files.
+**Antmay** optimizes Spec Driven Development. It offers a thread-based method for SDD, a suite of skills that support that method, and a CLI that automates it.
 
-Skills are not a CLI, a runtime, or a project-local state file. They are individual capabilities you install and compose — either one at a time for a single job, or arranged into one of three built-in workflows that walk a change end-to-end.
+The method is simple: every unit of work lives in its own thread under `docs/threads/<thread>/`, holding a self-contained seed, a running decision log, and whatever artifacts the work produces. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log.
+
+The **skills** are composable and harness-agnostic `SKILL.md` files that work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads them. They are not a runtime or a project-local state file: they are individual capabilities you install and compose — either one at a time for a single job, or arranged into one of three built-in recipes that walk a change end-to-end.
+
+The **CLI** (`antmay`) runs a **pipeline** unattended, stage by stage, against one thread — with durable checkpoints, workspace locking, and per-stage Git boundaries. A pipeline automates the automatable core of a recipe. See [`cli/`](./cli/README.md).
 
 > General-purpose, context-agnostic skills live in the companion repository [`Jei-sKappa/skills`](https://github.com/Jei-sKappa/skills).
 
@@ -26,17 +30,17 @@ Or install any skill individually:
 npx skills add Jei-sKappa/antmay --skill <skill-name>
 ```
 
-## Workflows
+## Recipes
 
-The three workflows differ only by **process shape** — how much ceremony a change earns. They are subject-neutral: you pick the shape that fits the work, not a router that maps bugs, features, or docs to a track. Every step is a suggestion, never a rule; skipping or adding one never invalidates a thread. A lighter path can grow into a heavier one in place, in the same thread, without starting over.
+A **recipe** is a named, ordered path through the skills. The three differ only by **process shape** — how much ceremony a change earns. They are subject-neutral: you pick the shape that fits the work, not a router that maps bugs, features, or docs to a category. Every step is a suggestion, never a rule; skipping or adding one never invalidates a thread. A lighter path can grow into a heavier one in place, in the same thread, without starting over.
 
-| Workflow | Process shape |
+| Recipe | Process shape |
 | --- | --- |
-| [**Quick**](./docs/workflows/quick.md) | The smallest delivery path — carry one change from a clarified start straight to implemented code and a recorded outcome, with the fewest artifacts that still leave a durable trail. |
-| [**Standard**](./docs/workflows/standard.md) | The full spec-driven path — thread a handoff-grade specification and a prescriptive plan between thread genesis and delivery, kept faithful to the decisions by reconciliation. |
-| [**Roadmap**](./docs/workflows/roadmap.md) | Direction and decomposition — explore a larger direction, write it down as a decomposition, and materialize independently executable child threads; then it is done. |
+| [**Quick**](./docs/recipes/quick.md) | The smallest delivery path — carry one change from a clarified start straight to implemented code and a recorded outcome, with the fewest artifacts that still leave a durable trail. |
+| [**Standard**](./docs/recipes/standard.md) | The full spec-driven path — thread a handoff-grade specification and a prescriptive plan between thread genesis and delivery, kept faithful to the decisions by reconciliation. |
+| [**Roadmap**](./docs/recipes/roadmap.md) | Direction and decomposition — explore a larger direction, write it down as a decomposition, and materialize independently executable child threads; then it is done. |
 
-The canonical methodology documentation — the thread model, the seed and decision-log contracts, the workflow paths, and the skill-authoring rules — lives under [`docs/`](./docs/README.md). That is the active reference for all new threads. Read it before opening a thread or writing any workflow artifact.
+The canonical method documentation — the glossary, the thread model, the seed and decision-log contracts, the recipes, and the skill-authoring rules — lives under [`docs/`](./docs/README.md). That is the active reference for all new threads. Read it before opening a thread or writing any thread artifact.
 
 ## Terminal outcomes
 
@@ -56,7 +60,7 @@ Every skill below is **user-invoked**: you (or your harness, routing on the skil
 
 #### [`open-thread`](./suite/skills/capture-discussion/open-thread/SKILL.md)
 
-Open a durable workflow thread on disk — interpret the user's idea and an optional tracker ticket, then compose the seed and hand normalized creation to the thread-creation primitive — use when a unit of work needs a home before any proposal, spec, or plan exists.
+Open a durable thread on disk — interpret the user's idea and an optional tracker ticket, then compose the seed and hand normalized creation to the thread-creation primitive — use when a unit of work needs a home before any proposal, spec, or plan exists.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-thread
@@ -262,7 +266,7 @@ npx skills add Jei-sKappa/antmay --skill whats-next
 
 #### [`archive-thread`](./suite/skills/finish-navigate/archive-thread/SKILL.md)
 
-Relocate a workflow thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
+Relocate a thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill archive-thread
@@ -312,4 +316,4 @@ Record a descendant thread's parent- or sibling-level discovery — the affected
 npx skills add Jei-sKappa/antmay --skill append-roadmap-feedback
 ```
 
-For the workflow methodology — the thread model, the seed and decision-log contracts, the three workflow paths, and the skill-authoring rules — see [`docs/`](./docs/README.md), the reference for all new threads.
+For the method — the glossary, the thread model, the seed and decision-log contracts, the three recipes, and the skill-authoring rules — see [`docs/`](./docs/README.md), the reference for all new threads.

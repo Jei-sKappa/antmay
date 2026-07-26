@@ -1,7 +1,7 @@
 import { chmodSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { standardScenario } from "../demo/recipe.mjs";
+import { standardScenario } from "../demo/pipeline.mjs";
 import { action, run } from "../demo/steps.mjs";
 
 /**

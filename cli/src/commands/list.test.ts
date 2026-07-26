@@ -74,7 +74,7 @@ function makeCheckpoint(overrides: {
   updatedAt: string;
   condition: RunCondition;
   stageIndex: number;
-  recipeName?: string;
+  pipelineName?: string;
   stages?: SnapshottedStage[];
   repoRoot?: string;
   threadRelPath?: string;
@@ -97,7 +97,7 @@ function makeCheckpoint(overrides: {
       execution: { cwd: repoRoot, sandbox: "none", branchStrategy: "head" },
     },
     dangerouslySkipPermissions: false,
-    recipeName: overrides.recipeName ?? "standard",
+    pipelineName: overrides.pipelineName ?? "standard",
     stages,
     observedHarnessVersions: { codex: "codex 1.0.0" },
     stageIndex: overrides.stageIndex,
@@ -229,7 +229,7 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
     const first = lines[0]!;
     expect(first).toContain("2026-07-23T13:45:00.000Z"); // updated time
     expect(first).toContain("Waiting for user"); // friendly condition
-    expect(first).toContain("standard"); // recipe
+    expect(first).toContain("standard"); // pipeline
     expect(first).toContain("2/3 [plan]"); // one-based stage position + id
     expect(first).toContain("codex/gpt-plan"); // current harness/model
     expect(first).toContain("/Users/dev/repo"); // absolute repo path

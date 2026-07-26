@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  builtInRecipes,
+  builtInPipelines,
   knownStageIds,
-  standardRecipe,
+  standardPipeline,
 } from "./standard.js";
 import type { QueueResolution } from "./types.js";
 
-describe("standardRecipe — stage table (AC-6.1)", () => {
+describe("standardPipeline — stage table (AC-6.1)", () => {
   it("has exactly six stages in the declared order", () => {
-    expect(standardRecipe.name).toBe("standard");
-    expect(standardRecipe.stages.map((s) => s.id)).toEqual([
+    expect(standardPipeline.name).toBe("standard");
+    expect(standardPipeline.stages.map((s) => s.id)).toEqual([
       "spec",
       "reconcile-spec",
       "review-spec",
@@ -21,13 +21,13 @@ describe("standardRecipe — stage table (AC-6.1)", () => {
   });
 
   it("each stage's skill matches its id", () => {
-    for (const stage of standardRecipe.stages) {
+    for (const stage of standardPipeline.stages) {
       expect(stage.skill).toBe(stage.id);
     }
   });
 
   it("declares the correct targets", () => {
-    const byId = Object.fromEntries(standardRecipe.stages.map((s) => [s.id, s]));
+    const byId = Object.fromEntries(standardPipeline.stages.map((s) => [s.id, s]));
     expect(byId.spec.target).toEqual({ kind: "thread-root" });
     expect(byId["reconcile-spec"].target).toEqual({
       kind: "thread-file",
@@ -52,7 +52,7 @@ describe("standardRecipe — stage table (AC-6.1)", () => {
   });
 
   it("declares the exact three-part Git policies incl. commit subjects (AC-12.3)", () => {
-    const byId = Object.fromEntries(standardRecipe.stages.map((s) => [s.id, s]));
+    const byId = Object.fromEntries(standardPipeline.stages.map((s) => [s.id, s]));
 
     expect(byId.spec.gitPolicy).toEqual({
       headMayChange: false,
@@ -114,25 +114,25 @@ describe("standardRecipe — stage table (AC-6.1)", () => {
       "reconcile-plan": "rerun",
       "implement-plan-with-subagents": "rerun",
     };
-    for (const stage of standardRecipe.stages) {
+    for (const stage of standardPipeline.stages) {
       expect(stage.queueResolution).toBe(expected[stage.id]);
     }
   });
 
   it("round-trips unchanged through JSON", () => {
-    const clone = JSON.parse(JSON.stringify(standardRecipe));
-    expect(clone).toEqual(standardRecipe);
+    const clone = JSON.parse(JSON.stringify(standardPipeline));
+    expect(clone).toEqual(standardPipeline);
   });
 });
 
-describe("builtInRecipes and knownStageIds", () => {
-  it("contains only the standard recipe", () => {
-    expect(Object.keys(builtInRecipes)).toEqual(["standard"]);
-    expect(builtInRecipes.standard).toBe(standardRecipe);
+describe("builtInPipelines and knownStageIds", () => {
+  it("contains only the standard pipeline", () => {
+    expect(Object.keys(builtInPipelines)).toEqual(["standard"]);
+    expect(builtInPipelines.standard).toBe(standardPipeline);
   });
 
-  it("collects every stage id across recipes", () => {
-    const ids = knownStageIds(builtInRecipes);
+  it("collects every stage id across pipelines", () => {
+    const ids = knownStageIds(builtInPipelines);
     expect([...ids].sort()).toEqual(
       [
         "spec",
@@ -145,10 +145,10 @@ describe("builtInRecipes and knownStageIds", () => {
     );
   });
 
-  it("unions ids across multiple recipes", () => {
+  it("unions ids across multiple pipelines", () => {
     const ids = knownStageIds({
-      standard: standardRecipe,
-      other: { name: "other", stages: [{ ...standardRecipe.stages[0], id: "custom" }] },
+      standard: standardPipeline,
+      other: { name: "other", stages: [{ ...standardPipeline.stages[0], id: "custom" }] },
     });
     expect(ids.has("custom")).toBe(true);
     expect(ids.has("spec")).toBe(true);

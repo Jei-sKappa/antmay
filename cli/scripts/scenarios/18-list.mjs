@@ -30,7 +30,7 @@ const CLAUDE = {
 
 const CODEX = { ...CLAUDE, harness: "codex", model: "gpt-5-codex" };
 
-/** The `standard` recipe's stages, each with the file its boundary commits. */
+/** The `standard` pipeline's stages, each with the file its boundary commits. */
 const STAGES = [
   ["spec", "spec.md"],
   ["reconcile-spec", "spec.md"],
@@ -162,7 +162,7 @@ function checkpointFor(ctx, row) {
       execution: { cwd: ctx.repoRoot, sandbox: "none", branchStrategy: "head" },
     },
     dangerouslySkipPermissions: false,
-    recipeName: "standard",
+    pipelineName: "standard",
     stages: STAGES.map(([id, file]) => ({
       id,
       skill: id,

@@ -148,7 +148,7 @@ const ACTION_HEADER = "What to do";
  * the identity block, the reason banners, and the closing action lines alike. */
 const CLOSING_KEYS = [
   "Run ID",
-  "Recipe",
+  "Pipeline",
   "Elapsed",
   "Checkpoint",
   "Reason",
@@ -281,7 +281,7 @@ export function printScriptedModeStartup(
 
 /**
  * Render the compact new-run/resume startup details to stdout — run ID,
- * recipe, thread, workspace, permission mode, and the ordered stage IDs. When
+ * pipeline, thread, workspace, permission mode, and the ordered stage IDs. When
  * permissions are unrestricted the prominent warning goes to stderr first, so
  * it leads the startup output rather than trailing it.
  */
@@ -289,7 +289,7 @@ export function printRunSummary(
   options: DisplayOptions,
   info: {
     runId: string;
-    recipeName: string;
+    pipelineName: string;
     threadRelPath: string;
     workspacePath: string;
     dangerouslySkipPermissions: boolean;
@@ -303,7 +303,7 @@ export function printRunSummary(
     : "restricted";
   const width = keyWidth(
     "Run",
-    "Recipe",
+    "Pipeline",
     "Thread",
     "Workspace",
     "Permissions",
@@ -321,7 +321,7 @@ export function printRunSummary(
     [
       paint("Run details", "bold"),
       line("Run", info.runId),
-      line("Recipe", info.recipeName),
+      line("Pipeline", info.pipelineName),
       line("Thread", info.threadRelPath),
       line("Workspace", info.workspacePath),
       line("Permissions", permissionMode),
@@ -341,7 +341,7 @@ function runSummaryBlock(
   paint: Painter,
   info: {
     runId: string;
-    recipeName: string;
+    pipelineName: string;
     totalElapsedMs: number;
     checkpointPath: string;
   },
@@ -352,7 +352,7 @@ function runSummaryBlock(
     "",
     paint("Run summary", "bold"),
     line("Run ID", info.runId),
-    line("Recipe", info.recipeName),
+    line("Pipeline", info.pipelineName),
     line("Elapsed", formatDuration(info.totalElapsedMs)),
     line("Checkpoint", info.checkpointPath),
   ];

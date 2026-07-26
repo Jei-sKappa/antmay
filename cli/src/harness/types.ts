@@ -1,5 +1,5 @@
 import type { HarnessId } from "../config/settings.js";
-import type { StageTarget } from "../recipe/types.js";
+import type { StageTarget } from "../pipeline/types.js";
 import type { WorkspaceExecution } from "../workspace/types.js";
 
 /**

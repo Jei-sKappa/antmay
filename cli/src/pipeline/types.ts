@@ -59,7 +59,7 @@ export type StageDescriptor = {
 /**
  * An ordered array of stage descriptors under a stable name.
  */
-export type Recipe = {
+export type Pipeline = {
   name: string;
   stages: StageDescriptor[];
 };

@@ -1,7 +1,7 @@
 # antmay
 
 `antmay` is a strict, non-interactive command-line executor that drives the
-Antmay workflow unattended: it runs a built-in recipe stage by stage
+Antmay method unattended: it runs a built-in pipeline stage by stage
 against one selected thread through an agentic harness, with durable
 checkpoints, workspace locking, and per-stage Git boundaries.
 
@@ -44,11 +44,11 @@ Copy the following complete example to get started:
 - `heartbeatSeconds` sets how often a live attempt prints that it is still
   working, and defaults to `300`. Lower it to keep a quiet unattended run
   visibly alive; raise it to keep long runs out of a CI log.
-- Stage overrides use the exact stage IDs from the selected recipe. The
-  built-in `standard` recipe ends with `implement-plan-with-subagents`; its
-  `prompt` is appended to that skill invocation. This unattended recipe uses
+- Stage overrides use the exact stage IDs from the selected pipeline. The
+  built-in `standard` pipeline ends with `implement-plan-with-subagents`; its
+  `prompt` is appended to that skill invocation. This pipeline uses
   the subagent implementation variant in place of the human-run Standard
-  workflow's `implement-plan` step.
+  Standard recipe's `implement-plan` step.
 - Settings perform no environment interpolation and store no credentials.
 
 ## Stale workspace locks
@@ -66,7 +66,7 @@ the same checkout at once.
 
 ## Scripted demo
 
-`npm run demo` drives the built CLI through the Standard recipe without
+`npm run demo` drives the built CLI through the `standard` pipeline without
 contacting Codex or Claude Code, so you end up with a real disposable
 repository and run directory to inspect. It runs `npm run build` without tests,
 then executes the scenario you pick.
@@ -178,7 +178,7 @@ Work through the steps in order, checking each box as you confirm it:
    under `docs/threads/<YYMMDDHHMMSSZ-slug>/` containing a non-empty `seed.md`
    and a non-empty `decisions.md`.
 3. [ ] **Commit ignore rules for the operational directories.** Add and commit a
-   `.gitignore` that ignores the three workflow operational directories so they
+   `.gitignore` that ignores the three thread operational directories so they
    never enter the boundary status set: `.pending-decisions/`,
    `.pending-reviews/`, and `.implementation-runs/`. Confirm `git status` is
    clean afterward.
@@ -206,11 +206,11 @@ Work through the steps in order, checking each box as you confirm it:
    Confirm the executor advanced the stage and produced the declared boundary
    commit for that stage (for the `spec` stage, a commit whose subject is
    `docs(<thread-folder>): spec`), staging only the validated thread paths.
-9. [ ] **Exercise one real pause and resume.** Mid-recipe, drop a file into the
+9. [ ] **Exercise one real pause and resume.** Mid-pipeline, drop a file into the
    thread's `.pending-decisions/` directory so the next queue gate finds it.
    Confirm the run pauses (exit `2`) and prints the pending file path, the pause
    reason, the log path, the run ID, and the exact `antmay afk resume <run-id>`
    command. Remove the pending file, then run the printed resume command and
    confirm the run continues.
 10. [ ] **List shows the run.** Run `antmay afk list` and confirm the disposable
-    run appears with its condition, run ID, recipe, stage position, and paths.
+    run appears with its condition, run ID, pipeline, stage position, and paths.

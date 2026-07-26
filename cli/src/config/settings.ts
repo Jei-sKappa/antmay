@@ -147,7 +147,7 @@ function validateProfile(
 /**
  * Validate the parsed settings document against the strict schema, collecting
  * every problem into `errors`. Stage keys absent from `knownStageIds` are
- * errors so the settings cannot silently target a stage no installed recipe
+ * errors so the settings cannot silently target a stage no installed pipeline
  * runs.
  */
 function validateDocument(
@@ -197,7 +197,7 @@ function validateDocument(
       for (const stageId of Object.keys(stages)) {
         if (!knownStageIds.has(stageId)) {
           errors.push(
-            `afk.stages.${stageId} is not a stage of any installed recipe.`,
+            `afk.stages.${stageId} is not a stage of any installed pipeline.`,
           );
           // Still validate the override shape to surface all problems at once.
         }

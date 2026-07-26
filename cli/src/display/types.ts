@@ -43,16 +43,16 @@ export interface Display {
   runPaused(info: {
     waiting: WaitingInfo;
     runId: string;
-    recipeName: string;
+    pipelineName: string;
     totalElapsedMs: number;
     logAbsPath: string | null;
     resumeCommand: string;
     checkpointPath: string;
   }): void;
-  /** The final stage finalized and the whole recipe completed. */
+  /** The final stage finalized and the whole pipeline completed. */
   runCompleted(info: {
     runId: string;
-    recipeName: string;
+    pipelineName: string;
     totalElapsedMs: number;
     checkpointPath: string;
     stageCount: number;
@@ -61,7 +61,7 @@ export interface Display {
    * and the run resumable exactly where it stood. */
   runInterrupted(info: {
     runId: string;
-    recipeName: string;
+    pipelineName: string;
     totalElapsedMs: number;
     checkpointPath: string;
     resumeCommand: string;
@@ -72,7 +72,7 @@ export interface Display {
    * where the run actually stood. */
   runFailed(info: {
     runId: string;
-    recipeName: string;
+    pipelineName: string;
     totalElapsedMs: number;
     checkpointPath: string;
     message: string;

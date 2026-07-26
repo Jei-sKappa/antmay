@@ -63,7 +63,7 @@ describe("resolveStageTarget", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("stays recipe-agnostic for a synthetic descriptor", () => {
+  it("stays pipeline-agnostic for a synthetic descriptor", () => {
     const synthetic: StageTarget = { kind: "thread-file", path: "notes/todo.md" };
     const result = resolveStageTarget(synthetic, "docs/threads/999999Z-synthetic");
     expect(result).toEqual({

@@ -5,12 +5,12 @@ import path from "node:path";
 import { gitOrThrow, runGit } from "../gitops/git.js";
 
 /**
- * Operational workflow directories that live inside a thread and must never
+ * Operational thread directories that live inside a thread and must never
  * enter the Git-boundary status set. The fixture commits ignore rules for them
  * so later queue-gate tests can drop files into a thread without dirtying the
  * worktree.
  */
-const IGNORED_WORKFLOW_DIRS = [
+const IGNORED_THREAD_DIRS = [
   ".pending-decisions/",
   ".pending-reviews/",
   ".implementation-runs/",
@@ -114,7 +114,7 @@ function templatesDirectory(): Promise<string> {
 
 /**
  * Build the pristine repository a spec describes: initialize it, configure a
- * committer identity with signing disabled, write the workflow's operational
+ * committer identity with signing disabled, write the thread's operational
  * ignore rules plus any thread content, and commit the lot as genesis. Runs at
  * most once per distinct spec; `createRepoFixture` copies the result.
  */
@@ -128,7 +128,7 @@ async function buildTemplate(spec: TemplateSpec): Promise<string> {
 
   await fs.writeFile(
     path.join(root, ".gitignore"),
-    IGNORED_WORKFLOW_DIRS.map((dir) => `${dir}\n`).join(""),
+    IGNORED_THREAD_DIRS.map((dir) => `${dir}\n`).join(""),
     "utf8",
   );
 
@@ -159,7 +159,7 @@ async function buildTemplate(spec: TemplateSpec): Promise<string> {
 
 /**
  * Create a disposable Git repository under the OS temp directory holding the
- * workflow's operational ignore rules and, unless `thread` is omitted, one
+ * thread's operational ignore rules and, unless `thread` is omitted, one
  * thread with seed/decision content — all already committed as genesis.
  *
  * The repository is a filesystem copy of a cached template built once per

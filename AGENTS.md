@@ -20,22 +20,23 @@ lives in exactly one of the three files.
 
 ## Repository purpose
 
-`antmay` is the reference repository for the Antmay workflow: a way of
-carrying a unit of work from a rough idea to shipped code through reviewable
-Markdown artifacts on disk, kept in a thread folder under `docs/threads/`.
+`antmay` optimizes Spec Driven Development. It offers the **Antmay method** — a
+thread-based way of carrying a unit of work from a rough idea to shipped code
+through reviewable Markdown artifacts on disk, kept in a thread folder under
+`docs/threads/` — plus the tooling that supports it.
 
 It ships two modules.
 
 ## The two modules
 
 **`suite/` — the skill suite.** The refined `SKILL.md` files that define the
-workflow, plus the shared references and maintenance scripts that keep them
-consistent. This is published content: end users install it with
+method's capabilities, plus the shared references and maintenance scripts that
+keep them consistent. This is published content: end users install it with
 `npx skills add Jei-sKappa/antmay --skill <skill-name>`, so formats and behavior
 stay stable. Read `suite/AGENTS.md` before touching anything under `suite/`.
 
 **`cli/` — the Antmay CLI.** A TypeScript/Node executor (`antmay`) that drives
-the workflow unattended, running a built-in recipe stage by stage against one
+the method unattended, running a built-in pipeline stage by stage against one
 selected thread through an agentic harness (Codex or Claude Code), with durable
 checkpoints, workspace locking, and per-stage Git boundaries. Its command
 surface is one namespace: `antmay afk run`, `antmay afk resume`,
@@ -45,7 +46,7 @@ under `cli/`.
 
 The two are independent on disk — the CLI reads no file inside `suite/`, and no
 skill knows the CLI exists — but they are coupled by contract. The CLI's
-built-in recipe invokes skills by name (`cli/src/recipe/standard.ts` names
+built-in pipeline invokes skills by name (`cli/src/pipeline/standard.ts` names
 `spec`, `reconcile-spec`, `review-spec`, `plan-strict`, `reconcile-plan`, and
 `implement-plan-with-subagents`) and classifies the terminal outcome those
 skills emit. Renaming or retiring one of them, or changing the outcome
@@ -57,7 +58,7 @@ documented in `docs/`.
 ```
 suite/           the skill suite and its maintenance tooling  → suite/AGENTS.md
 cli/             the Antmay CLI                              → cli/AGENTS.md
-docs/            canonical workflow reference + docs/threads/
+docs/            canonical method reference + docs/threads/
 .claude-plugin/  marketplace.json — load-bearing for skill distribution
 assets/          logos and banner
 README.md        user-facing index of the available skills
@@ -82,10 +83,24 @@ This repo follows [Conventional Commits](https://www.conventionalcommits.org/). 
 
 Changes that span modules or touch shared root files (`README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
 
-## Workflow Conventions
+## Method Conventions
 
-This repository is the reference home of the Antmay workflow, the ruleset for newly opened threads and their workflow artifacts.
+This repository is the reference home of the Antmay method, the ruleset for newly opened threads and their artifacts.
 
-The canonical reference — the skill catalog and workflow model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/thread-model.md`, `docs/skill-authoring.md`, and the three workflow docs under `docs/workflows/`. Read it before editing the workflow itself or writing/editing an artifact that belongs to an existing thread.
+The canonical reference — the skill catalog and recipe model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/glossary.md`, `docs/thread-model.md`, `docs/skill-authoring.md`, and the three recipe docs under `docs/recipes/`. Read it before editing the method itself or writing/editing an artifact that belongs to an existing thread.
 
 This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/` for any rule change; this section only changes if the reference doc set itself moves or splits.
+
+## Vocabulary
+
+`docs/glossary.md` is the naming authority for this repository: it fixes one meaning per term across the suite, the CLI, and the docs. Consult it before introducing a term, and update it in the same change whenever a term's meaning changes or a new canonical term appears.
+
+These names carry the most weight, because each sits next to a plausible wrong one:
+
+| Term | Means | Not |
+| --- | --- | --- |
+| **method** | the whole Antmay approach to SDD | a recipe |
+| **recipe** | one of the three documented, advisory paths — Quick, Standard, Roadmap | the method, or a pipeline |
+| **pipeline** | the CLI's enforced stage sequence, automating the automatable core of a recipe | a recipe |
+| **step** / **stage** | a step is one entry in a recipe; a stage is one entry in a pipeline | interchangeable |
+| **thread artifact** | a durable file inside a thread, as opposed to source code | any file a skill writes |

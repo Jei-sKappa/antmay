@@ -1,6 +1,6 @@
 # Quick
 
-Quick is the smallest delivery path for one change. It carries a single unit of work from a clarified starting point straight to implemented code and a recorded outcome, with the fewest artifacts that still leave a durable trail. It suits a change whose direction is already clear enough that a full specification and a prescriptive plan would cost more than they return — while keeping the option, at any moment, to grow into the fuller [Standard](standard.md) path without restarting.
+Quick is the smallest delivery path for one change. It carries a single unit of work from a clarified starting point straight to implemented code and a recorded outcome, with the fewest artifacts that still leave a durable trail. It suits a change whose direction is already clear enough that a full specification and a prescriptive plan would cost more than they return — while keeping the option, at any moment, to grow into the fuller [Standard](standard.md) recipe without restarting.
 
 ## Sequence
 
@@ -48,4 +48,4 @@ From that point the thread continues with the complete Standard tail: reconcile 
 
 ## Template
 
-The exact recommended sequence is also published at [`suite/shared/references/workflows/quick.md`](../../suite/shared/references/workflows/quick.md), the canonical copy that workflow-aware skills mirror into their references; this document describes the path rather than reproducing that list.
+The exact recommended sequence is also published at [`suite/shared/references/recipes/quick.md`](../../suite/shared/references/recipes/quick.md), the canonical copy that recipe-aware skills mirror into their references; this document describes the path rather than reproducing that list.

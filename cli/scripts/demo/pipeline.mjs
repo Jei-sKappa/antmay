@@ -1,10 +1,10 @@
 /**
  * The scripted-harness document every scenario starts from. A scenario states
- * only the stage it is demonstrating; the rest of the recipe runs correctly
+ * only the stage it is demonstrating; the rest of the pipeline runs correctly
  * underneath it, so each file reads as "the standard run, except this one stage".
  */
 
-/** Every stage of the `standard` recipe driven by its correct case. */
+/** Every stage of the `standard` pipeline driven by its correct case. */
 const CORRECT_STAGES = {
   spec: ["spec-correct"],
   "reconcile-spec": ["reconcile-spec-correct"],
@@ -15,7 +15,7 @@ const CORRECT_STAGES = {
 };
 
 /**
- * A scripted-harness document for the `standard` recipe. Each key of `overrides`
+ * A scripted-harness document for the `standard` pipeline. Each key of `overrides`
  * replaces that stage's case list; every other stage keeps its correct case.
  *
  * A stage's value is the ordered list of cases its successive attempts select,
@@ -25,7 +25,7 @@ const CORRECT_STAGES = {
 export function standardScenario(overrides = {}) {
   for (const stageId of Object.keys(overrides)) {
     if (!(stageId in CORRECT_STAGES)) {
-      throw new Error(`${stageId} is not a stage of the standard recipe.`);
+      throw new Error(`${stageId} is not a stage of the standard pipeline.`);
     }
   }
   return {

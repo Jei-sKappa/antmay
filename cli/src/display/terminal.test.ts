@@ -205,7 +205,7 @@ describe("runPaused", () => {
     createTerminalDisplay(options).runPaused({
       waiting,
       runId: "260723T00Z-run",
-      recipeName: "standard",
+      pipelineName: "standard",
       totalElapsedMs: 64_000,
       logAbsPath: "/runs/r1/logs/1-x-1.log",
       resumeCommand: "antmay afk resume 260723T00Z-run",
@@ -229,7 +229,7 @@ describe("runPaused", () => {
   it("closes the run with the same identity a completed run reports", () => {
     const { out } = paused();
     expect(out.text).toContain("Run summary");
-    expect(out.text).toContain("Recipe:");
+    expect(out.text).toContain("Pipeline:");
     expect(out.text).toContain("standard");
     expect(out.text).toContain("1m 4s");
     expect(out.text).toContain("/runs/r1/state.json");
@@ -375,7 +375,7 @@ describe("runCompleted", () => {
     const { options, out } = makeOptions();
     createTerminalDisplay(options).runCompleted({
       runId: "run-1",
-      recipeName: "standard",
+      pipelineName: "standard",
       totalElapsedMs: 3_723_000,
       checkpointPath: "/runs/run-1/state.json",
       stageCount: 6,
@@ -393,7 +393,7 @@ describe("runCompleted", () => {
     const { options, out } = makeOptions({ isTTY: true, noColor: false });
     createTerminalDisplay(options).runCompleted({
       runId: "run-1",
-      recipeName: "standard",
+      pipelineName: "standard",
       totalElapsedMs: 1000,
       checkpointPath: "/runs/run-1/state.json",
       stageCount: 6,
@@ -407,7 +407,7 @@ describe("runInterrupted", () => {
     const { options, out } = makeOptions();
     createTerminalDisplay(options).runInterrupted({
       runId: "run-2",
-      recipeName: "standard",
+      pipelineName: "standard",
       totalElapsedMs: 5000,
       checkpointPath: "/runs/run-2/state.json",
       resumeCommand: "antmay afk resume run-2",
@@ -427,7 +427,7 @@ describe("runFailed", () => {
     const { options, out, err } = makeOptions();
     createTerminalDisplay(options).runFailed({
       runId: "run-3",
-      recipeName: "standard",
+      pipelineName: "standard",
       totalElapsedMs: 5000,
       checkpointPath: "/runs/run-3/state.json",
       message: "ENOSPC writing state.json",
@@ -483,14 +483,14 @@ describe("color discipline", () => {
 describe("printRunSummary", () => {
   const info = {
     runId: "run-9",
-    recipeName: "standard",
+    pipelineName: "standard",
     threadRelPath: "docs/threads/t",
     workspacePath: "/repo",
     dangerouslySkipPermissions: false,
     stageIds: ["spec", "reconcile-spec", "review-spec"],
   };
 
-  it("prints run ID, recipe, thread, workspace, permission mode, and stage names", () => {
+  it("prints run ID, pipeline, thread, workspace, permission mode, and stage names", () => {
     const { options, out, err } = makeOptions();
     printRunSummary(options, info);
     expect(out.text).toContain("run-9");

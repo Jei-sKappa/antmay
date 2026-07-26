@@ -80,7 +80,7 @@ function refreshPendingReason(
 
 /**
  * Resume an existing `antmay afk run` from its durable checkpoint. Resolves only
- * the state root — never a config root, settings, or recipe definitions — then
+ * the state root — never a config root, settings, or pipeline definitions — then
  * runs the ordered, checkpoint-preserving preflight (AC-15.1/AC-15.2), acquires
  * the recorded workspace lock, recovers an abandoned `executing` attempt, and
  * dispatches on the durable condition and waiting kind (AC-15.3): DONE-finalized
@@ -169,7 +169,7 @@ export async function resumeCommand(
     // A completed run reports that fact and exits 1.
     if (checkpoint.condition === "completed") {
       return fail(
-        `Run "${args.runId}" already completed the whole "${checkpoint.recipeName}" recipe; there is nothing to resume.`,
+        `Run "${args.runId}" already completed the whole "${checkpoint.pipelineName}" pipeline; there is nothing to resume.`,
       );
     }
 
@@ -333,7 +333,7 @@ export async function resumeCommand(
     const lock = lockOutcome.handle;
 
     const runId = checkpoint.runId;
-    const recipeName = checkpoint.recipeName;
+    const pipelineName = checkpoint.pipelineName;
     const checkpointPath = path.join(runDir, "state.json");
     const resumeCommandLine = `antmay afk resume ${runId}`;
     const stageCount = checkpoint.stages.length;
@@ -366,7 +366,7 @@ export async function resumeCommand(
       display.runPaused({
         waiting,
         runId,
-        recipeName,
+        pipelineName,
         totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
         logAbsPath,
         resumeCommand: resumeCommandLine,
@@ -420,7 +420,7 @@ export async function resumeCommand(
       if (completed) {
         display.runCompleted({
           runId,
-          recipeName,
+          pipelineName,
           totalElapsedMs: clock().getTime() - Date.parse(base.createdAt),
           checkpointPath,
           stageCount,
@@ -469,7 +469,7 @@ export async function resumeCommand(
       }
       printRunSummary(displayOptions, {
         runId,
-        recipeName,
+        pipelineName,
         threadRelPath,
         workspacePath: checkpoint.workspace.path,
         dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,

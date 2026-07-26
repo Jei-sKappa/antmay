@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { standardRecipe } from "../../recipe/standard.js";
+import { standardPipeline } from "../../pipeline/standard.js";
 import {
   SCRIPTED_CASE_NAMES,
   SCRIPTED_HARNESS_TOGGLE_VAR,
@@ -18,7 +18,7 @@ import {
   type ScriptedCaseName,
 } from "./scenario.js";
 
-const STANDARD_STAGE_IDS = standardRecipe.stages.map((stage) => stage.id);
+const STANDARD_STAGE_IDS = standardPipeline.stages.map((stage) => stage.id);
 
 const VALID_STANDARD_SCENARIO = {
   schemaVersion: 0,

@@ -39,7 +39,7 @@ function errorMessage(error: unknown): string {
 
 /**
  * Build one whitespace-separated row for a valid checkpoint: updated time,
- * friendly condition, run ID, recipe, one-based stage position with stage ID,
+ * friendly condition, run ID, pipeline, one-based stage position with stage ID,
  * current harness/model, absolute repository path, and repository-relative
  * thread path. A completed run shows the final stage count and omits the current
  * stage ID and harness/model, since it has no live stage.
@@ -51,7 +51,7 @@ function renderRow(checkpoint: RunCheckpoint): string {
     checkpoint.updatedAt,
     condition,
     checkpoint.runId,
-    checkpoint.recipeName,
+    checkpoint.pipelineName,
   ];
 
   if (checkpoint.condition === "completed") {

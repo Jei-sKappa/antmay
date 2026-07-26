@@ -10,12 +10,12 @@ import {
 } from "./help.js";
 
 describe("parseCliArguments — accepted grammar", () => {
-  it("accepts `afk run <recipe> --thread <path>`", () => {
+  it("accepts `afk run <pipeline> --thread <path>`", () => {
     expect(
       parseCliArguments(["afk", "run", "standard", "--thread", "docs/threads/x"]),
     ).toEqual({
       kind: "run",
-      recipe: "standard",
+      pipeline: "standard",
       thread: "docs/threads/x",
       dangerouslySkipPermissions: false,
     });
@@ -33,7 +33,7 @@ describe("parseCliArguments — accepted grammar", () => {
       ]),
     ).toEqual({
       kind: "run",
-      recipe: "standard",
+      pipeline: "standard",
       thread: "t",
       dangerouslySkipPermissions: true,
     });
