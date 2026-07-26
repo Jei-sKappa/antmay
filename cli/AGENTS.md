@@ -169,6 +169,9 @@ bearing.
   version, and grammar errors stay cheap.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
+- **Every distinct terminal rendering has a demo scenario.** Give the terminal
+  something new to draw and you add or extend one in the same change — see
+  "Keep the scenario catalog current" below.
 
 ### Scripted test harness (developer-only)
 
@@ -278,6 +281,36 @@ working-tree state, and the paths and environment needed to keep driving the
 result by hand; without the flag the demo ends at the last `[PASS]`/`[FAIL]`
 line. `--no-color` strips color from the child's output, which is the way to
 check that the rendering still reads correctly when color carries nothing.
+
+### Keep the scenario catalog current
+
+**A change that gives the terminal something new to draw is not finished until a
+scenario shows it.** The catalog is how a human sees this tool's output without
+running a real harness; a rendering no scenario reaches is a rendering nobody
+ever looks at, and it rots unnoticed.
+
+Ask one question of every change: *can the terminal now produce output that no
+existing scenario already produces?* A new pause kind, banner, closing block,
+stage disposition, startup block, sub-line, or a new shape of an existing one —
+all yes. Then:
+
+- **If an existing scenario nearly covers it, extend that one.** Two scenarios
+  that end on renderings a reader cannot tell apart are one scenario too many.
+- **Otherwise add a file**, and give it a number that places it where it belongs
+  in the reading order — routine before rare, and after anything it builds on.
+  Renumbering neighbours to open a slot is expected and costs nothing; appending
+  to the end merely to dodge that is what puts the catalog back in arbitrary
+  order.
+- **Keep the scenario at one visual state.** It stops as soon as it has shown
+  what it exists to show, so that thing is the last output on screen and needs no
+  scrolling to find. Add a `note` if its shape needs explaining, such as needing
+  a second invocation.
+- **Update the table in `README.md`** in the same change, and run the scenario to
+  confirm the exit code it declares.
+
+This obligation covers renderings only. Behavior with no visible output belongs
+in the `*.test.ts` suite, which is the actual correctness gate — the demo checks
+one exit code per invocation and nothing more, and is no substitute for a test.
 
 ## Engineering Principles
 
