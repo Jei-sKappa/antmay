@@ -326,6 +326,14 @@ function validateStageProfile(value: unknown, label: string, errors: string[]): 
   if (typeof idle !== "number" || !Number.isInteger(idle) || idle <= 0) {
     errors.push(`${label}.idleTimeoutSeconds must be a positive integer.`);
   }
+  const heartbeat = value.heartbeatSeconds;
+  if (
+    typeof heartbeat !== "number" ||
+    !Number.isInteger(heartbeat) ||
+    heartbeat <= 0
+  ) {
+    errors.push(`${label}.heartbeatSeconds must be a positive integer.`);
+  }
 }
 
 /**

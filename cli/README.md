@@ -37,10 +37,13 @@ Copy the following complete example to get started:
 
 - `afk.defaults` applies to every stage; `afk.stages.<stage-id>` overrides it
   for one stage. Both may be omitted or left empty.
-- A profile may contain only `harness`, `model`, `prompt`, and
-  `idleTimeoutSeconds`. `harness` is `codex` or `claude-code`; `model` is a
-  non-empty string; `prompt` is a string; `idleTimeoutSeconds` is a positive
-  finite integer.
+- A profile may contain only `harness`, `model`, `prompt`,
+  `idleTimeoutSeconds`, and `heartbeatSeconds`. `harness` is `codex` or
+  `claude-code`; `model` is a non-empty string; `prompt` is a string; the two
+  duration fields are positive finite integers.
+- `heartbeatSeconds` sets how often a live attempt prints that it is still
+  working, and defaults to `300`. Lower it to keep a quiet unattended run
+  visibly alive; raise it to keep long runs out of a CI log.
 - Stage overrides use the exact stage IDs from the selected recipe. The
   built-in `standard` recipe ends with `implement-plan-with-subagents`; its
   `prompt` is appended to that skill invocation. This unattended recipe uses

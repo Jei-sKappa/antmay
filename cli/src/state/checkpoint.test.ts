@@ -38,6 +38,7 @@ function validCheckpoint(): RunCheckpoint {
           model: "gpt-5",
           prompt: "do spec",
           idleTimeoutSeconds: 900,
+          heartbeatSeconds: 300,
         },
         resolvedTarget: "/Users/dev/repo/docs/threads/x",
       },
@@ -57,6 +58,7 @@ function validCheckpoint(): RunCheckpoint {
           model: "claude",
           prompt: "do plan",
           idleTimeoutSeconds: 1200,
+          heartbeatSeconds: 300,
         },
         resolvedTarget: "/Users/dev/repo/docs/threads/x/plan.md",
       },
@@ -208,6 +210,26 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /waiting to be null/.test(e))).toBe(true);
+  });
+
+  it("rejects a stage profile that carries no heartbeat interval", () => {
+    const doc = validCheckpoint();
+    delete (doc.stages[0].profile as Record<string, unknown>).heartbeatSeconds;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /heartbeatSeconds/.test(e))).toBe(true);
+    }
+  });
+
+  it("rejects a non-positive heartbeat interval", () => {
+    const doc = validCheckpoint();
+    doc.stages[0].profile.heartbeatSeconds = 0;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /heartbeatSeconds/.test(e))).toBe(true);
+    }
   });
 
   it("rejects a waiting object that records no reasons", () => {

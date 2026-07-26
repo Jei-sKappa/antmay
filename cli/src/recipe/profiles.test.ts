@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AfkSettings } from "../config/settings.js";
-import { resolveStageProfiles } from "./profiles.js";
+import { DEFAULT_HEARTBEAT_SECONDS, resolveStageProfiles } from "./profiles.js";
 import type { Recipe } from "./types.js";
 
 const dummyPolicy = {
@@ -27,19 +27,20 @@ const recipe: Recipe = {
 };
 
 describe("resolveStageProfiles (AC-4.1)", () => {
-  it("seeds prompt and idleTimeout from built-ins when defaults supply harness/model", () => {
+  it("seeds prompt, idleTimeout and heartbeat from built-ins when defaults supply harness/model", () => {
     const settings: AfkSettings = {
       defaults: { harness: "codex", model: "gpt-x" },
       stages: {},
     };
+    const seeded = {
+      harness: "codex",
+      model: "gpt-x",
+      prompt: "",
+      idleTimeoutSeconds: 86400,
+      heartbeatSeconds: DEFAULT_HEARTBEAT_SECONDS,
+    };
     const result = resolveStageProfiles(recipe, settings);
-    expect(result).toEqual({
-      ok: true,
-      profiles: [
-        { harness: "codex", model: "gpt-x", prompt: "", idleTimeoutSeconds: 86400 },
-        { harness: "codex", model: "gpt-x", prompt: "", idleTimeoutSeconds: 86400 },
-      ],
-    });
+    expect(result).toEqual({ ok: true, profiles: [seeded, seeded] });
   });
 
   it("applies merge precedence seed -> defaults -> stage override with plain replacement", () => {
@@ -49,12 +50,14 @@ describe("resolveStageProfiles (AC-4.1)", () => {
         model: "default-model",
         prompt: "default prompt",
         idleTimeoutSeconds: 100,
+        heartbeatSeconds: 30,
       },
       stages: {
         beta: {
           harness: "claude-code",
           model: "beta-model",
           idleTimeoutSeconds: 200,
+          heartbeatSeconds: 60,
         },
       },
     };
@@ -67,13 +70,16 @@ describe("resolveStageProfiles (AC-4.1)", () => {
           model: "default-model",
           prompt: "default prompt",
           idleTimeoutSeconds: 100,
+          heartbeatSeconds: 30,
         },
         {
-          // harness/model/idle replaced; prompt inherited from defaults (no concat)
+          // harness/model/idle/heartbeat replaced; prompt inherited from
+          // defaults (no concat)
           harness: "claude-code",
           model: "beta-model",
           prompt: "default prompt",
           idleTimeoutSeconds: 200,
+          heartbeatSeconds: 60,
         },
       ],
     });

@@ -16,6 +16,7 @@ export type ProfileFields = {
   model?: string;
   prompt?: string;
   idleTimeoutSeconds?: number;
+  heartbeatSeconds?: number;
 };
 
 /**
@@ -49,6 +50,7 @@ const PROFILE_FIELDS: ReadonlySet<string> = new Set([
   "model",
   "prompt",
   "idleTimeoutSeconds",
+  "heartbeatSeconds",
 ]);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -121,6 +123,21 @@ function validateProfile(
       );
     } else {
       profile.idleTimeoutSeconds = idle;
+    }
+  }
+
+  if ("heartbeatSeconds" in value) {
+    const heartbeat = value.heartbeatSeconds;
+    if (
+      typeof heartbeat !== "number" ||
+      !Number.isInteger(heartbeat) ||
+      heartbeat <= 0
+    ) {
+      errors.push(
+        `${basePath}.heartbeatSeconds must be a positive finite integer.`,
+      );
+    } else {
+      profile.heartbeatSeconds = heartbeat;
     }
   }
 

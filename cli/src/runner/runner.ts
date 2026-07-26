@@ -29,8 +29,8 @@ import type { OutcomeParse } from "./outcome.js";
 import { parseTerminalOutcome } from "./outcome.js";
 import { SignalInterruption } from "./signals.js";
 
-/** The interval between display heartbeats for a live attempt. */
-const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+/** Milliseconds per second, for turning the profile's interval into a timer. */
+const MS_PER_SECOND = 1000;
 
 /**
  * The unstable and injected dependencies plus the durable inputs the runner
@@ -434,7 +434,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const attemptStartMs = Date.now();
     const heartbeat = setInterval(() => {
       display.heartbeat(Date.now() - attemptStartMs);
-    }, HEARTBEAT_INTERVAL_MS);
+    }, profile.heartbeatSeconds * MS_PER_SECOND);
     heartbeat.unref();
 
     let outcome: AttemptOutcome;

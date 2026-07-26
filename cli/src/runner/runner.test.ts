@@ -111,6 +111,7 @@ function buildCheckpoint(
         model: "test-model",
         prompt: "",
         idleTimeoutSeconds: 900,
+        heartbeatSeconds: 300,
       },
       resolvedTarget: target.path,
     };

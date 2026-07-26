@@ -16,6 +16,13 @@ const SUPPORTED_HARNESSES: ReadonlySet<HarnessId> = new Set<HarnessId>([
 ]);
 
 /**
+ * How often a live attempt reports that it is still working, when the settings
+ * name no interval. Five minutes is quiet enough to stay out of the way of an
+ * unattended run and frequent enough to prove the executor has not died.
+ */
+export const DEFAULT_HEARTBEAT_SECONDS = 300;
+
+/**
  * Shallow-merge one profile layer over an accumulator: a field present in the
  * layer replaces the accumulated value; an omitted field inherits.
  */
@@ -27,12 +34,16 @@ function mergeLayer(base: ProfileFields, layer: ProfileFields): ProfileFields {
   if (layer.idleTimeoutSeconds !== undefined) {
     merged.idleTimeoutSeconds = layer.idleTimeoutSeconds;
   }
+  if (layer.heartbeatSeconds !== undefined) {
+    merged.heartbeatSeconds = layer.heartbeatSeconds;
+  }
   return merged;
 }
 
 /**
  * Resolve the execution profile for every stage of `recipe`. For each stage,
- * resolution seeds `{ prompt: "", idleTimeoutSeconds: 86400 }`, shallow-merges
+ * resolution seeds `{ prompt: "", idleTimeoutSeconds: 86400, heartbeatSeconds:
+ * 300 }`, shallow-merges
  * `settings.defaults`, then the matching `settings.stages[stage.id]` override,
  * using plain field replacement. A missing or unsupported harness or a
  * missing/empty model after merging is an error naming the stage; all stage
@@ -46,7 +57,11 @@ export function resolveStageProfiles(
   const errors: string[] = [];
 
   for (const stage of recipe.stages) {
-    const seed: ProfileFields = { prompt: "", idleTimeoutSeconds: 86400 };
+    const seed: ProfileFields = {
+      prompt: "",
+      idleTimeoutSeconds: 86400,
+      heartbeatSeconds: DEFAULT_HEARTBEAT_SECONDS,
+    };
     const withDefaults = mergeLayer(seed, settings.defaults);
     const override = settings.stages[stage.id] ?? {};
     const resolved = mergeLayer(withDefaults, override);
@@ -62,13 +77,15 @@ export function resolveStageProfiles(
       );
     }
 
-    // seed guarantees prompt and idleTimeoutSeconds are always defined.
+    // seed guarantees prompt, idleTimeoutSeconds and heartbeatSeconds are
+    // always defined.
     if (resolved.harness !== undefined && resolved.model !== undefined && resolved.model.length > 0) {
       profiles.push({
         harness: resolved.harness,
         model: resolved.model,
         prompt: resolved.prompt ?? "",
         idleTimeoutSeconds: resolved.idleTimeoutSeconds ?? 86400,
+        heartbeatSeconds: resolved.heartbeatSeconds ?? DEFAULT_HEARTBEAT_SECONDS,
       });
     }
   }

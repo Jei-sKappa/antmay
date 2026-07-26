@@ -163,6 +163,22 @@ describe("schema rejections", () => {
     ).toBe(true);
   });
 
+  it("rejects a non-positive heartbeatSeconds", () => {
+    const errors = errorsFor({ afk: { defaults: { heartbeatSeconds: 0 } } });
+    expect(
+      errors.some((e) => e.includes("afk.defaults.heartbeatSeconds")),
+    ).toBe(true);
+  });
+
+  it("rejects a non-integer heartbeatSeconds", () => {
+    const errors = errorsFor({
+      afk: { stages: { spec: { heartbeatSeconds: 2.5 } } },
+    });
+    expect(
+      errors.some((e) => e.includes("afk.stages.spec.heartbeatSeconds")),
+    ).toBe(true);
+  });
+
   it("rejects a stage key absent from the injected known set", () => {
     const errors = errorsFor({ afk: { stages: { unknownstage: {} } } });
     expect(

@@ -66,12 +66,14 @@ export type Recipe = {
 
 /**
  * A fully resolved per-stage execution profile: the harness to drive, the model
- * to request, the opaque profile prompt appended after the stage trigger, and
- * the idle timeout in seconds.
+ * to request, the opaque profile prompt appended after the stage trigger, the
+ * idle timeout in seconds, and how often a live attempt reports that it is still
+ * working.
  */
 export type StageProfile = {
   harness: HarnessId;
   model: string;
   prompt: string;
   idleTimeoutSeconds: number;
+  heartbeatSeconds: number;
 };

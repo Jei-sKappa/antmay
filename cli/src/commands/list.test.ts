@@ -62,6 +62,7 @@ function makeStage(id: string, model: string): SnapshottedStage {
       model,
       prompt: "do work",
       idleTimeoutSeconds: 900,
+      heartbeatSeconds: 300,
     },
     resolvedTarget: "/Users/dev/repo/docs/threads/x",
   };
