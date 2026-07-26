@@ -3,7 +3,7 @@ name: finish
 description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.2.1
 disable-model-invocation: true
 ---
 
@@ -38,6 +38,10 @@ The findings are recommendations, never gates. Finish may recommend pausing when
 
 Finish NEVER manufactures readiness. It does not approve or version documents, delete pending bundles, rewrite the spec or plan, create a missing implementation report, mark reviews resolved, update living documentation, or add any completion status. If the inspection surfaces a gap, the fix is a separate authoring pass by the user or another operation — never an in-place edit here.
 
+## The ticket step
+
+When the thread's `seed.md` carries an `External:` value naming a tracker ticket, read `references/ticket-step.md` and follow it alongside the disposition you execute — it covers when the step applies and what to offer for each disposition. Read it before executing the chosen disposition, because one branch has to be settled before a pull-request body is drafted.
+
 ## Branch disposition
 
 After reporting the inspection, ASK the user which of exactly three dispositions to perform:
@@ -59,20 +63,6 @@ Creating a PR or merging requires the relevant work to be committed. Finish must
 - **leave as-is**.
 
 This is a deliberate authorization of a specific mutation, obtained before any commit is made.
-
-## The ticket step
-
-This step exists only when the thread's `seed.md` carries an `External:` value naming a tracker ticket AND that tracker is reachable. When there is no such value, when the tracker's tooling or credentials are unavailable, or when the ticket is already closed, say nothing about tickets and deliver the branch exactly as the sections above describe.
-
-When it does apply, determine the tracker from the `External:` value's host and read the matching reference under `references/trackers/` — for a `github.com` ticket that is `references/trackers/github.md`. It carries the availability check, the default-branch lookup, the reference forms, and the exact linking and closing mechanics.
-
-What you offer depends on the disposition the user chose, because the two paths close a ticket by different means:
-
-- **create PR** — offer to place a closing keyword for the ticket in the pull-request body. Settle this BEFORE drafting the body, since the keyword is part of what gets pushed. When the PR's base is the repository's default branch, the keyword is the whole job: it links the ticket to the PR on both objects and the tracker closes the ticket when the PR merges. When the base is NOT the default branch, say so plainly — the keyword will link the ticket but nothing will close it — and offer a non-closing `Related to <ticket>` mention instead. Do not close the ticket yourself on this path: the work is not merged yet, and a closed ticket over an unmerged PR misreports the state of the work.
-- **merge into a confirmed target** — no pull request exists to carry a keyword, so after the merge succeeds, offer to close the ticket with a comment citing the merge commit, so the closed ticket still leads back to the code.
-- **leave as-is** — offer nothing. No work was delivered.
-
-Every one of these is an offer the user accepts or declines, and a decline leaves the ticket untouched. Beyond the offer the user accepted, perform no tracker writes: no label changes, no status transitions, no backlink comments, no closing a ticket the chosen path did not close.
 
 ## After the branch action
 

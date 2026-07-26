@@ -4,7 +4,7 @@ description: Open a durable thread on disk from a rough idea and an optional tra
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.1
+  version: 0.2.2
 ---
 
 # Open Thread
