@@ -249,7 +249,19 @@ before the run, for a scenario whose shape is not self-evident, so a reader
 learns why it takes two invocations without opening the file — and
 `settingsDefaults`, merged over `afk.defaults` in the copied settings file. A
 scenario that needs different executor configuration uses that field rather than
-a demo-only hook, so the demo exercises the same path a user would.
+a demo-only hook, so the demo exercises the same path a user would. `scenario`
+itself is optional: a scenario that drives no attempt declares no scripted
+document and is given no scripted-harness file.
+
+Most scenarios reach their rendering by running the executor. A rendering that
+draws an aggregate over many runs cannot be reached that way — one invocation
+produces one run, and conditions like `ready` survive only microseconds between
+two checkpoint writes — so such a scenario seeds checkpoints into `ctx.stateRoot`
+from an `action` instead. Seed from one shape with per-row overrides, so a schema
+change is one edit rather than one per row, and require the exit code the command
+returns when every checkpoint is valid: the executor validates each one it reads
+and fails on an invalid document, which is what stops a seeded fixture from
+quietly drifting away from the schema it imitates.
 
 Scenarios are checked in under `scripts/scenarios/`, one file per scenario; the
 id is the filename stem and discovery is automatic, so a new scenario is a new

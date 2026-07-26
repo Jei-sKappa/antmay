@@ -477,10 +477,15 @@ async function main() {
   if (scenario.settingsDefaults !== undefined) {
     applySettingsDefaults(demoSettings, scenario.settingsDefaults);
   }
-  writeFileSync(
-    path.join(configRoot, "scripted-harness.json"),
-    `${JSON.stringify(scenario.scenario, null, 2)}\n`,
-  );
+  // A scenario that drives no attempt declares no scripted document, and gets
+  // no scripted-harness file: writing one would state a harness plan nothing
+  // ever reads.
+  if (scenario.scenario !== undefined) {
+    writeFileSync(
+      path.join(configRoot, "scripted-harness.json"),
+      `${JSON.stringify(scenario.scenario, null, 2)}\n`,
+    );
+  }
 
   const { threadName, threadRoot } = prepareFixtureRepo(repoRoot, scenario.id);
 

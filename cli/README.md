@@ -108,6 +108,7 @@ prints them all:
 | `15-permissions-warning` | a clean run opening on the boxed unrestricted warning |
 | `16-heartbeat` | the repeating `· still working` line |
 | `17-long-content` | oversized reasons, paths and tool arguments |
+| `18-list` | `afk list`, one row per condition, sorted newest first |
 
 `--scenario` takes any of three forms, so you need not remember a number to ask
 for a scenario by name:
