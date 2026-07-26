@@ -85,7 +85,38 @@ npm --prefix cli run demo -- --scenario 01-all-done
 
 Each scenario drives the run to one distinct visual state and stops there, so
 whatever it exists to show is the last thing on screen. Ids carry an ordering
-prefix, so `--list` prints them in reading order.
+prefix and are listed in reading order — a normal run, then the pauses you meet
+routinely, then the ways a stage fails, then the rare and the cosmetic. `--list`
+prints them all:
+
+| Scenario | Ends on |
+| --- | --- |
+| `01-all-done` | `SUCCESS` after six clean stages |
+| `02-blocked` | the `BLOCKED` banner |
+| `03-refused` | the `REFUSED` banner |
+| `04-waiting-for-user` | `WAITING FOR USER` and its pending list |
+| `05-multiple-reasons` | two stacked reason banners under a `2 reasons` header |
+| `06-retry` | a resumed stage's `· attempt 2` header, then `SUCCESS` |
+| `07-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
+| `08-failed-harness-error` | `FAILED — harness error` |
+| `09-failed-idle-timeout` | `FAILED — idle timeout` |
+| `10-failed-git-policy` | `FAILED — git policy violation` |
+| `11-failed-commit` | `FAILED — commit failed` |
+| `12-failed-queue-scan` | `FAILED — queue scan error` |
+| `13-interrupted` | `INTERRUPTED`, after a signal lands mid-stage |
+| `14-checkpoint-write-failure` | `FAILED — checkpoint write` |
+| `15-permissions-warning` | a clean run opening on the boxed unrestricted warning |
+| `16-heartbeat` | the repeating `· still working` line |
+| `17-long-content` | oversized reasons, paths and tool arguments |
+
+`--scenario` takes any of three forms, so you need not remember a number to ask
+for a scenario by name:
+
+```sh
+npm run demo -- --scenario 3            # by number
+npm run demo -- --scenario refused      # by name
+npm run demo -- --scenario 03-refused   # by full id
+```
 
 Adding a scenario means adding one `scripts/scenarios/<NN>-<name>.mjs` file
 exporting `{ label, scenario, steps }`, numbered where it belongs in the reading
