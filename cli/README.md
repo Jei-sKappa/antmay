@@ -23,7 +23,7 @@ Copy the following complete example to get started:
   "afk": {
     "defaults": {
       "harness": "codex",
-      "model": "gpt-5-codex"
+      "model": "gpt-5.6-sol"
     },
     "stages": {
       "implement-plan-with-subagents": {

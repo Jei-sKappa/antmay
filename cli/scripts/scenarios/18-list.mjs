@@ -28,7 +28,7 @@ const CLAUDE = {
   heartbeatSeconds: 300,
 };
 
-const CODEX = { ...CLAUDE, harness: "codex", model: "gpt-5-codex" };
+const CODEX = { ...CLAUDE, harness: "codex", model: "gpt-5.6-terra" };
 
 /** The `standard` pipeline's stages, each with the file its boundary commits. */
 const STAGES = [
