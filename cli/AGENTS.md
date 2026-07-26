@@ -1,15 +1,20 @@
-# AGENTS.md
+# AGENTS.md — Antmay CLI
 
-This file provides guidance to AI Agents when working with code in this
-repository.
+This file provides guidance to AI Agents working on the CLI under `cli/`. Paths
+below are `cli/`-relative, and the npm scripts are meant to run from `cli/`.
 
 ## Update rule
 
-Update `AGENTS.md` when:
+This file is the memory for the CLI. While working under `cli/`, update this
+file — not the root one, not the skill suite's — when:
 
 - You make significant changes that needs to be remembered across session.
 - You made a mistake that should not be repeated.
 - The user told you a new rule that should be remembered.
+
+A fact that holds for the skill suite too, or for the repository as a whole,
+belongs in the root `AGENTS.md` instead. Every fact lives in exactly one of the
+three files.
 
 > Note: `CLAUDE.md` is a symlink to `AGENTS.md`.
 
