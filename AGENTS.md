@@ -21,16 +21,26 @@ Update `AGENTS.md` when:
 npx skills add Jei-sKappa/antmay --skill <skill-name>
 ```
 
-There is no build, test, or lint pipeline — this is a content repository. Validation happens by reading the markdown and confirming the skill's instructions are coherent and progressively disclosed.
+The skill content has no build or lint pipeline: validation happens by reading the markdown and confirming the skill's instructions are coherent and progressively disclosed. Its one mechanical gate is `node suite/scripts/check-marketplace-skills.mjs`, which protects the distribution manifest (see Layout).
 
 General-purpose, context-agnostic skills (meta-prompting, handoff drafts, research helpers, and the like) live in the separate companion repository `Jei-sKappa/skills`, not here. This repository holds only the skills that serve the thread-based workflow.
 
 ## Layout
 
-Skills live directly under `skills/`, grouped into eleven capability groups. Each skill is either a **user-invoked** entry point (a capability a person deliberately reaches for) or a **model-invoked primitive** (a bounded building block an entry point composes into):
+The repository has two halves: `suite/` holds the skill suite plus the tooling that maintains it, and `cli/` holds the Antmay CLI. `docs/` stays at the root because both halves depend on it — it carries the canonical workflow reference and this repo's own threads under `docs/threads/`.
 
 ```
-skills/
+suite/           the skill suite and its maintenance tooling
+cli/             the Antmay CLI (its own build/test gate)
+docs/            canonical workflow reference + docs/threads/
+.claude-plugin/  marketplace.json — load-bearing for distribution
+assets/          logos and banner
+```
+
+Skills live under `suite/skills/`, grouped into eleven capability groups. Each skill is either a **user-invoked** entry point (a capability a person deliberately reaches for) or a **model-invoked primitive** (a bounded building block an entry point composes into):
+
+```
+suite/skills/
 ├── capture-discussion/      discussion, open-thread, resolve-pending-decisions
 ├── finish-navigate/         archive-thread, finish, whats-next
 ├── implement/               implement, implement-plan, implement-plan-with-subagents
@@ -46,25 +56,28 @@ skills/
 
 The five skills under `primitives/` are the model-invoked building blocks; every other active skill is a user-invoked entry point.
 
-Canonical shared references and the sync tooling that mirrors them into individual skills live at the repo root:
+Canonical shared references, the sync tooling that mirrors them into individual skills, and the suite's maintenance scripts sit alongside the skills:
 
 ```
-shared/
-├── references/                 canonical shared reference sources (e.g. workflows/{quick,standard,roadmap}.md)
-└── manifest.yaml               flat map: skill path → list of shared/references/ sources to mirror into it
-scripts/
-└── sync-shared-references.mjs  mirrors the canonical sources into each declaring skill's references/
+suite/shared/
+├── references/                  canonical shared reference sources (e.g. workflows/{quick,standard,roadmap}.md)
+└── manifest.yaml                flat map: skill path → list of shared/references/ sources to mirror into it
+suite/scripts/
+├── sync-shared-references.mjs   mirrors the canonical sources into each declaring skill's references/
+└── check-marketplace-skills.mjs asserts marketplace.json and suite/skills/ agree
 ```
 
 Rules:
 
-- Every skill lives at `skills/<group>/<skill-name>/SKILL.md`. The leaf directory name MUST match the `name:` field in the frontmatter.
+- Every skill lives at `suite/skills/<group>/<skill-name>/SKILL.md`. The leaf directory name MUST match the `name:` field in the frontmatter.
 - `README.md` — index of available skills; update when adding/removing a skill (use the full nested path in links).
-- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin, so installs are grouped under a single named heading, `Antmay`, in `npx skills list`. There is exactly one plugin entry, named `Antmay`, whose `skills` array lists every skill folder as `./skills/<group>/<skill-name>`. Every skill folder MUST appear in that array. Adding any skill means adding its path to the `Antmay` plugin's `skills` array.
+- `.claude-plugin/marketplace.json` — registers this repo as a `vercel-labs/skills` plugin, so installs are grouped under a single named heading, `Antmay`, in `npx skills list`. There is exactly one plugin entry, named `Antmay`; it sets `"source": "./suite"`, and its `skills` array lists every skill folder as `./skills/<group>/<skill-name>`, resolved against that source. Every skill folder MUST appear in that array.
+- That array is what makes the skills installable at all. The `skills` CLI scans a fixed set of root-relative directories (the repo root, a root-level `skills/`, the per-agent skill dirs) and then the parent directory of every path the array names; because the suite lives under `suite/`, nothing but the manifest finds it. A skill missing from the array is not a cosmetic grouping bug — it silently disappears from `npx skills add`, with no error, since the CLI's recursive fallback scan only runs when discovery found nothing at all.
+- Run `node suite/scripts/check-marketplace-skills.mjs` after adding, removing, renaming, or moving a skill. It fails when the manifest and `suite/skills/` disagree in either direction, and when two skills share a frontmatter `name:` (discovery de-duplicates on that field and would silently drop one).
 
 ## SKILL.md format
 
-Every skill file starts with YAML frontmatter, then the skill body. Mirror the structure of `skills/propose/propose/SKILL.md`:
+Every skill file starts with YAML frontmatter, then the skill body. Mirror the structure of `suite/skills/propose/propose/SKILL.md`:
 
 ```yaml
 ---
@@ -118,18 +131,19 @@ When an edit replaces design A with design B, the resulting skill body or docume
 
 Some skills ship copies of the same canonical reference (for example the workflow templates under `workflows/` that `whats-next` uses, or the discussion formats). These are NOT hand-maintained per skill:
 
-- Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
-- Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script mirrors each declared source to the same relative path under the skill's `references/` folder, owning exactly the files the manifest names: it deletes and rewrites precisely those, leaving hand-authored skill-local references untouched. Removing a manifest entry does not delete its previously generated copy — delete that orphan by hand.
+- Canonical shared files live in `suite/shared/references/` and are declared in `suite/shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `suite/shared/references/`).
+- Edit the canonical source under `suite/shared/references/`, then run `node suite/scripts/sync-shared-references.mjs`. The script mirrors each declared source to the same relative path under the skill's `references/` folder, owning exactly the files the manifest names: it deletes and rewrites precisely those, leaving hand-authored skill-local references untouched. Removing a manifest entry does not delete its previously generated copy — delete that orphan by hand.
 - NEVER hand-edit a generated copy under a skill's `references/` (any file the manifest declares for that skill). Those copies are generated, committed, and flow into distribution unchanged. Change the canonical source and re-run the script instead.
 
 ## When adding a new skill
 
 1. Decide which group the skill belongs to: `capture-discussion`, `finish-navigate`, `implement`, `merge`, `plan`, `primitives`, `propose`, `reconcile`, `review`, `roadmap`, or `spec`. If none fits, propose a new group folder and document it in this file's Layout section in the same change.
 2. Decide the invocation role. If the skill is a capability a person deliberately reaches for, it is a user-invoked entry point. Only add it under `primitives/` when it is a bounded building block an entry point composes into AND it clears the extraction bar — it is genuinely reused by more than one entry point (or is the single well-defined mechanism an entry point delegates to) rather than inlined logic. Do not create a primitive for a one-off.
-3. Create `skills/<group>/<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 0.1.0`). Every skill ships `agents/openai.yaml` with a universal `interface:` block (`display_name` in title case, a fresh terse `short_description`). For a user-invoked entry point, set `disable-model-invocation: true` in `SKILL.md` AND add `policy.allow_implicit_invocation: false` beneath the interface block. For a primitive, omit both role restrictions (carry the interface block alone) and open the description with a bounded precondition. The two harness declarations must never diverge.
+3. Create `suite/skills/<group>/<skill-name>/SKILL.md` with the frontmatter shown above (start at `version: 0.1.0`). Every skill ships `agents/openai.yaml` with a universal `interface:` block (`display_name` in title case, a fresh terse `short_description`). For a user-invoked entry point, set `disable-model-invocation: true` in `SKILL.md` AND add `policy.allow_implicit_invocation: false` beneath the interface block. For a primitive, omit both role restrictions (carry the interface block alone) and open the description with a bounded precondition. The two harness declarations must never diverge.
 4. Add a section to `README.md` under "Available skills" with the description and the `npx skills add …` install snippet, linking to the full nested path.
-5. Register the skill folder in `.claude-plugin/marketplace.json` by adding `./skills/<group>/<skill-name>` to the single `Antmay` plugin's `skills` array.
+5. Register the skill folder in `.claude-plugin/marketplace.json` by adding `./skills/<group>/<skill-name>` to the single `Antmay` plugin's `skills` array. Skip this and the skill ships uninstallable.
 6. Add the skill's folder name (the leaf, not the full path) to `conventionalCommits.scopes` in `.vscode/settings.json` (keep the array sorted alphabetically) so it shows up as a commit scope.
+7. Run `node suite/scripts/check-marketplace-skills.mjs` and confirm it passes.
 
 ## Commits
 

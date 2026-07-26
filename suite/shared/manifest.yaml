@@ -1,8 +1,8 @@
 # Shared-reference sync manifest.
 #
-# Flat map: each key is a skill path (repo-root-relative, a folder containing a
+# Flat map: each key is a skill path (suite-root-relative, a folder containing a
 # SKILL.md); each value is a list of source files relative to shared/references/.
-# `scripts/sync-shared-references.mjs` copies every listed source to the same
+# `suite/scripts/sync-shared-references.mjs` copies every listed source to the same
 # relative path under the skill's references/ folder. The script owns exactly
 # the files listed here: it deletes and rewrites precisely those, leaving any
 # hand-authored skill-local references untouched.

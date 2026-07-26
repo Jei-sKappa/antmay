@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// Sync shared references from the canonical sources under `shared/references/`
-// into each declaring skill's `references/` folder.
+// Sync shared references from the canonical sources under
+// `suite/shared/references/` into each declaring skill's `references/` folder.
 //
-// Source of truth: `shared/references/`. Declarations: `shared/manifest.yaml`
-// (a strictly flat map — skill-path key -> list of source paths relative to
+// Source of truth: `suite/shared/references/`. Declarations:
+// `suite/shared/manifest.yaml` (a strictly flat map — suite-root-relative
+// skill-path key -> list of source paths relative to
 // `shared/references/`). Each declared source is mirrored to the same relative
 // path under the skill's `references/` folder. Edit the canonical sources and
 // rerun; NEVER hand-edit the generated copies.
@@ -37,9 +38,9 @@ import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(SCRIPT_DIR, "..");
-const MANIFEST_PATH = join(REPO_ROOT, "shared", "manifest.yaml");
-const SHARED_REFS_DIR = join(REPO_ROOT, "shared", "references");
+const SUITE_ROOT = resolve(SCRIPT_DIR, "..");
+const MANIFEST_PATH = join(SUITE_ROOT, "shared", "manifest.yaml");
+const SHARED_REFS_DIR = join(SUITE_ROOT, "shared", "references");
 
 function fail(message) {
   console.error(`sync-shared-references: ${message}`);
@@ -121,7 +122,7 @@ function assertGeneratedFile(absFile, skillDir) {
 
 function main() {
   if (!isFile(MANIFEST_PATH)) {
-    fail(`manifest not found at ${relative(REPO_ROOT, MANIFEST_PATH)}`);
+    fail(`manifest not found at ${relative(SUITE_ROOT, MANIFEST_PATH)}`);
   }
 
   const manifest = parseManifest(readFileSync(MANIFEST_PATH, "utf8"), "shared/manifest.yaml");
@@ -129,9 +130,9 @@ function main() {
   // ---- VALIDATE EVERYTHING BEFORE DELETING ANYTHING ----
   const errors = [];
   for (const [skillPath, entries] of manifest) {
-    const skillDir = resolve(REPO_ROOT, skillPath);
-    if (relative(REPO_ROOT, skillDir).startsWith("..")) {
-      errors.push(`skill path escapes the repo: ${skillPath}`);
+    const skillDir = resolve(SUITE_ROOT, skillPath);
+    if (relative(SUITE_ROOT, skillDir).startsWith("..")) {
+      errors.push(`skill path escapes suite/: ${skillPath}`);
       continue;
     }
     if (!isFile(join(skillDir, "SKILL.md"))) {
@@ -155,7 +156,7 @@ function main() {
   // ---- APPLY (only after full validation) ----
   let copied = 0;
   for (const [skillPath, entries] of manifest) {
-    const skillDir = resolve(REPO_ROOT, skillPath);
+    const skillDir = resolve(SUITE_ROOT, skillPath);
     for (const entry of entries) {
       const src = resolve(SHARED_REFS_DIR, entry);
       const dest = resolve(skillDir, "references", entry);

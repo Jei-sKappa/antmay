@@ -56,7 +56,7 @@ once.
 change: no failing tests, no type errors, no half-migrated code left behind, no
 scenario left red. Freedom from old formats is not freedom from a working build.
 
-This section covers the CLI only. The skills under `skills/` **are** published
+This section covers the CLI only. The skills under `suite/skills/` **are** published
 and installed by real users through `npx skills add`, so their formats and
 behavior stay stable.
 

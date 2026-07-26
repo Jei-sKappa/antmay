@@ -2,7 +2,7 @@
   "plugins": [
     {
       "name": "Antmay",
-      "source": "./",
+      "source": "./suite",
       "skills": [
         "./skills/capture-discussion/discussion",
         "./skills/capture-discussion/open-thread",
