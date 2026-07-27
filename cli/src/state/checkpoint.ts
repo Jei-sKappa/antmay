@@ -122,6 +122,8 @@ export type AttemptRecord = {
   terminalResult: TerminalResult | null;
   pendingFiles?: string[];
   failure?: { kind: string; message: string };
+  /** Opaque provider session ID when one was captured for this attempt. */
+  agentSession?: { id: string };
   logPath: string;
 };
 
@@ -469,6 +471,13 @@ function validateAttempt(value: unknown, label: string, errors: string[]): void 
       if (typeof value.failure.message !== "string") {
         errors.push(`${label}.failure.message must be a string.`);
       }
+    }
+  }
+  if (value.agentSession !== undefined) {
+    if (!isPlainObject(value.agentSession)) {
+      errors.push(`${label}.agentSession must be an object.`);
+    } else if (!isNonEmptyString(value.agentSession.id)) {
+      errors.push(`${label}.agentSession.id must be a non-empty string.`);
     }
   }
   if (!isNormalizedRelPosix(value.logPath)) {

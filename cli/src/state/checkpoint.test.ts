@@ -398,6 +398,90 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
   });
 });
 
+describe("validateCheckpoint — attempt agentSession (AC-2.1)", () => {
+  it("accepts an attempt with no agentSession", () => {
+    const doc = validCheckpoint();
+    expect(doc.attempts[0].agentSession).toBeUndefined();
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.checkpoint.attempts[0].agentSession).toBeUndefined();
+    }
+  });
+
+  it("round-trips a valid ID-only agentSession", () => {
+    const doc = validCheckpoint();
+    doc.attempts[0].agentSession = { id: "S" };
+    const roundTripped = JSON.parse(JSON.stringify(doc));
+    const result = validateCheckpoint(roundTripped);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.checkpoint.attempts[0].agentSession).toEqual({ id: "S" });
+      expect(result.checkpoint.schemaVersion).toBe(0);
+    }
+  });
+
+  it("rejects a null agentSession", () => {
+    const doc = validCheckpoint();
+    (doc.attempts[0] as Record<string, unknown>).agentSession = null;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /attempts\[0\]\.agentSession must be an object/.test(e))).toBe(
+        true,
+      );
+    }
+  });
+
+  it("rejects a non-object agentSession", () => {
+    const doc = validCheckpoint();
+    (doc.attempts[0] as Record<string, unknown>).agentSession = "S";
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /attempts\[0\]\.agentSession must be an object/.test(e))).toBe(
+        true,
+      );
+    }
+  });
+
+  it("rejects an agentSession missing id", () => {
+    const doc = validCheckpoint();
+    (doc.attempts[0] as Record<string, unknown>).agentSession = {};
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => /attempts\[0\]\.agentSession\.id must be a non-empty string/.test(e)),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a non-string agentSession.id", () => {
+    const doc = validCheckpoint();
+    (doc.attempts[0] as Record<string, unknown>).agentSession = { id: 42 };
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => /attempts\[0\]\.agentSession\.id must be a non-empty string/.test(e)),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an empty agentSession.id", () => {
+    const doc = validCheckpoint();
+    doc.attempts[0].agentSession = { id: "" };
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => /attempts\[0\]\.agentSession\.id must be a non-empty string/.test(e)),
+      ).toBe(true);
+    }
+  });
+});
+
 describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => {
   it("accepts marker-less checkpoints", () => {
     const result = validateCheckpoint(validCheckpoint());
