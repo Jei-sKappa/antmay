@@ -4,7 +4,7 @@ description: Turn a rough idea into a tracker ticket whose body reads as a threa
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.3.0
+  version: 0.3.1
 ---
 
 # Open Ticket
@@ -26,9 +26,10 @@ the whole result.
 Do this first, before composing: a convention can decide the title's shape, and
 a title composed without it has to be rewritten.
 
-Read `references/repository-conventions.md`. It carries where a project states
-such a convention, which parts of it bind you, and what to do when it leaves a
-choice the user's idea does not settle.
+Read `references/repository-conventions.md` and apply what it says about a
+ticket. It carries where a project states such a convention, which parts of it
+bind you, and what to do when it leaves a choice the user's idea does not
+settle.
 
 ## Compose the ticket
 

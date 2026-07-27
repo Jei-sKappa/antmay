@@ -13,6 +13,7 @@
 # below does not delete its previously generated copy — delete that by hand.
 
 skills/finish-navigate/finish:
+  - repository-conventions.md
   - trackers/github.md
 
 skills/finish-navigate/whats-next:
@@ -24,6 +25,7 @@ skills/capture-discussion/open-thread:
   - trackers/github.md
 
 skills/capture-discussion/open-ticket:
+  - repository-conventions.md
   - trackers/github.md
 
 skills/capture-discussion/discussion:
