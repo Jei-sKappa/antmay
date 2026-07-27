@@ -50,6 +50,14 @@ A change scoped to one skill uses that skill's folder name as the commit scope
 omits the scope (`docs: …`). The valid scopes are listed in
 `conventionalCommits.scopes` in `.vscode/settings.json`.
 
+## Pull requests
+
+A pull request title takes the same Conventional Commits shape as a commit
+subject, under the same scope rules — `feat(cli): …`, `docs: …`. The body says
+what changed and why; where the work came from an issue, `Closes #<number>`
+links the two and closes the issue when the pull request merges into the
+default branch.
+
 ## Working in the repository
 
 `AGENTS.md` at the root is the entry point — it explains the two modules and
