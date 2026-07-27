@@ -46,6 +46,11 @@ export type AttemptRequest = {
   workspace: WorkspaceExecution;
   logFilePath: string;
   onEvent: (event: HarnessEvent) => void;
+  /**
+   * Invoked once when the adapter discovers the attempt's first non-empty
+   * provider-neutral session identity while the invocation is still live.
+   */
+  onSessionCaptured?: (session: { id: string }) => void;
   signal: AbortSignal;
 };
 
@@ -54,15 +59,17 @@ export type AttemptRequest = {
  *
  * A `failed` outcome carries a normalized `category` alongside the original
  * error's class name and message, so callers classify without touching any
- * harness-specific error type.
+ * harness-specific error type. Both variants may carry the attempt's captured
+ * session identity when one was discovered.
  */
 export type AttemptOutcome =
-  | { kind: "completed"; finalText: string }
+  | { kind: "completed"; finalText: string; session?: { id: string } }
   | {
       kind: "failed";
       category: "idle-timeout" | "aborted" | "provider-error";
       errorClass: string;
       errorMessage: string;
+      session?: { id: string };
     };
 
 /**

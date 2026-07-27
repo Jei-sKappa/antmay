@@ -96,6 +96,22 @@ const ABORTED_OUTCOME: AttemptOutcome = {
 };
 
 /**
+ * Deterministic fake session identity for a launched scripted attempt. The
+ * shape is intentionally obvious so pause and list renderings stay demo-covered
+ * without resembling a real provider ID.
+ */
+export function scriptedSessionId(stageId: string, attemptNumber: number): string {
+  return `scripted-session-${stageId}-${attemptNumber}`;
+}
+
+function withSession(
+  outcome: AttemptOutcome,
+  session: { id: string },
+): AttemptOutcome {
+  return { ...outcome, session };
+}
+
+/**
  * One line of a case's progress: prose the agent narrated, or a tool call it
  * made. A tool line names the operation the case genuinely performed and the
  * arguments it performed it with, so the rendered call describes real work.
@@ -1027,6 +1043,11 @@ async function invokeScripted(
     return ABORTED_OUTCOME;
   }
 
+  const session = {
+    id: scriptedSessionId(request.stage.id, request.stage.attemptNumber),
+  };
+  request.onSessionCaptured?.(session);
+
   const handler = CASE_HANDLERS[selected.caseName];
   const effect = await handler({
     request,
@@ -1035,7 +1056,7 @@ async function invokeScripted(
     threadAbsRoot: threadRoot.absPath,
   });
   if (!effect.ok) {
-    return scriptedProviderError(effect.error);
+    return withSession(scriptedProviderError(effect.error), session);
   }
 
   // A case that ends ordinarily streams its final message as the last line of
@@ -1047,7 +1068,7 @@ async function invokeScripted(
 
   const streamed = emitTranscript(request, transcript);
   if (!streamed.ok) {
-    return scriptedProviderError(streamed.error);
+    return withSession(scriptedProviderError(streamed.error), session);
   }
 
   const closing = ordinary
@@ -1062,21 +1083,27 @@ async function invokeScripted(
     closing,
   );
   if (!log.ok) {
-    return scriptedProviderError(log.error);
+    return withSession(scriptedProviderError(log.error), session);
   }
 
   if (ordinary) {
-    return { kind: "completed", finalText: effect.finalText };
+    return withSession(
+      { kind: "completed", finalText: effect.finalText },
+      session,
+    );
   }
   if (effect.ending.kind === "failed") {
-    return {
-      kind: "failed",
-      category: effect.ending.category,
-      errorClass: effect.ending.errorClass,
-      errorMessage: effect.ending.errorMessage,
-    };
+    return withSession(
+      {
+        kind: "failed",
+        category: effect.ending.category,
+        errorClass: effect.ending.errorClass,
+        errorMessage: effect.ending.errorMessage,
+      },
+      session,
+    );
   }
-  return awaitAbort(request.signal);
+  return withSession(await awaitAbort(request.signal), session);
 }
 
 /**

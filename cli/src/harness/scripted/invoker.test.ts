@@ -24,6 +24,7 @@ import {
   RECONCILE_SPEC_PENDING_DECISION_PATH,
   SCRIPTED_HARNESS_ERROR_CLASS,
   SPEC_CORRECT_CONTENT,
+  scriptedSessionId,
 } from "./invoker.js";
 import {
   SCRIPTED_CASE_NAMES,
@@ -80,6 +81,7 @@ function buildRequest(
     target?: StageTarget;
     signal?: AbortSignal;
     onEvent?: AttemptRequest["onEvent"];
+    onSessionCaptured?: AttemptRequest["onSessionCaptured"];
     logFilePath?: string;
   } = {},
 ): AttemptRequest {
@@ -120,6 +122,7 @@ function buildRequest(
       overrides.logFilePath ??
       path.join(fixture.root, ".antmay-runs", "01-spec-attempt-01.log"),
     onEvent: overrides.onEvent ?? (() => {}),
+    onSessionCaptured: overrides.onSessionCaptured,
     signal: overrides.signal ?? new AbortController().signal,
   };
 }
@@ -185,6 +188,7 @@ describe("createScriptedInvoker", () => {
     expect(firstOutcome).toEqual({
       kind: "completed",
       finalText: "Outcome: DONE — Fake completion; no files changed",
+      session: { id: scriptedSessionId("spec", 1) },
     });
 
     const second = buildRequest(fixture, stage, {
@@ -196,6 +200,7 @@ describe("createScriptedInvoker", () => {
     expect(secondOutcome).toEqual({
       kind: "completed",
       finalText: "Outcome: BLOCKED — Fake pause; no files changed",
+      session: { id: scriptedSessionId("spec", 2) },
     });
   });
 
@@ -476,6 +481,7 @@ describe("createScriptedInvoker", () => {
     expect(outcome).toEqual({
       kind: "completed",
       finalText: "Outcome: DONE — Fake plan written: plan.md",
+      session: { id: scriptedSessionId("plan-strict", 1) },
     });
     expect(await readFile(path.join(fixture.threadPath!, "plan.md"), "utf8")).toBe(
       PLAN_STRICT_PLAN_CONTENT,
@@ -634,6 +640,7 @@ describe("createScriptedInvoker", () => {
       kind: "completed",
       finalText:
         "Outcome: DONE — Fake implementation report written: implementation-report.md",
+      session: { id: scriptedSessionId("implement-plan-with-subagents", 1) },
     });
     expect(await readFile(reportPath, "utf8")).toBe(IMPLEMENT_REPORT_CONTENT);
 
@@ -806,6 +813,7 @@ describe("createScriptedInvoker", () => {
       category: "provider-error",
       errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
       errorMessage: expect.stringContaining("display exploded"),
+      session: { id: scriptedSessionId("spec", 1) },
     });
   });
 
@@ -821,6 +829,161 @@ describe("createScriptedInvoker", () => {
       kind: "failed",
       category: "provider-error",
       errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      session: { id: scriptedSessionId("spec", 1) },
+    });
+  });
+
+  describe("scripted session identity", () => {
+    it("reports the deterministic ID live and on completed outcomes", async () => {
+      const fixture = await newFixture();
+      const captured: { id: string }[] = [];
+      const invoker = createScriptedInvoker(
+        makeScenario({ spec: ["outcome-done"] }),
+      );
+      const request = buildRequest(fixture, stageById("spec"), {
+        onSessionCaptured: (session) => captured.push(session),
+      });
+      await initAttemptLog(fixture, request);
+
+      const outcome = await invoker.invoke(request);
+      expect(captured).toEqual([{ id: "scripted-session-spec-1" }]);
+      expect(outcome).toEqual({
+        kind: "completed",
+        finalText: "Outcome: DONE — Fake completion; no files changed",
+        session: { id: "scripted-session-spec-1" },
+      });
+    });
+
+    it("attaches the session to provider-error and idle-timeout endings", async () => {
+      const fixture = await newFixture();
+      for (const [caseName, category] of [
+        ["harness-provider-error", "provider-error"],
+        ["harness-idle-timeout", "idle-timeout"],
+      ] as const) {
+        const captured: { id: string }[] = [];
+        const invoker = createScriptedInvoker(
+          makeScenario({ "review-spec": [caseName] }),
+        );
+        const request = buildRequest(fixture, stageById("review-spec"), {
+          onSessionCaptured: (session) => captured.push(session),
+          logFilePath: path.join(
+            fixture.root,
+            ".antmay-runs",
+            `${caseName}.log`,
+          ),
+        });
+        await initAttemptLog(fixture, request);
+
+        const outcome = await invoker.invoke(request);
+        expect(captured).toEqual([
+          { id: scriptedSessionId("review-spec", 1) },
+        ]);
+        expect(outcome).toMatchObject({
+          kind: "failed",
+          category,
+          session: { id: scriptedSessionId("review-spec", 1) },
+        });
+      }
+    });
+
+    it("attaches the session to abort-settled outcomes after launch", async () => {
+      const fixture = await newFixture();
+      const captured: { id: string }[] = [];
+      const controller = new AbortController();
+      const invoker = createScriptedInvoker(
+        makeScenario({ "review-spec": ["harness-hang"] }),
+      );
+      const request = buildRequest(fixture, stageById("review-spec"), {
+        signal: controller.signal,
+        onSessionCaptured: (session) => {
+          captured.push(session);
+          controller.abort();
+        },
+      });
+      await initAttemptLog(fixture, request);
+
+      const outcome = await invoker.invoke(request);
+      expect(captured).toEqual([
+        { id: scriptedSessionId("review-spec", 1) },
+      ]);
+      expect(outcome).toEqual({
+        kind: "failed",
+        category: "aborted",
+        errorClass: "AbortError",
+        errorMessage: "The attempt was aborted by a signal.",
+        session: { id: scriptedSessionId("review-spec", 1) },
+      });
+    });
+
+    it("omits the session for pre-launch validation and abort failures", async () => {
+      const fixture = await newFixture();
+      const captured: { id: string }[] = [];
+      const invoker = createScriptedInvoker(
+        makeScenario({ spec: ["outcome-done"] }),
+      );
+
+      const exhausted = buildRequest(fixture, stageById("spec"), {
+        attemptNumber: 2,
+        onSessionCaptured: (session) => captured.push(session),
+      });
+      await initAttemptLog(fixture, exhausted);
+      const exhaustedOutcome = await invoker.invoke(exhausted);
+      expect(exhaustedOutcome).toMatchObject({
+        kind: "failed",
+        category: "provider-error",
+      });
+      expect(exhaustedOutcome).not.toHaveProperty("session");
+
+      const controller = new AbortController();
+      controller.abort();
+      const prelaunch = buildRequest(fixture, stageById("spec"), {
+        signal: controller.signal,
+        onSessionCaptured: (session) => captured.push(session),
+        logFilePath: path.join(
+          fixture.root,
+          ".antmay-runs",
+          "01-spec-attempt-prelaunch.log",
+        ),
+      });
+      await initAttemptLog(fixture, prelaunch);
+      const prelaunchOutcome = await invoker.invoke(prelaunch);
+      expect(prelaunchOutcome).toEqual({
+        kind: "failed",
+        category: "aborted",
+        errorClass: "AbortError",
+        errorMessage: expect.any(String),
+      });
+      expect(captured).toEqual([]);
+    });
+
+    it("does not change transcript or log framing when a session is reported", async () => {
+      const fixture = await newFixture();
+      const events: string[] = [];
+      const invoker = createScriptedInvoker(
+        makeScenario({ spec: ["spec-correct"] }),
+      );
+      const request = buildRequest(fixture, stageById("spec"), {
+        onEvent: (event) => {
+          if (event.type === "text") events.push(event.text);
+        },
+        onSessionCaptured: () => {},
+      });
+      const logPath = await initAttemptLog(fixture, request);
+
+      const outcome = await invoker.invoke(request);
+      expect(events).toEqual([
+        "Writing spec.md.",
+        "Outcome: DONE — Fake spec written: spec.md",
+      ]);
+      expect(outcome).toMatchObject({
+        kind: "completed",
+        session: { id: scriptedSessionId("spec", 1) },
+      });
+      const log = await readFile(logPath, "utf8");
+      expect(log.startsWith("Run: run-test\n")).toBe(true);
+      expect(log).toContain("  Case: spec-correct");
+      expect(log).toContain("  Attempt: 1");
+      expect(log).not.toContain("scripted-session-spec-1");
     });
   });
 });

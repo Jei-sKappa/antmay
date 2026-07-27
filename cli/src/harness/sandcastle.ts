@@ -1,5 +1,5 @@
 import { run, codex, claudeCode } from "@ai-hero/sandcastle";
-import type { RunOptions } from "@ai-hero/sandcastle";
+import type { AgentProvider, RunOptions, RunResult } from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 
 import type {
@@ -28,7 +28,7 @@ const COMPLETION_TIMEOUT_SECONDS = 60;
  * options are omitted so the harness's own bypass governs — session capture
  * stays disabled.
  */
-function buildAgent(request: AttemptRequest) {
+function buildAgent(request: AttemptRequest): AgentProvider {
   if (request.harness === "codex") {
     return request.dangerouslySkipPermissions
       ? codex(request.model, { captureSessions: false })
@@ -71,14 +71,45 @@ export function mapAgentStreamEvent(event: {
 }
 
 /**
+ * Watch raw stream lines through the attempt's provider parser and retain the
+ * first non-empty normalized session identity, reporting it once via the
+ * live-capture callback.
+ */
+function createSessionCapture(request: AttemptRequest, agent: AgentProvider): {
+  noteRawLine: (line: string) => void;
+} {
+  let captured = false;
+  return {
+    noteRawLine(line: string): void {
+      if (captured) {
+        return;
+      }
+      for (const parsed of agent.parseStreamLine(line)) {
+        if (parsed.type !== "session_id") {
+          continue;
+        }
+        if (parsed.sessionId.length === 0) {
+          continue;
+        }
+        captured = true;
+        request.onSessionCaptured?.({ id: parsed.sessionId });
+        return;
+      }
+    },
+  };
+}
+
+/**
  * Build the exact harness run options for a single attempt. Pure and
  * unit-testable: the mapping is fixed field-by-field, mapping the Antmay-owned
  * workspace values at the adapter edge and setting nothing outside the listed
- * options.
+ * options. One provider instance is both the run agent and the raw-line parser.
  */
 export function buildSandcastleRunOptions(request: AttemptRequest): RunOptions {
+  const agent = buildAgent(request);
+  const sessionCapture = createSessionCapture(request, agent);
   return {
-    agent: buildAgent(request),
+    agent,
     sandbox: noSandbox(),
     cwd: request.workspace.cwd,
     prompt: request.prompt,
@@ -92,6 +123,9 @@ export function buildSandcastleRunOptions(request: AttemptRequest): RunOptions {
       path: request.logFilePath,
       verbose: true,
       onAgentStreamEvent: (event) => {
+        if (event.type === "raw") {
+          sessionCapture.noteRawLine(event.line);
+        }
         const mapped = mapAgentStreamEvent(event);
         if (mapped !== null) {
           request.onEvent(mapped);
@@ -161,19 +195,63 @@ function normalizeError(
 }
 
 /**
+ * Prefer the live-captured ID; otherwise, on a resolved run only, take the
+ * last iteration's non-empty session ID as a settlement-only fallback.
+ */
+function resolveOutcomeSession(
+  liveSessionId: string | undefined,
+  result?: RunResult,
+): { id: string } | undefined {
+  if (liveSessionId !== undefined && liveSessionId.length > 0) {
+    return { id: liveSessionId };
+  }
+  if (result === undefined) {
+    return undefined;
+  }
+  const fallback = result.iterations.at(-1)?.sessionId;
+  if (typeof fallback === "string" && fallback.length > 0) {
+    return { id: fallback };
+  }
+  return undefined;
+}
+
+function withSession(
+  outcome: AttemptOutcome,
+  session: { id: string } | undefined,
+): AttemptOutcome {
+  return session === undefined ? outcome : { ...outcome, session };
+}
+
+/**
  * Create the {@link HarnessInvoker} backed by the harness adapter. On resolve,
  * the completed outcome's `finalText` is the captured single-iteration result
  * text; on reject, the error is normalized to a provider-neutral failed
- * outcome. No harness type appears in this signature.
+ * outcome. The first live-captured session ID is retained on either path; a
+ * resolved run with no live ID may still carry Sandcastle's final iteration
+ * session ID. No harness type appears in this signature.
  */
 export function createSandcastleInvoker(): HarnessInvoker {
   return {
     async invoke(request: AttemptRequest): Promise<AttemptOutcome> {
+      let liveSessionId: string | undefined;
+      const requestWithCapture: AttemptRequest = {
+        ...request,
+        onSessionCaptured: (session) => {
+          liveSessionId = session.id;
+          request.onSessionCaptured?.(session);
+        },
+      };
       try {
-        const result = await run(buildSandcastleRunOptions(request));
-        return { kind: "completed", finalText: result.stdout };
+        const result = await run(buildSandcastleRunOptions(requestWithCapture));
+        return withSession(
+          { kind: "completed", finalText: result.stdout },
+          resolveOutcomeSession(liveSessionId, result),
+        );
       } catch (error) {
-        return normalizeError(error, request.signal);
+        return withSession(
+          normalizeError(error, request.signal),
+          resolveOutcomeSession(liveSessionId),
+        );
       }
     },
   };

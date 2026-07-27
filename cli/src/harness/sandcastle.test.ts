@@ -268,6 +268,67 @@ describe("mapAgentStreamEvent", () => {
       { type: "tool-call", name: "Bash", args: "echo hi" },
     ]);
   });
+
+  it("parses raw lines with the same agent instance assigned to run options", () => {
+    const options = buildSandcastleRunOptions(makeRequest());
+    const parseSpy = vi
+      .spyOn(options.agent, "parseStreamLine")
+      .mockReturnValue([]);
+    const logging = options.logging;
+    if (logging?.type !== "file" || !logging.onAgentStreamEvent) {
+      throw new Error("expected file logging with a stream handler");
+    }
+    logging.onAgentStreamEvent({
+      type: "raw",
+      line: "provider-wire",
+      iteration: 0,
+      timestamp: new Date(),
+    });
+    expect(parseSpy).toHaveBeenCalledTimes(1);
+    expect(parseSpy).toHaveBeenCalledWith("provider-wire");
+    expect(options.agent.captureSessions).toBe(false);
+  });
+
+  it("captures the first non-empty session_id once and keeps raw lines off display", () => {
+    const events: HarnessEvent[] = [];
+    const captured: { id: string }[] = [];
+    const options = buildSandcastleRunOptions(
+      makeRequest({
+        onEvent: (event) => events.push(event),
+        onSessionCaptured: (session) => captured.push(session),
+      }),
+    );
+    const parseSpy = vi.spyOn(options.agent, "parseStreamLine");
+    parseSpy
+      .mockReturnValueOnce([])
+      .mockReturnValueOnce([{ type: "session_id", sessionId: "" }])
+      .mockReturnValueOnce([{ type: "session_id", sessionId: "first-id" }])
+      .mockReturnValueOnce([{ type: "session_id", sessionId: "second-id" }]);
+
+    const logging = options.logging;
+    if (logging?.type !== "file" || !logging.onAgentStreamEvent) {
+      throw new Error("expected file logging with a stream handler");
+    }
+    for (const line of ["noise", "empty-session", "first", "second"]) {
+      logging.onAgentStreamEvent({
+        type: "raw",
+        line,
+        iteration: 0,
+        timestamp: new Date(),
+      });
+    }
+    logging.onAgentStreamEvent({
+      type: "text",
+      message: "visible",
+      iteration: 0,
+      timestamp: new Date(),
+    });
+
+    expect(captured).toEqual([{ id: "first-id" }]);
+    expect(events).toEqual([{ type: "text", text: "visible" }]);
+    // Parsing stops once the first non-empty ID is retained.
+    expect(parseSpy).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("createSandcastleInvoker error normalization", () => {
@@ -276,7 +337,10 @@ describe("createSandcastleInvoker error normalization", () => {
   });
 
   it("returns completed with the run's stdout as finalText", async () => {
-    runMock.mockResolvedValue({ stdout: "final answer" } as never);
+    runMock.mockResolvedValue({
+      stdout: "final answer",
+      iterations: [],
+    } as never);
     const outcome = await createSandcastleInvoker().invoke(makeRequest());
     expect(outcome).toEqual({ kind: "completed", finalText: "final answer" });
   });
@@ -331,6 +395,102 @@ describe("createSandcastleInvoker error normalization", () => {
       errorClass: "TypeError",
       errorMessage: "boom",
     });
+  });
+
+  it("retains the first live session on completed outcomes", async () => {
+    const captured: { id: string }[] = [];
+    runMock.mockImplementation(async (options) => {
+      vi.spyOn(options.agent, "parseStreamLine")
+        .mockReturnValueOnce([{ type: "session_id", sessionId: "live-a" }])
+        .mockReturnValueOnce([{ type: "session_id", sessionId: "live-b" }]);
+      const logging = options.logging;
+      if (logging?.type === "file" && logging.onAgentStreamEvent) {
+        logging.onAgentStreamEvent({
+          type: "raw",
+          line: "a",
+          iteration: 0,
+          timestamp: new Date(),
+        });
+        logging.onAgentStreamEvent({
+          type: "raw",
+          line: "b",
+          iteration: 0,
+          timestamp: new Date(),
+        });
+      }
+      return {
+        stdout: "done",
+        iterations: [{ sessionId: "result-id" }],
+      } as never;
+    });
+
+    const outcome = await createSandcastleInvoker().invoke(
+      makeRequest({ onSessionCaptured: (session) => captured.push(session) }),
+    );
+    expect(captured).toEqual([{ id: "live-a" }]);
+    expect(outcome).toEqual({
+      kind: "completed",
+      finalText: "done",
+      session: { id: "live-a" },
+    });
+  });
+
+  it("retains the first live session on failed outcomes", async () => {
+    const captured: { id: string }[] = [];
+    runMock.mockImplementation(async (options) => {
+      vi.spyOn(options.agent, "parseStreamLine").mockReturnValue([
+        { type: "session_id", sessionId: "live-fail" },
+      ]);
+      const logging = options.logging;
+      if (logging?.type === "file" && logging.onAgentStreamEvent) {
+        logging.onAgentStreamEvent({
+          type: "raw",
+          line: "session",
+          iteration: 0,
+          timestamp: new Date(),
+        });
+      }
+      throw new TypeError("provider blew up");
+    });
+
+    const outcome = await createSandcastleInvoker().invoke(
+      makeRequest({ onSessionCaptured: (session) => captured.push(session) }),
+    );
+    expect(captured).toEqual([{ id: "live-fail" }]);
+    expect(outcome).toEqual({
+      kind: "failed",
+      category: "provider-error",
+      errorClass: "TypeError",
+      errorMessage: "provider blew up",
+      session: { id: "live-fail" },
+    });
+  });
+
+  it("uses the last iteration sessionId as settlement-only fallback", async () => {
+    const captured: { id: string }[] = [];
+    runMock.mockResolvedValue({
+      stdout: "fallback",
+      iterations: [{ sessionId: "iter-1" }, { sessionId: "iter-last" }],
+    } as never);
+
+    const outcome = await createSandcastleInvoker().invoke(
+      makeRequest({ onSessionCaptured: (session) => captured.push(session) }),
+    );
+    expect(captured).toEqual([]);
+    expect(outcome).toEqual({
+      kind: "completed",
+      finalText: "fallback",
+      session: { id: "iter-last" },
+    });
+  });
+
+  it("ignores an empty settlement fallback when no live session exists", async () => {
+    runMock.mockResolvedValue({
+      stdout: "none",
+      iterations: [{ sessionId: "" }],
+    } as never);
+    const outcome = await createSandcastleInvoker().invoke(makeRequest());
+    expect(outcome).toEqual({ kind: "completed", finalText: "none" });
   });
 });
 
