@@ -582,7 +582,18 @@ describe("printScriptedModeStartup", () => {
 });
 
 describe("printScriptedResolvedPrompt", () => {
-  it("prints readable prompt input with every physical line marked [DEV]", () => {
+  it("prints a readable single-line prompt to stdout with [DEV] markers", () => {
+    const { options, out, err } = makeOptions();
+    printScriptedResolvedPrompt(options, "$spec `docs/threads/demo`.");
+
+    expect(out.lines.filter((line) => line.startsWith("[DEV]"))).toEqual([
+      "[DEV] Resolved prompt",
+      "[DEV] $spec `docs/threads/demo`.",
+    ]);
+    expect(err.text).toBe("");
+  });
+
+  it("preserves natural multiline input with every physical line marked [DEV]", () => {
     const { options, out, err } = makeOptions();
     printScriptedResolvedPrompt(
       options,

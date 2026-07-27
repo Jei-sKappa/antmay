@@ -229,7 +229,9 @@ Every scripted invoker entry passes its exact `request.prompt` to the terminal's
 developer renderer before request validation. The resulting `[DEV] Resolved
 prompt` block sits after the attempt header and before any simulated transcript,
 with every physical prompt line marked `[DEV]`; it is terminal-only and never
-travels through `onEvent` or the attempt-log transcript. Pre-transcript
+travels through `onEvent` or the attempt-log transcript. The observer is
+best-effort: a synchronous rendering exception is discarded so it cannot
+replace or reclassify the scripted case's authoritative outcome. Pre-transcript
 validation failures therefore still expose their submitted prompt, while an
 attempt interrupted before the invoker call has no prompt block. Scripted mode
 also announces itself in one dim developer block printed ahead of the run

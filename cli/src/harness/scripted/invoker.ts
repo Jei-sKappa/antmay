@@ -1149,7 +1149,12 @@ export function createScriptedInvoker(
 ): HarnessInvoker {
   return {
     invoke(request: AttemptRequest): Promise<AttemptOutcome> {
-      onResolvedPrompt(request.prompt);
+      try {
+        onResolvedPrompt(request.prompt);
+      } catch {
+        // Developer diagnostics are observational. A broken display path must
+        // not replace or reclassify the scripted harness outcome.
+      }
       return invokeScripted(scenario, request);
     },
   };

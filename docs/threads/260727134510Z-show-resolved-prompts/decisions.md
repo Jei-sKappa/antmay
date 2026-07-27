@@ -23,3 +23,19 @@ Context: The scripted invoker validates each invocation request before selecting
 Decision: Emit the `[DEV] Resolved prompt` block immediately upon entry to the scripted invoker, before request-shape validation and other pre-transcript checks. Do not emit a prompt for an attempt interrupted before the runner calls the invoker.
 
 Rationale: Prompt validation failures are a primary case the inspection surface must make diagnosable. Showing the submitted `request.prompt` before validation preserves the actual input even when the invoker rejects it, while attempts that never reach the invocation boundary have no submitted request to display. A pre-validation developer block remains distinct from simulated agent output under DR1.
+
+## DR4: Keep prompt rendering observational
+
+Context: The prompt display is developer-only diagnostic output, while the scripted case's completed or normalized failure result remains the authoritative harness outcome. A synchronous exception from the prompt-rendering observer can otherwise escape before the scripted invocation returns that outcome.
+
+Decision: Isolate synchronous exceptions raised by the prompt-rendering observer and always continue into the scripted invocation. A rendering exception must not be reclassified as a provider or harness failure and must not replace the scripted case's outcome. Automated coverage must prove that a throwing observer leaves the authoritative scripted outcome unchanged.
+
+Rationale: Prompt rendering is best-effort observational output. Letting its failure escape bypasses ordinary attempt classification, while reporting it as a provider error would misidentify an executor-display failure as a harness failure. Preserving the scripted outcome accepts that a failed diagnostic may be unavailable when its output path cannot render reliably.
+
+## DR5: Test each prompt-display boundary directly
+
+Context: The implementation's current tests exercise the main prompt-display path but do not directly prove distinct single-line rendering, prompt visibility on pre-transcript case-selection failures, current-request sourcing and exact block count on retries, or exclusion from normalized events and persisted attempt logs. These behaviors are explicit acceptance boundaries in `spec.md`.
+
+Decision: Add focused automated coverage for each missing boundary. Renderer tests must cover single-line and multiline prompts separately. Pre-transcript case-selection failure coverage must prove that the submitted prompt appears before the failure without requiring simulated transcript output. Retry coverage must prove one block per invocation and, with distinguishable invocation requests at the adapter seam, prove that each invocation reports its own current prompt rather than cached text. Event and attempt-log assertions must explicitly prove that resolved-prompt diagnostics enter neither channel. Reconcile `implementation-report.md` after verification so its coverage claims match the evidence.
+
+Rationale: These boundaries protect the feature's central guarantees: the exact current request is shown once at invocation time and remains terminal-only. Direct tests make regressions observable, whereas weakening the acceptance criteria or only softening the report would leave specified behavior unverified.

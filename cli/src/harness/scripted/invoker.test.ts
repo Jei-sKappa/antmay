@@ -260,22 +260,97 @@ describe("createScriptedInvoker", () => {
 
   it("reports the submitted prompt before streaming scripted transcript events", async () => {
     const fixture = await newFixture();
-    const observed: string[] = [];
+    const observedOrder: string[] = [];
+    const observedPrompts: string[] = [];
+    const observedEvents: string[] = [];
     const invoker = createScriptedInvoker(
       makeScenario({ spec: ["outcome-done"] }),
-      (prompt) => observed.push(`prompt:${prompt}`),
+      (prompt) => {
+        observedPrompts.push(prompt);
+        observedOrder.push("prompt");
+      },
     );
     const request = buildRequest(fixture, stageById("spec"), {
-      onEvent: (event) => observed.push(`event:${event.type}`),
+      onEvent: (event) => {
+        observedEvents.push(JSON.stringify(event));
+        observedOrder.push("event");
+      },
     });
-    await initAttemptLog(fixture, request);
+    const logPath = await initAttemptLog(fixture, request);
 
     await invoker.invoke(request);
+    const log = await readFile(logPath, "utf8");
 
-    expect(observed[0]).toBe(`prompt:${request.prompt}`);
-    expect(observed.length).toBeGreaterThan(1);
-    expect(observed.slice(1).every((entry) => entry.startsWith("event:"))).toBe(true);
+    expect(observedPrompts).toEqual([request.prompt]);
+    expect(observedEvents.length).toBeGreaterThan(0);
+    expect(observedOrder[0]).toBe("prompt");
+    expect(observedOrder.slice(1).every((entry) => entry === "event")).toBe(true);
+    expect(observedEvents.join("\n")).not.toContain("[DEV] Resolved prompt");
+    expect(observedEvents.join("\n")).not.toContain(request.prompt);
+    expect(log).not.toContain("[DEV] Resolved prompt");
+    expect(log).not.toContain(request.prompt);
   });
+
+  it("reports each invocation's current prompt instead of replaying prior input", async () => {
+    const fixture = await newFixture();
+    const observedPrompts: string[] = [];
+    const invoker = createScriptedInvoker(
+      makeScenario({ spec: ["outcome-done", "outcome-done"] }),
+      (prompt) => observedPrompts.push(prompt),
+    );
+    const stage = stageById("spec");
+    const first = buildRequest(fixture, stage, {
+      profilePrompt: "First profile instruction.",
+    });
+    const second = buildRequest(fixture, stage, {
+      attemptNumber: 2,
+      profilePrompt: "Second profile instruction.",
+      logFilePath: path.join(
+        fixture.root,
+        ".antmay-runs",
+        "01-spec-attempt-02.log",
+      ),
+    });
+    await initAttemptLog(fixture, first);
+    await initAttemptLog(fixture, second);
+
+    const firstOutcome = await invoker.invoke(first);
+    const secondOutcome = await invoker.invoke(second);
+
+    expect(firstOutcome.kind).toBe("completed");
+    expect(secondOutcome.kind).toBe("completed");
+    expect(first.prompt).not.toBe(second.prompt);
+    expect(observedPrompts).toEqual([first.prompt, second.prompt]);
+  });
+
+  it.each([
+    ["outcome-done", "completed"],
+    ["harness-provider-error", "failed"],
+  ] as const)(
+    "keeps the %s outcome authoritative when prompt rendering throws",
+    async (caseName, expectedKind) => {
+      const fixture = await newFixture();
+      const invoker = createScriptedInvoker(
+        makeScenario({ spec: [caseName] }),
+        () => {
+          throw new Error("prompt display exploded");
+        },
+      );
+      const request = buildRequest(fixture, stageById("spec"));
+      await initAttemptLog(fixture, request);
+
+      const outcome = await invoker.invoke(request);
+
+      expect(outcome.kind).toBe(expectedKind);
+      if (caseName === "harness-provider-error") {
+        expect(outcome).toMatchObject({
+          kind: "failed",
+          category: "provider-error",
+          errorMessage: expect.stringContaining("provider closed the stream"),
+        });
+      }
+    },
+  );
 
   it("rejects resolved target mismatches", async () => {
     const fixture = await newFixture();
