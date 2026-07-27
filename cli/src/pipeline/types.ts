@@ -127,6 +127,32 @@ export type GitPolicy = {
 export type QueueResolution = "advance" | "rerun";
 
 /**
+ * One ordered entry of a pipeline document: the catalog stage it selects, plus
+ * the optional portable instructions the author attached to that selection.
+ *
+ * An entry is a selection, never a definition: it carries no target, Git,
+ * queue, prerequisite, output, agent, or timing field, and its instructions are
+ * opaque text the CLI never interprets.
+ */
+export type PipelineStageEntry = {
+  stage: CatalogStageId;
+  instructions?: string;
+};
+
+/**
+ * A validated pipeline document.
+ *
+ * `name` is the identity the document declares for display, and `sourcePath` is
+ * the absolute source it was read from. The two are deliberately independent:
+ * moving or renaming the file changes the provenance and not the identity.
+ */
+export type PipelineDocument = {
+  name: string;
+  sourcePath: string;
+  stages: PipelineStageEntry[];
+};
+
+/**
  * One serializable stage descriptor consumed by the generic runner. Carries no
  * functions so the checkpoint can persist it verbatim.
  */
