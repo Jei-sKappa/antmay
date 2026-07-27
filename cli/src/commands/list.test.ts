@@ -5,7 +5,9 @@ import { Writable } from "node:stream";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { HarnessId } from "../config/settings.js";
 import type {
+  AttemptRecord,
   RunCheckpoint,
   RunCondition,
   SnapshottedStage,
@@ -46,7 +48,11 @@ async function tempDir(prefix: string): Promise<string> {
   return dir;
 }
 
-function makeStage(id: string, model: string): SnapshottedStage {
+function makeStage(
+  id: string,
+  model: string,
+  harness: HarnessId = "codex",
+): SnapshottedStage {
   return {
     id,
     skill: id,
@@ -59,7 +65,7 @@ function makeStage(id: string, model: string): SnapshottedStage {
     },
     queueResolution: "advance",
     profile: {
-      harness: "codex",
+      harness,
       model,
       prompt: "do work",
       idleTimeoutSeconds: 900,
@@ -76,6 +82,7 @@ function makeCheckpoint(overrides: {
   stageIndex: number;
   pipelineName?: string;
   stages?: SnapshottedStage[];
+  attempts?: AttemptRecord[];
   repoRoot?: string;
   threadRelPath?: string;
 }): RunCheckpoint {
@@ -83,6 +90,10 @@ function makeCheckpoint(overrides: {
     overrides.stages ??
     [makeStage("spec", "gpt-spec"), makeStage("plan", "gpt-plan"), makeStage("impl", "gpt-impl")];
   const repoRoot = overrides.repoRoot ?? "/Users/dev/repo";
+  const observedHarnessVersions: Partial<Record<HarnessId, string>> = {};
+  for (const stage of stages) {
+    observedHarnessVersions[stage.profile.harness] = `${stage.profile.harness} 1.0.0`;
+  }
   const checkpoint: RunCheckpoint = {
     schemaVersion: 0,
     runId: overrides.runId,
@@ -99,10 +110,10 @@ function makeCheckpoint(overrides: {
     dangerouslySkipPermissions: false,
     pipelineName: overrides.pipelineName ?? "standard",
     stages,
-    observedHarnessVersions: { codex: "codex 1.0.0" },
+    observedHarnessVersions,
     stageIndex: overrides.stageIndex,
     condition: overrides.condition,
-    attempts: [],
+    attempts: overrides.attempts ?? [],
     waiting: null,
     gitCursor: { stageIndex: overrides.stageIndex, headAtStageEntry: null, observedHead: null },
   };
@@ -390,5 +401,192 @@ describe("listCommand corruption handling (AC-16.3)", () => {
     expect(code).toBe(0);
     expect(err.text).toBe("");
     expect(out.text).toContain("20260723T170000000Z-toggle00");
+  });
+});
+
+describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
+  const stagesWithMixedHarnesses = [
+    makeStage("spec", "gpt-spec", "codex"),
+    makeStage("plan", "claude-plan", "claude-code"),
+    makeStage("impl", "gpt-impl", "codex"),
+  ];
+
+  function doneAttempt(
+    stageIndex: number,
+    stageId: string,
+    sessionId?: string,
+  ): AttemptRecord {
+    return {
+      attempt: 1,
+      stageIndex,
+      stageId,
+      startedAt: "2026-07-23T12:00:00.000Z",
+      endedAt: "2026-07-23T12:01:00.000Z",
+      result: "done",
+      terminalResult: {
+        token: "DONE",
+        candidateLine: `Outcome: DONE — ${stageId} finished.`,
+        detail: `— ${stageId} finished.`,
+      },
+      ...(sessionId !== undefined ? { agentSession: { id: sessionId } } : {}),
+      logPath: `logs/0${stageIndex + 1}-${stageId}-attempt-01.log`,
+    };
+  }
+
+  it("selects the newest session-carrying attempt and its snapshotted harness", async () => {
+    const stateRoot = await tempDir("antmay-list-");
+    // Cursor sits on impl (codex), but the newest captured session is on plan
+    // (claude-code) — the column must use plan's snapshotted harness, not the
+    // current stage's.
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T180000000Z-latest00",
+        updatedAt: "2026-07-23T18:00:00.000Z",
+        condition: "ready",
+        stageIndex: 2,
+        stages: stagesWithMixedHarnesses,
+        attempts: [
+          doneAttempt(0, "spec", "session-old-spec"),
+          doneAttempt(1, "plan", "session-newest-plan"),
+          doneAttempt(2, "impl"), // newer attempt, no session
+        ],
+      }),
+    );
+    const { deps: d, out, err } = deps({ ANTMAY_STATE_HOME: stateRoot });
+
+    const code = await listCommand(d);
+
+    expect(code).toBe(0);
+    expect(err.text).toBe("");
+    const row = out.text.trimEnd();
+    expect(row).toContain("claude-code/session-newest-plan");
+    expect(row).not.toContain("session-old-spec");
+    expect(row).toContain("3/3 [impl]");
+    expect(row).toContain("codex/gpt-impl"); // current stage harness/model unchanged
+    // Session column sits immediately before the repository path.
+    expect(row).toMatch(/claude-code\/session-newest-plan {2}\/Users\/dev\/repo {2}/);
+  });
+
+  it("renders the latest session for ready, executing, waiting, and completed", async () => {
+    const stateRoot = await tempDir("antmay-list-");
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T181000000Z-ready000",
+        updatedAt: "2026-07-23T18:10:00.000Z",
+        condition: "ready",
+        stageIndex: 1,
+        stages: stagesWithMixedHarnesses,
+        attempts: [doneAttempt(0, "spec", "sess-ready")],
+      }),
+    );
+    const executing = makeCheckpoint({
+      runId: "20260723T182000000Z-exec0000",
+      updatedAt: "2026-07-23T18:20:00.000Z",
+      condition: "ready",
+      stageIndex: 1,
+      stages: stagesWithMixedHarnesses,
+      attempts: [doneAttempt(0, "spec", "sess-exec-old")],
+    });
+    executing.condition = "executing";
+    executing.attempts = [
+      doneAttempt(0, "spec", "sess-exec-old"),
+      {
+        attempt: 1,
+        stageIndex: 1,
+        stageId: "plan",
+        startedAt: "2026-07-23T18:20:00.000Z",
+        result: "executing",
+        terminalResult: null,
+        agentSession: { id: "sess-exec-live" },
+        logPath: "logs/02-plan-attempt-01.log",
+      },
+    ];
+    await seedRun(stateRoot, executing);
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T183000000Z-wait0000",
+        updatedAt: "2026-07-23T18:30:00.000Z",
+        condition: "waiting-for-user",
+        stageIndex: 1,
+        stages: stagesWithMixedHarnesses,
+        attempts: [
+          doneAttempt(0, "spec", "sess-wait-old"),
+          {
+            attempt: 1,
+            stageIndex: 1,
+            stageId: "plan",
+            startedAt: "2026-07-23T18:29:00.000Z",
+            endedAt: "2026-07-23T18:30:00.000Z",
+            result: "waiting",
+            terminalResult: {
+              token: "BLOCKED",
+              candidateLine: "Outcome: BLOCKED — blocked.",
+              detail: "— blocked.",
+            },
+            agentSession: { id: "sess-wait-now" },
+            logPath: "logs/02-plan-attempt-01.log",
+          },
+        ],
+      }),
+    );
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T184000000Z-done0000",
+        updatedAt: "2026-07-23T18:40:00.000Z",
+        condition: "completed",
+        stageIndex: 3,
+        stages: stagesWithMixedHarnesses,
+        attempts: [
+          doneAttempt(0, "spec", "sess-done-old"),
+          doneAttempt(1, "plan", "sess-done-mid"),
+          doneAttempt(2, "impl", "sess-done-latest"),
+        ],
+      }),
+    );
+    const { deps: d, out, err } = deps({ ANTMAY_STATE_HOME: stateRoot });
+
+    const code = await listCommand(d);
+
+    expect(code).toBe(0);
+    expect(err.text).toBe("");
+    const lines = out.text.trimEnd().split("\n");
+    expect(lines).toHaveLength(4);
+    expect(lines[0]).toContain("Completed");
+    expect(lines[0]).toContain("codex/sess-done-latest");
+    expect(lines[0]).not.toContain("sess-done-old");
+    expect(lines[0]).not.toContain("sess-done-mid");
+    expect(lines[1]).toContain("Waiting for user");
+    expect(lines[1]).toContain("claude-code/sess-wait-now");
+    expect(lines[2]).toContain("Executing (unverified)");
+    expect(lines[2]).toContain("claude-code/sess-exec-live");
+    expect(lines[3]).toContain("Ready");
+    expect(lines[3]).toContain("codex/sess-ready");
+  });
+
+  it("omits the session column when no attempt captured a session", async () => {
+    const stateRoot = await tempDir("antmay-list-");
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T185000000Z-nosess00",
+        updatedAt: "2026-07-23T18:50:00.000Z",
+        condition: "ready",
+        stageIndex: 0,
+        attempts: [doneAttempt(0, "spec")],
+      }),
+    );
+    const { deps: d, out } = deps({ ANTMAY_STATE_HOME: stateRoot });
+
+    const code = await listCommand(d);
+
+    expect(code).toBe(0);
+    const row = out.text.trimEnd();
+    expect(row).toContain("codex/gpt-spec");
+    expect(row).toMatch(/codex\/gpt-spec {2}\/Users\/dev\/repo {2}/);
+    expect(row).not.toMatch(/codex\/gpt-spec {2}\S+\/\S+ {2}\/Users\/dev\/repo/);
   });
 });

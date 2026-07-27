@@ -3,7 +3,11 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK } from "../cli/exit-codes.js";
 import { resolveStateRoot } from "../config/roots.js";
-import type { RunCheckpoint, RunCondition } from "../state/checkpoint.js";
+import type {
+  AttemptRecord,
+  RunCheckpoint,
+  RunCondition,
+} from "../state/checkpoint.js";
 import { readCheckpoint } from "../state/persist.js";
 import { runsDirectory } from "../state/runs.js";
 
@@ -38,11 +42,44 @@ function errorMessage(error: unknown): string {
 }
 
 /**
+ * Walk attempts from newest to oldest and return the first that carries a
+ * captured provider session. Pure: no I/O and no condition-specific rules.
+ */
+function latestSessionAttempt(
+  attempts: readonly AttemptRecord[],
+): AttemptRecord | undefined {
+  for (let i = attempts.length - 1; i >= 0; i -= 1) {
+    const attempt = attempts[i]!;
+    if (attempt.agentSession !== undefined) {
+      return attempt;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Format the optional latest-session column as `<snapshotted-harness>/<id>`,
+ * resolving the harness from the selected attempt's stage snapshot. Returns
+ * `undefined` when no attempt captured a session.
+ */
+function formatLatestSession(checkpoint: RunCheckpoint): string | undefined {
+  const attempt = latestSessionAttempt(checkpoint.attempts);
+  if (attempt?.agentSession === undefined) {
+    return undefined;
+  }
+  const stage = checkpoint.stages[attempt.stageIndex]!;
+  return `${stage.profile.harness}/${attempt.agentSession.id}`;
+}
+
+/**
  * Build one whitespace-separated row for a valid checkpoint: updated time,
  * friendly condition, run ID, pipeline, one-based stage position with stage ID,
- * current harness/model, absolute repository path, and repository-relative
- * thread path. A completed run shows the final stage count and omits the current
- * stage ID and harness/model, since it has no live stage.
+ * current harness/model, optional latest captured session, absolute repository
+ * path, and repository-relative thread path. A completed run shows the final
+ * stage count and omits the current stage ID and harness/model, since it has no
+ * live stage. The session column, when present, is always the newest
+ * session-carrying attempt's snapshotted harness and ID — independent of the
+ * displayed stage position.
  */
 function renderRow(checkpoint: RunCheckpoint): string {
   const condition = CONDITION_LABELS[checkpoint.condition];
@@ -60,6 +97,11 @@ function renderRow(checkpoint: RunCheckpoint): string {
     const stage = checkpoint.stages[checkpoint.stageIndex]!;
     columns.push(`${checkpoint.stageIndex + 1}/${stageCount} [${stage.id}]`);
     columns.push(`${stage.profile.harness}/${stage.profile.model}`);
+  }
+
+  const latestSession = formatLatestSession(checkpoint);
+  if (latestSession !== undefined) {
+    columns.push(latestSession);
   }
 
   columns.push(checkpoint.repoRoot, checkpoint.threadRelPath);

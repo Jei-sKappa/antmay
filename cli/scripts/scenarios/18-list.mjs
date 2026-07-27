@@ -117,6 +117,10 @@ function attemptsFor(condition, stageIndex) {
         candidateLine: `Outcome: DONE — ${id} finished.`,
         detail: `— ${id} finished.`,
       },
+      // Every settled attempt carries an ID-only session so each row shows a
+      // latest-session column; multiple sessions on one run exercise newest
+      // selection (only the final session-carrying attempt is rendered).
+      agentSession: { id: `scripted-session-${id}-1` },
       logPath: `logs/${String(i + 1).padStart(2, "0")}-${id}-attempt-01.log`,
     });
   }
@@ -138,6 +142,7 @@ function attemptsFor(condition, stageIndex) {
               detail: "— the spec contradicts the roadmap.",
             },
           }),
+      agentSession: { id: `scripted-session-${id}-1` },
       logPath: `logs/${String(stageIndex + 1).padStart(2, "0")}-${id}-attempt-01.log`,
     });
   }
