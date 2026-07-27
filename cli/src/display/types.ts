@@ -39,13 +39,16 @@ export interface Display {
     disposition: StageDisposition;
   }): void;
   /** The run durably paused for a human. `logAbsPath` is null for a pause taken
-   * before any attempt was allocated. */
+   * before any attempt was allocated. `continuationCommand` is the paste-ready
+   * native provider command when the pause concerns an attempt that captured a
+   * session; omitted otherwise. */
   runPaused(info: {
     waiting: WaitingInfo;
     runId: string;
     pipelineName: string;
     totalElapsedMs: number;
     logAbsPath: string | null;
+    continuationCommand?: string;
     resumeCommand: string;
     checkpointPath: string;
   }): void;

@@ -341,6 +341,35 @@ describe("runPaused", () => {
     expect(out.text).not.toContain("Log:");
   });
 
+  it("renders Continue after Log and before Resume when a continuation command is supplied", () => {
+    const { out } = paused({
+      continuationCommand: "codex resume 'sess-1'",
+    });
+    expect(out.text).toContain("Continue:   codex resume 'sess-1'");
+    expect(out.text).toContain("Log:");
+    expect(out.text).toContain("Resume:");
+    expect(out.text).not.toContain("Harness:");
+    expect(out.text).not.toMatch(/clean.?worktree/i);
+    const continueAt = out.text.indexOf("Continue:");
+    const resumeAt = out.text.indexOf("Resume:");
+    const logAt = out.text.indexOf("Log:");
+    expect(logAt).toBeGreaterThan(-1);
+    expect(continueAt).toBeGreaterThan(logAt);
+    expect(resumeAt).toBeGreaterThan(continueAt);
+    const lines = out.text.trimEnd().split("\n");
+    expect(lines[lines.length - 1]).toContain(
+      "Resume:     antmay afk resume 260723T00Z-run",
+    );
+  });
+
+  it("omits Continue when no continuation command is provided", () => {
+    const { out } = paused();
+    expect(out.text).not.toContain("Continue:");
+    expect(out.text).toContain("Log:");
+    expect(out.text).toContain("Resume:");
+    expect(out.text).not.toMatch(/clean.?worktree/i);
+  });
+
   it("echoes a malformed candidate line verbatim, behind the gutter that marks it as quoted", () => {
     const { out } = paused({
       waiting: governedBy({

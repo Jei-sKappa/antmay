@@ -156,6 +156,7 @@ const CLOSING_KEYS = [
   "Pending",
   "Next",
   "Log",
+  "Continue",
   "Resume",
 ] as const;
 
@@ -515,6 +516,9 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
       }
       if (info.logAbsPath !== null) {
         lines.push(line("Log", info.logAbsPath));
+      }
+      if (info.continuationCommand !== undefined) {
+        lines.push(line("Continue", info.continuationCommand));
       }
       lines.push(line("Resume", info.resumeCommand));
       emit(options.stdout, lines.join("\n"));
