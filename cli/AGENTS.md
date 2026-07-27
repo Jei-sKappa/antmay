@@ -218,12 +218,13 @@ interpret the toggle or touch scenario/state/Git/harness modules.
 Scripted output imitates an ordinary attempt rather than announcing itself. Each
 case reports a transcript of progress lines plus how it ended; the invoker
 streams every line through `onEvent` (so the terminal renders them like real
-agent output) and appends the same lines to the attempt log under a
-`Scripted Harness Run` frame naming the agent, case, and attempt. A progress line
-is either prose or a tool call, and describes only filesystem work the case
-genuinely performs; the frame fabricates no sandbox, branch, or timing. Scripted
-mode announces itself in exactly one dim line printed ahead of the run details
-block.
+agent output), appends its explicit `Scripted session: <id>` metadata line to the
+attempt log as soon as the synthetic identity exists, and appends the transcript
+under a `Scripted Harness Run` frame naming the agent, case, and attempt. A
+progress line is either prose or a tool call, and describes only filesystem work
+the case genuinely performs; the metadata and frame fabricate no provider JSON,
+sandbox, branch, or timing. Scripted mode announces itself in exactly one dim
+line printed ahead of the run details block.
 
 A case ends in one of three ways. Most report a `finalText` carrying the terminal
 outcome line. A case may instead report a `CaseEnding`: `failed` returns a
@@ -236,8 +237,9 @@ event loop and exit before any signal arrived.
 Every valid launched scripted attempt also reports a deterministic synthetic
 session ID `scripted-session-<stage-id>-<attempt>` once through
 `onSessionCaptured` and again on the settled outcome (ordinary, provider-error,
-idle-timeout, and abort paths). The shape is deliberately non-provider-like so
-demo coverage of the pause `Continue` line (`04-waiting-for-user`) and the list
+idle-timeout, and abort paths), with the same ID written to the attempt log
+before case execution. The shape is deliberately non-provider-like so demo
+coverage of the pause `Continue` line (`04-waiting-for-user`) and the list
 latest-session column (`18-list`) needs no real harness and no scenario-specific
 session setup beyond the shared list seed.
 

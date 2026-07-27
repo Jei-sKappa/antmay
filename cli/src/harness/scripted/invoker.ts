@@ -673,6 +673,31 @@ function emitTranscript(
 }
 
 /**
+ * Persist the synthetic session identity as scripted-harness metadata as soon
+ * as it exists. Real harness logs retain the provider's raw session event; this
+ * explicit line gives scripted logs the same recovery surface without
+ * fabricating provider JSON or emitting executor metadata as agent output.
+ */
+async function appendSessionIdentity(
+  request: AttemptRequest,
+  sessionId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await appendFile(
+      request.logFilePath,
+      `Scripted session: ${sessionId}\n`,
+      "utf8",
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      error: `failed to append scripted session identity: ${(error as Error).message}`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
  * Append the attempt's session log beneath the header Antmay already wrote: an
  * opening frame naming the agent, case, and attempt, the same transcript the
  * display received, and a closing frame. The frame reports only what this
@@ -1047,6 +1072,10 @@ async function invokeScripted(
     id: scriptedSessionId(request.stage.id, request.stage.attemptNumber),
   };
   request.onSessionCaptured?.(session);
+  const sessionLog = await appendSessionIdentity(request, session.id);
+  if (!sessionLog.ok) {
+    return withSession(scriptedProviderError(sessionLog.error), session);
+  }
 
   const handler = CASE_HANDLERS[selected.caseName];
   const effect = await handler({

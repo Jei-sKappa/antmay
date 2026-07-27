@@ -84,6 +84,11 @@ provider CLI for you. You paste it in your own terminal when you want the same
 conversation back (for example after a `DONE` that left `.pending-decisions/`
 work for a human).
 
+The session identity is also discoverable in the attempt log: a real run retains
+the provider's raw session event in its verbose stream, while the scripted demo
+writes an explicit `Scripted session: scripted-session-<stage-id>-<attempt>`
+metadata line. The scripted line stays out of the terminal's agent transcript.
+
 Typical journey after an attempt-backed `WAITING FOR USER` pause:
 
 1. Read the pending decision bundle and settle it outside Antmay.

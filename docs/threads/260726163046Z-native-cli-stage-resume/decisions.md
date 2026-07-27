@@ -223,3 +223,13 @@ Context: Supersedes DR4's `agentSession` shape and DR11's rule that the attempt 
 Decision: An attempt optionally persists `agentSession?: { id: string }`. A consumer that needs the native continuation command resolves the harness from `checkpoint.stages[attempt.stageIndex].profile.harness` and passes it with the ID to the shared command-composition helper from DR20. Pause rendering, run listing, validation, scripted fixtures, and tests use this ID-only persisted shape.
 
 Rationale: The checkpoint keeps one authority for the harness while still preserving the only new provider value this feature needs to capture. The existing immutable stage snapshot makes the lookup deterministic for old and current attempts. The trade-off is that rendering a continuation command requires checkpoint context rather than an attempt record alone.
+
+## DR23: Make the scripted session ID discoverable in its attempt log
+
+Scope: `cli/src/harness/scripted/`, `cli/README.md`, `cli/AGENTS.md`
+
+Context: A real Sandcastle attempt retains the provider's raw session event in its verbose attempt log, so the provider session ID remains recoverable there independently of checkpoint persistence. The scripted invoker owns a deterministic synthetic ID rather than a provider raw event. Attempt-log inspection is a recovery surface in both modes and must expose the identity produced by a completed or interrupted attempt.
+
+Decision: Every valid launched scripted attempt appends its deterministic `scripted-session-<stage-id>-<attempt>` identity to the attempt log as explicit scripted-harness metadata before executing the selected case. The line is not emitted through `onEvent`, so terminal transcripts remain limited to agent progress and tool calls. Pre-launch validation and interruption paths that produce no session append no session line.
+
+Rationale: Attempt-log inspection should expose the session identity in both real and scripted runs. An explicit synthetic metadata line preserves the scripted harness's provider-neutral and visibly fake identity while avoiding fabricated provider JSON. Writing it before case execution gives the scripted log the same recovery role as the real verbose stream if later scripted work fails or is interrupted.

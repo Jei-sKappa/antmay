@@ -790,6 +790,7 @@ describe("createScriptedInvoker", () => {
     expect(log.startsWith("Run: run-test\n")).toBe(true);
     expect(log).toContain("Harness version: scripted-harness 1.0.0");
     expect(log).toContain("Stage: spec");
+    expect(log).toContain("Scripted session: scripted-session-spec-1");
     expect(log).toContain("  Case: spec-correct");
     expect(log).toContain("  Attempt: 1");
     expect(log).toContain("Writing spec.md.");
@@ -815,6 +816,8 @@ describe("createScriptedInvoker", () => {
       errorMessage: expect.stringContaining("display exploded"),
       session: { id: scriptedSessionId("spec", 1) },
     });
+    const log = await readFile(request.logFilePath, "utf8");
+    expect(log).toContain("Scripted session: scripted-session-spec-1");
   });
 
   it("normalizes log append failures to provider-error", async () => {
@@ -956,7 +959,7 @@ describe("createScriptedInvoker", () => {
       expect(captured).toEqual([]);
     });
 
-    it("does not change transcript or log framing when a session is reported", async () => {
+    it("keeps the terminal transcript unchanged while recording the session in the log", async () => {
       const fixture = await newFixture();
       const events: string[] = [];
       const invoker = createScriptedInvoker(
@@ -981,9 +984,9 @@ describe("createScriptedInvoker", () => {
       });
       const log = await readFile(logPath, "utf8");
       expect(log.startsWith("Run: run-test\n")).toBe(true);
+      expect(log).toContain("Scripted session: scripted-session-spec-1");
       expect(log).toContain("  Case: spec-correct");
       expect(log).toContain("  Attempt: 1");
-      expect(log).not.toContain("scripted-session-spec-1");
     });
   });
 });
