@@ -147,11 +147,11 @@ and cannot change catalog behavior.
 
 ### Trusted stage catalog
 
-Every catalog entry is a serializable definition of one fixed-target,
-completion-oriented skill adapter. It owns the skill name, target rule,
-artifact prerequisite, promised state transition, Git policy, queue resolution,
-and base prompt. Pipeline documents select and order entries; they never copy
-or alter these fields (per `decisions.md` DR1).
+Every catalog entry is a serializable definition of one completion-oriented
+skill adapter with a catalog-owned, deterministic target rule. It owns the skill
+name, target rule, artifact prerequisite, promised state transition, Git policy,
+queue resolution, and base prompt. Pipeline documents select and order entries;
+they never copy or alter these fields (per `decisions.md` DR1).
 
 The catalog's artifact contracts and targets are:
 
