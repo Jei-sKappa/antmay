@@ -52,11 +52,12 @@ This work does not:
 - change queue resolution, stage advancement, exit codes, workspace locking,
   or the existing clean-worktree enforcement and error text.
 
-The earlier executor thread at
-`docs/threads/260723121015Z-afk-workflow-executor/` remains untouched. Every
-stage attempt, including an attempt started by `antmay afk resume`, remains a
-fresh harness conversation; native continuation is an out-of-band human action
-(per `decisions.md` DR9).
+Historical thread artifacts outside this thread remain untouched (the relevant
+earlier executor thread is
+`docs/threads/260723121015Z-afk-workflow-executor/`). Every stage attempt,
+including an attempt started by `antmay afk resume`, remains a fresh harness
+conversation; native continuation is an out-of-band human action (per
+`decisions.md` DR9).
 
 ## Behavioral contract
 
@@ -149,7 +150,9 @@ attempt; the harness comes from its snapshotted stage profile. The line appears
 for pauses drawn immediately by the runner and for the same pauses later
 re-rendered by `antmay afk resume`. A pause that has no associated attempt, or
 whose attempt has no session, has no `Continue` line. Existing `Log` and
-`Resume` behavior remains intact (per `decisions.md` DR11 and DR22).
+`Resume` behavior remains intact. The command's binary identifies the harness,
+so no separate harness-name label is rendered (per `decisions.md` DR5, DR11,
+and DR22).
 
 ### Run listing
 
@@ -159,7 +162,8 @@ that carries `agentSession`, rendered as
 attempt's `stageIndex`. The value is omitted when no attempt captured a
 session. This selection rule also applies to executing and completed runs; it
 does not imply that the selected session belongs to the run's currently
-displayed stage (per `decisions.md` DR6 and DR22).
+displayed stage. A complete per-attempt session view belongs with a future
+broader rework of the command's output (per `decisions.md` DR6 and DR22).
 
 ### Scripted behavior and documentation
 
@@ -262,7 +266,8 @@ Source: `decisions.md` DR5, DR11, DR20, and DR22.
   containing a single quote is encoded as one POSIX-safe shell argument.
 - **AC-3.2** Every attempt-backed pause with a persisted session renders one
   `Continue` line using that attempt's ID and its snapshotted stage harness,
-  both when initially paused and when re-rendered by `antmay afk resume`.
+  both when initially paused and when re-rendered by `antmay afk resume`,
+  without a separate harness-name label.
 - **AC-3.3** A pause without an attempt or without `agentSession` renders no
   `Continue` line and preserves its existing `Log` and `Resume` lines.
 - **AC-3.4** Producing the command performs no provider-transcript filesystem
@@ -309,8 +314,9 @@ Source: `decisions.md` DR6, DR9, DR18, and DR19.
 - **AC-6.3** Existing `resume` queue resolution, clean-worktree validation,
   error text, and exit codes are unchanged, and pause rendering adds no
   clean-worktree caution.
-- **AC-6.4** No file under
-  `docs/threads/260723121015Z-afk-workflow-executor/` is changed.
+- **AC-6.4** No historical thread artifact outside this thread is changed (the
+  relevant earlier executor thread is
+  `docs/threads/260723121015Z-afk-workflow-executor/`).
 - **AC-6.5** `cli/README.md` documents the native-session journey, latest-session
   list rule, real-provider smoke check, clean-worktree instruction, and updated
   scenario renderings.
