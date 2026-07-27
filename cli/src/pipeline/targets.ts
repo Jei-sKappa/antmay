@@ -1,6 +1,11 @@
 import path from "node:path";
 
-import type { PathSelector, StageTarget } from "./types.js";
+import type {
+  ArtifactState,
+  PathSelector,
+  StageTarget,
+  StageTargetRule,
+} from "./types.js";
 
 /**
  * The result of resolving a stage target to a repository-relative path. A
@@ -74,6 +79,27 @@ export function resolveStageTarget(
     return { ok: false, error: joined.error };
   }
   return { ok: true, path: joined.path };
+}
+
+/**
+ * Resolve a catalog stage's declarative target rule against the artifact state
+ * it is evaluated in, then to a repository-relative path. A `fixed` rule ignores
+ * the state; a `when-spec-present` rule picks its target from the state's spec
+ * dimension. Both branches pass through the same thread-relative safety checks
+ * as any other stage target.
+ */
+export function resolveStageTargetRule(
+  rule: StageTargetRule,
+  threadRelPath: string,
+  state: ArtifactState,
+): TargetResult {
+  const target: StageTarget =
+    rule.kind === "fixed"
+      ? rule.target
+      : state.spec
+        ? rule.whenPresent
+        : rule.otherwise;
+  return resolveStageTarget(target, threadRelPath);
 }
 
 /**

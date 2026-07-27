@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveSelector, resolveStageTarget } from "./targets.js";
-import type { PathSelector, StageTarget } from "./types.js";
+import { STAGE_CATALOG } from "./catalog.js";
+import {
+  resolveSelector,
+  resolveStageTarget,
+  resolveStageTargetRule,
+} from "./targets.js";
+import type { ArtifactState, PathSelector, StageTarget } from "./types.js";
 
 const THREAD = "docs/threads/260723121015Z-afk-workflow-executor";
+
+const STATE_WITHOUT_SPEC: ArtifactState = {
+  validThread: true,
+  proposal: false,
+  spec: false,
+  plan: "absent",
+  implementationReport: false,
+};
+const STATE_WITH_SPEC: ArtifactState = { ...STATE_WITHOUT_SPEC, spec: true };
 
 describe("resolveStageTarget", () => {
   it("resolves the thread root to a repo-relative path with a trailing slash", () => {
@@ -70,6 +84,62 @@ describe("resolveStageTarget", () => {
       ok: true,
       path: "docs/threads/999999Z-synthetic/notes/todo.md",
     });
+  });
+});
+
+describe("resolveStageTargetRule", () => {
+  it("resolves a fixed rule regardless of artifact state", () => {
+    const rule = STAGE_CATALOG["plan-strict"].targetRule;
+    expect(resolveStageTargetRule(rule, THREAD, STATE_WITH_SPEC)).toEqual({
+      ok: true,
+      path: `${THREAD}/spec.md`,
+    });
+    expect(resolveStageTargetRule(rule, THREAD, STATE_WITHOUT_SPEC)).toEqual({
+      ok: true,
+      path: `${THREAD}/spec.md`,
+    });
+  });
+
+  it("targets plan-brief at spec.md when the state has a spec", () => {
+    const rule = STAGE_CATALOG["plan-brief"].targetRule;
+    expect(resolveStageTargetRule(rule, THREAD, STATE_WITH_SPEC)).toEqual({
+      ok: true,
+      path: `${THREAD}/spec.md`,
+    });
+  });
+
+  it("targets plan-brief at the thread root when the state has no spec", () => {
+    const rule = STAGE_CATALOG["plan-brief"].targetRule;
+    expect(resolveStageTargetRule(rule, THREAD, STATE_WITHOUT_SPEC)).toEqual({
+      ok: true,
+      path: `${THREAD}/`,
+    });
+  });
+
+  it("resolves every catalog stage to a path inside the thread", () => {
+    for (const stage of Object.values(STAGE_CATALOG)) {
+      for (const state of [STATE_WITH_SPEC, STATE_WITHOUT_SPEC]) {
+        const result = resolveStageTargetRule(stage.targetRule, THREAD, state);
+        expect(result.ok).toBe(true);
+        if (!result.ok) continue;
+        expect(result.path.startsWith(`${THREAD}/`)).toBe(true);
+      }
+    }
+  });
+
+  it("keeps the traversal check on a state-sensitive branch", () => {
+    const result = resolveStageTargetRule(
+      {
+        kind: "when-spec-present",
+        whenPresent: { kind: "thread-file", path: "../escape.md" },
+        otherwise: { kind: "thread-root" },
+      },
+      THREAD,
+      STATE_WITH_SPEC,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("..");
   });
 });
 
