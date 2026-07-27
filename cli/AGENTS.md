@@ -233,6 +233,14 @@ only when the attempt is aborted — the seam that lets a signal land mid-attemp
 listener alone keeps nothing alive and the process would otherwise drain its
 event loop and exit before any signal arrived.
 
+Every valid launched scripted attempt also reports a deterministic synthetic
+session ID `scripted-session-<stage-id>-<attempt>` once through
+`onSessionCaptured` and again on the settled outcome (ordinary, provider-error,
+idle-timeout, and abort paths). The shape is deliberately non-provider-like so
+demo coverage of the pause `Continue` line (`04-waiting-for-user`) and the list
+latest-session column (`18-list`) needs no real harness and no scenario-specific
+session setup beyond the shared list seed.
+
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
 gate. It exists to exhibit the terminal interface: each scenario drives the run
 to one distinct visual state — a closing block, a reason banner, a stage

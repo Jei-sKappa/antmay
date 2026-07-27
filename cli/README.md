@@ -64,6 +64,40 @@ longer running, and only then manually remove that exact file. Do not remove a
 lock whose process may still be alive — doing so allows two executors to mutate
 the same checkout at once.
 
+## Native provider conversations
+
+Every Antmay stage attempt starts a **fresh** harness conversation. Capturing a
+provider session ID does not change that: `antmay afk resume <run-id>` continues
+the Antmay pipeline (queues, Git boundaries, checkpoints) and never reopens or
+reuses a prior Codex or Claude Code conversation for the next attempt.
+
+When a pause concerns an attempt that captured a session, the pause action block
+prints a paste-ready native command under `Continue`:
+
+- Codex: `codex resume '<session-id>'`
+- Claude Code: `claude --resume '<session-id>'`
+
+That command is an **out-of-band convenience**. Antmay does not verify that a
+provider transcript still exists, does not mutate the checkpoint when you paste
+it, does not reuse the session on a later stage attempt, and never launches the
+provider CLI for you. You paste it in your own terminal when you want the same
+conversation back (for example after a `DONE` that left `.pending-decisions/`
+work for a human).
+
+Typical journey after an attempt-backed `WAITING FOR USER` pause:
+
+1. Read the pending decision bundle and settle it outside Antmay.
+2. Optionally paste the printed `Continue` command to reopen the provider
+   conversation for context while you decide.
+3. Commit or revert any repository changes that conversation made, so the
+   worktree is clean.
+4. Run the printed `antmay afk resume <run-id>` to continue the pipeline.
+
+`antmay afk list` adds the run's **most recent attempt that carries a session**,
+rendered as `<snapshotted-harness>/<session-id>`. That value can belong to an
+earlier stage than the row's currently displayed stage position; when no attempt
+captured a session, the column is omitted.
+
 ## Scripted demo
 
 `npm run demo` drives the built CLI through the `standard` pipeline without
@@ -86,15 +120,18 @@ npm --prefix cli run demo -- --scenario 01-all-done
 Each scenario drives the run to one distinct visual state and stops there, so
 whatever it exists to show is the last thing on screen. Ids carry an ordering
 prefix and are listed in reading order — a normal run, then the pauses you meet
-routinely, then the ways a stage fails, then the rare and the cosmetic. `--list`
-prints them all:
+routinely, then the ways a stage fails, then the rare and the cosmetic. Attempt-
+backed pauses and the run listing already show native-session surfaces through
+existing scenarios (`04-waiting-for-user` for `Continue`, `18-list` for the
+latest-session column); neither needs a separate scenario. `--list` prints them
+all:
 
 | Scenario | Ends on |
 | --- | --- |
 | `01-all-done` | `SUCCESS` after six clean stages |
 | `02-blocked` | the `BLOCKED` banner |
 | `03-refused` | the `REFUSED` banner |
-| `04-waiting-for-user` | `WAITING FOR USER` and its pending list |
+| `04-waiting-for-user` | `WAITING FOR USER`, its pending list, and native `Continue` with `scripted-session-reconcile-spec-1` |
 | `05-multiple-reasons` | two stacked reason banners under a `2 reasons` header |
 | `06-retry` | a resumed stage's `· attempt 2` header, then `SUCCESS` |
 | `07-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
@@ -108,7 +145,7 @@ prints them all:
 | `15-permissions-warning` | a clean run opening on the boxed unrestricted warning |
 | `16-heartbeat` | the repeating `· still working` line |
 | `17-long-content` | oversized reasons, paths and tool arguments |
-| `18-list` | `afk list`, one row per condition, sorted newest first |
+| `18-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
 
 `--scenario` takes any of three forms, so you need not remember a number to ask
 for a scenario by name:
@@ -214,3 +251,18 @@ Work through the steps in order, checking each box as you confirm it:
    confirm the run continues.
 10. [ ] **List shows the run.** Run `antmay afk list` and confirm the disposable
     run appears with its condition, run ID, pipeline, stage position, and paths.
+    When any attempt captured a session, confirm the row's latest-session value
+    is `<harness>/<session-id>` for the most recent session-carrying attempt.
+11. [ ] **Native session capture and out-of-band continue.** Against whichever
+    real provider is configured in settings (`codex` or `claude-code`), start a
+    disposable run and, while a stage attempt is still executing, open that
+    run's `state.json` and confirm the current attempt already carries
+    `agentSession.id`. Reach an attempt-backed pause (for example by leaving a
+    `.pending-decisions/` bundle so the queue gate pauses after `DONE`). Confirm
+    the pause prints a `Continue:` line with `codex resume '<id>'` or
+    `claude --resume '<id>'` matching that ID. Paste the command in a separate
+    terminal and confirm the **same** provider conversation opens. Deliberately
+    commit or revert any repository changes that conversation made so the
+    worktree is clean, then invoke the printed `antmay afk resume <run-id>` and
+    confirm the Antmay pipeline continues. This step is human-run only — it is
+    not an automated or credential-dependent gate.
