@@ -143,3 +143,83 @@ Context: Supersedes the condition under which DR3 renders its caution — "where
 Decision: A pause block states the clean-worktree precondition when both hold: `antmay afk resume` would require a clean worktree for that pause's governing waiting kind, and the block carries no `nextAction` note already saying so. Whether the block also shows a `Continue` line does not enter the condition. Today exactly one block satisfies it — the DONE-with-pending pause — which therefore states its precondition whether or not a session was captured, while the two boundary pauses never state it. The predicate deciding which waiting kinds require a clean worktree lives in exactly one module, shared between the renderer and `cli/src/commands/resume.ts`, rather than being restated in the display.
 
 Rationale: The caution answers what must be true before `antmay afk resume` will run, which is a property of the pause, not of whether a provider happened to emit a session line — tying it to the `Continue` line would make one pause state its precondition on one harness and omit it on an attempt where capture failed, a distinction no reader could interpret. Rendering it wherever the precondition holds regardless of the existing note was rejected because it puts two sentences saying nearly the same thing on the most common pause kind. Deriving the condition from a predicate shared with `resume` keeps the renderer from drifting out of step with the rule it describes, which is the failure this record exists to correct.
+
+## DR15: Delegate live session parsing to Sandcastle's provider
+
+Scope: `cli/src/harness/sandcastle.ts`
+
+Context: Supersedes DR1's provider-specific raw-stream matcher and its comparison diagnostic. Antmay needs the session ID before `run()` settles so rejected or abruptly terminated attempts can retain it, but Sandcastle's public `AgentProvider.parseStreamLine(line)` already translates each provider's wire format into a normalized `session_id` event. Maintaining a second Codex/Claude parser in Antmay duplicates that dependency logic and creates disagreement states that exist only because two parsers were introduced.
+
+Decision: The adapter builds the Sandcastle provider once for the attempt and passes each raw stdout line through that provider's `parseStreamLine()` method. It retains the first normalized `session_id` event and reports that ID immediately to the runner. When `run()` resolves without a live-captured ID, `result.iterations.at(-1)?.sessionId` is used as a settle-time fallback. Antmay implements no provider-specific session JSON matcher, performs no comparison between independently parsed IDs, and produces no capture-source disagreement diagnostic.
+
+Rationale: Sandcastle remains the single authority for provider wire formats while Antmay still learns the ID early enough to preserve failed and killed attempts. The result field provides a cheap fallback for a resolved run without becoming a second parsing authority. This removes the matcher-drift failure mode and the warning/type machinery created to manage it; the trade-off is that Antmay deliberately relies on the pinned Sandcastle parser instead of independently detecting provider protocol changes.
+
+## DR16: Serialize the immediate session checkpoint write before settlement
+
+Scope: `cli/src/runner/runner.ts`
+
+Context: Supersedes DR12's checkpoint-write timing. Persisting the session while an attempt is still executing protects recovery after an abrupt process death, but the `onSessionCaptured` callback is synchronous while checkpoint persistence is asynchronous. If the provisional write and the attempt's settlement write overlap, atomic replacement protects each individual document from corruption but does not prevent the older provisional write from completing last and replacing a settled checkpoint with stale `executing` state.
+
+Decision: The first captured session starts exactly one provisional checkpoint write, whose promise the runner retains. No later checkpoint write for that attempt may overlap it. After the harness resolves or rejects, the runner awaits the provisional write before performing interruption or ordinary settlement persistence. The settlement record includes the captured session again. When no session is reported while the attempt is live, no provisional write occurs and a session supplied only by DR15's resolved-result fallback is recorded at settlement.
+
+Rationale: Immediate persistence is worth one additional fsynced checkpoint write because preserving the native conversation after a killed long-running attempt is a core outcome of this feature. Explicit serialization retains that recovery property without allowing an older `executing` document to win a race against the final state. The trade-off is a small amount of promise coordination in the runner and, after the harness ends, waiting for any still-pending provisional write before the final transition.
+
+## DR17: Preserve the discriminated attempt outcome union
+
+Scope: `cli/src/harness/types.ts`
+
+Context: Supersedes DR7's nested `result` shape and capture-diagnostic member. That redesign existed to carry a session independently of completion or failure together with the disagreement warning produced by DR1. DR15 removes the independent parser and its warning, while the existing `AttemptOutcome` union already gives every consumer a direct `kind` discriminant for classification.
+
+Decision: `AttemptOutcome` remains the existing `completed` / `failed` discriminated union and gains a shared optional `session?: { id: string }` property. It has no nested `result` member and no `sessionWarning`. Classification continues to read `outcome.kind`. The dedicated `onSessionCaptured` request callback remains separate from the outcome because it reports the ID while the invocation is still live for DR16's early persistence; `HarnessEvent` gains no session variant.
+
+Rationale: The narrow additive type expresses that either outcome may carry a session without mechanically reshaping every adapter, fake, classifier, and runner call site. Keeping live capture separate also preserves the boundary between executor metadata and agent output. The trade-off is that session orthogonality is expressed through a shared intersection or duplicated optional field rather than through a wrapper object, which is less architecturally emphatic but materially simpler.
+
+## DR18: Test Antmay's session flow automatically and native resumption manually
+
+Scope: `cli/src/harness/`, `cli/src/runner/`, `cli/src/display/`, `cli/README.md`
+
+Context: Supersedes DR2 and DR10, plus their `npm run verify:session` documentation requirements in DR9. Those records introduced parser-agreement fixtures and a credential-dependent real-provider Vitest configuration to guard the Codex and Claude wire matcher owned by Antmay. DR15 removes that matcher and delegates provider parsing to Sandcastle, so the drift relationship those tests existed to detect no longer exists. A non-interactive provider call can confirm that an ID was returned, but only opening the printed command in an interactive terminal proves the user-visible outcome.
+
+Decision: Automated tests cover only Antmay-owned behavior: consuming Sandcastle's normalized `session_id` event, retaining and reporting the first ID, attaching it to successful and failed outcomes, serializing early checkpoint persistence before settlement, validating the persisted record, and rendering the pause and list surfaces through the scripted harness and existing demo scenarios. The implementation adds no `session-id.manual.ts`, no `npm run verify:session`, and no `vitest.manual.config.ts`. `cli/README.md` instead carries a concise manual smoke checklist that runs whichever real provider is configured, confirms the checkpoint received its session ID, pastes the emitted native resume command, and verifies that the same conversation opens.
+
+Rationale: The automated suite remains deterministic, free of credentials and model charges, and focused on Antmay's contract. The manual check covers the only evidence the dedicated verifier could not automate: successful interactive continuation in the provider CLI. The trade-off is that provider integration drift is discovered when the smoke checklist is intentionally run rather than through a standalone diagnostic command.
+
+## DR19: Leave clean-worktree presentation outside the session feature
+
+Scope: `cli/src/display/`, `cli/src/commands/resume.ts`, `cli/README.md`
+
+Context: Supersedes DR3 and DR14. A person who edits the repository while continuing the native provider conversation must commit or revert those changes before `antmay afk resume` can proceed, but that clean-worktree requirement already exists and the resume command already rejects a dirty tree with corrective guidance. Capturing and exposing a provider session does not change the predicate or its enforcement.
+
+Decision: This feature adds no clean-worktree caution to pause rendering, introduces no shared clean-worktree predicate for the renderer, and otherwise leaves resume's existing validation and error text unchanged. The documented native-session journey and manual smoke checklist state that repository changes made while continuing the conversation must be deliberately committed or reverted before resuming the Antmay run.
+
+Rationale: Documentation gives the motivating journey the needed instruction while keeping the implementation focused on session identity, persistence, retrieval, and native continuation. Existing enforcement still prevents an unsafe resume. The trade-off is that a person who did not read the journey may learn the precondition only when `resume` rejects a dirty worktree rather than seeing a proactive pause-block caution.
+
+## DR20: Shell-quote session IDs in native continuation commands
+
+Scope: `cli/src/display/`, `cli/src/harness/`
+
+Context: Supersedes DR5's unquoted command spelling while preserving its pause behavior and DR11's persisted-record source. Antmay validates a captured session ID only as a non-empty opaque string. A command described as paste-ready cannot also assume that the value consists solely of characters that the user's shell will interpret literally.
+
+Decision: One Antmay-owned command-composition helper maps the captured harness to its native resume syntax and applies POSIX-safe shell quoting to the session ID, including correct encoding of embedded single quotes. An ordinary ID renders as `codex resume '<id>'` for Codex or `claude --resume '<id>'` for Claude Code. Every surface that presents a native continuation command uses that helper. Antmay continues to treat the ID as opaque and does not inspect or verify the resumed conversation's transcript.
+
+Rationale: Quoting makes every valid persisted ID safe to paste while remaining harmless and readable for the UUID-like values providers normally emit. Centralizing the mapping prevents display surfaces from drifting apart. The trade-off is a small quoting helper and its focused tests instead of direct string interpolation.
+
+## DR21: Treat a failed early session write as recoverable
+
+Scope: `cli/src/runner/runner.ts`, `cli/src/display/`
+
+Context: Restates DR13's provisional-write failure policy after DR15–DR17 simplified session capture and the attempt outcome. The early write protects recovery from an abruptly terminated process, but it does not describe a stage transition or affect the harness result. Stopping an already-running invocation would require cancellation and a separate checkpoint-error path, and could discard useful agent work.
+
+Decision: If the provisional session checkpoint write fails, the runner reports one warning and allows the harness attempt to continue. It still observes the failed write before settlement as required by DR16, includes the session on the settled attempt, and performs the ordinary final checkpoint write. A failure of that final write retains the runner's existing fatal checkpoint-write behavior. The feature adds no retry loop, harness cancellation, or durable warning field.
+
+Rationale: Continuing preserves useful work and gives the normal settlement write another opportunity to persist the captured ID. If persistence remains unavailable, the existing raw attempt log remains the manual recovery source and the final write failure is surfaced normally. The trade-off is that an abrupt process death after the provisional failure but before successful settlement can still leave the session absent from the checkpoint.
+
+## DR22: Persist only the session ID on an attempt
+
+Scope: `cli/src/state/checkpoint.ts`, `cli/src/display/`, `cli/src/commands/`
+
+Context: Supersedes DR4's `agentSession` shape and DR11's rule that the attempt record carries its own harness. Every attempt already names its stage by index, and the checkpoint contains an immutable snapshot of that stage's resolved execution profile, including its harness. Persisting the same harness again beside the session ID would introduce duplicated state and require a cross-field invariant solely to prevent the two copies from disagreeing.
+
+Decision: An attempt optionally persists `agentSession?: { id: string }`. A consumer that needs the native continuation command resolves the harness from `checkpoint.stages[attempt.stageIndex].profile.harness` and passes it with the ID to the shared command-composition helper from DR20. Pause rendering, run listing, validation, scripted fixtures, and tests use this ID-only persisted shape.
+
+Rationale: The checkpoint keeps one authority for the harness while still preserving the only new provider value this feature needs to capture. The existing immutable stage snapshot makes the lookup deterministic for old and current attempts. The trade-off is that rendering a continuation command requires checkpoint context rather than an attempt record alone.
