@@ -607,7 +607,15 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
   });
 
   it("marks the initial checkpoint, prints startup output, and uses scripted seams", async () => {
-    const h = await setup();
+    const h = await setup({
+      afk: {
+        defaults: {
+          harness: "codex",
+          model: "test-model",
+          prompt: "Prefer small changes.\nCheck tests.",
+        },
+      },
+    });
     const scenarioPath = await writeScriptedScenario(h.configRoot);
     const result = await run(h, [], {
       env: scriptedEnv(h),
@@ -618,6 +626,18 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     // The scripted note precedes the otherwise-unchanged startup output.
     expect(result.out.indexOf("[DEV] Scripted harness")).toBeLessThan(
       result.out.indexOf("Run details"),
+    );
+    expect(result.out.match(/\[DEV\] Resolved prompt/g)).toHaveLength(6);
+    const firstStage = result.out.indexOf("Stage 1/6 · spec");
+    const firstPrompt = result.out.indexOf("[DEV] Resolved prompt");
+    const firstPromptBody = result.out.indexOf("[DEV] $spec `");
+    const firstTranscript = result.out.indexOf("│ Writing spec.md.");
+    expect(firstStage).toBeLessThan(firstPrompt);
+    expect(firstPrompt).toBeLessThan(firstPromptBody);
+    expect(firstPromptBody).toBeLessThan(firstTranscript);
+    expect(result.out).toContain(
+      `[DEV] $spec \`${h.fixture.threadRelPath}/\`. Prefer small changes.\n` +
+        "[DEV] Check tests.",
     );
 
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
@@ -690,5 +710,6 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     if (cp.ok) {
       expect(cp.checkpoint.startedScripted).toBeUndefined();
     }
+    expect(result.out).not.toContain("[DEV] Resolved prompt");
   });
 });

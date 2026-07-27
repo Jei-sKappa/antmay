@@ -937,6 +937,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     });
     expect(result.code).toBe(0);
     expect(result.out).toContain("[DEV] Scripted harness");
+    expect(result.out).toContain("[DEV] Resolved prompt");
   });
 
   it("pauses with harness-error when the stage case array is exhausted on resume", async () => {
@@ -970,6 +971,12 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(0);
+    expect(result.out.indexOf("Stage 1/6 · spec · attempt 2")).toBeLessThan(
+      result.out.indexOf("[DEV] Resolved prompt"),
+    );
+    expect(result.out.indexOf("[DEV] Resolved prompt")).toBeLessThan(
+      result.out.indexOf("│ Writing spec.md."),
+    );
     const cp = await readCp(h, runId);
     expect(attemptCountAt(cp, 0)).toBe(2);
     const folder = h.fixture.threadFolder as string;

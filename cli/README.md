@@ -110,6 +110,11 @@ contacting Codex or Claude Code, so you end up with a real disposable
 repository and run directory to inspect. It runs `npm run build` without tests,
 then executes the scenario you pick.
 
+Every launched scripted attempt prints a `[DEV] Resolved prompt` block directly
+from its invocation request after the attempt header and before simulated agent
+output. Multiline prompts remain readable, with every physical line marked
+`[DEV]`; real-harness runs do not print this developer block.
+
 From `cli/` run:
 
 ```sh
@@ -133,7 +138,7 @@ all:
 
 | Scenario | Ends on |
 | --- | --- |
-| `01-all-done` | `SUCCESS` after six clean stages |
+| `01-all-done` | `SUCCESS` after six clean stages, with all six resolved prompts shown as `[DEV]` input |
 | `02-blocked` | the `BLOCKED` banner |
 | `03-refused` | the `REFUSED` banner |
 | `04-waiting-for-user` | `WAITING FOR USER`, its pending list, and native `Continue` with `scripted-session-reconcile-spec-1` |

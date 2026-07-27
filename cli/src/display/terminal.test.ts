@@ -8,6 +8,7 @@ import {
   createTerminalDisplay,
   printRunSummary,
   printScriptedModeStartup,
+  printScriptedResolvedPrompt,
   printUnrestrictedWarning,
   type DisplayOptions,
 } from "./terminal.js";
@@ -577,5 +578,24 @@ describe("printScriptedModeStartup", () => {
       "[DEV]   enabled: true",
       "[DEV]   config:  /cfg/scripted-harness.json",
     ]);
+  });
+});
+
+describe("printScriptedResolvedPrompt", () => {
+  it("prints readable prompt input with every physical line marked [DEV]", () => {
+    const { options, out, err } = makeOptions();
+    printScriptedResolvedPrompt(
+      options,
+      "$spec `docs/threads/demo`.\nPrefer small changes.\n",
+    );
+
+    expect(out.lines.filter((line) => line.startsWith("[DEV]"))).toEqual([
+      "[DEV] Resolved prompt",
+      "[DEV] $spec `docs/threads/demo`.",
+      "[DEV] Prefer small changes.",
+      "[DEV] ",
+    ]);
+    expect(out.text).not.toContain("\\n");
+    expect(err.text).toBe("");
   });
 });

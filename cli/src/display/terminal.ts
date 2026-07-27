@@ -281,6 +281,20 @@ export function printScriptedModeStartup(
 }
 
 /**
+ * The exact prompt submitted to one scripted harness invocation. Printed as
+ * developer-only input before the scripted adapter validates or runs the
+ * request, so prompt-assembly failures still leave their central evidence on
+ * screen without reading as agent output.
+ */
+export function printScriptedResolvedPrompt(
+  options: DisplayOptions,
+  prompt: string,
+): void {
+  const paint = createPainter(options);
+  emitDev(options, [paint("Resolved prompt", "bold"), prompt].join("\n"));
+}
+
+/**
  * Render the compact new-run/resume startup details to stdout — run ID,
  * pipeline, thread, workspace, permission mode, and the ordered stage IDs. When
  * permissions are unrestricted the prominent warning goes to stderr first, so

@@ -8,6 +8,7 @@ import {
   createTerminalDisplay,
   printRunSummary,
   printScriptedModeStartup,
+  printScriptedResolvedPrompt,
 } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { evaluateBoundary, finalizeBoundary } from "../gitops/boundary.js";
@@ -228,7 +229,9 @@ export async function resumeCommand(
       if (!loaded.ok) {
         return fail(loaded.errors.join("\n"));
       }
-      invoker = deps.createScriptedInvoker(loaded.scenario);
+      invoker = deps.createScriptedInvoker(loaded.scenario, (prompt) => {
+        printScriptedResolvedPrompt(displayOptions, prompt);
+      });
       probe = deps.scriptedProbe;
       scenarioPath = loaded.scenarioPath;
     }

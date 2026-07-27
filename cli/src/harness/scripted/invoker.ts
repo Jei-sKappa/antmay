@@ -1139,10 +1139,17 @@ async function invokeScripted(
  * Create a provider-neutral scripted harness invoker bound to a validated
  * scenario. Case selection uses explicit stage ID and durable attempt number
  * only; failures normalize to provider-error outcomes at the adapter boundary.
+ * The optional developer observer receives the exact submitted prompt at
+ * adapter entry, before request validation, and stays outside normalized
+ * harness events and attempt logs.
  */
-export function createScriptedInvoker(scenario: ScriptedScenario): HarnessInvoker {
+export function createScriptedInvoker(
+  scenario: ScriptedScenario,
+  onResolvedPrompt: (prompt: string) => void = () => undefined,
+): HarnessInvoker {
   return {
     invoke(request: AttemptRequest): Promise<AttemptOutcome> {
+      onResolvedPrompt(request.prompt);
       return invokeScripted(scenario, request);
     },
   };

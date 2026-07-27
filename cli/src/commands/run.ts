@@ -8,7 +8,12 @@ import { VERSION } from "../cli/help.js";
 import { resolveRoots } from "../config/roots.js";
 import { loadSettings } from "../config/settings.js";
 import type { HarnessId } from "../config/settings.js";
-import { createTerminalDisplay, printRunSummary, printScriptedModeStartup } from "../display/terminal.js";
+import {
+  createTerminalDisplay,
+  printRunSummary,
+  printScriptedModeStartup,
+  printScriptedResolvedPrompt,
+} from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import type { probeHarnessExecutables } from "../harness/probe.js";
@@ -179,7 +184,9 @@ export async function runCommand(
       if (!loaded.ok) {
         return fail(loaded.errors.join("\n"));
       }
-      invoker = deps.createScriptedInvoker(loaded.scenario);
+      invoker = deps.createScriptedInvoker(loaded.scenario, (prompt) => {
+        printScriptedResolvedPrompt(displayOptions, prompt);
+      });
       probe = deps.scriptedProbe;
       scenarioPath = loaded.scenarioPath;
     }

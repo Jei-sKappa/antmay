@@ -239,7 +239,11 @@ describe("createScriptedInvoker", () => {
 
   it("rejects prompt mismatches without using prompt as dispatch", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const observedPrompts: string[] = [];
+    const invoker = createScriptedInvoker(
+      makeScenario({ spec: ["outcome-done"] }),
+      (prompt) => observedPrompts.push(prompt),
+    );
     const request = buildRequest(fixture, stageById("spec"), {
       prompt: "$wrong `target`.",
     });
@@ -251,6 +255,26 @@ describe("createScriptedInvoker", () => {
       category: "provider-error",
       errorMessage: expect.stringContaining("prompt"),
     });
+    expect(observedPrompts).toEqual(["$wrong `target`."]);
+  });
+
+  it("reports the submitted prompt before streaming scripted transcript events", async () => {
+    const fixture = await newFixture();
+    const observed: string[] = [];
+    const invoker = createScriptedInvoker(
+      makeScenario({ spec: ["outcome-done"] }),
+      (prompt) => observed.push(`prompt:${prompt}`),
+    );
+    const request = buildRequest(fixture, stageById("spec"), {
+      onEvent: (event) => observed.push(`event:${event.type}`),
+    });
+    await initAttemptLog(fixture, request);
+
+    await invoker.invoke(request);
+
+    expect(observed[0]).toBe(`prompt:${request.prompt}`);
+    expect(observed.length).toBeGreaterThan(1);
+    expect(observed.slice(1).every((entry) => entry.startsWith("event:"))).toBe(true);
   });
 
   it("rejects resolved target mismatches", async () => {

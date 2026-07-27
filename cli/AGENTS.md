@@ -223,8 +223,17 @@ attempt log as soon as the synthetic identity exists, and appends the transcript
 under a `Scripted Harness Run` frame naming the agent, case, and attempt. A
 progress line is either prose or a tool call, and describes only filesystem work
 the case genuinely performs; the metadata and frame fabricate no provider JSON,
-sandbox, branch, or timing. Scripted mode announces itself in exactly one dim
-line printed ahead of the run details block.
+sandbox, branch, or timing.
+
+Every scripted invoker entry passes its exact `request.prompt` to the terminal's
+developer renderer before request validation. The resulting `[DEV] Resolved
+prompt` block sits after the attempt header and before any simulated transcript,
+with every physical prompt line marked `[DEV]`; it is terminal-only and never
+travels through `onEvent` or the attempt-log transcript. Pre-transcript
+validation failures therefore still expose their submitted prompt, while an
+attempt interrupted before the invoker call has no prompt block. Scripted mode
+also announces itself in one dim developer block printed ahead of the run
+details.
 
 A case ends in one of three ways. Most report a `finalText` carrying the terminal
 outcome line. A case may instead report a `CaseEnding`: `failed` returns a
