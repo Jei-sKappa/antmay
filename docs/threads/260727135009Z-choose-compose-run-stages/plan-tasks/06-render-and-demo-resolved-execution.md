@@ -27,6 +27,8 @@
 - `cli/src/display/terminal.test.ts`
 - `cli/src/harness/scripted/invoker.ts`
 - `cli/src/harness/scripted/invoker.test.ts`
+- `cli/src/harness/scripted/scenario.ts`
+- `cli/src/harness/scripted/scenario.test.ts`
 - `cli/scripts/demo.mjs`
 - `cli/scripts/demo/fixture.mjs`
 - `cli/scripts/demo/pipeline.mjs`
@@ -50,7 +52,7 @@
 
 **Verification:**
 
-1. Run `npm --prefix cli run test -- src/display/terminal.test.ts src/commands/run.test.ts src/commands/resume.test.ts src/harness/scripted/invoker.test.ts`.
+1. Run `npm --prefix cli run test -- src/display/terminal.test.ts src/commands/run.test.ts src/commands/resume.test.ts src/harness/scripted/invoker.test.ts src/harness/scripted/scenario.test.ts`.
 2. Run `npm --prefix cli run demo -- --scenario 01-all-done --no-color`.
 3. Run `npm --prefix cli run demo -- --scenario 06-retry --no-color`.
 4. Run `npm --prefix cli run demo -- --scenario 07-runtime-prerequisite --no-color`.

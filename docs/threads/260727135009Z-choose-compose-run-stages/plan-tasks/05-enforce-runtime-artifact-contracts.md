@@ -2,7 +2,7 @@
 
 **Objective:** Prevent a stage from launching without its concrete prerequisite or finalizing after `DONE` without its promised artifact state, with deterministic same-stage recovery on resume.
 
-**Input / context:** Consume the snapshotted serializable contracts from Task 4 and the fresh artifact inspector from Task 1. Follow `spec.md` section “Runtime contract enforcement and recovery” and `decisions.md DR5`, `DR13`, and `DR15`. Contract checks precede harness launch and Git/queue advancement; they do not replace existing queue, outcome, or Git gates.
+**Input / context:** Consume the snapshotted serializable contracts from Task 4 and the fresh artifact inspector plus shared contract evaluators from Task 1. Follow `spec.md` section “Runtime contract enforcement and recovery” and `decisions.md DR5`, `DR13`, and `DR15`. Contract checks precede harness launch and Git/queue advancement; they do not replace existing queue, outcome, or Git gates.
 
 **Steps:**
 1. Add durable waiting reason kinds and checkpoint validation for an unmet runtime prerequisite and for `stage-contract-violation`. Store enough serializable expected/observed contract detail for terminal diagnostics and resume dispatch without consulting live pipeline documents.
@@ -43,6 +43,6 @@
 - Existing queue gates, terminal outcomes, boundaries, lock ownership, signals, and exit codes pass regression coverage.
 - The targeted tests and the full CLI gate pass.
 
-**Consumes:** snapshotted stage prerequisites, promised transitions, resolved targets, Git policies, and queue resolutions from Task 4; `inspectArtifactState` and artifact-contract evaluation from Tasks 1 and 3.
+**Consumes:** snapshotted stage prerequisites, promised transitions, resolved targets, Git policies, and queue resolutions from Task 4; `inspectArtifactState` and the pure prerequisite, transition, and postcondition evaluators produced by Task 1.
 
 **Produces:** durable runtime prerequisite pauses and `stage-contract-violation` pauses; deterministic checkpoint-only recovery for repaired, retryable, and dirty unresolved contract violations.
