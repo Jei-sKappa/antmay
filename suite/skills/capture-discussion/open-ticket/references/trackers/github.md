@@ -1,8 +1,13 @@
 # GitHub tracker reference
 
 Everything GitHub-specific a skill needs in order to read, create, link, or
-close a ticket. On GitHub a ticket is an issue, and a ticket reference is an
-issue URL or number.
+close a ticket, and to open a pull request where GitHub is also the code host.
+On GitHub a ticket is an issue, and a ticket reference is an issue URL or
+number.
+
+A project's tracker and its code host are not always the same service. Resolve
+the tracker from a ticket reference's host, and resolve the host from the git
+remote — this file applies to whichever of the two GitHub is.
 
 All commands use the `gh` CLI, which carries its own authentication.
 
@@ -120,6 +125,27 @@ ticket's timeline and leaves the ticket open:
 ```text
 Related to #<number>
 ```
+
+## The pull request body template
+
+A repository may ship a template that every pull-request body is expected to
+follow, at the first of these paths that exists:
+
+```text
+.github/PULL_REQUEST_TEMPLATE.md
+PULL_REQUEST_TEMPLATE.md
+docs/PULL_REQUEST_TEMPLATE.md
+```
+
+The web UI prefills it, and `gh pr create` prefills it when it prompts for a
+body interactively — but passing `--body` or `--body-file` bypasses it
+entirely. A skill that drafts the body itself therefore reads the template and
+follows its structure, or the project's template is silently defeated by the
+automation.
+
+A repository may instead hold several templates in a
+`.github/PULL_REQUEST_TEMPLATE/` directory, where none applies by default. Ask
+which one the change belongs under rather than picking one.
 
 ## Closing a ticket
 
