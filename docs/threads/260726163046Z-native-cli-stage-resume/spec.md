@@ -6,7 +6,7 @@ After this change, a person whose `antmay afk` run has paused can reopen the *ex
 
 Concretely, three things become true:
 
-1. Every stage attempt that reached its provider records which provider conversation it ran in, durably, in the run checkpoint.
+1. Every stage attempt that reached its provider records which provider conversation it ran in, durably, in the run checkpoint — from the moment that conversation is identified, so an attempt whose process is killed still names it.
 2. The pause block printed when a run stops for a human includes a ready-to-paste command that reopens that conversation, next to the existing `Log` and `Resume` lines.
 3. `antmay afk list` shows each run's most recent conversation identity, so the reference survives a lost terminal.
 
@@ -28,9 +28,9 @@ In scope:
 
 - Capturing the provider session ID inside the Sandcastle harness adapter, for successful *and* failed attempts.
 - A capture-health diagnostic surfaced as a single terminal warning.
-- Reshaping the Antmay-owned `AttemptOutcome` so a session sits beside the attempt result rather than inside one of its variants.
-- Persisting the session on the attempt record in the run checkpoint, plus its validation.
-- One new line in the pause block, and one new column in `antmay afk list`.
+- Reshaping the Antmay-owned `AttemptOutcome` so a session sits beside the attempt result rather than inside one of its variants, and adding one harness-seam callback so the runner learns the session while the attempt is still running.
+- Persisting the session on the attempt record in the run checkpoint — provisionally when it is captured, finally when the attempt settles — plus its validation.
+- One new line in the pause block, rendered alike by `antmay afk run` and `antmay afk resume`, a clean-worktree caution on the one pause that needs it, and one new column in `antmay afk list`.
 - A synthetic session in the scripted test harness so both new renderings are demo-reachable.
 - Two drift guards: a CI test pinning Antmay's matcher against Sandcastle's own parser, and an opt-in real-provider verifier with its own vitest config.
 - Living documentation under `cli/`.
@@ -58,6 +58,8 @@ The adapter watches the raw provider stream for the session-identity line and ho
 - Claude Code: `{ "type": "system", "subtype": "init", "session_id": "<id>" }`
 
 Sandcastle already delivers every provider stdout line to the `onAgentStreamEvent` callback the adapter wires, as `{ type: "raw", line, iteration, timestamp }`; those events are currently dropped. Non-JSON and unparseable lines must not throw.
+
+On that first match the adapter also calls the request's `onSessionCaptured` callback, once, which is how the runner learns the session while the attempt is still running (per `decisions.md` DR13). Later matching lines fire nothing.
 
 This matters because a rejected Sandcastle `run()` produces no `RunResult` at all, so an idle timeout, a provider error, and an abort would otherwise carry no session — which is precisely when a human wants to inspect the conversation.
 
@@ -93,7 +95,15 @@ export type AttemptOutcome = {
 
 Hoisting `session` out of the union is what makes it true by construction that a session is independent of how the attempt ended. `sessionWarning` is a sibling, not a field inside `session`, because it describes the health of Antmay's capture mechanism rather than the identity of a conversation — the recorded ID stays correct in both diagnostic cases — and it is never persisted.
 
-No new callback and no new `HarnessEvent` variant is added. The adapter writes the diagnostic's prose; the runner forwards it verbatim to `display.warn` exactly once per attempt that carries one. Classification consumes only the `result` half, which is unchanged.
+The harness request carries one callback beside `onEvent` (per `decisions.md` DR13):
+
+```ts
+onSessionCaptured?: (session: { id: string }) => void;
+```
+
+The Sandcastle adapter fires it on the first matching raw line, the scripted invoker fires it with its synthetic session, and the fake harness accepts it and may ignore it. `HarnessEvent` gains no variant: it stays the vocabulary of what the terminal draws, so an executor's own information never rides the agent-output path.
+
+The adapter writes the diagnostic's prose; the runner forwards it verbatim to `display.warn` exactly once per attempt that carries one. Classification consumes only the `result` half, which is unchanged.
 
 Every consumer moves with the shape: `cli/src/harness/sandcastle.ts`, `cli/src/harness/scripted/invoker.ts`, `cli/src/test-helpers/fake-harness.ts`, `cli/src/runner/classify.ts`, and `cli/src/runner/runner.ts`, where `outcome.kind` becomes `outcome.result.kind`.
 
@@ -105,17 +115,19 @@ Every consumer moves with the shape: `cli/src/harness/sandcastle.ts`, `cli/src/h
 agentSession?: { harness: HarnessId; id: string };
 ```
 
-Written on **every** attempt whose outcome carried a session, whatever that attempt's result — `done`, `waiting`, and `interrupted` alike — not on a subset selected by outcome. Absent when no session was captured, which is a real state: the runner's pre-launch interruption path settles an attempt that never invoked the harness, and a provider may emit no init line.
+Written on **every** attempt for which a session was captured, whatever that attempt's result — an `executing` record mid-attempt, and `done`, `waiting`, and `interrupted` alike — not on a subset selected by outcome. Absent when no session was captured, which is a real state: the runner's pre-launch interruption path settles an attempt that never invoked the harness, and a provider may emit no init line.
 
 `harness` is stored alongside the ID even though it is derivable from the snapshotted stage profile, so a reader can compose the native command from the attempt record alone. The runner supplies it from the resolved stage profile; the harness seam does not carry it.
 
-The value is attached only on the settle-time write the runner already performs, which gives the runner's interruption helper an optional session parameter — supplied at its post-abort call site, absent at its pre-launch one. No additional checkpoint write is introduced: mid-attempt, the persisted executing record carries no session.
+The runner writes the field twice (per `decisions.md` DR12). The first write is **provisional**: when `onSessionCaptured` fires, the runner replaces the executing attempt record, so the ID is durable seconds into the attempt, before anything can kill the process. The second is the settle-time write the runner already performs, and it is **final** — DR1 keeps Sandcastle's value authoritative on the resolve path, so a settle-time value that differs overwrites the provisional one. Only the raw-stream match is available mid-attempt; Sandcastle's own value exists once `run()` resolves and no earlier.
+
+A failure of the provisional write does not stop the run: the runner emits one `display.warn` naming it, and the attempt continues. The attempt is already durably recorded as `executing`, the settle-time write records the session regardless, and that write keeps the fatal handling every other checkpoint write has. The settle-time write is also what gives the runner's interruption helper an optional session parameter — supplied at its post-abort call site, absent at its pre-launch one.
 
 `validateAttempt` validates the field as optional; when present, `harness` must be a known harness id and `id` a non-empty string. `schemaVersion` stays `0`.
 
-### Showing it at a pause (`cli/src/display/`)
+### Showing it at a pause (`cli/src/display/`, `cli/src/commands/resume.ts`)
 
-When the attempt a pause is about carries a session, the pause block's action section gains one line under the key `Continue`, alongside `Log` and `Resume`, whose value is the exact native command (per `decisions.md` DR5):
+Every pause block is about at most one attempt, and it reads that attempt's **persisted record** — the same object the `Log` line's path already comes from. When the record carries `agentSession`, the block's action section gains one line under the key `Continue`, alongside `Log` and `Resume`, whose value is the exact native command (per `decisions.md` DR5 and DR11):
 
 ```
   Continue  codex resume 019a2f3c-…
@@ -123,11 +135,11 @@ When the attempt a pause is about carries a session, the pause block's action se
   Resume    antmay afk resume 20260726T163046000Z-11aa22bb
 ```
 
-For Claude Code the value is `claude --resume <id>`. No separate harness-name label is rendered: the harness is legible from the binary name in the command. A paste-ready line matches this section's established idiom — its stated purpose is that the last thing on screen is the thing to type next — and it removes the one detail nobody memorizes, which is that the two providers spell continuation differently.
+For Claude Code the value is `claude --resume <id>`; the record's own `agentSession.harness` selects the spelling, so no renderer reaches into the stage profile for it. No separate harness-name label is rendered: the harness is legible from the binary name in the command. A paste-ready line matches this section's established idiom — its stated purpose is that the last thing on screen is the thing to type next — and it removes the one detail nobody memorizes, which is that the two providers spell continuation differently.
 
-The session shown always belongs to the attempt the pause is about, so no attempt-selection rule applies. A pause taken before any attempt was allocated — the pre-attempt queue gate, a gate error — shows no `Continue` line, exactly as it already shows no `Log` line.
+One rule covers every pause block, whichever command draws it. `cli/src/runner/runner.ts` renders pauses for an attempt it just ran; `cli/src/commands/resume.ts` renders them from six of its own call sites for an attempt read back from the checkpoint — among them the re-render of a pause whose pending bundle is still unresolved, which is this thread's motivating case printed again by the command a returning person types. Both compose the line from the record, so neither needs a live `AttemptOutcome`. The session shown always belongs to the attempt the pause is about, so no attempt-selection rule applies. A pause about no attempt at all — the pre-attempt queue gate, a gate error — shows no `Continue` line, exactly as it already shows no `Log` line.
 
-Whenever the `Continue` line is present, the same block also states that the worktree must be clean before `antmay afk resume`, so the person commits or reverts whatever the conversation changed (per `decisions.md` DR3). This is necessary because `resume` requires a clean worktree for a `pending-queues` pause, and the natural next step — `resolve-pending-decisions` appending to `decisions.md`, which the stage's own boundary commit already committed — leaves the worktree dirty. Without the caution, a person would invest a whole conversation before discovering the precondition. The caution is rendered by the display; no `nextAction` is added to the checkpoint and no new field enters it.
+A pause block states the clean-worktree precondition for `antmay afk resume` when two things hold together: `resume` would require a clean worktree for that pause's governing waiting kind, and the block carries no `nextAction` note already saying so (per `decisions.md` DR14 and DR3). Whether the block shows a `Continue` line does not enter the condition — the precondition is a property of the pause, not of whether a provider emitted an init line. Today exactly one block qualifies: the DONE-with-pending-bundle pause, which is also the one a person is most likely to act on inside a reopened conversation, since `resolve-pending-decisions` appends to `decisions.md` — already committed by the stage's own boundary commit — and leaves the worktree dirty. Without the caution a person would invest a whole conversation before discovering the precondition. The `git-policy-violation` and `commit-error` pauses never state it, because `resume` does not require a clean worktree for them. The predicate naming which waiting kinds require one lives in exactly one module, shared with `cli/src/commands/resume.ts`. The caution is rendered by the display; no `nextAction` is added to the checkpoint and no new field enters it.
 
 Rendering requires no filesystem access: the ID is an opaque reference and the line is composed identically whether or not a transcript still exists.
 
@@ -135,15 +147,15 @@ Rendering requires no filesystem access: the ID is an opaque reference and the l
 
 `renderRow` gains one column showing the session of the **most recent attempt that carries one**, rendered `<harness>/<session-id>` to reuse the row's existing `harness/model` idiom, and omitted for a run that captured none (per `decisions.md` DR6). A completed run's row shows it too, even though such a row deliberately omits stage and `harness/model`; the stored `harness` keeps the column self-describing there.
 
-The selection rule is exact where it matters: for a run waiting on a human, the latest attempt is always the current stage's, because a pause happens on the stage the cursor sits at. It can lag the displayed stage only for `ready` runs, which persist just between two checkpoint writes, and for completed runs, where nothing is blocked. `cli/README.md` states the rule.
+The selection rule is exact where it matters: for a run waiting on a human, the latest attempt is always the current stage's, because a pause happens on the stage the cursor sits at. An `executing` run shows its in-flight attempt's session too, since the provisional write puts it on the record seconds in (per `decisions.md` DR12); it falls back to an earlier attempt only in the moments before the provider's init line arrives, or when none ever arrives. The value can otherwise lag the displayed stage for `ready` runs, which persist just between two checkpoint writes, and for completed runs, where nothing is blocked. `cli/README.md` states the rule.
 
 `list` stays read-only: no lock, no settings, no config root, no Git.
 
 ### Scripted harness and demo scenarios
 
-`createScriptedInvoker` reports a deterministic, self-evidently synthetic session of the form `scripted-session-<stage-id>-<attempt>` (per `decisions.md` DR8). This exists because a pause block cannot be seeded — it is drawn by a live run, and every demo run goes through the scripted invoker, which contacts no provider. The value's shape is what keeps it honest: `scripted-session-spec-1` cannot be mistaken for a real conversation and nobody will paste it expecting a provider to accept it.
+`createScriptedInvoker` reports a deterministic, self-evidently synthetic session of the form `scripted-session-<stage-id>-<attempt>` (per `decisions.md` DR8). It reports it on both paths the runner reads: it fires `onSessionCaptured` at the start of a scripted attempt and carries the same value on the outcome, so a scripted run exercises the provisional write as well as the settle-time one. This exists because a pause block cannot be seeded — it is drawn by a live run, and every demo run goes through the scripted invoker, which contacts no provider. The value's shape is what keeps it honest: `scripted-session-spec-1` cannot be mistaken for a real conversation and nobody will paste it expecting a provider to accept it.
 
-- `cli/scripts/scenarios/04-waiting-for-user.mjs` then renders the `Continue` line with no change to the scenario file itself, since the line follows from the outcome.
+- `cli/scripts/scenarios/04-waiting-for-user.mjs` then renders the `Continue` line with no change to the scenario file itself, since the line follows from the attempt record the run writes.
 - `cli/scripts/scenarios/18-list.mjs` gains `agentSession` in its shared seed shape. Its `expectExit: 0` already forces every seed through the real checkpoint validator, so the seeded field is verified for free.
 - No new scenario file is added; the scenario table in `cli/README.md` is updated for whatever its rows now say.
 - The capture diagnostic gets **no** scenario: `display.warn` renders one generic yellow `warning: <message>` line, so it is visually identical to any other warning, and identical renderings do not earn separate scenarios. The scripted invoker therefore needs no fabricated-disagreement case.
@@ -168,9 +180,11 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 
 **Sandcastle invocation shape is otherwise frozen.** `captureSessions: false` for both providers; no `resumeSession`, no `forkSession`, no structured `output`, no retries. Reading raw lines sets no option. Only the single captured result feeds the terminal-outcome gate; the session match never does.
 
-**No Sandcastle type crosses the adapter boundary.** The session reaches the runner as a plain Antmay-owned `{ id: string }`.
+**No Sandcastle type crosses the adapter boundary.** The session reaches the runner as a plain Antmay-owned `{ id: string }`, on the outcome and through `onSessionCaptured` alike.
 
 **The harness → native-command mapping lives in exactly one module.** It has two consumers (the pause renderer and the manual verifier) and must not be duplicated.
+
+**The clean-worktree predicate lives in exactly one module.** Which waiting kinds require a clean worktree is stated once and consumed by both `cli/src/commands/resume.ts`, which enforces it, and the pause renderer, which describes it. A renderer that restated the rule could drift out of step with the command it describes.
 
 **Exit codes are fixed** (`cli/src/cli/exit-codes.ts`): `0` ok, `1` failure, `2` waiting/paused, `130`/`143`/`129` for signals. None is repurposed. No new exit code appears.
 
@@ -198,6 +212,7 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 - **AC-1.6** When Sandcastle's `run()` rejects with an idle timeout, a provider error, or an abort, and a matching line was seen, the returned failed outcome still carries `session.id`.
 - **AC-1.7** When no matching line was seen and Sandcastle supplied nothing, the outcome carries no `session`.
 - **AC-1.8** `buildSandcastleRunOptions` still yields `captureSessions: false` for both providers and sets no `resumeSession`, `forkSession`, `output`, or retry option.
+- **AC-1.9** `onSessionCaptured` fires exactly once per attempt, on the first matching line, carrying that line's ID; subsequent matching lines fire nothing, and an attempt with no matching line never fires it.
 
 ### FR-2 — Capture drift produces exactly one warning
 
@@ -211,50 +226,56 @@ Asserting the last mile — that `codex resume <id>` genuinely reopens the conve
 
 ### FR-3 — `AttemptOutcome` states that a session is independent of the result
 
-*Enforces `decisions.md` DR7.*
+*Enforces `decisions.md` DR7 and DR13.*
 
 - **AC-3.1** `AttemptOutcome` is an object with optional `session`, optional `sessionWarning`, and a required `result` holding the unchanged `completed`/`failed` union.
 - **AC-3.2** Classification depends only on the outcome's `result`: no classification path reads `session` or `sessionWarning`.
 - **AC-3.3** `npm --prefix cli run check` passes: no type errors, no failing tests, no unmigrated call site.
+- **AC-3.4** The harness request carries an optional `onSessionCaptured` callback taking `{ id: string }`, and `HarnessEvent` holds no session variant.
 
 ### FR-4 — The session is durable on the attempt record
 
-*Enforces `decisions.md` DR4.*
+*Enforces `decisions.md` DR4 and DR12.*
 
-- **AC-4.1** An attempt whose outcome carried a session persists `agentSession: { harness, id }`, for each of `result: "done"`, `"waiting"`, and `"interrupted"`.
-- **AC-4.2** An attempt whose outcome carried no session persists no `agentSession`; a pre-launch interruption, which never invoked the harness, is one such case.
+- **AC-4.1** An attempt for which a session was captured persists `agentSession: { harness, id }`, for each of `result: "executing"`, `"done"`, `"waiting"`, and `"interrupted"`.
+- **AC-4.2** An attempt for which no session was captured persists no `agentSession`; a pre-launch interruption, which never invoked the harness, is one such case.
 - **AC-4.3** `validateAttempt` accepts an absent `agentSession`; rejects a non-object, an unknown `harness`, a missing `harness`, an empty `id`, and a non-string `id`, each with a message naming the offending path.
 - **AC-4.4** The persisted `harness` equals the harness of the snapshotted stage profile that ran the attempt.
 - **AC-4.5** A checkpoint written by this version still declares `schemaVersion: 0`, and the validator still rejects any other value with its existing no-migration message.
-- **AC-4.6** Read mid-attempt (before the harness call resolves), the persisted executing attempt record carries no `agentSession`.
+- **AC-4.6** Read mid-attempt, after `onSessionCaptured` has fired and before the harness call resolves, the persisted executing attempt record already carries `agentSession`; read before the callback fires, it carries none.
+- **AC-4.7** When the provisional value and Sandcastle's settle-time value differ, the settled record holds Sandcastle's.
+- **AC-4.8** When the provisional write fails, the runner emits one `display.warn` naming the failure, the attempt runs on, and the settle-time write proceeds with its ordinary fatal handling.
 
 ### FR-5 — The pause block offers the native command
 
-*Enforces `decisions.md` DR5 and DR3.*
+*Enforces `decisions.md` DR5, DR11, DR14, and DR3.*
 
-- **AC-5.1** A pause on a Codex attempt carrying session `X` renders an action line keyed `Continue` whose value is exactly `codex resume X`.
-- **AC-5.2** The same on Claude Code renders exactly `claude --resume X`.
-- **AC-5.3** A pause on an attempt carrying no session renders no `Continue` line.
+- **AC-5.1** A pause about an attempt whose record carries a Codex session `X` renders an action line keyed `Continue` whose value is exactly `codex resume X`.
+- **AC-5.2** The same for a Claude Code record renders exactly `claude --resume X`.
+- **AC-5.3** A pause about an attempt whose record carries no `agentSession` renders no `Continue` line.
 - **AC-5.4** A pause taken before any attempt was allocated renders neither a `Continue` line nor a `Log` line.
-- **AC-5.5** Every pause block containing a `Continue` line also states the clean-worktree precondition for `antmay afk resume`.
-- **AC-5.6** The block renders identically for a session ID that matches no transcript on disk, and rendering performs no filesystem access.
-- **AC-5.7** The `runFailed` and `runInterrupted` blocks are byte-for-byte unchanged.
+- **AC-5.5** A pause block rendered by `antmay afk resume` for an attempt whose record carries a session shows the same `Continue` line the runner would have shown for it. This holds in particular for the re-render of a pause whose pending bundle is still unresolved, and for the `git-policy-violation` and `commit-error` pauses resume produces.
+- **AC-5.6** A DONE-with-pending-bundle pause states the clean-worktree precondition for `antmay afk resume`, whether or not it also shows a `Continue` line.
+- **AC-5.7** A `git-policy-violation` or `commit-error` pause states no clean-worktree precondition, and still shows its `Continue` line when the attempt's record carries a session.
+- **AC-5.8** The block renders identically for a session ID that matches no transcript on disk, and rendering performs no filesystem access.
+- **AC-5.9** The `runFailed` and `runInterrupted` blocks are byte-for-byte unchanged.
 
 ### FR-6 — `antmay afk list` shows the run's most recent session
 
-*Enforces `decisions.md` DR6.*
+*Enforces `decisions.md` DR6 and DR12.*
 
 - **AC-6.1** A run whose latest session-carrying attempt used Codex with ID `X` renders a column `codex/X`.
 - **AC-6.2** A run no attempt of which carried a session renders no session column value.
 - **AC-6.3** A completed run's row renders the column, even though it omits stage and `harness/model`.
 - **AC-6.4** When several attempts across several stages carry sessions, the rendered value is the last such attempt in the record order.
-- **AC-6.5** `list` still acquires no lock and reads no settings, config root, or Git state.
+- **AC-6.5** An `executing` run whose in-flight attempt has a provisionally written session renders that attempt's session, not an earlier one.
+- **AC-6.6** `list` still acquires no lock and reads no settings, config root, or Git state.
 
 ### FR-7 — Both new renderings are demo-reachable
 
 *Enforces `decisions.md` DR8.*
 
-- **AC-7.1** The scripted invoker returns `session.id` of the form `scripted-session-<stage-id>-<attempt>`.
+- **AC-7.1** The scripted invoker fires `onSessionCaptured` with, and returns `session.id` of, the form `scripted-session-<stage-id>-<attempt>`.
 - **AC-7.2** `npm run demo` with `04-waiting-for-user` exits `2` and its pause block contains the `Continue` line.
 - **AC-7.3** `npm run demo` with `18-list` exits `0` and its table shows the session column, the seeds having passed the real checkpoint validator.
 - **AC-7.4** No scenario file is added, and the scenario table in `cli/README.md` matches what the scenarios now end on.
@@ -285,9 +306,10 @@ The *what* above is pinned. These *hows* are deliberately left to the implemente
 - **How the raw-line matcher is factored** — a helper function, a closure over the attempt, or a small stateful object — and whether it is exported, provided AC-8.1 can call it.
 - **Where the `display.warn` call sits** in the runner relative to classification and persistence, provided AC-2.5 holds on every settle path.
 - **Whether the classifier receives the whole outcome or only its `result`**, provided AC-3.2 holds.
-- **The exact prose of the capture diagnostic** and of the clean-worktree caution, provided each states what FR-2 and AC-5.5 require.
+- **The exact prose of the capture diagnostic**, provided it conveys that Antmay's matcher is stale while the recorded ID remains correct, and **of the clean-worktree caution**, provided it states the precondition AC-5.6 requires.
+- **The exact prose of the provisional-write warning**, and where in the runner the provisional write sits relative to the callback, provided AC-4.6 and AC-4.8 hold.
 - **The session column's position** in the `list` row's column order.
 - **The trivial prompt text, temporary-directory strategy, idle timeout, and timeout budget** of the manual verifier.
 - **Test file organization** for the new cases, subject to the concurrent-file constraint above.
 
-Not free, and worth restating because each is pinned above rather than left to the implementer: the `Continue` key label and the two command spellings; `agentSession`'s field names and its optionality; `schemaVersion: 0`; the `<harness>/<session-id>` column format and the most-recent-attempt selection rule; the `scripted-session-<stage-id>-<attempt>` form; Sandcastle's precedence over the matcher on the resolve path; and `npm run verify:session` selecting the manual verifier through its own `vitest.manual.config.ts` while `cli/vitest.config.ts` stays untouched.
+Not free, and worth restating because each is pinned above rather than left to the implementer: the `Continue` key label and the two command spellings; that the line is composed from the persisted attempt record and renders on every pause block whichever command draws it; the two conditions under which the clean-worktree caution renders; `agentSession`'s field names and its optionality; the provisional and settle-time writes, with the settle-time one final; the `onSessionCaptured` callback and `HarnessEvent` gaining no variant; `schemaVersion: 0`; the `<harness>/<session-id>` column format and the most-recent-attempt selection rule; the `scripted-session-<stage-id>-<attempt>` form; Sandcastle's precedence over the matcher on the resolve path; and `npm run verify:session` selecting the manual verifier through its own `vitest.manual.config.ts` while `cli/vitest.config.ts` stays untouched.
