@@ -1013,3 +1013,92 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
   });
 });
+
+describe.concurrent("resumeCommand — persisted-attempt Continue (AC-3.2, AC-3.3)", () => {
+  async function seedSessionBackedPause(
+    h: Harness,
+    sessionId: string,
+  ): Promise<string> {
+    await seed(h, [
+      {
+        before: () => dropPendingSync(h.fixture, "q.md"),
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: BLOCKED — needs a human",
+          session: { id: sessionId },
+        },
+      },
+    ]);
+    return soleRunId(h);
+  }
+
+  it("re-renders the Codex Continue command from the persisted attempt", async () => {
+    const h = await setup();
+    const runId = await seedSessionBackedPause(h, "codex-sess");
+    const cp = await readCp(h, runId);
+    expect(cp.attempts[0]?.agentSession).toEqual({ id: "codex-sess" });
+    expect(cp.stages[0]?.profile.harness).toBe("codex");
+
+    const result = await resume(h, runId, []);
+    expect(result.code).toBe(2);
+    expect(result.out).toContain("Continue:   codex resume 'codex-sess'");
+    expect(result.out).toContain("Log:");
+    expect(result.out).toMatch(new RegExp(`Resume:\\s+antmay afk resume ${runId}`));
+  });
+
+  it("re-renders the Claude Code Continue command from the snapshotted harness", async () => {
+    const h = await setup({
+      afk: { defaults: { harness: "claude-code", model: "test-model" } },
+    });
+    const runId = await seedSessionBackedPause(h, "claude-sess");
+    const cp = await readCp(h, runId);
+    expect(cp.stages[0]?.profile.harness).toBe("claude-code");
+
+    const result = await resume(h, runId, []);
+    expect(result.code).toBe(2);
+    expect(result.out).toContain("Continue:   claude --resume 'claude-sess'");
+  });
+
+  it("quotes a session ID containing a single quote as one shell argument", async () => {
+    const h = await setup();
+    const runId = await seedSessionBackedPause(h, "foo'bar");
+    const result = await resume(h, runId, []);
+    expect(result.code).toBe(2);
+    expect(result.out).toContain("Continue:   codex resume 'foo'\\''bar'");
+  });
+
+  it("omits Continue when the attempt has no session, keeping Log and Resume", async () => {
+    const h = await setup();
+    await seed(h, [
+      {
+        before: () => dropPendingSync(h.fixture, "q.md"),
+        outcome: BLOCKED,
+      },
+    ]);
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).attempts[0]?.agentSession).toBeUndefined();
+
+    const result = await resume(h, runId, []);
+    expect(result.code).toBe(2);
+    expect(result.out).not.toContain("Continue:");
+    expect(result.out).toContain("Log:");
+    expect(result.out).toMatch(new RegExp(`Resume:\\s+antmay afk resume ${runId}`));
+  });
+
+  it("omits Log and Continue on a pre-attempt pause", async () => {
+    const h = await setup();
+    let calls = 0;
+    await seed(h, standardSteps(h.fixture), {
+      installSignals: fakeSignals(() => (++calls > 1 ? "SIGINT" : null)),
+    });
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).attempts.length).toBe(0);
+
+    dropPendingSync(h.fixture, "q.md");
+    const result = await resume(h, runId, standardSteps(h.fixture));
+    expect(result.code).toBe(2);
+    expect(result.out).not.toContain("Continue:");
+    expect(result.out).not.toContain("Log:");
+    expect(result.out).toMatch(new RegExp(`Resume:\\s+antmay afk resume ${runId}`));
+  });
+});

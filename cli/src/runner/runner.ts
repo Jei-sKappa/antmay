@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { Display, StageDisposition } from "../display/types.js";
+import { nativeContinuationCommand } from "../harness/native-session.js";
 import { renderStagePrompt } from "../harness/prompt.js";
 import type { AttemptOutcome, HarnessInvoker } from "../harness/types.js";
 import {
@@ -211,13 +212,28 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
 
   // Render the durable pause. `createdAt` never changes across a persist, so the
   // run's total elapsed time is derived at call time from the live checkpoint.
-  function renderPause(waiting: WaitingInfo, logAbsPath: string | null): void {
+  // Log and Continue both come from the persisted attempt this pause is about;
+  // a pre-attempt pause passes none.
+  function renderPause(
+    waiting: WaitingInfo,
+    attempt: AttemptRecord | undefined = undefined,
+  ): void {
+    const logAbsPath =
+      attempt === undefined ? null : path.join(runDir, attempt.logPath);
+    const continuationCommand =
+      attempt?.agentSession !== undefined
+        ? nativeContinuationCommand(
+            checkpoint.stages[attempt.stageIndex]!.profile.harness,
+            attempt.agentSession.id,
+          )
+        : undefined;
     display.runPaused({
       waiting,
       runId,
       pipelineName,
       totalElapsedMs: elapsedMs(),
       logAbsPath,
+      continuationCommand,
       resumeCommand,
       checkpointPath,
     });
@@ -236,7 +252,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       observedHead: string | null;
     };
     pendingFiles: string[];
-    logAbsPath: string;
     failure?: { errorClass: string; errorMessage: string };
     agentSession?: { id: string };
   }): Promise<RunnerResult> {
@@ -291,7 +306,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       durationMs: Date.parse(endedAt) - Date.parse(args.executingAttempt.startedAt),
       disposition: "interrupted",
     });
-    renderPause(waiting, args.logAbsPath);
+    renderPause(waiting, settled);
     return { status: "interrupted", signal: args.sig };
   }
 
@@ -338,7 +353,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         waiting,
       });
       if (!persisted.ok) return fatal(persisted.message);
-      renderPause(waiting, null);
+      renderPause(waiting);
       return { status: "paused", waiting };
     }
     if (preScan.pendingFiles.length > 0) {
@@ -353,7 +368,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         waiting,
       });
       if (!persisted.ok) return fatal(persisted.message);
-      renderPause(waiting, null);
+      renderPause(waiting);
       return { status: "paused", waiting };
     }
 
@@ -448,7 +463,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           observedHead: attemptStartHead,
         },
         pendingFiles: [],
-        logAbsPath: logPaths.absPath,
       });
     }
 
@@ -538,7 +552,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         executingAttempt,
         finalCursor: { stageIndex, headAtStageEntry: cursorEntry, observedHead },
         pendingFiles,
-        logAbsPath: logPaths.absPath,
         failure: {
           errorClass: outcome.errorClass,
           errorMessage: outcome.errorMessage,
@@ -660,7 +673,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       // The stage itself succeeded — it reported DONE and its boundary was
       // finalized. Only the pending bundle keeps the run from advancing.
       display.stageSucceeded({ stagePosition, durationMs });
-      renderPause(waiting, logPaths.absPath);
+      renderPause(waiting, done);
       return { status: "paused", waiting };
     }
 
@@ -731,7 +744,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       durationMs,
       disposition: stageDisposition(aborted, parse),
     });
-    renderPause(waiting, logPaths.absPath);
+    renderPause(waiting, settled);
     return { status: "paused", waiting };
   }
 

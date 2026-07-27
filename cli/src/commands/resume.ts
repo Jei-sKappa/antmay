@@ -21,6 +21,7 @@ import {
   loadScriptedScenario,
   SCRIPTED_HARNESS_TOGGLE_VAR,
 } from "../harness/scripted/scenario.js";
+import { nativeContinuationCommand } from "../harness/native-session.js";
 import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import type {
@@ -353,22 +354,26 @@ export async function resumeCommand(
       }
     };
 
-    const attemptLogAbs = (attempt: AttemptRecord | undefined): string | null =>
-      attempt === undefined ? null : path.join(runDir, attempt.logPath);
-
-    // Render the durable pause. None of resume's own pause paths runs an attempt
-    // in this process, so none of them closes a stage — only the run-level block
-    // is printed.
     const renderPause = (
       waiting: WaitingInfo,
-      logAbsPath: string | null,
+      attempt: AttemptRecord | undefined = undefined,
     ): void => {
+      const logAbsPath =
+        attempt === undefined ? null : path.join(runDir, attempt.logPath);
+      const continuationCommand =
+        attempt?.agentSession !== undefined
+          ? nativeContinuationCommand(
+              checkpoint.stages[attempt.stageIndex]!.profile.harness,
+              attempt.agentSession.id,
+            )
+          : undefined;
       display.runPaused({
         waiting,
         runId,
         pipelineName,
         totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),
         logAbsPath,
+        continuationCommand,
         resumeCommand: resumeCommandLine,
         checkpointPath,
       });
@@ -510,7 +515,7 @@ export async function resumeCommand(
             waiting,
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          renderPause(waiting, attemptLogAbs(lastAttempt));
+          renderPause(waiting, lastAttempt);
           return EXIT_WAITING;
         }
         const message = `The advancement invariant could not be evaluated because the pending-queue scan failed: ${scan.message}`;
@@ -529,7 +534,7 @@ export async function resumeCommand(
           waiting,
         });
         if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        renderPause(waiting, null);
+        renderPause(waiting);
         return EXIT_WAITING;
       }
 
@@ -542,7 +547,7 @@ export async function resumeCommand(
             ...originalWaiting,
             reasons: refreshPendingReason(originalWaiting.reasons, scan.pendingFiles),
           };
-          renderPause(waiting, attemptLogAbs(lastAttempt));
+          renderPause(waiting, lastAttempt);
           return EXIT_WAITING;
         }
         // A ready or recovered-executing cursor persists a tokenless pre-attempt
@@ -563,7 +568,7 @@ export async function resumeCommand(
           waiting,
         });
         if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        renderPause(waiting, null);
+        renderPause(waiting);
         return EXIT_WAITING;
       }
 
@@ -610,7 +615,7 @@ export async function resumeCommand(
             gitCursor: { ...checkpoint.gitCursor, observedHead: newHead },
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          renderPause(waiting, attemptLogAbs(preserved));
+          renderPause(waiting, preserved);
           return EXIT_WAITING;
         }
 
@@ -634,7 +639,7 @@ export async function resumeCommand(
             gitCursor: { ...checkpoint.gitCursor, observedHead: newHead },
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          renderPause(waiting, attemptLogAbs(preserved));
+          renderPause(waiting, preserved);
           return EXIT_WAITING;
         }
 

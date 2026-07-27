@@ -1229,6 +1229,118 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
   });
 });
 
+describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC-3.3)", () => {
+  it("supplies Continue from the persisted session ID and snapshotted harness", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const rec = recorder();
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        createFakeHarness([
+          {
+            outcome: {
+              kind: "completed",
+              finalText: "Outcome: BLOCKED — needs a human",
+              session: { id: "sess-pause-1" },
+            },
+          },
+        ]),
+        rec.display,
+      ),
+    );
+
+    expect(result.status).toBe("paused");
+    expect(rec.runPaused).toHaveLength(1);
+    const paused = rec.runPaused[0]!;
+    const cp = await loadCheckpoint(runDir);
+    expect(paused.logAbsPath).toBe(path.join(runDir, cp.attempts[0]!.logPath));
+    expect(paused.continuationCommand).toBe("codex resume 'sess-pause-1'");
+    expect(cp.attempts[0].agentSession).toEqual({ id: "sess-pause-1" });
+  });
+
+  it("spells Continue with the snapshotted Claude Code harness", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const checkpoint = buildCheckpoint(fixture, [cleanStage]);
+    checkpoint.stages[0]!.profile.harness = "claude-code";
+    checkpoint.observedHarnessVersions = { "claude-code": "claude 1.0.0" };
+    const rec = recorder();
+    const ctx = makeContext(
+      checkpoint,
+      runDir,
+      createFakeHarness([
+        {
+          outcome: {
+            kind: "completed",
+            finalText: "Outcome: BLOCKED — needs a human",
+            session: { id: "claude-sess" },
+          },
+        },
+      ]),
+      rec.display,
+    );
+    ctx.harnessVersions = { "claude-code": "claude 1.0.0" };
+
+    const result = await executeRun(ctx);
+
+    expect(result.status).toBe("paused");
+    expect(rec.runPaused[0]!.continuationCommand).toBe(
+      "claude --resume 'claude-sess'",
+    );
+  });
+
+  it("omits Continue when the settled attempt has no session, keeping Log", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const rec = recorder();
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        createFakeHarness([
+          {
+            outcome: {
+              kind: "completed",
+              finalText: "Outcome: BLOCKED — needs a human",
+            },
+          },
+        ]),
+        rec.display,
+      ),
+    );
+
+    expect(result.status).toBe("paused");
+    expect(rec.runPaused).toHaveLength(1);
+    const cp = await loadCheckpoint(runDir);
+    expect(rec.runPaused[0]!.logAbsPath).toBe(
+      path.join(runDir, cp.attempts[0]!.logPath),
+    );
+    expect(rec.runPaused[0]!.continuationCommand).toBeUndefined();
+  });
+
+  it("omits Log and Continue on a pre-attempt pending-queues pause", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await dropPendingDecision(fixture, "d1.md");
+    const rec = recorder();
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        createFakeHarness([{}]),
+        rec.display,
+      ),
+    );
+
+    expect(result.status).toBe("paused");
+    expect(rec.runPaused).toHaveLength(1);
+    expect(rec.runPaused[0]!.logAbsPath).toBeNull();
+    expect(rec.runPaused[0]!.continuationCommand).toBeUndefined();
+  });
+});
+
 describe.concurrent("executeRun — harness stage context", () => {
   it("passes snapshotted stage metadata and attempt number on the first attempt", async () => {
     const fixture = await newFixture();
