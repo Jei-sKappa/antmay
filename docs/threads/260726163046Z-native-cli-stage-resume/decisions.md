@@ -233,3 +233,13 @@ Context: A real Sandcastle attempt retains the provider's raw session event in i
 Decision: Every valid launched scripted attempt appends its deterministic `scripted-session-<stage-id>-<attempt>` identity to the attempt log as explicit scripted-harness metadata before executing the selected case. The line is not emitted through `onEvent`, so terminal transcripts remain limited to agent progress and tool calls. Pre-launch validation and interruption paths that produce no session append no session line.
 
 Rationale: Attempt-log inspection should expose the session identity in both real and scripted runs. An explicit synthetic metadata line preserves the scripted harness's provider-neutral and visibly fake identity while avoiding fabricated provider JSON. Writing it before case execution gives the scripted log the same recovery role as the real verbose stream if later scripted work fails or is interrupted.
+
+## DR24: Stop adapter-side parsing after the first session identity
+
+Scope: `cli/src/harness/sandcastle.ts`
+
+Context: Supersedes DR15's requirement that the adapter pass every raw stdout line through the attempt provider's `parseStreamLine()` method. Sandcastle itself parses every raw line through that provider as part of running the attempt. The adapter invokes the parser separately only to obtain the first normalized session identity early enough for provisional checkpoint persistence.
+
+Decision: The adapter passes raw stream lines to the attempt provider's `parseStreamLine()` method until it receives the first `session_id` event with a non-empty ID. It retains that ID, reports it once through `onSessionCaptured`, and stops its own additional parsing for the remainder of the attempt. Sandcastle remains responsible for parsing the complete provider stream, and later session events do not replace the first captured identity.
+
+Rationale: The feature requires one early, stable session identity rather than a second full-stream parse. Stopping the adapter's additional parser calls after capture avoids redundant work and avoids depending on repeated parser invocation remaining harmless, while preserving first-ID selection, callback cardinality, settlement retention, and Sandcastle's complete stream processing.
