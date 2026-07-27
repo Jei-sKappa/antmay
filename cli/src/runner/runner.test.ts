@@ -149,6 +149,7 @@ function makeContext(
   invoker: HarnessInvoker,
   display: Display = nullDisplay,
   signal: AbortSignal = new AbortController().signal,
+  persistCheckpoint?: RunnerContext["persistCheckpoint"],
 ): RunnerContext {
   return {
     checkpoint,
@@ -159,6 +160,7 @@ function makeContext(
     display,
     harnessVersions: { codex: "codex 1.2.3" },
     signal,
+    persistCheckpoint,
   };
 }
 
@@ -777,6 +779,453 @@ describe.concurrent("executeRun — no artifact preconditions (AC-6.4)", () => {
 
     expect(result.status).toBe("completed");
     expect(harness.calls.length).toBe(2);
+  });
+});
+
+describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2.5)", () => {
+  it("starts exactly one provisional write on first live capture and ignores later callbacks", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const provisionalSnapshots: RunCheckpoint[] = [];
+    let provisionalCount = 0;
+
+    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+      dir,
+      cp,
+    ) => {
+      const last = cp.attempts.at(-1);
+      if (
+        cp.condition === "executing" &&
+        last?.result === "executing" &&
+        last.agentSession !== undefined
+      ) {
+        provisionalCount += 1;
+        provisionalSnapshots.push(structuredClone(cp));
+      }
+      await writeCheckpoint(dir, cp);
+    };
+
+    const harness = createFakeHarness([
+      {
+        before: (request) => {
+          request.onSessionCaptured?.({ id: "live-1" });
+          request.onSessionCaptured?.({ id: "live-2" });
+          request.onSessionCaptured?.({ id: "live-3" });
+        },
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: DONE",
+          session: { id: "live-1" },
+        },
+      },
+    ]);
+
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        nullDisplay,
+        new AbortController().signal,
+        persistCheckpoint,
+      ),
+    );
+
+    expect(result.status).toBe("completed");
+    expect(provisionalCount).toBe(1);
+    const provisional = provisionalSnapshots[0];
+    expect(provisional.condition).toBe("executing");
+    expect(provisional.waiting).toBeNull();
+    expect(provisional.stageIndex).toBe(0);
+    expect(provisional.attempts).toHaveLength(1);
+    expect(provisional.attempts[0]).toMatchObject({
+      attempt: 1,
+      stageIndex: 0,
+      stageId: "solo",
+      result: "executing",
+      terminalResult: null,
+      agentSession: { id: "live-1" },
+    });
+    expect(provisional.attempts[0].endedAt).toBeUndefined();
+    expect(provisional.gitCursor.stageIndex).toBe(0);
+    expect(provisional.gitCursor.headAtStageEntry).not.toBeNull();
+
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("completed");
+    expect(cp.attempts[0].result).toBe("done");
+    expect(cp.attempts[0].agentSession).toEqual({ id: "live-1" });
+  });
+
+  it("does not start settlement persistence while a provisional write is pending (AC-2.3)", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+
+    let releaseProvisional!: () => void;
+    let notifyProvisionalStarted!: () => void;
+    const provisionalStarted = new Promise<void>((resolve) => {
+      notifyProvisionalStarted = resolve;
+    });
+    let provisionalPending = false;
+    let settlementStartedWhilePending = false;
+    let settlementWriteCount = 0;
+
+    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+      dir,
+      cp,
+    ) => {
+      const last = cp.attempts.at(-1);
+      const isProvisional =
+        cp.condition === "executing" &&
+        last?.result === "executing" &&
+        last.agentSession !== undefined;
+      if (isProvisional) {
+        provisionalPending = true;
+        notifyProvisionalStarted();
+        await new Promise<void>((resolve) => {
+          releaseProvisional = resolve;
+        });
+        provisionalPending = false;
+      } else if (last !== undefined && last.result !== "executing") {
+        if (provisionalPending) settlementStartedWhilePending = true;
+        settlementWriteCount += 1;
+      }
+      await writeCheckpoint(dir, cp);
+    };
+
+    const harness = createFakeHarness([
+      {
+        before: (request) => {
+          request.onSessionCaptured?.({ id: "sess-deferred" });
+        },
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: DONE",
+          session: { id: "sess-deferred" },
+        },
+      },
+    ]);
+
+    const runPromise = executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        nullDisplay,
+        new AbortController().signal,
+        persistCheckpoint,
+      ),
+    );
+
+    await provisionalStarted;
+    expect(settlementWriteCount).toBe(0);
+    expect(settlementStartedWhilePending).toBe(false);
+    releaseProvisional();
+
+    const result = await runPromise;
+    expect(result.status).toBe("completed");
+    expect(settlementStartedWhilePending).toBe(false);
+    expect(settlementWriteCount).toBe(1);
+
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("completed");
+    expect(cp.attempts[0].result).toBe("done");
+    expect(cp.attempts[0].agentSession).toEqual({ id: "sess-deferred" });
+  });
+
+  it("retains the session on completed, provider-error, idle-timeout, and post-launch interruption", async () => {
+    const cases: Array<{
+      name: string;
+      step: FakeHarnessStep;
+      expectResult: "done" | "waiting" | "interrupted";
+      expectStatus: "completed" | "paused" | "interrupted";
+    }> = [
+      {
+        name: "completed",
+        step: {
+          before: (request) => request.onSessionCaptured?.({ id: "s-done" }),
+          outcome: {
+            kind: "completed",
+            finalText: "Outcome: DONE",
+            session: { id: "s-done" },
+          },
+        },
+        expectResult: "done",
+        expectStatus: "completed",
+      },
+      {
+        name: "provider-error",
+        step: {
+          before: (request) => request.onSessionCaptured?.({ id: "s-provider" }),
+          outcome: {
+            kind: "failed",
+            category: "provider-error",
+            errorClass: "ProviderError",
+            errorMessage: "boom",
+            session: { id: "s-provider" },
+          },
+        },
+        expectResult: "waiting",
+        expectStatus: "paused",
+      },
+      {
+        name: "idle-timeout",
+        step: {
+          before: (request) => request.onSessionCaptured?.({ id: "s-idle" }),
+          outcome: {
+            kind: "failed",
+            category: "idle-timeout",
+            errorClass: "IdleTimeout",
+            errorMessage: "no output",
+            session: { id: "s-idle" },
+          },
+        },
+        expectResult: "waiting",
+        expectStatus: "paused",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const fixture = await newFixture();
+      const runDir = await makeRunDir();
+      const result = await executeRun(
+        makeContext(
+          buildCheckpoint(fixture, [cleanStage]),
+          runDir,
+          createFakeHarness([testCase.step]),
+        ),
+      );
+      expect(result.status).toBe(testCase.expectStatus);
+      const cp = await loadCheckpoint(runDir);
+      expect(cp.attempts[0].result).toBe(testCase.expectResult);
+      expect(cp.attempts[0].agentSession?.id).toMatch(/^s-/);
+    }
+
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const controller = new AbortController();
+    const harness = createFakeHarness([
+      {
+        before: (request) => {
+          request.onSessionCaptured?.({ id: "s-interrupt" });
+          controller.abort(new SignalInterruption("SIGTERM"));
+        },
+        hangUntilAbort: true,
+      },
+    ]);
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        nullDisplay,
+        controller.signal,
+      ),
+    );
+    expect(result.status).toBe("interrupted");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.attempts[0].result).toBe("interrupted");
+    expect(cp.attempts[0].agentSession).toEqual({ id: "s-interrupt" });
+  });
+
+  it("does not invent a session on pre-launch interruption", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const controller = new AbortController();
+    const display: Display = {
+      ...nullDisplay,
+      attemptStarted: () => controller.abort(new SignalInterruption("SIGINT")),
+    };
+    const harness = createFakeHarness([{}]);
+
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        display,
+        controller.signal,
+      ),
+    );
+
+    expect(result).toEqual({ status: "interrupted", signal: "SIGINT" });
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.attempts[0].result).toBe("interrupted");
+    expect(cp.attempts[0].agentSession).toBeUndefined();
+  });
+
+  it("skips provisional persistence for an outcome-only fallback session", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    let provisionalCount = 0;
+
+    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+      dir,
+      cp,
+    ) => {
+      const last = cp.attempts.at(-1);
+      if (
+        cp.condition === "executing" &&
+        last?.result === "executing" &&
+        last.agentSession !== undefined
+      ) {
+        provisionalCount += 1;
+      }
+      await writeCheckpoint(dir, cp);
+    };
+
+    const harness = createFakeHarness([
+      {
+        // No onSessionCaptured — session arrives only on the outcome.
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: DONE",
+          session: { id: "fallback-only" },
+        },
+      },
+    ]);
+
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        nullDisplay,
+        new AbortController().signal,
+        persistCheckpoint,
+      ),
+    );
+
+    expect(result.status).toBe("completed");
+    expect(provisionalCount).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.attempts[0].agentSession).toEqual({ id: "fallback-only" });
+  });
+
+  it("warns once on provisional failure, continues the harness, and settles with the session", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    let harnessContinued = false;
+
+    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+      dir,
+      cp,
+    ) => {
+      const last = cp.attempts.at(-1);
+      if (
+        cp.condition === "executing" &&
+        last?.result === "executing" &&
+        last.agentSession !== undefined
+      ) {
+        throw new Error("provisional disk full");
+      }
+      await writeCheckpoint(dir, cp);
+    };
+
+    const harness = createFakeHarness([
+      {
+        before: (request) => {
+          request.onSessionCaptured?.({ id: "s-warn" });
+          harnessContinued = true;
+        },
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: DONE",
+          session: { id: "s-warn" },
+        },
+      },
+    ]);
+    const rec = recorder();
+
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        rec.display,
+        new AbortController().signal,
+        persistCheckpoint,
+      ),
+    );
+
+    expect(harnessContinued).toBe(true);
+    expect(result.status).toBe("completed");
+    expect(rec.warns).toHaveLength(1);
+    expect(rec.warns[0]).toContain("provisional disk full");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("completed");
+    expect(cp.attempts[0].agentSession).toEqual({ id: "s-warn" });
+  });
+
+  it("keeps settlement checkpoint failure fatal after a successful provisional write", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+
+    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+      dir,
+      cp,
+    ) => {
+      const last = cp.attempts.at(-1);
+      const isProvisional =
+        cp.condition === "executing" &&
+        last?.result === "executing" &&
+        last.agentSession !== undefined;
+      if (!isProvisional && last !== undefined && last.result !== "executing") {
+        throw new Error("settlement write failed");
+      }
+      await writeCheckpoint(dir, cp);
+    };
+
+    const harness = createFakeHarness([
+      {
+        before: (request) => request.onSessionCaptured?.({ id: "s-fatal" }),
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: DONE",
+          session: { id: "s-fatal" },
+        },
+      },
+    ]);
+
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        harness,
+        nullDisplay,
+        new AbortController().signal,
+        persistCheckpoint,
+      ),
+    );
+
+    expect(result.status).toBe("fatal-checkpoint");
+    const cp = await loadCheckpoint(runDir);
+    // Last durable checkpoint is the provisional executing record with the session.
+    expect(cp.condition).toBe("executing");
+    expect(cp.attempts[0].result).toBe("executing");
+    expect(cp.attempts[0].agentSession).toEqual({ id: "s-fatal" });
+  });
+
+  it("prefers the outcome session over the live-captured value at settlement", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const harness = createFakeHarness([
+      {
+        before: (request) => request.onSessionCaptured?.({ id: "live-id" }),
+        outcome: {
+          kind: "completed",
+          finalText: "Outcome: DONE",
+          session: { id: "outcome-id" },
+        },
+      },
+    ]);
+
+    await executeRun(
+      makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
+    );
+
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.attempts[0].agentSession).toEqual({ id: "outcome-id" });
   });
 });
 

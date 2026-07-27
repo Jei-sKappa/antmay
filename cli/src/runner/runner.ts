@@ -48,6 +48,12 @@ export type RunnerContext = {
   harnessVersions: Record<string, string>;
   signal: AbortSignal;
   clock?: () => Date;
+  /**
+   * Atomic checkpoint writer. Defaults to production `writeCheckpoint`; tests
+   * may inject a wrapper to control ordering and failure without changing
+   * production callers.
+   */
+  persistCheckpoint?: typeof writeCheckpoint;
 };
 
 /**
@@ -123,6 +129,24 @@ function abortOrigin(signal: AbortSignal): string {
   return "aborted";
 }
 
+/** Settlement session: outcome wins; live capture is the fallback when omitted. */
+function resolveAttemptSession(
+  outcome: AttemptOutcome,
+  liveSession: { id: string } | undefined,
+): { id: string } | undefined {
+  const session = outcome.session ?? liveSession;
+  if (session === undefined || session.id.length === 0) return undefined;
+  return { id: session.id };
+}
+
+function withAgentSession(
+  record: AttemptRecord,
+  session: { id: string } | undefined,
+): AttemptRecord {
+  if (session === undefined) return record;
+  return { ...record, agentSession: session };
+}
+
 function gateErrorMessage(scanError: string): string {
   return (
     "The advancement invariant could not be evaluated because the " +
@@ -147,6 +171,7 @@ function pendingQueuesMessage(sorted: string[]): string {
 export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   const { runDir, invoker, display, signal } = ctx;
   const clock = ctx.clock ?? (() => new Date());
+  const persistCheckpoint = ctx.persistCheckpoint ?? writeCheckpoint;
   let checkpoint = ctx.checkpoint;
 
   const repoRoot = checkpoint.repoRoot;
@@ -161,7 +186,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   async function persist(next: RunCheckpoint): Promise<PersistOutcome> {
     const stamped: RunCheckpoint = { ...next, updatedAt: clock().toISOString() };
     try {
-      await writeCheckpoint(runDir, stamped);
+      await persistCheckpoint(runDir, stamped);
       checkpoint = stamped;
       return { ok: true };
     } catch (error) {
@@ -213,6 +238,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     pendingFiles: string[];
     logAbsPath: string;
     failure?: { errorClass: string; errorMessage: string };
+    agentSession?: { id: string };
   }): Promise<RunnerResult> {
     const endedAt = clock().toISOString();
     const baseMessage =
@@ -241,14 +267,17 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       reasons,
       nextAction: UNVALIDATED_CHANGES_NOTE,
     };
-    const settled: AttemptRecord = {
-      ...args.executingAttempt,
-      result: "interrupted",
-      endedAt,
-      terminalResult: null,
-      pendingFiles: pending,
-      failure: { kind: "interrupted", message: baseMessage },
-    };
+    const settled: AttemptRecord = withAgentSession(
+      {
+        ...args.executingAttempt,
+        result: "interrupted",
+        endedAt,
+        terminalResult: null,
+        pendingFiles: pending,
+        failure: { kind: "interrupted", message: baseMessage },
+      },
+      args.agentSession,
+    );
     const persisted = await persist({
       ...checkpoint,
       attempts: replaceLast(checkpoint.attempts, settled),
@@ -429,6 +458,11 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     }, profile.heartbeatSeconds * MS_PER_SECOND);
     heartbeat.unref();
 
+    // Live session capture: first non-empty ID starts exactly one provisional
+    // checkpoint write. The promise is retained and awaited before settlement.
+    let liveSession: { id: string } | undefined;
+    let provisionalWrite: Promise<PersistOutcome> | undefined;
+
     let outcome: AttemptOutcome;
     try {
       outcome = await invoker.invoke({
@@ -449,11 +483,34 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         workspace: checkpoint.workspace.execution,
         logFilePath: logPaths.absPath,
         onEvent: (event) => display.harnessEvent(event),
+        onSessionCaptured: (session) => {
+          if (liveSession !== undefined) return;
+          if (typeof session.id !== "string" || session.id.length === 0) return;
+          liveSession = { id: session.id };
+          // Do not await here — retain the promise and serialize before settlement.
+          provisionalWrite = persist({
+            ...checkpoint,
+            attempts: replaceLast(
+              checkpoint.attempts,
+              withAgentSession(executingAttempt, liveSession),
+            ),
+          });
+        },
         signal,
       });
     } finally {
       clearInterval(heartbeat);
+      if (provisionalWrite !== undefined) {
+        const early = await provisionalWrite;
+        if (!early.ok) {
+          display.warn(
+            `Failed to persist the live agent session on the executing attempt: ${early.message}`,
+          );
+        }
+      }
     }
+
+    const agentSession = resolveAttemptSession(outcome, liveSession);
 
     // 4. Post-attempt gates: re-scan queues, parse on completion, read the
     //    post-attempt HEAD for every settled attempt, finalize a DONE boundary.
@@ -486,6 +543,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           errorClass: outcome.errorClass,
           errorMessage: outcome.errorMessage,
         },
+        agentSession,
       });
     }
 
@@ -545,12 +603,15 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const terminalResult = terminalResultFrom(parse);
 
     if (classification.action === "advance") {
-      const done: AttemptRecord = {
-        ...executingAttempt,
-        result: "done",
-        endedAt,
-        terminalResult,
-      };
+      const done: AttemptRecord = withAgentSession(
+        {
+          ...executingAttempt,
+          result: "done",
+          endedAt,
+          terminalResult,
+        },
+        agentSession,
+      );
       const nextIndex = stageIndex + 1;
       const completed = nextIndex === stageCount;
       const persisted = await persist({
@@ -577,13 +638,16 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     }
 
     if (classification.action === "pause-done") {
-      const done: AttemptRecord = {
-        ...executingAttempt,
-        result: "done",
-        endedAt,
-        terminalResult,
-        pendingFiles,
-      };
+      const done: AttemptRecord = withAgentSession(
+        {
+          ...executingAttempt,
+          result: "done",
+          endedAt,
+          terminalResult,
+          pendingFiles,
+        },
+        agentSession,
+      );
       const waiting: WaitingInfo = { reasons: classification.reasons };
       const persisted = await persist({
         ...checkpoint,
@@ -643,14 +707,17 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       reasons,
       nextAction: UNVALIDATED_CHANGES_NOTE,
     };
-    const settled: AttemptRecord = {
-      ...executingAttempt,
-      result: aborted ? "interrupted" : "waiting",
-      endedAt,
-      terminalResult,
-      pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
-      failure: { kind, message: baseMessage },
-    };
+    const settled: AttemptRecord = withAgentSession(
+      {
+        ...executingAttempt,
+        result: aborted ? "interrupted" : "waiting",
+        endedAt,
+        terminalResult,
+        pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
+        failure: { kind, message: baseMessage },
+      },
+      agentSession,
+    );
     const persisted = await persist({
       ...checkpoint,
       attempts: replaceLast(checkpoint.attempts, settled),
