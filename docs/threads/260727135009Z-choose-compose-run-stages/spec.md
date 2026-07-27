@@ -96,15 +96,25 @@ syntax-directed resolution rules (per `decisions.md` DR4):
 
 | Reference shape | Pipeline resolution | Profile resolution |
 | --- | --- | --- |
-| bare non-empty kebab-case name | `<config-root>/pipelines/<name>.json` | `<config-root>/profiles/<name>.json` |
+| bare name matching the shared name grammar | `<config-root>/pipelines/<name>.json` | `<config-root>/profiles/<name>.json` |
 | relative reference with an explicit directory component | path relative to the invocation working directory | path relative to the invocation working directory |
 | absolute path | that absolute path | that absolute path |
 | bare filename such as `standard.json` | invalid; direct the user to `standard` or `./standard.json` | invalid; direct the user to the equivalent name or explicit path |
 
+The shared pipeline and profile name grammar is
+`^[a-z0-9]+(?:-[a-z0-9]+)*$` (per `decisions.md` DR16). Validation applies to
+the raw string with no trimming, case folding, Unicode normalization, or other
+rewriting. Lowercase ASCII letters and digits are allowed within segments,
+including at the beginning; single hyphens separate non-empty segments.
+Uppercase or non-ASCII characters, whitespace, underscores, and leading,
+trailing, or repeated hyphens are invalid.
+
 Resolution is determined only by syntax. A missing explicit path does not fall
 back to config-root name lookup, and a missing named document does not search
 the working directory. The declared document name is its display identity and
-need not match its filename. Its resolved path is separate source provenance.
+need not match its filename, but it must satisfy the same shared name grammar.
+An explicit path remains a path regardless of its filename. Its resolved path
+is separate source provenance.
 
 No runnable pipeline is compiled into the executor. A run always loads its
 required pipeline document through this path. The trusted stage catalog remains
@@ -128,7 +138,7 @@ A pipeline is a strict JSON object with exactly this schema:
 ```
 
 - `schemaVersion` is required and must equal `0`.
-- `name` is required, non-empty, and kebab-case.
+- `name` is required and its raw value must match the shared name grammar.
 - `stages` is required and non-empty.
 - Each stage entry is an object with required `stage` and optional
   `instructions`; there is no string shorthand.
@@ -282,8 +292,13 @@ selection. Local execution data comes from an optional selected profile and an
 optional settings file (per `decisions.md` DR2 and DR8).
 
 `<config-root>/settings.json` is optional. A missing file behaves as an empty
-stage map. When present, its `afk.stages.<stage-id>` entries use this binding
-shape:
+stage map. When present, it is a strict object with exactly one required root
+field, `afk`; `afk` is a strict object with exactly one required field,
+`stages`; and `stages` is an object that may be empty (per `decisions.md`
+DR17). Consequently, `{}` and `{"afk": {}}` are invalid, while
+`{"afk": {"stages": {}}}` is a valid empty settings document.
+
+Non-empty `afk.stages.<stage-id>` entries use this binding shape:
 
 ```json
 {
@@ -322,18 +337,18 @@ document is strict JSON with this shape:
 }
 ```
 
-Profile `schemaVersion` must equal `0`, `name` is non-empty kebab-case, and
-`stages` is a non-empty object. Settings and profiles share one stage-binding
-schema:
+Profile `schemaVersion` must equal `0`, the raw `name` must match the shared
+name grammar, and `stages` is a non-empty object. Settings and profiles share
+one stage-binding schema:
 
-- `agent` is required and contains required `harness` and required non-empty
-  `model`;
+- `agent` is required, contains required `harness` and required non-empty
+  `model`, and permits no other fields;
 - `harness` must be a CLI-supported harness;
 - optional `idleTimeoutSeconds` and `heartbeatSeconds` are positive integers;
 - omitted timing fields resolve to intrinsic defaults of 86,400 and 300 seconds
   respectively;
 - prompt and instructions fields are forbidden;
-- unknown fields are rejected.
+- unknown fields are rejected at every document, container, and binding level.
 
 Settings and profiles may contain unused supported catalog stage IDs so one
 document can be reused across pipelines. Any unknown catalog stage ID
@@ -407,8 +422,9 @@ an earlier safety boundary and do not substitute for those controls.
 
 - publish a complete Standard pipeline document using the strict schema, ready
   to copy to `<config-root>/pipelines/standard.json`;
-- document pipeline/profile name and path references, `--from`, settings
-  fallback, binding precedence, intrinsic timing defaults, and startup display;
+- document the exact pipeline/profile name grammar, name and path references,
+  `--from`, the canonical settings and profile schemas, settings fallback,
+  binding precedence, intrinsic timing defaults, and startup display;
 - provide examples for a full run, a suffix run, a custom pipeline path, and a
   named or explicitly pathed profile;
 - contain one support matrix covering every published Antmay skill;
@@ -472,9 +488,13 @@ external documents. There is no stage-discovery or initialization command.
   `<pipeline-ref>`, optional `--from`, optional `--profile`, required
   `--thread`, and the existing permissions flag; missing values, duplicates
   rejected by the parser, and extra positionals return usage errors.
-- **AC-1.2:** Tests prove that bare kebab-case pipeline and profile names resolve
-  only below their respective config-root directories, while absolute paths and
-  relative paths with directory components resolve as explicit paths (DR4).
+- **AC-1.2:** Tests prove that raw bare pipeline and profile names matching
+  `^[a-z0-9]+(?:-[a-z0-9]+)*$` resolve only below their respective config-root
+  directories; `standard-2`, `2-stage`, and the invalid uppercase, non-ASCII,
+  whitespace, underscore, edge-hyphen, and repeated-hyphen forms exercise the
+  grammar without normalization. Absolute paths and relative paths with
+  directory components resolve as explicit paths regardless of filename (DR4,
+  DR16).
 - **AC-1.3:** Tests prove that `standard.json` is rejected with guidance naming
   `standard` and `./standard.json`, and that neither missing reference form
   falls back to the other lookup strategy (DR4).
@@ -488,9 +508,10 @@ external documents. There is no stage-discovery or initialization command.
 ### FR-2 — Validate one canonical pipeline schema and trusted catalog
 
 - **AC-2.1:** Pipeline validator tests accept the exact object schema in this
-  spec and reject wrong schema versions, empty or non-kebab names, empty stages,
-  string stage shorthand, empty instructions, duplicate IDs, unknown IDs, and
-  every unknown root or entry field (DR3, DR7).
+  spec and reject wrong schema versions, every name that fails the shared raw
+  name grammar, empty stages, string stage shorthand, empty instructions,
+  duplicate IDs, unknown IDs, and every unknown root or entry field (DR3, DR7,
+  DR16).
 - **AC-2.2:** Catalog tests assert that the supported ID set is exactly the nine
   stages listed in Scope and that proposal and Roadmap stage IDs are rejected
   (DR9).
@@ -548,12 +569,17 @@ external documents. There is no stage-discovery or initialization command.
 
 ### FR-5 — Resolve local execution bindings atomically
 
-- **AC-5.1:** A missing `settings.json` loads as an empty stage map, and a
-  profile that covers every selected stage can start without settings (DR8).
-- **AC-5.2:** Settings and profile validator tests enforce their exact strict
-  schemas, required profile metadata, atomic `agent.harness`/`agent.model`
-  pair, positive timing values, and rejection of prompt, instructions, and
-  unknown fields (DR8).
+- **AC-5.1:** A missing `settings.json` and a canonical
+  `{"afk": {"stages": {}}}` document each load as an empty stage map, and a
+  profile that covers every selected stage can start without settings (DR8,
+  DR17).
+- **AC-5.2:** Settings validator tests require exactly the `afk.stages`
+  containers in a present document, permit an empty stage map, and reject `{}`,
+  `{"afk": {}}`, and unknown fields at every level. Profile validator tests
+  enforce their exact strict schema and the shared raw name grammar. Both
+  validators enforce the atomic `agent.harness`/`agent.model` pair, positive
+  timing values, and rejection of prompt, instructions, and unknown fields
+  (DR8, DR16, DR17).
 - **AC-5.3:** For each selected stage, a profile entry replaces the entire
   settings entry; tests prove fields never merge across sources and an omitted
   profile stage falls back to its whole settings binding (DR2, DR8).

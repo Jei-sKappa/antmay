@@ -129,3 +129,23 @@ Context: Pipeline preflight validates simulated artifact composition, but concre
 Decision: Immediately before every stage attempt, the executor will re-inspect the concrete artifact state and pause before invoking the agent when the stage prerequisite is unmet. After a recognized `DONE`, it will verify the stage's promised output before applying the Git boundary or advancing. An unmet postcondition will pause the run on the same stage with a `stage-contract-violation` that reports the expected and observed state. On resume, a prerequisite pause will be rechecked and the stage will start once its requirement is restored. For a postcondition pause, resume will first recheck the promised output: if a human repair now satisfies it, the executor will continue Git finalization without invoking the agent again; if it remains unsatisfied and the worktree is clean, the executor will start a fresh attempt of the same stage; if it remains unsatisfied and the worktree is dirty, the run will remain paused and require those changes to be repaired or reverted.
 
 Rationale: Boundary checks preserve fail-fast safety after preflight without turning bounded artifact recognition into semantic validation. The recovery rules support deliberate human repair, avoid repeating a stage whose output has already been corrected, and provide a natural retry after an unsuccessful attempt has been discarded.
+
+## DR16: Use one exact grammar for pipeline and profile names
+
+Scope: Pipeline and execution-profile references and JSON documents
+
+Context: Bare pipeline and execution-profile names select config-root lookup, while the declared names inside those documents provide their display identities. Both surfaces require one exact interpretation of kebab-case so reference routing and document validation cannot disagree on edge forms.
+
+Decision: A pipeline or execution-profile name must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`. Validation applies to the raw string without trimming, case folding, Unicode normalization, or other rewriting. Lowercase ASCII letters and digits are allowed within segments, including at the beginning; single hyphens separate non-empty segments. Uppercase or non-ASCII characters, whitespace, underscores, and leading, trailing, or repeated hyphens are invalid. The same predicate governs bare pipeline and profile references and the declared `name` in both document types. An explicit path remains a path regardless of its filename, but the loaded document's declared name must satisfy this grammar.
+
+Rationale: One ASCII predicate makes syntax-directed reference resolution, strict document validation, documentation, and tests deterministic and portable. Allowing a digit at the beginning keeps the grammar minimal and introduces no path-safety risk because separators, dots, and empty segments remain forbidden.
+
+## DR17: Require one canonical settings container
+
+Scope: `settings.json`
+
+Context: DR8 makes the settings file optional, treats a missing file as an empty stage map, removes `afk.defaults`, and places explicit local bindings under `afk.stages.<stage-id>`. A strict validator still needs one defined shape for a settings file that is present, including the empty-map case used with a complete execution profile.
+
+Decision: A present `settings.json` document must be an object with exactly one required root field, `afk`. The `afk` value must be an object with exactly one required field, `stages`. The `stages` value must be an object and may be empty; its non-empty entries must use supported catalog stage IDs and the complete binding schema from DR8. Unknown fields at the document root, under `afk`, inside a stage binding, or inside its `agent` object are validation errors. Consequently, `{}` and `{"afk": {}}` are invalid, while `{"afk": {"stages": {}}}` is valid and resolves to an empty settings stage map.
+
+Rationale: One required container shape keeps the strict schema, documentation, and validator tests deterministic while allowing a complete selected profile to operate alongside either no settings file or a canonical empty one. Requiring non-empty bindings would add no safety because selected-stage coverage is already checked after profile and settings resolution.
