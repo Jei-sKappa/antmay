@@ -3,7 +3,7 @@ name: finish
 description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.1
+  version: 0.3.0
 disable-model-invocation: true
 ---
 
@@ -46,7 +46,7 @@ When the thread's `seed.md` carries an `External:` value naming a tracker ticket
 
 After reporting the inspection, ASK the user which of exactly three dispositions to perform:
 
-1. **create PR** — push the current branch to its remote and open a pull request against a base branch (confirm the base). If `gh` is available, invoke `gh pr create` with a title and body you may draft from the thread's artifacts and recent commits; if `gh` is unavailable, report the push result and tell the user how to open the PR manually. Cite the PR URL in the final report. Leave the branch checked out.
+1. **create PR** — push the current branch to its remote and open a pull request against a base branch (confirm the base). If `gh` is available, invoke `gh pr create` with a title and body you may draft from the thread's artifacts and recent commits, shaped by what `references/repository-conventions.md` finds the project prescribes for a pull request; where the remote is GitHub, `references/trackers/github.md` also names the body template that passing a body would otherwise bypass. If `gh` is unavailable, report the push result and tell the user how to open the PR manually. Cite the PR URL in the final report. Leave the branch checked out.
 2. **merge into a confirmed target branch** — ask for or confirm the target branch, then check it out, integrate the current branch, and push (e.g. `git checkout <target>; git pull; git merge <current>; git push`).
 3. **leave as-is** — report the current branch state (branch name, how many commits it carries, working-tree state) and stop. No git command runs. This is a fully valid result, not a failure.
 
@@ -63,6 +63,8 @@ Creating a PR or merging requires the relevant work to be committed. Finish must
 - **leave as-is**.
 
 This is a deliberate authorization of a specific mutation, obtained before any commit is made.
+
+Draft the message for an authorized commit from what those files change, following whatever `references/repository-conventions.md` finds the project prescribes for a commit message, and show it alongside the file set the user is authorizing — the message is part of what they are approving.
 
 ## After the branch action
 
