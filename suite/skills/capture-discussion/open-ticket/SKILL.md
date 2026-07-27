@@ -4,7 +4,7 @@ description: Turn a rough idea into a tracker ticket whose body reads as a threa
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # Open Ticket
@@ -21,13 +21,23 @@ half-specification.
 You write nothing to disk. The ticket in the tracker and the URL you report are
 the whole result.
 
+## Read the repository's conventions
+
+Do this first, before composing: a convention can decide the title's shape, and
+a title composed without it has to be rewritten.
+
+Read `references/repository-conventions.md`. It carries where a project states
+such a convention, which parts of it bind you, and what to do when it leaves a
+choice the user's idea does not settle.
+
 ## Compose the ticket
 
 Compose two things from the user's idea.
 
 **The title** — one human-readable line naming the subject, in the register a
-person would use when speaking about the work: prose, with no bracketed prefix
-and no kebab-case identifier.
+person would use when speaking about the work. Where the project prescribes no
+title shape, that register means prose, with no bracketed prefix and no
+kebab-case identifier.
 
 **The body** — a self-contained **problem statement**: what triggered the work
 and what outcome is wanted, written so a reader with no memory of the
@@ -56,10 +66,14 @@ ambiguous, ask which one is meant; never pick one by order or by name.
 
 ## Confirm once, then file
 
-Show the user the composed title, the composed body, and the label you will
+Show the user the composed title, the composed body, and the labels you will
 apply. When the marker label does not yet exist in the target repository, say so
 in this same message — its creation is part of what the user is approving, not a
 silent side effect.
+
+Where a convention shaped the title or added a label, this message is also where
+the value you chose for it is visible, and where you ask about any choice the
+idea did not settle.
 
 Invite one round of corrections, fold any adjustment in, and file the ticket.
 This is a brief confirmation, not a drawn-out dialogue — one pass is enough. The
