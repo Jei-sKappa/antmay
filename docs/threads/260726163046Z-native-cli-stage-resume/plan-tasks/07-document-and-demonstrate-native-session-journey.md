@@ -12,27 +12,26 @@
 4. Extend the human-run manual smoke checklist for whichever real provider is configured: confirm a live executing checkpoint receives `agentSession.id`, reach an attempt-backed pause, paste the emitted native command, verify the same conversation opens, and deliberately commit or revert any conversation-made repository changes before invoking `antmay afk resume`.
 5. State that the native command is an out-of-band convenience and does not verify transcript existence, mutate the Antmay checkpoint, reuse a session for a stage attempt, or launch automatically.
 6. Update `cli/AGENTS.md` in its scripted-harness section to record the deterministic `scripted-session-<stage-id>-<attempt>` callback/outcome behavior and its role in the existing pause/list demo coverage.
-7. Update the label/comment in `cli/scripts/scenarios/04-waiting-for-user.mjs` to describe the `Continue` line now produced automatically by the scripted invoker, without adding scenario-specific session setup.
-8. Run both affected no-color demo scenarios and confirm `04-waiting-for-user` contains `Continue` with `scripted-session-reconcile-spec-1`, while `18-list` contains the seeded latest-session values and both declared exit-code checks pass.
-9. Confirm the change adds no credential-dependent manual test, `verify:session` package script, feature-specific Vitest configuration, fourth CLI subcommand, pause-time clean-worktree warning, or edit under the earlier executor thread.
-10. Run the complete deterministic CLI gate after the living documentation and scenario descriptions match the delivered behavior.
+7. Run both affected no-color demo scenarios and confirm `04-waiting-for-user` contains `Continue` with `scripted-session-reconcile-spec-1` without any change to that scenario, while `18-list` contains the seeded latest-session values and both declared exit-code checks pass.
+8. Confirm the change adds no credential-dependent manual test, `verify:session` package script, feature-specific Vitest configuration, fourth CLI subcommand, pause-time clean-worktree warning, edit to `cli/scripts/scenarios/04-waiting-for-user.mjs`, or edit under the earlier executor thread.
+9. Run the complete deterministic CLI gate after the living documentation and scenario descriptions match the delivered behavior.
 
 **Files modified:**
 
 - `cli/README.md`
 - `cli/AGENTS.md`
-- `cli/scripts/scenarios/04-waiting-for-user.mjs`
 
 **Verification:**
 
 1. `npm --prefix cli run demo -- --scenario 04-waiting-for-user --no-color`
 2. `npm --prefix cli run demo -- --scenario 18-list --no-color`
-3. `rg -n "native|Continue|codex resume|claude --resume|most recent|agentSession|scripted-session" cli/README.md cli/AGENTS.md cli/scripts/scenarios/04-waiting-for-user.mjs`
+3. `rg -n "native|Continue|codex resume|claude --resume|most recent|agentSession|scripted-session" cli/README.md cli/AGENTS.md`
 4. `test ! -e cli/src/harness/session-id.manual.ts`
 5. `test ! -e cli/vitest.manual.config.ts`
 6. `node -e 'const p = require("./cli/package.json"); process.exit(Object.hasOwn(p.scripts, "verify:session") ? 1 : 0)'`
-7. `git status --short -- docs/threads/260723121015Z-afk-workflow-executor`
-8. `npm --prefix cli run check`
+7. `git diff --exit-code -- cli/scripts/scenarios/04-waiting-for-user.mjs`
+8. `git status --short -- docs/threads/260723121015Z-afk-workflow-executor`
+9. `npm --prefix cli run check`
 
 **Acceptance criteria:**
 
@@ -41,7 +40,7 @@
 - `cli/AGENTS.md` records the deterministic scripted session callback/outcome behavior.
 - Demo `04-waiting-for-user` visibly renders the native `Continue` line without scenario-specific session setup.
 - Demo `18-list` visibly renders the latest-session values, and both scenarios pass their declared exit-code checks.
-- No manual provider test file, `verify:session` script, feature-specific Vitest configuration, fourth subcommand, clean-worktree pause warning, or historical-thread edit is introduced.
+- No manual provider test file, `verify:session` script, feature-specific Vitest configuration, fourth subcommand, clean-worktree pause warning, `04-waiting-for-user` scenario edit, or historical-thread edit is introduced.
 - `npm --prefix cli run check` passes without credentials or paid model calls.
 
 **Consumes:** scripted `scripted-session-<stage-id>-<attempt>` capture; persisted-attempt pause continuation behavior; latest-session list rendering and demo seed.

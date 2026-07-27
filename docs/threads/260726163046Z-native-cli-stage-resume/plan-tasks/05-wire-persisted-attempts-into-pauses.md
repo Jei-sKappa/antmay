@@ -8,7 +8,7 @@
 
 1. Refactor the runner's local pause-rendering helper in `cli/src/runner/runner.ts` to accept the persisted `AttemptRecord` the pause concerns, or no attempt for a pre-attempt queue/gate pause.
 2. Derive the `Log` path from that record and, when it has `agentSession`, resolve `checkpoint.stages[attempt.stageIndex].profile.harness` and call `nativeContinuationCommand` for the display's optional `Continue` value.
-3. Pass the just-persisted settled attempt on DONE-with-pending, non-DONE, boundary-failure, and post-launch interruption pauses; pass no attempt on both pre-attempt queue-gate paths. Do not source presentation from the live `AttemptOutcome`.
+3. Pass the just-persisted settled attempt on DONE-with-pending, non-DONE, boundary-failure, and every allocated-attempt interruption pause, including both pre-launch and post-launch interruptions. Pass no attempt only on the two pre-attempt queue-gate paths. Do not source presentation from the live `AttemptOutcome`.
 4. Refactor the corresponding helper in `cli/src/commands/resume.ts` to accept an `AttemptRecord` or no attempt and derive both `Log` and `Continue` from that same record.
 5. Preserve the existing six resume pause associations: the four paths currently given `lastAttempt` or `preserved` remain attempt-backed, and the two paths currently given no log remain attempt-free.
 6. Leave queue scanning, queue resolution, checkpoint mutations, clean-worktree validation/error text, boundary finalization, lock behavior, and exit-code selection unchanged.
@@ -33,6 +33,7 @@
 - Re-rendering the same durable pause through `antmay afk resume` produces the same native command.
 - Codex and Claude Code pause commands use their respective syntax and centralized quoting helper.
 - A pause whose attempt has no session omits `Continue` but keeps its `Log` and `Resume` lines.
+- A pre-launch interrupted attempt keeps its `Log` line and omits `Continue`; only pauses taken before any attempt was allocated omit both.
 - A pre-attempt pause omits both `Log` and `Continue`.
 - No pause renderer reads a live outcome, duplicates the attempt's harness, probes transcripts, launches a provider, or adds a clean-worktree caution.
 - Resume's mutations, validation, queue/boundary decisions, locks, error text, and exit codes remain unchanged.
