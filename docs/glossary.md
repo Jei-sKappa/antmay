@@ -19,6 +19,7 @@ that owns the concept — [thread-model.md](thread-model.md),
 | **Spec Driven Development (SDD)** | The broader practice the method serves: deciding and writing down what to build before building it, so the written intent — not a chat log — is what downstream work reads. |
 | **suite** | The installable set of skills under `suite/`, the reference implementation of the method. One coherently installed set, never a partial mix. |
 | **CLI** | The `antmay` executable under `cli/`, which runs a pipeline unattended against one thread. |
+| **suite/CLI contract** | The only coupling between the two modules: the skill names a pipeline invokes and the terminal-outcome protocol it classifies. They share no files, so breaking this contract changes no path in the other module — which is what makes it worth naming. `[contract]` is its issue-title scope prefix ([CONTRIBUTING.md](../CONTRIBUTING.md)). |
 
 ## Recipes and pipelines
 
@@ -128,6 +129,7 @@ queue is non-empty.
 | --- | --- |
 | **workflow** | Not a term of art here. Write **method** for the whole approach, **recipe** for one of the three named paths, **thread artifact** for the artifact domain, and **process** for process-level intent. |
 | **issue** | Two unrelated senses, both live. GitHub's word for a **ticket**: write **ticket** for the concept, and `issue` only where a GitHub-specific reference, command, or accepted input form is being named. Also the middle **review severity** (`blocker`, `issue`, `nit`), which keeps its name. |
+| **contract** | Generic on its own, and used in three senses. Always qualify which: the **suite/CLI contract** between the modules, a skill's **output contract**, or a roadmap as the **decomposition contract**. Bare "contract" is unqualified only as the `[contract]` issue prefix, where the scope list supplies the sense. |
 | **status** | Never used for a run's end state. That is the **terminal outcome**. There is no status field, status token, or status layer anywhere in the method. |
 | **outcome** | On its own, means the terminal outcome. For a thread's lasting artifact write **final deliverable**; for the seed's goal write **intended goal**; for the delivered result write **implementation report**. |
 | **recipe** vs **pipeline** | A **recipe** is the documented advisory path; a **pipeline** is the CLI's enforced stage sequence. They are not two fidelities of one thing — never use either name for the other. |
