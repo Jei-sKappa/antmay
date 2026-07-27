@@ -6,7 +6,7 @@ import { Writable } from "node:stream";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
-import type { HarnessId } from "../config/settings.js";
+import type { HarnessId } from "../config/execution.js";
 import type { ProbeResult } from "../harness/probe.js";
 import { createScriptedInvoker } from "../harness/scripted/invoker.js";
 import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
@@ -72,9 +72,47 @@ async function tempDir(prefix: string): Promise<string> {
   return dir;
 }
 
-const VALID_SETTINGS = {
-  afk: { defaults: { harness: "codex", model: "test-model" } },
-};
+/** The stage IDs the fixture's `standard` pipeline document selects, in order. */
+const STANDARD_STAGE_IDS = [
+  "spec",
+  "reconcile-spec",
+  "review-spec",
+  "plan-strict",
+  "reconcile-plan",
+  "implement-plan-with-subagents",
+] as const;
+
+/** A pipeline document selecting the Standard stages under the name `standard`. */
+function pipelineDocument(): Record<string, unknown> {
+  return {
+    schemaVersion: 0,
+    name: "standard",
+    stages: STANDARD_STAGE_IDS.map((stage) => ({ stage })),
+  };
+}
+
+/**
+ * A settings document binding every Standard stage to one codex/test-model
+ * agent, with `overrides` replacing whole bindings stage by stage.
+ */
+function settingsFor(
+  overrides: Record<string, unknown> = {},
+  model = "test-model",
+): Record<string, unknown> {
+  return {
+    afk: {
+      stages: {
+        ...Object.fromEntries(
+          STANDARD_STAGE_IDS.map((stage) => [
+            stage,
+            { agent: { harness: "codex", model } },
+          ]),
+        ),
+        ...overrides,
+      },
+    },
+  };
+}
 
 function fakeSignals(
   signaled: () => NodeJS.Signals | null = () => null,
@@ -94,7 +132,7 @@ const okProbe: RunDeps["probe"] = async (harnesses): Promise<ProbeResult> => {
 
 type Harness = { configRoot: string; stateRoot: string; fixture: RepoFixture };
 
-async function setup(settings: unknown = VALID_SETTINGS): Promise<Harness> {
+async function setup(settings: unknown = settingsFor()): Promise<Harness> {
   const fixture = await createRepoFixture({ thread: {} });
   fixtures.push(fixture);
   const configRoot = await tempDir("antmay-cfg-");
@@ -102,6 +140,12 @@ async function setup(settings: unknown = VALID_SETTINGS): Promise<Harness> {
   await fs.writeFile(
     path.join(configRoot, "settings.json"),
     JSON.stringify(settings, null, 2),
+    "utf8",
+  );
+  await fs.mkdir(path.join(configRoot, "pipelines"), { recursive: true });
+  await fs.writeFile(
+    path.join(configRoot, "pipelines", "standard.json"),
+    JSON.stringify(pipelineDocument(), null, 2),
     "utf8",
   );
   return { configRoot, stateRoot, fixture };
@@ -122,6 +166,7 @@ async function seed(
   steps: FakeHarnessStep[],
   overrides: Partial<{
     dangerouslySkipPermissions: boolean;
+    profile: string;
     env: NodeJS.ProcessEnv;
     probe: RunDeps["probe"];
     installSignals: RunDeps["installSignals"];
@@ -149,6 +194,7 @@ async function seed(
     {
       pipeline: "standard",
       thread: h.fixture.threadFolder as string,
+      ...(overrides.profile !== undefined ? { profile: overrides.profile } : {}),
       dangerouslySkipPermissions: overrides.dangerouslySkipPermissions ?? false,
     },
     deps,
@@ -776,17 +822,13 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
 
 describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1, DR48)", () => {
   it("probes only the current stage's harness and keeps retained versions for later stages", async () => {
-    const h = await setup({
-      afk: {
-        defaults: { harness: "codex", model: "test-model" },
-        stages: {
-          "implement-plan-with-subagents": {
-            harness: "claude-code",
-            model: "claude-model",
-          },
+    const h = await setup(
+      settingsFor({
+        "implement-plan-with-subagents": {
+          agent: { harness: "claude-code", model: "claude-model" },
         },
-      },
-    });
+      }),
+    );
     const runProbe: RunDeps["probe"] = async (harnesses) => {
       const versions: Partial<Record<HarnessId, string>> = {};
       for (const hh of harnesses) versions[hh] = `${hh}-run`;
@@ -828,13 +870,66 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     const runId = await soleRunId(h);
     await fs.writeFile(
       path.join(h.configRoot, "settings.json"),
-      JSON.stringify({ afk: { defaults: { harness: "codex", model: "changed" } } }),
+      JSON.stringify(settingsFor({}, "changed")),
       "utf8",
     );
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
-    expect(cp.stages.every((s) => s.profile.model === "test-model")).toBe(true);
+    expect(
+      cp.stages.every((stage) => stage.binding.agent.model === "test-model"),
+    ).toBe(true);
+  });
+
+  it("rereads no pipeline, profile, or settings document after allocation (AC-6.3)", async () => {
+    const h = await setup(
+      settingsFor({
+        spec: { agent: { harness: "codex", model: "settings-model" } },
+      }),
+    );
+    await fs.mkdir(path.join(h.configRoot, "profiles"), { recursive: true });
+    await fs.writeFile(
+      path.join(h.configRoot, "profiles", "quality.json"),
+      JSON.stringify({
+        schemaVersion: 0,
+        name: "quality",
+        stages: Object.fromEntries(
+          STANDARD_STAGE_IDS.map((stage) => [
+            stage,
+            { agent: { harness: "codex", model: "profile-model" } },
+          ]),
+        ),
+      }),
+      "utf8",
+    );
+    await seed(h, [{ outcome: BLOCKED }], { profile: "quality" });
+    const runId = await soleRunId(h);
+    const before = await readCp(h, runId);
+
+    // Rewrite the pipeline into a different selection, corrupt the profile, and
+    // delete the settings file entirely.
+    await fs.writeFile(
+      path.join(h.configRoot, "pipelines", "standard.json"),
+      JSON.stringify({
+        schemaVersion: 0,
+        name: "rewritten",
+        stages: [{ stage: "review-spec" }],
+      }),
+      "utf8",
+    );
+    await fs.rm(path.join(h.configRoot, "profiles", "quality.json"));
+    await fs.rm(path.join(h.configRoot, "settings.json"));
+
+    const result = await resume(h, runId, standardSteps(h.fixture));
+    expect(result.code).toBe(0);
+    const after = await readCp(h, runId);
+    expect(after.pipelineName).toBe("standard");
+    expect(after.pipelineSourcePath).toBe(before.pipelineSourcePath);
+    expect(after.profileSelection).toEqual(before.profileSelection);
+    expect(after.stages).toEqual(before.stages);
+    expect(
+      after.stages.every((stage) => stage.binding.agent.model === "profile-model"),
+    ).toBe(true);
   });
 
   it("re-prints the unrestricted-permissions warning on resume (DR56)", async () => {
@@ -1067,7 +1162,7 @@ describe.concurrent("resumeCommand — persisted-attempt Continue (AC-3.2, AC-3.
     const runId = await seedSessionBackedPause(h, "codex-sess");
     const cp = await readCp(h, runId);
     expect(cp.attempts[0]?.agentSession).toEqual({ id: "codex-sess" });
-    expect(cp.stages[0]?.profile.harness).toBe("codex");
+    expect(cp.stages[0]?.binding.agent.harness).toBe("codex");
 
     const result = await resume(h, runId, []);
     expect(result.code).toBe(2);
@@ -1077,12 +1172,14 @@ describe.concurrent("resumeCommand — persisted-attempt Continue (AC-3.2, AC-3.
   });
 
   it("re-renders the Claude Code Continue command from the snapshotted harness", async () => {
-    const h = await setup({
-      afk: { defaults: { harness: "claude-code", model: "test-model" } },
-    });
+    const h = await setup(
+      settingsFor({
+        spec: { agent: { harness: "claude-code", model: "test-model" } },
+      }),
+    );
     const runId = await seedSessionBackedPause(h, "claude-sess");
     const cp = await readCp(h, runId);
-    expect(cp.stages[0]?.profile.harness).toBe("claude-code");
+    expect(cp.stages[0]?.binding.agent.harness).toBe("claude-code");
 
     const result = await resume(h, runId, []);
     expect(result.code).toBe(2);

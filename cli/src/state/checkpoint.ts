@@ -1,13 +1,9 @@
 import path from "node:path";
 
-import type { HarnessId } from "../config/settings.js";
-import type {
-  GitPolicy,
-  PathSelector,
-  StageDescriptor,
-  StageProfile,
-  StageTarget,
-} from "../pipeline/types.js";
+import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
+import { isCatalogStageId } from "../pipeline/catalog.js";
+import type { CatalogStage } from "../pipeline/catalog.js";
+import type { CatalogStageId, PlanState } from "../pipeline/types.js";
 import type { WorkspaceConfig } from "../workspace/types.js";
 
 /**
@@ -128,16 +124,37 @@ export type AttemptRecord = {
 };
 
 /**
- * An immutable snapshot of one resolved stage: its declarative descriptor, its
- * fully resolved execution profile, and the resolved target path.
+ * An immutable snapshot of one selected stage: the complete catalog descriptor
+ * with its artifact contract, the concrete repository-relative target
+ * composition settled on, the pipeline entry's portable instructions when it
+ * carried any, and the fully resolved local execution binding.
+ *
+ * Everything an attempt and its recovery need is here, so resume rereads no
+ * pipeline, execution-profile, or settings document.
  */
-export type SnapshottedStage = StageDescriptor & {
-  profile: StageProfile;
+export type SnapshottedStage = CatalogStage & {
   resolvedTarget: string;
+  instructions?: string;
+  binding: ResolvedStageBinding;
 };
 
 /**
+ * Which local document supplied the run's stage bindings: an execution profile
+ * selected by reference, carrying its declared name and resolved source
+ * provenance, or the settings file alone.
+ */
+export type ProfileSelection =
+  | { kind: "settings-only" }
+  | { kind: "profile"; name: string; sourcePath: string };
+
+/**
  * The full `state.json` document at `schemaVersion: 0`.
+ *
+ * `pipelineName` is the pipeline document's declared identity and
+ * `pipelineSourcePath` the absolute source it was read from; the two are
+ * independent, because moving the file changes the provenance and not the
+ * identity. `fromStage` is present only when the invocation named an entry
+ * point, and `stages` holds exactly the selected suffix.
  */
 export type RunCheckpoint = {
   schemaVersion: 0;
@@ -150,6 +167,9 @@ export type RunCheckpoint = {
   workspace: WorkspaceConfig;
   dangerouslySkipPermissions: boolean;
   pipelineName: string;
+  pipelineSourcePath: string;
+  profileSelection: ProfileSelection;
+  fromStage?: CatalogStageId;
   stages: SnapshottedStage[];
   observedHarnessVersions: Partial<Record<HarnessId, string>>;
   stageIndex: number;
@@ -250,6 +270,17 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
+/**
+ * A resolved stage target without its directory marker. A thread-root target
+ * resolves to the thread path with one trailing slash, so the marker is dropped
+ * before the shared relative-path check runs.
+ */
+function stripTrailingSlash(value: unknown): unknown {
+  return typeof value === "string" && value.endsWith("/")
+    ? value.slice(0, -1)
+    : value;
+}
+
 function validateStageTarget(value: unknown, label: string, errors: string[]): void {
   if (!isPlainObject(value)) {
     errors.push(`${label} must be an object.`);
@@ -307,19 +338,25 @@ function validateGitPolicy(value: unknown, label: string, errors: string[]): voi
   }
 }
 
-function validateStageProfile(value: unknown, label: string, errors: string[]): void {
+/**
+ * Validate a snapshotted stage's fully resolved local binding: the atomic
+ * harness/model agent pair and both settled timing values.
+ */
+function validateStageBinding(value: unknown, label: string, errors: string[]): void {
   if (!isPlainObject(value)) {
     errors.push(`${label} must be an object.`);
     return;
   }
-  if (typeof value.harness !== "string" || !HARNESS_IDS.has(value.harness)) {
-    errors.push(`${label}.harness must be a known harness id.`);
-  }
-  if (!isNonEmptyString(value.model)) {
-    errors.push(`${label}.model must be a non-empty string.`);
-  }
-  if (typeof value.prompt !== "string") {
-    errors.push(`${label}.prompt must be a string.`);
+  const agent = value.agent;
+  if (!isPlainObject(agent)) {
+    errors.push(`${label}.agent must be an object.`);
+  } else {
+    if (typeof agent.harness !== "string" || !HARNESS_IDS.has(agent.harness)) {
+      errors.push(`${label}.agent.harness must be a known harness id.`);
+    }
+    if (!isNonEmptyString(agent.model)) {
+      errors.push(`${label}.agent.model must be a non-empty string.`);
+    }
   }
   const idle = value.idleTimeoutSeconds;
   if (typeof idle !== "number" || !Number.isInteger(idle) || idle <= 0) {
@@ -336,8 +373,80 @@ function validateStageProfile(value: unknown, label: string, errors: string[]): 
 }
 
 /**
- * Validate one snapshotted stage. Returns the stage id when structurally sound
- * enough for cross-field checks, else `undefined`.
+ * Validate one declarative target rule: `fixed` names one target, and
+ * `when-spec-present` names the target for each branch of the spec dimension.
+ */
+function validateTargetRule(value: unknown, label: string, errors: string[]): void {
+  if (!isPlainObject(value)) {
+    errors.push(`${label} must be an object.`);
+    return;
+  }
+  if (value.kind === "fixed") {
+    validateStageTarget(value.target, `${label}.target`, errors);
+    return;
+  }
+  if (value.kind === "when-spec-present") {
+    validateStageTarget(value.whenPresent, `${label}.whenPresent`, errors);
+    validateStageTarget(value.otherwise, `${label}.otherwise`, errors);
+    return;
+  }
+  errors.push(`${label}.kind must be "fixed" or "when-spec-present".`);
+}
+
+const PLAN_STATES: ReadonlySet<string> = new Set<PlanState>([
+  "absent",
+  "brief",
+  "strict",
+  "malformed",
+]);
+
+const BOOLEAN_ARTIFACT_DIMENSIONS = [
+  "validThread",
+  "proposal",
+  "spec",
+  "implementationReport",
+] as const;
+
+/**
+ * Validate one artifact-state pattern — a stage's prerequisite or its promised
+ * transition. Every named dimension must carry its own value type, and no other
+ * key may appear.
+ */
+function validateArtifactPattern(
+  value: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (!isPlainObject(value)) {
+    errors.push(`${label} must be an object.`);
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    if (
+      key !== "plan" &&
+      !(BOOLEAN_ARTIFACT_DIMENSIONS as readonly string[]).includes(key)
+    ) {
+      errors.push(`${label}.${key} is not an artifact-state dimension.`);
+    }
+  }
+  for (const dimension of BOOLEAN_ARTIFACT_DIMENSIONS) {
+    if (dimension in value && typeof value[dimension] !== "boolean") {
+      errors.push(`${label}.${dimension} must be a boolean.`);
+    }
+  }
+  if (
+    "plan" in value &&
+    (typeof value.plan !== "string" || !PLAN_STATES.has(value.plan))
+  ) {
+    errors.push(`${label}.plan must be a known plan state.`);
+  }
+}
+
+/**
+ * Validate one snapshotted stage: its catalog descriptor and artifact contract,
+ * the concrete resolved target, the optional portable instructions, and the
+ * resolved local binding. Returns the stage id and bound harness when
+ * structurally sound enough for cross-field checks, else `undefined`.
  */
 function validateStage(
   value: unknown,
@@ -349,26 +458,35 @@ function validateStage(
     return undefined;
   }
   let id: string | undefined;
-  if (!isNonEmptyString(value.id)) {
-    errors.push(`${label}.id must be a non-empty string.`);
+  if (typeof value.id !== "string" || !isCatalogStageId(value.id)) {
+    errors.push(`${label}.id must name a catalog stage.`);
   } else {
     id = value.id;
   }
   if (!isNonEmptyString(value.skill)) {
     errors.push(`${label}.skill must be a non-empty string.`);
   }
-  validateStageTarget(value.target, `${label}.target`, errors);
+  validateTargetRule(value.targetRule, `${label}.targetRule`, errors);
+  validateArtifactPattern(value.prerequisite, `${label}.prerequisite`, errors);
+  validateArtifactPattern(value.promises, `${label}.promises`, errors);
   validateGitPolicy(value.gitPolicy, `${label}.gitPolicy`, errors);
   if (value.queueResolution !== "advance" && value.queueResolution !== "rerun") {
     errors.push(`${label}.queueResolution must be "advance" or "rerun".`);
   }
-  validateStageProfile(value.profile, `${label}.profile`, errors);
-  if (!isNonEmptyString(value.resolvedTarget)) {
-    errors.push(`${label}.resolvedTarget must be a non-empty string.`);
+  if (!isNormalizedRelPosix(stripTrailingSlash(value.resolvedTarget))) {
+    errors.push(
+      `${label}.resolvedTarget must be a normalized repository-relative POSIX path.`,
+    );
   }
+  if (value.instructions !== undefined && !isNonEmptyString(value.instructions)) {
+    errors.push(`${label}.instructions must be a non-empty string when present.`);
+  }
+  validateStageBinding(value.binding, `${label}.binding`, errors);
   const harness =
-    isPlainObject(value.profile) && typeof value.profile.harness === "string"
-      ? value.profile.harness
+    isPlainObject(value.binding) &&
+    isPlainObject(value.binding.agent) &&
+    typeof value.binding.agent.harness === "string"
+      ? value.binding.agent.harness
       : undefined;
   if (id === undefined || harness === undefined) return undefined;
   return { id, harness };
@@ -542,6 +660,33 @@ function validateWaiting(value: unknown, errors: string[]): void {
   validateWaitingReasons(value.reasons, errors);
 }
 
+/**
+ * Validate the recorded profile selection: either the settings-only selection,
+ * which carries nothing further, or a selected profile with both its declared
+ * name and its resolved source provenance.
+ */
+function validateProfileSelection(value: unknown, errors: string[]): void {
+  if (!isPlainObject(value)) {
+    errors.push(`profileSelection must be an object.`);
+    return;
+  }
+  if (value.kind === "settings-only") {
+    return;
+  }
+  if (value.kind !== "profile") {
+    errors.push(`profileSelection.kind must be "settings-only" or "profile".`);
+    return;
+  }
+  if (!isNonEmptyString(value.name)) {
+    errors.push(`profileSelection.name must be a non-empty string.`);
+  }
+  if (!isAbsoluteHostPath(value.sourcePath)) {
+    errors.push(
+      `profileSelection.sourcePath must be a normalized absolute host path.`,
+    );
+  }
+}
+
 function validateWorkspace(value: unknown, errors: string[]): void {
   if (!isPlainObject(value)) {
     errors.push(`workspace must be an object.`);
@@ -628,6 +773,16 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
   }
   if (!isNonEmptyString(doc.pipelineName)) {
     errors.push(`pipelineName must be a non-empty string.`);
+  }
+  if (!isAbsoluteHostPath(doc.pipelineSourcePath)) {
+    errors.push(`pipelineSourcePath must be a normalized absolute host path.`);
+  }
+  validateProfileSelection(doc.profileSelection, errors);
+  if (
+    doc.fromStage !== undefined &&
+    (typeof doc.fromStage !== "string" || !isCatalogStageId(doc.fromStage))
+  ) {
+    errors.push(`fromStage must name a catalog stage when present.`);
   }
 
   const stageInfos: Array<{ id: string; harness: string } | undefined> = [];

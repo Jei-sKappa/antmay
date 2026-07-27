@@ -30,7 +30,7 @@ import type { OutcomeParse } from "./outcome.js";
 import { parseTerminalOutcome } from "./outcome.js";
 import { SignalInterruption } from "./signals.js";
 
-/** Milliseconds per second, for turning the profile's interval into a timer. */
+/** Milliseconds per second, for turning the binding's interval into a timer. */
 const MS_PER_SECOND = 1000;
 
 /**
@@ -223,7 +223,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const continuationCommand =
       attempt?.agentSession !== undefined
         ? nativeContinuationCommand(
-            checkpoint.stages[attempt.stageIndex]!.profile.harness,
+            checkpoint.stages[attempt.stageIndex]!.binding.agent.harness,
             attempt.agentSession.id,
           )
         : undefined;
@@ -329,7 +329,8 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
 
     const stageIndex = checkpoint.stageIndex;
     const stage: SnapshottedStage = checkpoint.stages[stageIndex];
-    const profile = stage.profile;
+    const binding = stage.binding;
+    const agent = binding.agent;
     const ordinal = stageIndex + 1;
     const stagePosition = `${ordinal}/${stageCount}`;
 
@@ -416,11 +417,11 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       stageId: stage.id,
       stageOrdinal: ordinal,
       attempt: attemptNumber,
-      harness: profile.harness,
-      model: profile.model,
+      harness: agent.harness,
+      model: agent.model,
       harnessVersion:
-        ctx.harnessVersions[profile.harness] ??
-        checkpoint.observedHarnessVersions[profile.harness] ??
+        ctx.harnessVersions[agent.harness] ??
+        checkpoint.observedHarnessVersions[agent.harness] ??
         "unknown",
       repoRoot,
       threadRelPath,
@@ -436,17 +437,17 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     display.attemptStarted({
       stagePosition,
       stageId: stage.id,
-      harness: profile.harness,
-      model: profile.model,
+      harness: agent.harness,
+      model: agent.model,
       attempt: attemptNumber,
       logAbsPath: logPaths.absPath,
     });
 
     const prompt = renderStagePrompt(
-      profile.harness,
+      agent.harness,
       stage.skill,
       stage.resolvedTarget,
-      profile.prompt,
+      stage.instructions,
     );
 
     // A signal after reserving the attempt and creating its log but before the
@@ -469,7 +470,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const attemptStartMs = Date.now();
     const heartbeat = setInterval(() => {
       display.heartbeat(Date.now() - attemptStartMs);
-    }, profile.heartbeatSeconds * MS_PER_SECOND);
+    }, binding.heartbeatSeconds * MS_PER_SECOND);
     heartbeat.unref();
 
     // Live session capture: first non-empty ID starts exactly one provisional
@@ -480,19 +481,20 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     let outcome: AttemptOutcome;
     try {
       outcome = await invoker.invoke({
-        harness: profile.harness,
-        model: profile.model,
+        harness: agent.harness,
+        model: agent.model,
         prompt,
         stage: {
           id: stage.id,
           skill: stage.skill,
-          target: stage.target,
           resolvedTarget: stage.resolvedTarget,
           threadRelPath,
-          profilePrompt: profile.prompt,
+          ...(stage.instructions !== undefined
+            ? { instructions: stage.instructions }
+            : {}),
           attemptNumber,
         },
-        idleTimeoutSeconds: profile.idleTimeoutSeconds,
+        idleTimeoutSeconds: binding.idleTimeoutSeconds,
         dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,
         workspace: checkpoint.workspace.execution,
         logFilePath: logPaths.absPath,

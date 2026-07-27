@@ -5,9 +5,14 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
 import { VERSION } from "../cli/help.js";
+import {
+  loadExecutionProfile,
+  loadStageSettings,
+  resolveStageBindings,
+} from "../config/execution.js";
+import type { HarnessId, StageBindingMap } from "../config/execution.js";
+import { resolveDocumentReference } from "../config/references.js";
 import { resolveRoots } from "../config/roots.js";
-import { loadSettings } from "../config/settings.js";
-import type { HarnessId } from "../config/settings.js";
 import {
   createTerminalDisplay,
   printRunSummary,
@@ -24,12 +29,15 @@ import {
   loadScriptedScenario,
 } from "../harness/scripted/scenario.js";
 import type { HarnessInvoker } from "../harness/types.js";
-import { resolveStageProfiles } from "../pipeline/profiles.js";
-import { builtInPipelines, knownStageIds } from "../pipeline/standard.js";
-import { resolveStageTarget } from "../pipeline/targets.js";
+import { composePipeline } from "../pipeline/composition.js";
+import { loadPipelineDocument } from "../pipeline/documents.js";
 import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
-import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint.js";
+import type {
+  ProfileSelection,
+  RunCheckpoint,
+  SnapshottedStage,
+} from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
@@ -38,6 +46,7 @@ import {
   generateRunId,
   runsDirectory,
 } from "../state/runs.js";
+import { inspectArtifactState } from "../thread/artifacts.js";
 import { scanPendingQueues } from "../thread/queues.js";
 import { resolveThreadTarget } from "../thread/resolve.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
@@ -96,7 +105,13 @@ type Allocated = {
  * return path.
  */
 export async function runCommand(
-  args: { pipeline: string; thread: string; dangerouslySkipPermissions: boolean },
+  args: {
+    pipeline: string;
+    thread: string;
+    from?: string;
+    profile?: string;
+    dangerouslySkipPermissions: boolean;
+  },
   deps: RunDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
@@ -122,64 +137,136 @@ export async function runCommand(
   });
 
   try {
-    // Preflight 1: exact built-in pipeline resolution.
-    const pipeline = builtInPipelines[args.pipeline];
-    if (pipeline === undefined) {
-      const known = Object.keys(builtInPipelines).sort().join(", ");
-      return fail(`Unknown pipeline "${args.pipeline}". Known pipelines: ${known}.`);
-    }
-
     const toggleResult = interpretScriptedHarnessToggle(deps.env);
     if (toggleResult.mode === "error") {
       return fail(toggleResult.message);
     }
     const useScripted = toggleResult.mode === "scripted";
 
-    // Preflight 2: thread resolution and validation (owning Git root, active
+    // Preflight 1: root resolution. Every reference below is resolved against
+    // the config root or the invocation working directory, so nothing can be
+    // read before the roots are known.
+    const roots = resolveRoots(deps.env, deps.homedir);
+    if (!roots.ok) {
+      return fail(roots.message);
+    }
+
+    // Preflight 2: the required pipeline document. Its reference is resolved by
+    // syntax alone, then exactly that source is read and strictly validated —
+    // in full, before `--from` selects anything from it.
+    const pipelineRef = resolveDocumentReference(
+      args.pipeline,
+      "pipeline",
+      roots.configRoot,
+      deps.cwd,
+    );
+    if (!pipelineRef.ok) {
+      return fail(pipelineRef.message);
+    }
+    const pipelineSourcePath = pipelineRef.reference.sourcePath;
+    const pipelineLoad = loadPipelineDocument(pipelineSourcePath);
+    if (!pipelineLoad.ok) {
+      return fail(pipelineLoad.errors.join("\n"));
+    }
+    const document = pipelineLoad.document;
+
+    // Preflight 3: the optional execution profile. The declared name comes from
+    // the loaded document and the source provenance from the resolved
+    // reference, because the two are independent identities.
+    let profileStages: StageBindingMap | null = null;
+    let profileSelection: ProfileSelection = { kind: "settings-only" };
+    if (args.profile !== undefined) {
+      const profileRef = resolveDocumentReference(
+        args.profile,
+        "profile",
+        roots.configRoot,
+        deps.cwd,
+      );
+      if (!profileRef.ok) {
+        return fail(profileRef.message);
+      }
+      const profileLoad = loadExecutionProfile(profileRef.reference.sourcePath);
+      if (!profileLoad.ok) {
+        return fail(profileLoad.errors.join("\n"));
+      }
+      profileStages = profileLoad.profile.stages;
+      profileSelection = {
+        kind: "profile",
+        name: profileLoad.profile.name,
+        sourcePath: profileRef.reference.sourcePath,
+      };
+    }
+
+    // Preflight 4: the optional settings file. A missing file is an empty stage
+    // map, so a complete profile runs without one.
+    const settings = loadStageSettings(roots.configRoot);
+    if (!settings.ok) {
+      return fail(settings.errors.join("\n"));
+    }
+
+    // Preflight 5: thread resolution and validation (owning Git root, active
     // location, seed, and decision log).
     const thread = await resolveThreadTarget(args.thread, deps.cwd);
     if (!thread.ok) {
       return fail(thread.message);
     }
 
-    // Preflight 3: roots, settings, and every resolved stage target and profile.
-    const roots = resolveRoots(deps.env, deps.homedir);
-    if (!roots.ok) {
-      return fail(roots.message);
-    }
-    const settings = loadSettings(roots.configRoot, knownStageIds(builtInPipelines));
-    if (!settings.ok) {
-      return fail(settings.errors.join("\n"));
-    }
-    const profilesResult = resolveStageProfiles(pipeline, settings.settings);
-    if (!profilesResult.ok) {
-      return fail(profilesResult.errors.join("\n"));
-    }
-    const stages: SnapshottedStage[] = [];
-    const targetErrors: string[] = [];
-    pipeline.stages.forEach((stage, index) => {
-      const target = resolveStageTarget(stage.target, thread.threadRelPath);
-      if (!target.ok) {
-        targetErrors.push(`Stage "${stage.id}": ${target.error}`);
-        return;
-      }
-      stages.push({
-        ...stage,
-        profile: profilesResult.profiles[index]!,
-        resolvedTarget: target.path,
-      });
-    });
-    if (targetErrors.length > 0) {
-      return fail(targetErrors.join("\n"));
+    // Preflight 6: the thread's concrete artifact state, which is the only
+    // starting point composition simulates from.
+    const inspection = await inspectArtifactState(
+      thread.repoRoot,
+      thread.threadRelPath,
+    );
+    if (!inspection.ok) {
+      return fail(inspection.message);
     }
 
+    // Preflight 7: compose the selected suffix, proving every selected stage can
+    // run from the state at its position and resolving its concrete target.
+    const composition = composePipeline(
+      document,
+      inspection.state,
+      thread.threadRelPath,
+      args.from ?? null,
+    );
+    if (!composition.ok) {
+      return fail(composition.errors.join("\n"));
+    }
+    const prepared = composition.stages;
+
+    // Preflight 8: one complete local binding per selected stage, from the
+    // profile when it binds the stage and from settings otherwise.
+    const bindings = resolveStageBindings(
+      prepared.map((entry) => entry.stage.id),
+      settings.stages,
+      profileStages,
+    );
+    if (!bindings.ok) {
+      return fail(bindings.errors.join("\n"));
+    }
+
+    // Composition accepted the entry point, so the first selected stage is
+    // exactly the stage `--from` named.
+    const fromStage = args.from === undefined ? null : prepared[0]!.stage.id;
+
+    const stages: SnapshottedStage[] = prepared.map((entry, index) => ({
+      ...entry.stage,
+      resolvedTarget: entry.target,
+      ...(entry.instructions !== undefined
+        ? { instructions: entry.instructions }
+        : {}),
+      binding: bindings.bindings[index]!,
+    }));
+
+    // Preflight 9: the scripted scenario, validated against exactly the selected
+    // stage IDs.
     let invoker = deps.invoker;
     let probe = deps.probe;
     let scenarioPath: string | undefined;
     if (useScripted) {
       const loaded = await loadScriptedScenario(
         roots.configRoot,
-        pipeline.stages.map((stage) => stage.id),
+        stages.map((stage) => stage.id),
       );
       if (!loaded.ok) {
         return fail(loaded.errors.join("\n"));
@@ -191,9 +278,11 @@ export async function runCommand(
       scenarioPath = loaded.scenarioPath;
     }
 
-    // Preflight 4: harness-executable preflight over the distinct selected
+    // Preflight 10: harness-executable preflight over the distinct selected
     // harnesses; require a non-empty version for each and keep the observed lines.
-    const distinct = [...new Set(stages.map((stage) => stage.profile.harness))];
+    const distinct = [
+      ...new Set(stages.map((stage) => stage.binding.agent.harness)),
+    ];
     const probeResult = await probe(distinct, thread.repoRoot);
     if (!probeResult.ok) {
       const lines = probeResult.failures.map(
@@ -219,7 +308,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 5: clean-worktree requirement (boundary status set).
+    // Preflight 11: clean-worktree requirement (boundary status set).
     let clean: boolean;
     try {
       clean = await isWorktreeClean(thread.repoRoot);
@@ -234,7 +323,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 6: both pending queues must be empty; a non-empty queue or a scan
+    // Preflight 12: both pending queues must be empty; a non-empty queue or a scan
     // error both fail preflight with no run.
     const preScan = await scanPendingQueues(thread.repoRoot, thread.threadRelPath);
     if (!preScan.ok) {
@@ -246,7 +335,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 7: unfinished same-thread-run guard. An absent runs directory
+    // Preflight 13: unfinished same-thread-run guard. An absent runs directory
     // means no runs and creates nothing; a corrupt sibling checkpoint warns
     // without blocking; a non-completed run recording this workspace AND thread
     // refuses.
@@ -361,7 +450,10 @@ export async function runCommand(
           threadRelPath: thread.threadRelPath,
           workspace,
           dangerouslySkipPermissions: args.dangerouslySkipPermissions,
-          pipelineName: pipeline.name,
+          pipelineName: document.name,
+          pipelineSourcePath,
+          profileSelection,
+          ...(fromStage !== null ? { fromStage } : {}),
           stages,
           observedHarnessVersions,
           stageIndex: 0,
@@ -412,7 +504,7 @@ export async function runCommand(
     }
     printRunSummary(displayOptions, {
       runId: checkpoint.runId,
-      pipelineName: pipeline.name,
+      pipelineName: document.name,
       threadRelPath: thread.threadRelPath,
       workspacePath: workspace.path,
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,

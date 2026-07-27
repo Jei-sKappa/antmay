@@ -8,7 +8,6 @@ import type {
   HarnessEvent,
   HarnessInvoker,
 } from "../types.js";
-import { resolveStageTarget } from "../../pipeline/targets.js";
 import type { ScriptedCaseName, ScriptedScenario } from "./scenario.js";
 import { isCaseCompatibleWithStage } from "./scenario.js";
 
@@ -522,17 +521,14 @@ function validateRequestShape(
     return { ok: false, error: "attemptNumber must be at least 1." };
   }
 
-  const expectedTarget = resolveStageTarget(
-    request.stage.target,
-    request.stage.threadRelPath,
-  );
-  if (!expectedTarget.ok) {
-    return { ok: false, error: expectedTarget.error };
-  }
-  if (request.stage.resolvedTarget !== expectedTarget.path) {
+  // The concrete target was settled by composition against the thread's
+  // artifact state, so it is verified for containment rather than re-derived:
+  // both a thread-root target (`<thread>/`) and a thread-file target
+  // (`<thread>/spec.md`) sit under the thread prefix.
+  if (!request.stage.resolvedTarget.startsWith(`${request.stage.threadRelPath}/`)) {
     return {
       ok: false,
-      error: "resolvedTarget does not match the stage target for the thread.",
+      error: "resolvedTarget does not lie inside the stage's thread.",
     };
   }
 
@@ -540,7 +536,7 @@ function validateRequestShape(
     request.harness,
     request.stage.skill,
     request.stage.resolvedTarget,
-    request.stage.profilePrompt,
+    request.stage.instructions,
   );
   if (request.prompt !== expectedPrompt) {
     return { ok: false, error: "prompt does not match the expected stage prompt." };

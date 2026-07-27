@@ -5,7 +5,7 @@ import { Writable } from "node:stream";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import type { HarnessId } from "../config/settings.js";
+import type { HarnessId } from "../config/execution.js";
 import type { ProbeResult } from "../harness/probe.js";
 import { createScriptedInvoker } from "../harness/scripted/invoker.js";
 import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
@@ -22,6 +22,7 @@ import { readCheckpoint } from "../state/persist.js";
 import { createRunDirectory, runsDirectory } from "../state/runs.js";
 import {
   createFakeHarness,
+  type FakeHarness,
   type FakeHarnessStep,
 } from "../test-helpers/fake-harness.js";
 import {
@@ -70,9 +71,47 @@ async function tempDir(prefix: string): Promise<string> {
   return dir;
 }
 
-const VALID_SETTINGS = {
-  afk: { defaults: { harness: "codex", model: "test-model" } },
-};
+/** The stage IDs the fixture's `standard` pipeline document selects, in order. */
+const STANDARD_STAGE_IDS = [
+  "spec",
+  "reconcile-spec",
+  "review-spec",
+  "plan-strict",
+  "reconcile-plan",
+  "implement-plan-with-subagents",
+] as const;
+
+/** A pipeline document selecting `stages` under the declared name `standard`. */
+function pipelineDocument(
+  stages: readonly (string | { stage: string; instructions: string })[] =
+    STANDARD_STAGE_IDS,
+  name = "standard",
+): Record<string, unknown> {
+  return {
+    schemaVersion: 0,
+    name,
+    stages: stages.map((entry) =>
+      typeof entry === "string" ? { stage: entry } : entry,
+    ),
+  };
+}
+
+/** A settings document binding every named stage to one codex/test-model agent. */
+function settingsFor(
+  stages: readonly string[] = STANDARD_STAGE_IDS,
+  model = "test-model",
+): Record<string, unknown> {
+  return {
+    afk: {
+      stages: Object.fromEntries(
+        stages.map((stage) => [
+          stage,
+          { agent: { harness: "codex", model } },
+        ]),
+      ),
+    },
+  };
+}
 
 const SIGNAL_EXIT: Record<string, number> = {
   SIGINT: EXIT_SIGINT,
@@ -118,25 +157,68 @@ type Harness = {
   fixture: RepoFixture;
 };
 
+/**
+ * A repository, config root, and state root for one case. `settings` and
+ * `pipeline` are written unless explicitly `null`, which is how a case exercises
+ * a missing settings file or a missing pipeline document.
+ */
 async function setup(
-  settings: unknown = VALID_SETTINGS,
-  writeSettings = true,
+  options: {
+    settings?: unknown;
+    pipeline?: unknown;
+    profile?: unknown;
+    profileName?: string;
+  } = {},
 ): Promise<Harness> {
   const fixture = await createRepoFixture({ thread: {} });
   fixtures.push(fixture);
   const configRoot = await tempDir("antmay-cfg-");
   const stateRoot = await tempDir("antmay-state-");
-  if (writeSettings) {
+  const settings =
+    "settings" in options ? options.settings : settingsFor();
+  if (settings !== null) {
     await fs.writeFile(
       path.join(configRoot, "settings.json"),
       JSON.stringify(settings, null, 2),
       "utf8",
     );
   }
+  const pipeline =
+    "pipeline" in options ? options.pipeline : pipelineDocument();
+  if (pipeline !== null) {
+    await writeConfigDocument(configRoot, "pipelines", "standard", pipeline);
+  }
+  if (options.profile !== undefined) {
+    await writeConfigDocument(
+      configRoot,
+      "profiles",
+      options.profileName ?? "quality",
+      options.profile,
+    );
+  }
   return { configRoot, stateRoot, fixture };
 }
 
-type RunResult = { code: number; out: string; err: string };
+/** Write one config-root document, creating its role directory. */
+async function writeConfigDocument(
+  configRoot: string,
+  directory: "pipelines" | "profiles",
+  name: string,
+  document: unknown,
+): Promise<string> {
+  const dir = path.join(configRoot, directory);
+  await fs.mkdir(dir, { recursive: true });
+  const documentPath = path.join(dir, `${name}.json`);
+  await fs.writeFile(documentPath, JSON.stringify(document, null, 2), "utf8");
+  return documentPath;
+}
+
+type RunResult = {
+  code: number;
+  out: string;
+  err: string;
+  invoker: FakeHarness;
+};
 
 async function run(
   h: Harness,
@@ -144,6 +226,8 @@ async function run(
   overrides: Partial<{
     pipeline: string;
     thread: string;
+    from: string;
+    profile: string;
     dangerouslySkipPermissions: boolean;
     env: NodeJS.ProcessEnv;
     probe: RunDeps["probe"];
@@ -154,6 +238,7 @@ async function run(
 ): Promise<RunResult> {
   const out = new Capture();
   const err = new Capture();
+  const invoker = createFakeHarness(steps);
   const deps: RunDeps = {
     env: {
       ANTMAY_CONFIG_HOME: h.configRoot,
@@ -163,7 +248,7 @@ async function run(
     },
     cwd: h.fixture.root,
     homedir: os.homedir(),
-    invoker: createFakeHarness(steps),
+    invoker,
     probe: overrides.probe ?? okProbe,
     createScriptedInvoker,
     scriptedProbe: probeScriptedHarnessExecutables,
@@ -179,11 +264,13 @@ async function run(
     {
       pipeline: overrides.pipeline ?? "standard",
       thread: overrides.thread ?? (h.fixture.threadFolder as string),
+      ...(overrides.from !== undefined ? { from: overrides.from } : {}),
+      ...(overrides.profile !== undefined ? { profile: overrides.profile } : {}),
       dangerouslySkipPermissions: overrides.dangerouslySkipPermissions ?? false,
     },
     deps,
   );
-  return { code, out: out.text, err: err.text };
+  return { code, out: out.text, err: err.text, invoker };
 }
 
 async function runDirNames(stateRoot: string): Promise<string[]> {
@@ -308,13 +395,17 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
     const runDir = await soleCheckpointDir(h.stateRoot);
     await fs.writeFile(
       path.join(h.configRoot, "settings.json"),
-      JSON.stringify({ afk: { defaults: { harness: "codex", model: "changed-model" } } }),
+      JSON.stringify(settingsFor(STANDARD_STAGE_IDS, "changed-model")),
       "utf8",
     );
     const cp = await readCheckpoint(runDir);
     expect(cp.ok).toBe(true);
     if (cp.ok) {
-      expect(cp.checkpoint.stages.every((s) => s.profile.model === "test-model")).toBe(true);
+      expect(
+        cp.checkpoint.stages.every(
+          (stage) => stage.binding.agent.model === "test-model",
+        ),
+      ).toBe(true);
     }
   });
 
@@ -328,6 +419,208 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
   });
 });
 
+describe.concurrent("runCommand — external documents and selection (FR-1, FR-4, FR-5, FR-6)", () => {
+  it("snapshots the declared identity and resolved source of a named pipeline", async () => {
+    const h = await setup();
+    const result = await run(h, standardSteps(h.fixture));
+    expect(result.code).toBe(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    expect(cp.checkpoint.pipelineName).toBe("standard");
+    expect(cp.checkpoint.pipelineSourcePath).toBe(
+      path.join(h.configRoot, "pipelines", "standard.json"),
+    );
+    expect(cp.checkpoint.profileSelection).toEqual({ kind: "settings-only" });
+    expect(cp.checkpoint.fromStage).toBeUndefined();
+  });
+
+  it("loads an explicit relative path whose filename differs from the declared name", async () => {
+    const h = await setup({ pipeline: null });
+    const documentPath = path.join(h.fixture.root, "my-pipeline.json");
+    await fs.writeFile(
+      documentPath,
+      JSON.stringify(pipelineDocument(STANDARD_STAGE_IDS, "standard")),
+      "utf8",
+    );
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "chore: check in a pipeline"]);
+
+    const result = await run(h, standardSteps(h.fixture), {
+      pipeline: "./my-pipeline.json",
+    });
+    expect(result.code).toBe(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    // The declared name is the identity; the filename is only provenance.
+    expect(cp.checkpoint.pipelineName).toBe("standard");
+    expect(cp.checkpoint.pipelineSourcePath).toBe(documentPath);
+  });
+
+  it("runs a complete selected profile with no settings file at all", async () => {
+    const h = await setup({
+      settings: null,
+      profile: {
+        schemaVersion: 0,
+        name: "maximum-quality",
+        stages: Object.fromEntries(
+          STANDARD_STAGE_IDS.map((stage) => [
+            stage,
+            {
+              agent: { harness: "codex", model: "profile-model" },
+              idleTimeoutSeconds: 120,
+              heartbeatSeconds: 30,
+            },
+          ]),
+        ),
+      },
+      profileName: "maximum-quality",
+    });
+
+    const result = await run(h, standardSteps(h.fixture), {
+      profile: "maximum-quality",
+    });
+    expect(result.code).toBe(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    expect(cp.checkpoint.profileSelection).toEqual({
+      kind: "profile",
+      name: "maximum-quality",
+      sourcePath: path.join(h.configRoot, "profiles", "maximum-quality.json"),
+    });
+    expect(
+      cp.checkpoint.stages.every(
+        (stage) =>
+          stage.binding.agent.model === "profile-model" &&
+          stage.binding.idleTimeoutSeconds === 120 &&
+          stage.binding.heartbeatSeconds === 30,
+      ),
+    ).toBe(true);
+  });
+
+  it("falls back to the whole settings binding for a stage the profile omits", async () => {
+    const h = await setup({
+      profile: {
+        schemaVersion: 0,
+        name: "partial",
+        stages: {
+          spec: { agent: { harness: "codex", model: "profile-model" } },
+        },
+      },
+      profileName: "partial",
+    });
+
+    const result = await run(h, standardSteps(h.fixture), { profile: "partial" });
+    expect(result.code).toBe(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    expect(cp.checkpoint.stages[0]!.binding.agent.model).toBe("profile-model");
+    expect(cp.checkpoint.stages[1]!.binding.agent.model).toBe("test-model");
+    // Omitted timing fields settle to the intrinsic defaults on both sources.
+    expect(cp.checkpoint.stages[0]!.binding.idleTimeoutSeconds).toBe(86_400);
+    expect(cp.checkpoint.stages[1]!.binding.heartbeatSeconds).toBe(300);
+  });
+
+  it("snapshots only the selected suffix and records the entry point", async () => {
+    const h = await setup();
+    await writeThreadFile(h.fixture, "spec.md", "# Spec\n");
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "docs: spec"]);
+
+    const result = await run(h, standardSteps(h.fixture).slice(3), {
+      from: "plan-strict",
+    });
+    expect(result.code).toBe(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    expect(cp.checkpoint.fromStage).toBe("plan-strict");
+    expect(cp.checkpoint.stages.map((stage) => stage.id)).toEqual([
+      "plan-strict",
+      "reconcile-plan",
+      "implement-plan-with-subagents",
+    ]);
+    // Nothing credits the three skipped stages: they were never attempted.
+    expect(cp.checkpoint.attempts.map((attempt) => attempt.stageId)).toEqual([
+      "plan-strict",
+      "reconcile-plan",
+      "implement-plan-with-subagents",
+    ]);
+  });
+
+  it("snapshots the catalog contract and concrete target of every selected stage", async () => {
+    const h = await setup();
+    await run(h, standardSteps(h.fixture));
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    const rel = h.fixture.threadRelPath as string;
+    const spec = cp.checkpoint.stages[0]!;
+    expect(spec.prerequisite).toEqual({ validThread: true });
+    expect(spec.promises).toEqual({ spec: true });
+    expect(spec.resolvedTarget).toBe(`${rel}/`);
+    expect(cp.checkpoint.stages[3]!.resolvedTarget).toBe(`${rel}/spec.md`);
+  });
+
+  it("appends portable stage instructions after the trigger and target", async () => {
+    const h = await setup({
+      pipeline: pipelineDocument([
+        { stage: "spec", instructions: "Cover the migration path." },
+        ...STANDARD_STAGE_IDS.slice(1),
+      ]),
+    });
+
+    const result = await run(h, standardSteps(h.fixture));
+    expect(result.code).toBe(0);
+    const rel = h.fixture.threadRelPath as string;
+    expect(result.invoker.calls[0]!.prompt).toBe(
+      `$spec \`${rel}/\`. Cover the migration path.`,
+    );
+    expect(result.invoker.calls[1]!.prompt).toBe(
+      `$reconcile-spec \`${rel}/spec.md\`.`,
+    );
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    expect(cp.checkpoint.stages[0]!.instructions).toBe(
+      "Cover the migration path.",
+    );
+    expect(cp.checkpoint.stages[1]!.instructions).toBeUndefined();
+  });
+
+  it("probes only the harnesses the selected stages bind", async () => {
+    const h = await setup({
+      settings: {
+        afk: {
+          stages: {
+            ...(settingsFor(STANDARD_STAGE_IDS).afk as {
+              stages: Record<string, unknown>;
+            }).stages,
+            "plan-brief": {
+              agent: { harness: "claude-code", model: "unused-model" },
+            },
+          },
+        },
+      },
+    });
+    let probed: HarnessId[] = [];
+    const trackingProbe: RunDeps["probe"] = async (harnesses, repoRoot) => {
+      probed = [...harnesses];
+      return okProbe(harnesses, repoRoot);
+    };
+
+    const result = await run(h, standardSteps(h.fixture), {
+      probe: trackingProbe,
+    });
+    expect(result.code).toBe(0);
+    // `plan-brief` is bound but never selected, so its harness is never probed.
+    expect(probed).toEqual(["codex"]);
+  });
+});
+
 describe.concurrent("runCommand — preflight failures leave no run, no checkpoint, no lock (AC-7.1)", () => {
   async function expectClean(h: Harness, result: RunResult): Promise<void> {
     expect(result.code).toBe(1);
@@ -335,11 +628,36 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     expect(await lockNames(h.stateRoot)).toEqual([]);
   }
 
-  it("rejects an unknown pipeline", async () => {
+  it("rejects a named pipeline whose document does not exist", async () => {
     const h = await setup();
     const result = await run(h, [], { pipeline: "nope" });
     await expectClean(h, result);
-    expect(result.err).toContain("Unknown pipeline");
+    expect(result.err).toContain("No pipeline document exists at");
+    expect(result.err).toContain(path.join("pipelines", "nope.json"));
+  });
+
+  it("rejects a bare filename reference with both legal alternatives", async () => {
+    const h = await setup();
+    const result = await run(h, [], { pipeline: "standard.json" });
+    await expectClean(h, result);
+    expect(result.err).toContain('Use "standard"');
+    expect(result.err).toContain('"./standard.json"');
+  });
+
+  it("rejects a structurally invalid pipeline document", async () => {
+    const h = await setup({
+      pipeline: { schemaVersion: 1, name: "standard", stages: [] },
+    });
+    const result = await run(h, []);
+    await expectClean(h, result);
+    expect(result.err).toContain("schemaVersion must be 0.");
+  });
+
+  it("rejects a named profile whose document does not exist", async () => {
+    const h = await setup();
+    const result = await run(h, [], { profile: "nope" });
+    await expectClean(h, result);
+    expect(result.err).toContain("No execution profile document exists at");
   });
 
   it("rejects an unresolvable thread", async () => {
@@ -348,17 +666,47 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     await expectClean(h, result);
   });
 
-  it("rejects a missing settings file and points at documentation", async () => {
-    const h = await setup(undefined, false);
+  it("refuses a selected stage that no source binds, naming that stage", async () => {
+    const h = await setup({
+      settings: settingsFor(STANDARD_STAGE_IDS.slice(1)),
+    });
     const result = await run(h, []);
     await expectClean(h, result);
-    expect(result.err).toContain("cli/README.md");
+    expect(result.err).toContain('Stage "spec" has no execution binding');
   });
 
   it("rejects an invalid settings document", async () => {
-    const h = await setup({ afk: { defaults: { harness: "nope" } } });
+    const h = await setup({ settings: { afk: { defaults: {} } } });
     const result = await run(h, []);
     await expectClean(h, result);
+    expect(result.err).toContain("afk.defaults");
+  });
+
+  it("refuses an impossible composition before allocation", async () => {
+    const h = await setup({
+      pipeline: pipelineDocument(["plan-brief", "implement-plan"]),
+      settings: settingsFor(["plan-brief", "implement-plan"]),
+    });
+    const result = await run(h, []);
+    await expectClean(h, result);
+    expect(result.err).toContain('Stage "implement-plan" (selected position 2)');
+    expect(result.err).toContain('plan state "strict"');
+    expect(result.err).toContain('"plan-brief" (position 1) promises plan state "brief"');
+  });
+
+  it("refuses an unknown --from stage before allocation, naming it", async () => {
+    const h = await setup();
+    const result = await run(h, [], { from: "implement" });
+    await expectClean(h, result);
+    expect(result.err).toContain('Stage "implement" is not in pipeline "standard"');
+  });
+
+  it("refuses a --from entry point the thread cannot satisfy", async () => {
+    const h = await setup();
+    const result = await run(h, [], { from: "plan-strict" });
+    await expectClean(h, result);
+    expect(result.err).toContain('Stage "plan-strict" (selected position 1)');
+    expect(result.err).toContain("No earlier stage is selected");
   });
 
   it("rejects when a selected harness executable is unavailable", async () => {
@@ -551,7 +899,7 @@ function dropPendingDecisionSync(fixture: RepoFixture, name: string): void {
   writeFileSync(path.join(dir, name), "open decision", "utf8");
 }
 
-/** Happy-path scripted scenario for the built-in standard pipeline. */
+/** Happy-path scripted scenario for the fixture's `standard` selection. */
 function standardScriptedScenario(
   overrides: Partial<Record<string, string[]>> = {},
 ): Record<string, unknown> {
@@ -711,5 +1059,38 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
       expect(cp.checkpoint.startedScripted).toBeUndefined();
     }
     expect(result.out).not.toContain("[DEV] Resolved prompt");
+  });
+
+  it("validates the scenario against the selected suffix only", async () => {
+    const h = await setup();
+    await writeThreadFile(h.fixture, "spec.md", "# Spec\n");
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "docs: spec"]);
+    // A scenario covering every document stage now over-covers the suffix.
+    await writeScriptedScenario(h.configRoot);
+
+    const overCovered = await run(h, [], {
+      env: scriptedEnv(h),
+      from: "plan-strict",
+    });
+    expect(overCovered.code).toBe(1);
+    expect(overCovered.err).toContain("stages.spec is not an expected stage id.");
+    expect(await runDirNames(h.stateRoot)).toEqual([]);
+
+    await writeScriptedScenario(h.configRoot, {
+      schemaVersion: 0,
+      stages: {
+        "plan-strict": ["plan-strict-correct"],
+        "reconcile-plan": ["reconcile-plan-correct"],
+        "implement-plan-with-subagents": [
+          "implement-plan-with-subagents-correct",
+        ],
+      },
+    });
+    const suffixOnly = await run(h, [], {
+      env: scriptedEnv(h),
+      from: "plan-strict",
+    });
+    expect(suffixOnly.code).toBe(0);
   });
 });

@@ -39,6 +39,41 @@ describe("parseCliArguments — accepted grammar", () => {
     });
   });
 
+  it("accepts the optional --from and --profile options", () => {
+    expect(
+      parseCliArguments([
+        "afk",
+        "run",
+        "./pipelines/mine.json",
+        "--thread",
+        "docs/threads/x",
+        "--from",
+        "plan-strict",
+        "--profile",
+        "maximum-quality",
+      ]),
+    ).toEqual({
+      kind: "run",
+      pipeline: "./pipelines/mine.json",
+      thread: "docs/threads/x",
+      from: "plan-strict",
+      profile: "maximum-quality",
+      dangerouslySkipPermissions: false,
+    });
+  });
+
+  it("omits --from and --profile entirely when neither is given", () => {
+    const command = parseCliArguments([
+      "afk",
+      "run",
+      "standard",
+      "--thread",
+      "t",
+    ]);
+    expect(command).not.toHaveProperty("from");
+    expect(command).not.toHaveProperty("profile");
+  });
+
   it("accepts `afk resume <run-id>`", () => {
     expect(parseCliArguments(["afk", "resume", "run-123"])).toEqual({
       kind: "resume",
@@ -84,12 +119,44 @@ describe("parseCliArguments — rejections name the nearest usage", () => {
     );
   });
 
+  it("rejects a missing --from value", () => {
+    expectUsageError(
+      parseCliArguments(["afk", "run", "standard", "--thread", "t", "--from"]),
+      RUN_USAGE,
+    );
+  });
+
+  it("rejects a missing --profile value", () => {
+    expectUsageError(
+      parseCliArguments(["afk", "run", "standard", "--thread", "t", "--profile"]),
+      RUN_USAGE,
+    );
+  });
+
+  it("rejects --from and --profile on resume and list", () => {
+    expectUsageError(
+      parseCliArguments(["afk", "resume", "run-1", "--from", "spec"]),
+      RESUME_USAGE,
+    );
+    expectUsageError(
+      parseCliArguments(["afk", "list", "--profile", "quality"]),
+      LIST_USAGE,
+    );
+  });
+
   it("rejects an unknown subcommand under afk", () => {
     expectUsageError(parseCliArguments(["afk", "frobnicate"]), AFK_USAGE);
   });
 
   it("rejects an unknown top-level command", () => {
     expectUsageError(parseCliArguments(["nope"]), TOP_USAGE);
+  });
+
+  it("offers no stage-discovery or initialization subcommand (AC-8.5)", () => {
+    expectUsageError(parseCliArguments(["afk", "stages"]), AFK_USAGE);
+    expectUsageError(parseCliArguments(["afk", "init"]), AFK_USAGE);
+    expect(AFK_USAGE).not.toMatch(/\bstages\b/);
+    expect(AFK_USAGE).not.toMatch(/\binit\b/);
   });
 
   it("rejects `resume --dangerously-skip-permissions`", () => {

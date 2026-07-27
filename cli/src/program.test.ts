@@ -49,6 +49,43 @@ describe("runMain dispatch (AC-1.1, FR-8)", () => {
     expect(handlersCalled).toBe(0);
   });
 
+  it("hands the run handler the pipeline reference, entry point, and profile", async () => {
+    const received: Array<Record<string, unknown>> = [];
+    const code = await runMain(
+      [
+        "afk",
+        "run",
+        "./mine.json",
+        "--thread",
+        "docs/threads/x",
+        "--from",
+        "plan-strict",
+        "--profile",
+        "maximum-quality",
+      ],
+      {
+        run: async (command) => {
+          received.push({ ...command });
+          return EXIT_OK;
+        },
+        resume: async () => EXIT_FAILURE,
+        list: async () => EXIT_FAILURE,
+      },
+    );
+
+    expect(code).toBe(EXIT_OK);
+    expect(received).toEqual([
+      {
+        kind: "run",
+        pipeline: "./mine.json",
+        thread: "docs/threads/x",
+        from: "plan-strict",
+        profile: "maximum-quality",
+        dangerouslySkipPermissions: false,
+      },
+    ]);
+  });
+
   it("prints the version line for --version", async () => {
     const chunks: string[] = [];
     const original = process.stdout.write.bind(process.stdout);

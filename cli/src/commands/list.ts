@@ -68,7 +68,7 @@ function formatLatestSession(checkpoint: RunCheckpoint): string | undefined {
     return undefined;
   }
   const stage = checkpoint.stages[attempt.stageIndex]!;
-  return `${stage.profile.harness}/${attempt.agentSession.id}`;
+  return `${stage.binding.agent.harness}/${attempt.agentSession.id}`;
 }
 
 /**
@@ -96,7 +96,7 @@ function renderRow(checkpoint: RunCheckpoint): string {
   } else {
     const stage = checkpoint.stages[checkpoint.stageIndex]!;
     columns.push(`${checkpoint.stageIndex + 1}/${stageCount} [${stage.id}]`);
-    columns.push(`${stage.profile.harness}/${stage.profile.model}`);
+    columns.push(`${stage.binding.agent.harness}/${stage.binding.agent.model}`);
   }
 
   const latestSession = formatLatestSession(checkpoint);

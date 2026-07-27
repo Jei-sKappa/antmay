@@ -33,10 +33,8 @@ function makeRequest(overrides: Partial<AttemptRequest> = {}): AttemptRequest {
     stage: {
       id: "spec",
       skill: "spec",
-      target: { kind: "thread-root" },
-      resolvedTarget: "docs/threads/260723121015Z-demo",
+      resolvedTarget: "docs/threads/260723121015Z-demo/",
       threadRelPath: "docs/threads/260723121015Z-demo",
-      profilePrompt: "",
       attemptNumber: 1,
     },
     idleTimeoutSeconds: 900,
@@ -125,12 +123,11 @@ describe("buildSandcastleRunOptions", () => {
     const withStage = buildSandcastleRunOptions(
       makeRequest({
         stage: {
-          id: "other-stage",
+          id: "review-spec",
           skill: "other-skill",
-          target: { kind: "thread-file", path: "notes.md" },
           resolvedTarget: "docs/threads/other/notes.md",
           threadRelPath: "docs/threads/other",
-          profilePrompt: "extra context",
+          instructions: "extra context",
           attemptNumber: 99,
         },
       }),

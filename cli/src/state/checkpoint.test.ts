@@ -20,33 +20,43 @@ function validCheckpoint(): RunCheckpoint {
     },
     dangerouslySkipPermissions: false,
     pipelineName: "standard",
+    pipelineSourcePath: "/Users/dev/.config/antmay/pipelines/standard.json",
+    profileSelection: {
+      kind: "profile",
+      name: "maximum-quality",
+      sourcePath: "/Users/dev/.config/antmay/profiles/maximum-quality.json",
+    },
     stages: [
       {
         id: "spec",
         skill: "spec",
-        target: { kind: "thread-root" },
+        targetRule: { kind: "fixed", target: { kind: "thread-root" } },
+        prerequisite: { validThread: true },
+        promises: { spec: true },
         gitPolicy: {
           headMayChange: false,
-          allowedChanges: [
-            { kind: "exact-file", threadRelativePath: "docs/threads/x/spec.md" },
-          ],
+          allowedChanges: [{ kind: "exact-file", threadRelativePath: "spec.md" }],
           changeRequired: true,
           commitSubjectTemplate: "chore(afk): spec <thread-folder>",
         },
         queueResolution: "rerun",
-        profile: {
-          harness: "codex",
-          model: "gpt-5",
-          prompt: "do spec",
+        resolvedTarget: "docs/threads/260723121015Z-demo/",
+        instructions: "Cover the migration path.",
+        binding: {
+          agent: { harness: "codex", model: "gpt-5" },
           idleTimeoutSeconds: 900,
           heartbeatSeconds: 300,
         },
-        resolvedTarget: "/Users/dev/repo/docs/threads/x",
       },
       {
-        id: "plan",
+        id: "plan-strict",
         skill: "plan-strict",
-        target: { kind: "thread-file", path: "docs/threads/x/plan.md" },
+        targetRule: {
+          kind: "fixed",
+          target: { kind: "thread-file", path: "spec.md" },
+        },
+        prerequisite: { validThread: true, spec: true },
+        promises: { plan: "strict" },
         gitPolicy: {
           headMayChange: true,
           allowedChanges: [],
@@ -54,14 +64,12 @@ function validCheckpoint(): RunCheckpoint {
           commitSubjectTemplate: null,
         },
         queueResolution: "advance",
-        profile: {
-          harness: "claude-code",
-          model: "claude",
-          prompt: "do plan",
+        resolvedTarget: "docs/threads/260723121015Z-demo/spec.md",
+        binding: {
+          agent: { harness: "claude-code", model: "claude" },
           idleTimeoutSeconds: 1200,
           heartbeatSeconds: 300,
         },
-        resolvedTarget: "/Users/dev/repo/docs/threads/x/plan.md",
       },
     ],
     observedHarnessVersions: { codex: "codex 1.0.0", "claude-code": "claude 2.0.0" },
@@ -140,6 +148,141 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
   });
 });
 
+describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
+  it("round-trips pipeline provenance, profile selection, and the entry point", () => {
+    const doc = validCheckpoint();
+    doc.fromStage = "spec";
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.checkpoint.pipelineName).toBe("standard");
+    expect(result.checkpoint.pipelineSourcePath).toBe(
+      "/Users/dev/.config/antmay/pipelines/standard.json",
+    );
+    expect(result.checkpoint.profileSelection).toEqual({
+      kind: "profile",
+      name: "maximum-quality",
+      sourcePath: "/Users/dev/.config/antmay/profiles/maximum-quality.json",
+    });
+    expect(result.checkpoint.fromStage).toBe("spec");
+  });
+
+  it("round-trips each stage's catalog contract, target, instructions, and binding", () => {
+    const result = validateCheckpoint(
+      JSON.parse(JSON.stringify(validCheckpoint())),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const [spec, plan] = result.checkpoint.stages;
+    expect(spec.prerequisite).toEqual({ validThread: true });
+    expect(spec.promises).toEqual({ spec: true });
+    expect(spec.targetRule).toEqual({
+      kind: "fixed",
+      target: { kind: "thread-root" },
+    });
+    expect(spec.resolvedTarget).toBe("docs/threads/260723121015Z-demo/");
+    expect(spec.instructions).toBe("Cover the migration path.");
+    expect(spec.binding).toEqual({
+      agent: { harness: "codex", model: "gpt-5" },
+      idleTimeoutSeconds: 900,
+      heartbeatSeconds: 300,
+    });
+    expect(plan.instructions).toBeUndefined();
+  });
+
+  it("accepts the settings-only selection and no entry point", () => {
+    const doc = validCheckpoint();
+    doc.profileSelection = { kind: "settings-only" };
+    delete doc.fromStage;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.checkpoint.profileSelection).toEqual({ kind: "settings-only" });
+    expect(result.checkpoint.fromStage).toBeUndefined();
+  });
+
+  it("requires the pipeline source provenance", () => {
+    const doc = validCheckpoint() as Record<string, unknown>;
+    delete doc.pipelineSourcePath;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /pipelineSourcePath/.test(e))).toBe(true);
+    }
+  });
+
+  it("requires a selected profile to carry both name and source", () => {
+    const doc = validCheckpoint();
+    doc.profileSelection = { kind: "profile", name: "quality" } as never;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => /profileSelection\.sourcePath/.test(e)),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a fromStage that names no catalog stage", () => {
+    const doc = { ...validCheckpoint(), fromStage: "propose" as never };
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /fromStage/.test(e))).toBe(true);
+    }
+  });
+
+  it("rejects a stage id that names no catalog stage", () => {
+    const doc = validCheckpoint();
+    doc.stages[0].id = "propose" as never;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /stages\[0\]\.id/.test(e))).toBe(true);
+    }
+  });
+
+  it("rejects an artifact contract naming an unknown dimension or value", () => {
+    const doc = validCheckpoint();
+    (doc.stages[0].prerequisite as Record<string, unknown>).roadmap = true;
+    doc.stages[1].promises.plan = "partial" as never;
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => /stages\[0\]\.prerequisite\.roadmap/.test(e)),
+      ).toBe(true);
+      expect(
+        result.errors.some((e) => /stages\[1\]\.promises\.plan/.test(e)),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an empty instructions string", () => {
+    const doc = validCheckpoint();
+    doc.stages[0].instructions = "";
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /stages\[0\]\.instructions/.test(e))).toBe(
+        true,
+      );
+    }
+  });
+
+  it("rejects a resolved target that escapes its repository-relative form", () => {
+    const doc = validCheckpoint();
+    doc.stages[0].resolvedTarget = "/Users/dev/repo/docs/threads/x";
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => /stages\[0\]\.resolvedTarget/.test(e)),
+      ).toBe(true);
+    }
+  });
+});
+
 describe("validateCheckpoint schema version (AC-13.1)", () => {
   it("rejects an unknown schema version distinctly with no migration", () => {
     const doc = { ...validCheckpoint(), schemaVersion: 2 };
@@ -203,9 +346,9 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     if (!result.ok) expect(result.errors.some((e) => /waiting to be null/.test(e))).toBe(true);
   });
 
-  it("rejects a stage profile that carries no heartbeat interval", () => {
+  it("rejects a stage binding that carries no heartbeat interval", () => {
     const doc = validCheckpoint();
-    delete (doc.stages[0].profile as Record<string, unknown>).heartbeatSeconds;
+    delete (doc.stages[0].binding as Record<string, unknown>).heartbeatSeconds;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -215,7 +358,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("rejects a non-positive heartbeat interval", () => {
     const doc = validCheckpoint();
-    doc.stages[0].profile.heartbeatSeconds = 0;
+    doc.stages[0].binding.heartbeatSeconds = 0;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {

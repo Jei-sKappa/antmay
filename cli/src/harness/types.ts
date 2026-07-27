@@ -1,20 +1,20 @@
-import type { HarnessId } from "../config/settings.js";
-import type { StageTarget } from "../pipeline/types.js";
+import type { HarnessId } from "../config/execution.js";
 import type { WorkspaceExecution } from "../workspace/types.js";
 
 /**
  * Antmay-owned stage metadata supplied on every harness invocation so adapters
  * can select and validate scripted cases without parsing the rendered prompt.
- * `attemptNumber` is the positive, durable per-stage attempt counter persisted
- * for this invocation in the run checkpoint.
+ * `resolvedTarget` is the concrete repository-relative target the composer
+ * settled on, `instructions` are the pipeline entry's portable instructions when
+ * it carried any, and `attemptNumber` is the positive, durable per-stage attempt
+ * counter persisted for this invocation in the run checkpoint.
  */
 export type AttemptStageContext = {
   id: string;
   skill: string;
-  target: StageTarget;
   resolvedTarget: string;
   threadRelPath: string;
-  profilePrompt: string;
+  instructions?: string;
   attemptNumber: number;
 };
 

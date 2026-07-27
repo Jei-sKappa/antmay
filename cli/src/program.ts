@@ -73,6 +73,8 @@ async function runHandler(command: RunCommand): Promise<number> {
     {
       pipeline: command.pipeline,
       thread: command.thread,
+      ...(command.from !== undefined ? { from: command.from } : {}),
+      ...(command.profile !== undefined ? { profile: command.profile } : {}),
       dangerouslySkipPermissions: command.dangerouslySkipPermissions,
     },
     {
@@ -93,9 +95,8 @@ async function runHandler(command: RunCommand): Promise<number> {
 /**
  * The real `resume` handler. Like `run`, it dynamically imports the command
  * implementation and the concrete harness dependencies only when `resume` was
- * selected. `resume` accepts no execution overrides and never rereads settings
- * or pipeline definitions, so it imports neither `loadSettings` nor
- * `builtInPipelines` for resolution.
+ * selected. `resume` accepts no execution overrides and rereads no pipeline,
+ * execution-profile, or settings document, so it imports none of their loaders.
  */
 async function resumeHandler(command: ResumeCommand): Promise<number> {
   const [

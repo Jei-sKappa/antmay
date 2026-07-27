@@ -8,10 +8,15 @@ import type { Display, StageDisposition } from "../display/types.js";
 import { nullDisplay } from "../display/types.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import { readHead } from "../gitops/status.js";
-import { standardPipeline } from "../pipeline/standard.js";
+import { STAGE_CATALOG } from "../pipeline/catalog.js";
 import { resolveStageTarget } from "../pipeline/targets.js";
-import type { StageDescriptor } from "../pipeline/types.js";
-import type { RunCheckpoint } from "../state/checkpoint.js";
+import type {
+  CatalogStageId,
+  GitPolicy,
+  QueueResolution,
+  StageTarget,
+} from "../pipeline/types.js";
+import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint.js";
 import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import {
   createFakeHarness,
@@ -55,9 +60,22 @@ async function makeRunDir(): Promise<string> {
   return raw;
 }
 
-// Synthetic (non-`standard`) descriptors that prove pipeline-agnosticism.
-const alphaStage: StageDescriptor = {
-  id: "alpha",
+/**
+ * A stage the runner drives, described the way a test wants to think about it.
+ * The catalog owns the real skill, target, and policies; these fixtures pair a
+ * catalog stage ID with synthetic ones so the cases below prove the runner reads
+ * only its snapshot and never any particular pipeline's behavior.
+ */
+type SyntheticStage = {
+  id: CatalogStageId;
+  skill: string;
+  target: StageTarget;
+  gitPolicy: GitPolicy;
+  queueResolution: QueueResolution;
+};
+
+const alphaStage: SyntheticStage = {
+  id: "spec",
   skill: "alpha-skill",
   target: { kind: "thread-file", path: "notes.md" },
   gitPolicy: {
@@ -69,8 +87,8 @@ const alphaStage: StageDescriptor = {
   queueResolution: "advance",
 };
 
-const betaStage: StageDescriptor = {
-  id: "beta",
+const betaStage: SyntheticStage = {
+  id: "review-spec",
   skill: "beta-skill",
   target: { kind: "thread-file", path: "summary.md" },
   gitPolicy: {
@@ -82,8 +100,8 @@ const betaStage: StageDescriptor = {
   queueResolution: "rerun",
 };
 
-const cleanStage: StageDescriptor = {
-  id: "solo",
+const cleanStage: SyntheticStage = {
+  id: "reconcile-spec",
   skill: "solo-skill",
   target: { kind: "thread-file", path: "artifact.md" },
   gitPolicy: {
@@ -95,26 +113,59 @@ const cleanStage: StageDescriptor = {
   queueResolution: "rerun",
 };
 
+/**
+ * One Standard selection taken verbatim from the catalog, which is what the
+ * composer hands the runner for a full `standard` document. Every one of these
+ * stages has a `fixed` target rule, so the fixture reads the target off the rule
+ * rather than simulating artifact state.
+ */
+const STANDARD_SELECTION: SyntheticStage[] = (
+  [
+    "spec",
+    "reconcile-spec",
+    "review-spec",
+    "plan-strict",
+    "reconcile-plan",
+    "implement-plan-with-subagents",
+  ] as const
+).map((id) => {
+  const stage = STAGE_CATALOG[id];
+  if (stage.targetRule.kind !== "fixed") {
+    throw new Error(`stage ${id} has no fixed target`);
+  }
+  return {
+    id: stage.id,
+    skill: stage.skill,
+    target: stage.targetRule.target,
+    gitPolicy: stage.gitPolicy,
+    queueResolution: stage.queueResolution,
+  };
+});
+
 function buildCheckpoint(
   fixture: RepoFixture,
-  stages: StageDescriptor[],
+  stages: SyntheticStage[],
   pipelineName = "synthetic",
 ): RunCheckpoint {
   const threadRelPath = fixture.threadRelPath as string;
   const root = fixture.root;
-  const snapshotted = stages.map((descriptor) => {
+  const snapshotted: SnapshottedStage[] = stages.map((descriptor) => {
     const target = resolveStageTarget(descriptor.target, threadRelPath);
     if (!target.ok) throw new Error(target.error);
     return {
-      ...descriptor,
-      profile: {
-        harness: "codex" as const,
-        model: "test-model",
-        prompt: "",
+      id: descriptor.id,
+      skill: descriptor.skill,
+      targetRule: { kind: "fixed", target: descriptor.target },
+      prerequisite: {},
+      promises: {},
+      gitPolicy: descriptor.gitPolicy,
+      queueResolution: descriptor.queueResolution,
+      resolvedTarget: target.path,
+      binding: {
+        agent: { harness: "codex", model: "test-model" },
         idleTimeoutSeconds: 900,
         heartbeatSeconds: 300,
       },
-      resolvedTarget: target.path,
     };
   });
   const now = "2026-07-24T00:00:00.000Z";
@@ -133,6 +184,8 @@ function buildCheckpoint(
     },
     dangerouslySkipPermissions: false,
     pipelineName,
+    pipelineSourcePath: "/tmp/config/pipelines/synthetic.json",
+    profileSelection: { kind: "settings-only" },
     stages: snapshotted,
     observedHarnessVersions: { codex: "codex 1.2.3" },
     stageIndex: 0,
@@ -295,7 +348,7 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     ];
     const result = await executeRun(
       makeContext(
-        buildCheckpoint(fixture, standardPipeline.stages, standardPipeline.name),
+        buildCheckpoint(fixture, STANDARD_SELECTION, "standard"),
         runDir,
         createFakeHarness(steps),
       ),
@@ -841,7 +894,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     expect(provisional.attempts[0]).toMatchObject({
       attempt: 1,
       stageIndex: 0,
-      stageId: "solo",
+      stageId: "reconcile-spec",
       result: "executing",
       terminalResult: null,
       agentSession: { id: "live-1" },
@@ -1264,7 +1317,7 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const checkpoint = buildCheckpoint(fixture, [cleanStage]);
-    checkpoint.stages[0]!.profile.harness = "claude-code";
+    checkpoint.stages[0]!.binding.agent.harness = "claude-code";
     checkpoint.observedHarnessVersions = { "claude-code": "claude 1.0.0" };
     const rec = recorder();
     const ctx = makeContext(
@@ -1346,19 +1399,18 @@ describe.concurrent("executeRun — harness stage context", () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const checkpoint = buildCheckpoint(fixture, [alphaStage]);
-    checkpoint.stages[0].profile.prompt = "focus on acceptance criteria";
+    checkpoint.stages[0].instructions = "focus on acceptance criteria";
     const harness = createFakeHarness([{}]);
 
     await executeRun(makeContext(checkpoint, runDir, harness));
 
     expect(harness.calls).toHaveLength(1);
     expect(harness.calls[0].stage).toEqual({
-      id: "alpha",
+      id: "spec",
       skill: "alpha-skill",
-      target: alphaStage.target,
       resolvedTarget: path.posix.join(fixture.threadRelPath as string, "notes.md"),
       threadRelPath: fixture.threadRelPath,
-      profilePrompt: "focus on acceptance criteria",
+      instructions: "focus on acceptance criteria",
       attemptNumber: 1,
     });
     const cp = await loadCheckpoint(runDir);
@@ -1375,12 +1427,12 @@ describe.concurrent("executeRun — harness stage context", () => {
       {
         attempt: 1,
         stageIndex: 0,
-        stageId: "solo",
+        stageId: "reconcile-spec",
         startedAt: "2026-07-24T00:00:00.000Z",
         endedAt: "2026-07-24T00:01:00.000Z",
         result: "waiting",
         terminalResult: { token: "BLOCKED", candidateLine: "Outcome: BLOCKED", detail: "" },
-        logPath: "logs/01-solo-attempt-1.log",
+        logPath: "logs/01-reconcile-spec-attempt-1.log",
       },
     ];
     checkpoint.waiting = governedBy({ kind: "outcome-blocked", message: "blocked" });
@@ -1395,12 +1447,10 @@ describe.concurrent("executeRun — harness stage context", () => {
 
     expect(harness.calls).toHaveLength(1);
     expect(harness.calls[0].stage).toEqual({
-      id: "solo",
+      id: "reconcile-spec",
       skill: "solo-skill",
-      target: cleanStage.target,
       resolvedTarget: path.posix.join(fixture.threadRelPath as string, "artifact.md"),
       threadRelPath: fixture.threadRelPath,
-      profilePrompt: "",
       attemptNumber: 2,
     });
     const cp = await loadCheckpoint(runDir);

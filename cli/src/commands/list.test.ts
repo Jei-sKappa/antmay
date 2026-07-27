@@ -5,7 +5,8 @@ import { Writable } from "node:stream";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { HarnessId } from "../config/settings.js";
+import type { HarnessId } from "../config/execution.js";
+import type { CatalogStageId } from "../pipeline/types.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
@@ -49,14 +50,16 @@ async function tempDir(prefix: string): Promise<string> {
 }
 
 function makeStage(
-  id: string,
+  id: CatalogStageId,
   model: string,
   harness: HarnessId = "codex",
 ): SnapshottedStage {
   return {
     id,
     skill: id,
-    target: { kind: "thread-root" },
+    targetRule: { kind: "fixed", target: { kind: "thread-root" } },
+    prerequisite: { validThread: true },
+    promises: {},
     gitPolicy: {
       headMayChange: false,
       allowedChanges: [],
@@ -64,14 +67,12 @@ function makeStage(
       commitSubjectTemplate: null,
     },
     queueResolution: "advance",
-    profile: {
-      harness,
-      model,
-      prompt: "do work",
+    resolvedTarget: "docs/threads/260723121015Z-demo/",
+    binding: {
+      agent: { harness, model },
       idleTimeoutSeconds: 900,
       heartbeatSeconds: 300,
     },
-    resolvedTarget: "/Users/dev/repo/docs/threads/x",
   };
 }
 
@@ -88,11 +89,16 @@ function makeCheckpoint(overrides: {
 }): RunCheckpoint {
   const stages =
     overrides.stages ??
-    [makeStage("spec", "gpt-spec"), makeStage("plan", "gpt-plan"), makeStage("impl", "gpt-impl")];
+    [
+      makeStage("spec", "gpt-spec"),
+      makeStage("plan-strict", "gpt-plan"),
+      makeStage("implement-plan", "gpt-impl"),
+    ];
   const repoRoot = overrides.repoRoot ?? "/Users/dev/repo";
   const observedHarnessVersions: Partial<Record<HarnessId, string>> = {};
   for (const stage of stages) {
-    observedHarnessVersions[stage.profile.harness] = `${stage.profile.harness} 1.0.0`;
+    observedHarnessVersions[stage.binding.agent.harness] =
+      `${stage.binding.agent.harness} 1.0.0`;
   }
   const checkpoint: RunCheckpoint = {
     schemaVersion: 0,
@@ -109,6 +115,8 @@ function makeCheckpoint(overrides: {
     },
     dangerouslySkipPermissions: false,
     pipelineName: overrides.pipelineName ?? "standard",
+    pipelineSourcePath: "/Users/dev/.config/antmay/pipelines/standard.json",
+    profileSelection: { kind: "settings-only" },
     stages,
     observedHarnessVersions,
     stageIndex: overrides.stageIndex,
@@ -241,7 +249,7 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
     expect(first).toContain("2026-07-23T13:45:00.000Z"); // updated time
     expect(first).toContain("Waiting for user"); // friendly condition
     expect(first).toContain("standard"); // pipeline
-    expect(first).toContain("2/3 [plan]"); // one-based stage position + id
+    expect(first).toContain("2/3 [plan-strict]"); // one-based stage position + id
     expect(first).toContain("codex/gpt-plan"); // current harness/model
     expect(first).toContain("/Users/dev/repo"); // absolute repo path
     expect(first).toContain("docs/threads/260723121015Z-demo"); // repo-relative thread
@@ -407,8 +415,8 @@ describe("listCommand corruption handling (AC-16.3)", () => {
 describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
   const stagesWithMixedHarnesses = [
     makeStage("spec", "gpt-spec", "codex"),
-    makeStage("plan", "claude-plan", "claude-code"),
-    makeStage("impl", "gpt-impl", "codex"),
+    makeStage("plan-strict", "claude-plan", "claude-code"),
+    makeStage("implement-plan", "gpt-impl", "codex"),
   ];
 
   function doneAttempt(
@@ -448,8 +456,8 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
         stages: stagesWithMixedHarnesses,
         attempts: [
           doneAttempt(0, "spec", "session-old-spec"),
-          doneAttempt(1, "plan", "session-newest-plan"),
-          doneAttempt(2, "impl"), // newer attempt, no session
+          doneAttempt(1, "plan-strict", "session-newest-plan"),
+          doneAttempt(2, "implement-plan"), // newer attempt, no session
         ],
       }),
     );
@@ -462,7 +470,7 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
     const row = out.text.trimEnd();
     expect(row).toContain("claude-code/session-newest-plan");
     expect(row).not.toContain("session-old-spec");
-    expect(row).toContain("3/3 [impl]");
+    expect(row).toContain("3/3 [implement-plan]");
     expect(row).toContain("codex/gpt-impl"); // current stage harness/model unchanged
     // Session column sits immediately before the repository path.
     expect(row).toMatch(/claude-code\/session-newest-plan {2}\/Users\/dev\/repo {2}/);
@@ -495,7 +503,7 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
       {
         attempt: 1,
         stageIndex: 1,
-        stageId: "plan",
+        stageId: "plan-strict",
         startedAt: "2026-07-23T18:20:00.000Z",
         result: "executing",
         terminalResult: null,
@@ -517,7 +525,7 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
           {
             attempt: 1,
             stageIndex: 1,
-            stageId: "plan",
+            stageId: "plan-strict",
             startedAt: "2026-07-23T18:29:00.000Z",
             endedAt: "2026-07-23T18:30:00.000Z",
             result: "waiting",
@@ -542,8 +550,8 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
         stages: stagesWithMixedHarnesses,
         attempts: [
           doneAttempt(0, "spec", "sess-done-old"),
-          doneAttempt(1, "plan", "sess-done-mid"),
-          doneAttempt(2, "impl", "sess-done-latest"),
+          doneAttempt(1, "plan-strict", "sess-done-mid"),
+          doneAttempt(2, "implement-plan", "sess-done-latest"),
         ],
       }),
     );

@@ -4,26 +4,26 @@ import { renderStagePrompt } from "./prompt.js";
 
 const TARGET = "docs/threads/260723121015Z-afk-workflow-executor/spec.md";
 
-describe("renderStagePrompt (AC-4.3, AC-6.2)", () => {
-  it("renders the codex trigger byte-exact without a profile prompt", () => {
-    expect(renderStagePrompt("codex", "spec", TARGET, "")).toBe(
+describe("renderStagePrompt (AC-2.4)", () => {
+  it("renders the codex trigger byte-exact without instructions", () => {
+    expect(renderStagePrompt("codex", "spec", TARGET)).toBe(
       "$spec `docs/threads/260723121015Z-afk-workflow-executor/spec.md`.",
     );
   });
 
-  it("renders the claude-code trigger byte-exact without a profile prompt", () => {
-    expect(renderStagePrompt("claude-code", "spec", TARGET, "")).toBe(
+  it("renders the claude-code trigger byte-exact without instructions", () => {
+    expect(renderStagePrompt("claude-code", "spec", TARGET)).toBe(
       "/spec `docs/threads/260723121015Z-afk-workflow-executor/spec.md`.",
     );
   });
 
-  it("appends the profile prompt after a single space for codex", () => {
+  it("appends the portable instructions after the trigger and target for codex", () => {
     expect(renderStagePrompt("codex", "plan-strict", TARGET, "be terse")).toBe(
       "$plan-strict `docs/threads/260723121015Z-afk-workflow-executor/spec.md`. be terse",
     );
   });
 
-  it("appends the profile prompt after a single space for claude-code", () => {
+  it("appends the portable instructions after the trigger and target for claude-code", () => {
     expect(
       renderStagePrompt("claude-code", "plan-strict", TARGET, "be terse"),
     ).toBe(
@@ -31,9 +31,10 @@ describe("renderStagePrompt (AC-4.3, AC-6.2)", () => {
     );
   });
 
-  it("adds nothing beyond the trigger when the profile prompt is empty", () => {
-    const rendered = renderStagePrompt("codex", "review-spec", TARGET, "");
+  it("adds nothing beyond the trigger and target for a stage with no instructions", () => {
+    const rendered = renderStagePrompt("codex", "review-spec", TARGET);
     expect(rendered.startsWith("$review-spec `")).toBe(true);
     expect(rendered.endsWith("`.")).toBe(true);
+    expect(renderStagePrompt("codex", "review-spec", TARGET, "")).toBe(rendered);
   });
 });

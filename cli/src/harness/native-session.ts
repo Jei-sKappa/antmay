@@ -1,4 +1,4 @@
-import type { HarnessId } from "../config/settings.js";
+import type { HarnessId } from "../config/execution.js";
 
 /**
  * Quote `value` as one POSIX single-quoted shell argument. Every embedded

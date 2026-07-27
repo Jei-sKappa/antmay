@@ -1,4 +1,4 @@
-import type { HarnessId } from "../../config/settings.js";
+import type { HarnessId } from "../../config/execution.js";
 import type { ProbeResult } from "../probe.js";
 
 /** Deterministic version observation returned for every logical harness. */

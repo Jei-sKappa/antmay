@@ -4,7 +4,6 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { standardPipeline } from "../../pipeline/standard.js";
 import {
   SCRIPTED_CASE_NAMES,
   SCRIPTED_HARNESS_TOGGLE_VAR,
@@ -18,7 +17,19 @@ import {
   type ScriptedCaseName,
 } from "./scenario.js";
 
-const STANDARD_STAGE_IDS = standardPipeline.stages.map((stage) => stage.id);
+/**
+ * The stage IDs one representative Standard selection contributes. Scenario
+ * validation is driven by the run's selected stage IDs, so the list is written
+ * out here rather than derived from any document.
+ */
+const STANDARD_STAGE_IDS = [
+  "spec",
+  "reconcile-spec",
+  "review-spec",
+  "plan-strict",
+  "reconcile-plan",
+  "implement-plan-with-subagents",
+];
 
 const VALID_STANDARD_SCENARIO = {
   schemaVersion: 0,
@@ -205,6 +216,32 @@ describe("validateScriptedScenario — accepted Standard input", () => {
       "spec-correct",
     ]);
     expect(Object.keys(result.scenario.stages)).toEqual(STANDARD_STAGE_IDS);
+  });
+
+  it("validates against the selected suffix, not the whole document", () => {
+    const suffix = ["plan-strict", "reconcile-plan"];
+    const document = {
+      schemaVersion: 0,
+      stages: {
+        "plan-strict": ["plan-strict-correct"],
+        "reconcile-plan": ["reconcile-plan-correct"],
+      },
+    };
+    const result = validateScriptedScenario(document, suffix);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.keys(result.scenario.stages)).toEqual(suffix);
+
+    // A skipped stage is not selected, so covering it is an unexpected entry.
+    const withSkipped = validateScriptedScenario(
+      { schemaVersion: 0, stages: { ...document.stages, spec: ["spec-correct"] } },
+      suffix,
+    );
+    expect(withSkipped.ok).toBe(false);
+    if (withSkipped.ok) return;
+    expect(withSkipped.errors.join("\n")).toContain(
+      "stages.spec is not an expected stage id.",
+    );
   });
 });
 

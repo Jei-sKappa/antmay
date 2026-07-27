@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { standardPipeline } from "../pipeline/standard.js";
-import type { GitPolicy } from "../pipeline/types.js";
+import { STAGE_CATALOG } from "../pipeline/catalog.js";
+import type { CatalogStageId, GitPolicy } from "../pipeline/types.js";
 import {
   createRepoFixture,
   type RepoFixture,
@@ -27,10 +27,8 @@ async function newFixture(): Promise<RepoFixture> {
   return fixture;
 }
 
-function policyOf(id: string): GitPolicy {
-  const stage = standardPipeline.stages.find((entry) => entry.id === id);
-  if (stage === undefined) throw new Error(`no standard stage "${id}"`);
-  return stage.gitPolicy;
+function policyOf(id: CatalogStageId): GitPolicy {
+  return STAGE_CATALOG[id].gitPolicy;
 }
 
 async function lastSubject(fixture: RepoFixture): Promise<string> {

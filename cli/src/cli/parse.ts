@@ -25,6 +25,8 @@ export type CliCommand =
       kind: "run";
       pipeline: string;
       thread: string;
+      from?: string;
+      profile?: string;
       dangerouslySkipPermissions: boolean;
     }
   | { kind: "resume"; runId: string }
@@ -114,6 +116,8 @@ function parseRun(args: string[]): CliCommand {
     help: { type: "boolean", short: "h" },
     version: { type: "boolean" },
     thread: { type: "string" },
+    from: { type: "string" },
+    profile: { type: "string" },
     "dangerously-skip-permissions": { type: "boolean" },
   });
   if (!parsed.ok) {
@@ -126,7 +130,7 @@ function parseRun(args: string[]): CliCommand {
     return { kind: "version" };
   }
   if (parsed.positionals.length === 0) {
-    return usageError("Missing required <pipeline> argument.", RUN_USAGE);
+    return usageError("Missing required <pipeline-ref> argument.", RUN_USAGE);
   }
   if (parsed.positionals.length > 1) {
     return usageError(
@@ -138,13 +142,20 @@ function parseRun(args: string[]): CliCommand {
   if (typeof thread !== "string") {
     return usageError("Missing required option --thread.", RUN_USAGE);
   }
-  return {
+  const command: Extract<CliCommand, { kind: "run" }> = {
     kind: "run",
     pipeline: parsed.positionals[0]!,
     thread,
     dangerouslySkipPermissions:
       parsed.values["dangerously-skip-permissions"] === true,
   };
+  if (typeof parsed.values.from === "string") {
+    command.from = parsed.values.from;
+  }
+  if (typeof parsed.values.profile === "string") {
+    command.profile = parsed.values.profile;
+  }
+  return command;
 }
 
 function parseResume(args: string[]): CliCommand {

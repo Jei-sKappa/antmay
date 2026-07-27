@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
 import { resolveRoots, resolveStateRoot } from "../config/roots.js";
-import type { HarnessId } from "../config/settings.js";
+import type { HarnessId } from "../config/execution.js";
 import {
   createTerminalDisplay,
   printRunSummary,
@@ -240,7 +240,7 @@ export async function resumeCommand(
 
     const stageIndex = checkpoint.stageIndex;
     const stage = checkpoint.stages[stageIndex]!;
-    const currentHarness = stage.profile.harness;
+    const currentHarness = stage.binding.agent.harness;
 
     // Probe only the current stage's snapshotted harness (DR48).
     const probeResult = await probe([currentHarness], repoRoot);
@@ -366,7 +366,7 @@ export async function resumeCommand(
       const continuationCommand =
         attempt?.agentSession !== undefined
           ? nativeContinuationCommand(
-              checkpoint.stages[attempt.stageIndex]!.profile.harness,
+              checkpoint.stages[attempt.stageIndex]!.binding.agent.harness,
               attempt.agentSession.id,
             )
           : undefined;

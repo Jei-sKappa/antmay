@@ -5,9 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { renderStagePrompt } from "../prompt.js";
 import type { AttemptRequest } from "../types.js";
+import { STAGE_CATALOG } from "../../pipeline/catalog.js";
+import type { CatalogStage } from "../../pipeline/catalog.js";
 import { resolveStageTarget } from "../../pipeline/targets.js";
-import { standardPipeline } from "../../pipeline/standard.js";
-import type { StageDescriptor, StageTarget } from "../../pipeline/types.js";
+import type { CatalogStageId, StageTarget } from "../../pipeline/types.js";
 import { createAttemptLog, type AttemptLogHeader } from "../../state/logs.js";
 import {
   createRepoFixture,
@@ -60,21 +61,29 @@ function makeScenario(
   });
 }
 
-function stageById(id: string): StageDescriptor {
-  const stage = standardPipeline.stages.find((entry) => entry.id === id);
-  if (stage === undefined) {
-    throw new Error(`missing stage ${id}`);
+function stageById(id: CatalogStageId): CatalogStage {
+  return STAGE_CATALOG[id];
+}
+
+/**
+ * The concrete target a catalog stage resolves to in the fixture thread. Every
+ * stage the scripted cases exercise has a `fixed` rule, so the branch is not
+ * state-sensitive here.
+ */
+function targetOf(stage: CatalogStage): StageTarget {
+  if (stage.targetRule.kind !== "fixed") {
+    throw new Error(`stage ${stage.id} has no fixed target`);
   }
-  return stage;
+  return stage.targetRule.target;
 }
 
 function buildRequest(
   fixture: RepoFixture,
-  stage: StageDescriptor,
+  stage: CatalogStage,
   overrides: {
     attemptNumber?: number;
     harness?: "codex" | "claude-code";
-    profilePrompt?: string;
+    instructions?: string;
     prompt?: string;
     resolvedTarget?: string;
     threadRelPath?: string;
@@ -86,17 +95,17 @@ function buildRequest(
   } = {},
 ): AttemptRequest {
   const threadRelPath = overrides.threadRelPath ?? fixture.threadRelPath!;
-  const target = overrides.target ?? stage.target;
+  const target = overrides.target ?? targetOf(stage);
   const resolved = resolveStageTarget(target, threadRelPath);
   if (!resolved.ok) {
     throw new Error(resolved.error);
   }
   const resolvedTarget = overrides.resolvedTarget ?? resolved.path;
   const harness = overrides.harness ?? "codex";
-  const profilePrompt = overrides.profilePrompt ?? "";
+  const instructions = overrides.instructions;
   const prompt =
     overrides.prompt ??
-    renderStagePrompt(harness, stage.skill, resolvedTarget, profilePrompt);
+    renderStagePrompt(harness, stage.skill, resolvedTarget, instructions);
 
   return {
     harness,
@@ -105,10 +114,9 @@ function buildRequest(
     stage: {
       id: stage.id,
       skill: stage.skill,
-      target,
       resolvedTarget,
       threadRelPath,
-      profilePrompt,
+      ...(instructions !== undefined ? { instructions } : {}),
       attemptNumber: overrides.attemptNumber ?? 1,
     },
     idleTimeoutSeconds: 900,
@@ -368,11 +376,11 @@ describe("createScriptedInvoker", () => {
     });
   });
 
-  it("rejects profile prompt mismatches", async () => {
+  it("rejects instruction mismatches", async () => {
     const fixture = await newFixture();
     const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
     const request = buildRequest(fixture, stageById("spec"), {
-      profilePrompt: "extra",
+      instructions: "extra",
       prompt: "$spec `docs/threads/wrong`. extra",
     });
     await initAttemptLog(fixture, request);

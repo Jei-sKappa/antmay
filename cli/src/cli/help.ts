@@ -27,17 +27,27 @@ ${COMMON_OPTIONS}`;
 export const AFK_USAGE = `Usage: antmay afk <subcommand> [options]
 
 Subcommands:
-  run <pipeline> --thread <path> [--dangerously-skip-permissions]
+  run <pipeline-ref> --thread <path> [--from <stage-id>] [--profile <profile-ref>] [--dangerously-skip-permissions]
   resume <run-id>
   list
 
 ${COMMON_OPTIONS}`;
 
 /** Usage shown for `antmay afk run` grammar errors. */
-export const RUN_USAGE = `Usage: antmay afk run <pipeline> --thread <path> [--dangerously-skip-permissions]
+export const RUN_USAGE = `Usage: antmay afk run <pipeline-ref> --thread <path> [--from <stage-id>] [--profile <profile-ref>] [--dangerously-skip-permissions]
+
+Arguments:
+  <pipeline-ref>                      Pipeline document: a bare name loaded from
+                                      <config-root>/pipelines/<name>.json, or a
+                                      path with an explicit directory component
 
 Options:
       --thread <path>                 Thread to run the pipeline against (required)
+      --from <stage-id>               Enter the pipeline at this stage, running
+                                      it and every later stage
+      --profile <profile-ref>         Execution profile: a bare name loaded from
+                                      <config-root>/profiles/<name>.json, or a
+                                      path with an explicit directory component
       --dangerously-skip-permissions  Grant the run unrestricted host access
   -h, --help                          Show help
       --version                       Show version`;

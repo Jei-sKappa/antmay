@@ -39,11 +39,15 @@ function checkpoint(): RunCheckpoint {
     },
     dangerouslySkipPermissions: false,
     pipelineName: "standard",
+    pipelineSourcePath: "/tmp/config/pipelines/standard.json",
+    profileSelection: { kind: "settings-only" },
     stages: [
       {
         id: "spec",
         skill: "spec",
-        target: { kind: "thread-root" },
+        targetRule: { kind: "fixed", target: { kind: "thread-root" } },
+        prerequisite: { validThread: true },
+        promises: { spec: true },
         gitPolicy: {
           headMayChange: false,
           allowedChanges: [],
@@ -51,14 +55,13 @@ function checkpoint(): RunCheckpoint {
           commitSubjectTemplate: null,
         },
         queueResolution: "rerun",
-        profile: {
-          harness: "codex",
-          model: "gpt-5",
-          prompt: "p",
+        resolvedTarget: "docs/threads/t/",
+        instructions: "Keep it short.",
+        binding: {
+          agent: { harness: "codex", model: "gpt-5" },
           idleTimeoutSeconds: 900,
           heartbeatSeconds: 300,
         },
-        resolvedTarget: "/tmp/repo/docs/threads/t",
       },
     ],
     observedHarnessVersions: { codex: "codex 1.0.0" },

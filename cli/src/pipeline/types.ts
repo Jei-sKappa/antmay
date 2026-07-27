@@ -1,5 +1,3 @@
-import type { HarnessId } from "../config/settings.js";
-
 /**
  * A declarative stage target. Either the thread root itself, or a single file
  * addressed by a thread-relative path. Targets are plain JSON so a descriptor
@@ -150,38 +148,4 @@ export type PipelineDocument = {
   name: string;
   sourcePath: string;
   stages: PipelineStageEntry[];
-};
-
-/**
- * One serializable stage descriptor consumed by the generic runner. Carries no
- * functions so the checkpoint can persist it verbatim.
- */
-export type StageDescriptor = {
-  id: string;
-  skill: string;
-  target: StageTarget;
-  gitPolicy: GitPolicy;
-  queueResolution: QueueResolution;
-};
-
-/**
- * An ordered array of stage descriptors under a stable name.
- */
-export type Pipeline = {
-  name: string;
-  stages: StageDescriptor[];
-};
-
-/**
- * A fully resolved per-stage execution profile: the harness to drive, the model
- * to request, the opaque profile prompt appended after the stage trigger, the
- * idle timeout in seconds, and how often a live attempt reports that it is still
- * working.
- */
-export type StageProfile = {
-  harness: HarnessId;
-  model: string;
-  prompt: string;
-  idleTimeoutSeconds: number;
-  heartbeatSeconds: number;
 };
