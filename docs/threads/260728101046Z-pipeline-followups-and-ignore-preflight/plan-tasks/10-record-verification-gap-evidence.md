@@ -1,4 +1,4 @@
-### Task 7: Close and document the inherited verification gaps
+### Task 10: Close and document the inherited verification gaps
 
 **Objective:** Turn the runtime-prerequisite timing relationship into executable evidence and record why the other three inherited gaps remain deliberate.
 
@@ -39,6 +39,6 @@
 - The runner, checkpoint validator, and documentation assertion each carry the required local reasoning.
 - No behavior, validator breadth, documentation threshold, demo driver, or demo step vocabulary changes.
 
-**Consumes:** scenario `07-runtime-prerequisite` as exercised after Task 6's artifact-language change.
+**Consumes:** the concrete artifact-contract terminal output produced by Task 9 and exhibited by scenario `07-runtime-prerequisite`.
 
 **Produces:** `cli/src/harness/scripted/demo-timing.test.ts` as the executable timing binding; local code comments documenting the three accepted gaps.

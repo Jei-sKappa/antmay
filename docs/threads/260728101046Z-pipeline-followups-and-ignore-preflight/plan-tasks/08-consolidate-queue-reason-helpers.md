@@ -1,8 +1,8 @@
-### Task 5: Consolidate queue-reason helpers
+### Task 8: Consolidate queue-reason helpers
 
 **Objective:** Make the classifier the sole owner of queue-reason wording, assembly, and gate-error-before-pending-files precedence.
 
-**Input / context:** `spec.md` FR-8 AC-8.1 and AC-8.7; `decisions.md DR9` and `decisions.md DR15`; the focused message expectations in `cli/src/runner/classify.test.ts`; and the duplicate helpers in `classify.ts`, `runner.ts`, and `resume.ts`.
+**Input / context:** `spec.md` FR-8 AC-8.1 and AC-8.7; `decisions.md DR9` and `decisions.md DR15`; the focused message expectations in `cli/src/runner/classify.test.ts`; the duplicate helpers in `classify.ts`, `runner.ts`, and `resume.ts`; and the reduced runner/resume cursor code produced by Task 5.
 
 **Steps:**
 1. Export `gateErrorMessage`, `pendingQueuesMessage`, and the queue-reason assembly function from `cli/src/runner/classify.ts`. Keep sorting, singular/plural wording, failure-before-pending precedence, and `pendingFiles` payloads byte-for-byte compatible.
@@ -32,6 +32,6 @@
 - Gate errors still precede pending-queue reasons, and focused expected messages remain unchanged.
 - Consolidation changes no user-visible text, reason classification, exit code, or terminal layout.
 
-**Consumes:** the current `WaitingReason` and checkpoint shapes after Tasks 3 and 4.
+**Consumes:** `RunCheckpoint.gitCursor = { stageIndex, observedHead }` and the corresponding runner/resume cursor writes produced by Task 5.
 
 **Produces:** classifier-owned `gateErrorMessage(...)`, `pendingQueuesMessage(...)`, and queue-reason assembly consumed by the runner and resume command.

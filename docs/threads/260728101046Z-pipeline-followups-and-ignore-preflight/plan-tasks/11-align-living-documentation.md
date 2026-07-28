@@ -1,8 +1,8 @@
-### Task 8: Align the living documentation
+### Task 11: Align the living documentation
 
 **Objective:** Make the method vocabulary, Standard recipe, CLI reference, and maintainer guidance describe the implemented pipeline and verification contracts accurately.
 
-**Input / context:** `spec.md` FR-10 through FR-12; `decisions.md DR11`, `decisions.md DR12`, `decisions.md DR16`, and `decisions.md DR17`; the root cross-module stage-support maintenance rule; and the code, scenario table, and `cli/AGENTS.md` changes produced by Tasks 2, 4, 6, and 7.
+**Input / context:** `spec.md` FR-10 through FR-12; `decisions.md DR11`, `decisions.md DR12`, `decisions.md DR16`, and `decisions.md DR17`; the root cross-module stage-support maintenance rule; and the code, scenario table, and `cli/AGENTS.md` changes produced by Tasks 3, 6, 9, and 10.
 
 **Steps:**
 1. Update the `stage` entry in `docs/glossary.md` to include its artifact prerequisite and promised transition alongside its ID, skill, target rule, Git policy, and queue resolution.
@@ -39,6 +39,6 @@
 - `cli/AGENTS.md` contains a concise, non-periodic real-harness verification-gap paragraph naming all four properties.
 - Every edited document describes the resulting current state, and `npm --prefix cli run check` passes.
 
-**Consumes:** the README scenario table from Task 2, `shared/` layout entry from Task 4, artifact-language behavior from Task 6, and verification comments/test from Task 7.
+**Consumes:** the README scenario row and structured-refusal boundary produced by Task 3, the `shared/` module-layout entry produced by Task 6, the concrete artifact-contract terminal output produced by Task 9, and the verification comments and timing test produced by Task 10.
 
 **Produces:** current method and CLI documentation aligned with the implemented stage, model, Git-policy, scenario, and verification contracts; no later task consumes an implementation interface.
