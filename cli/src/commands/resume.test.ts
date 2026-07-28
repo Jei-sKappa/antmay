@@ -1042,7 +1042,11 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(cp.waiting?.reasons[0].detail).toContain("dirty");
     expect(cp.waiting?.nextAction).toContain("revert");
     expect(attemptCountAt(cp, 0)).toBe(1);
-    expect(result.out).toContain("expected true, found false");
+    // The recheck restates the still-unmet promise as the file it is about, in
+    // the same words the rendered `Artifacts:` row uses.
+    expect(cp.waiting?.reasons[0].message).toContain("a non-empty spec.md");
+    expect(result.out).toContain("expected a non-empty spec.md, found no spec.md");
+    expect(result.out).not.toContain("expected true, found false");
   });
 });
 

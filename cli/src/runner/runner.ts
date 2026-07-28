@@ -29,6 +29,7 @@ import type { AttemptLogHeader } from "../state/logs.js";
 import { writeCheckpoint } from "../state/persist.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import {
+  describeContractSide,
   evaluateArtifactPrerequisite,
   evaluatePromisedState,
   inspectArtifactState,
@@ -50,11 +51,14 @@ const MS_PER_SECOND = 1000;
 
 /**
  * The instruction a pre-attempt prerequisite pause carries: the stage was never
- * launched, so there is nothing to revert — the missing artifact state has to
- * come back before the stage can run.
+ * launched, so there is nothing to revert — the artifacts the pause listed have
+ * to come back, and the worktree has to be clean, before the stage can run.
+ *
+ * One static sentence, never composed from the unmet dimensions: the pause's
+ * `Artifacts:` list already says which artifacts those are.
  */
 const RESTORE_PREREQUISITE_NOTE =
-  "Restore the artifact state the stage requires in the thread, then resume.";
+  "Restore the artifacts listed above and leave the worktree clean, then resume.";
 
 /**
  * The unstable and injected dependencies plus the durable inputs the runner
@@ -169,19 +173,6 @@ function withAgentSession(
 ): AttemptRecord {
   if (session === undefined) return record;
   return { ...record, agentSession: session };
-}
-
-/**
- * One side of a set of unmet contract dimensions, spelled as the
- * `dimension = value` pairs a contract diagnostic reads with.
- */
-function describeContractSide(
-  unmet: readonly ArtifactMismatch[],
-  side: "expected" | "observed",
-): string {
-  return unmet
-    .map((mismatch) => `${mismatch.dimension} = ${JSON.stringify(mismatch[side])}`)
-    .join(", ");
 }
 
 function prerequisiteMessage(unmet: readonly ArtifactMismatch[]): string {

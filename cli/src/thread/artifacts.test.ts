@@ -5,10 +5,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ArtifactState, PlanState } from "../pipeline/types.js";
+import type { ArtifactMismatch } from "./artifacts.js";
 import {
   applyArtifactTransition,
+  describeArtifact,
+  describeContractSide,
   evaluateArtifactPrerequisite,
   evaluatePromisedState,
+  formatArtifactMismatch,
   inspectArtifactState,
 } from "./artifacts.js";
 
@@ -401,6 +405,97 @@ describe("evaluatePromisedState (AC-3.4)", () => {
     ).toEqual([
       { dimension: "implementationReport", expected: true, observed: false },
     ]);
+  });
+});
+
+/**
+ * Every dimension-and-value pair an artifact state can take, with the concrete
+ * files or folders that pair's phrase has to name. This list is what holds the
+ * description table to plain language: a phrase that names no artifact, or that
+ * leaks a dimension key or a raw value, fails here.
+ */
+const DESCRIBED_PAIRS: Array<{
+  dimension: keyof ArtifactState;
+  value: boolean | PlanState;
+  names: string[];
+}> = [
+  { dimension: "validThread", value: true, names: ["seed.md", "decisions.md"] },
+  { dimension: "validThread", value: false, names: ["seed.md", "decisions.md"] },
+  { dimension: "proposal", value: true, names: ["proposal.md"] },
+  { dimension: "proposal", value: false, names: ["proposal.md"] },
+  { dimension: "spec", value: true, names: ["spec.md"] },
+  { dimension: "spec", value: false, names: ["spec.md"] },
+  {
+    dimension: "implementationReport",
+    value: true,
+    names: ["implementation-report.md"],
+  },
+  {
+    dimension: "implementationReport",
+    value: false,
+    names: ["implementation-report.md"],
+  },
+  { dimension: "plan", value: "absent", names: ["plan.md", "plan-tasks/"] },
+  { dimension: "plan", value: "brief", names: ["plan.md", "plan-tasks/"] },
+  { dimension: "plan", value: "strict", names: ["plan.md", "plan-tasks/"] },
+  { dimension: "plan", value: "malformed", names: ["plan.md", "plan-tasks/"] },
+];
+
+describe("describeArtifact (AC-9.1)", () => {
+  it("names the concrete file or folder and its shape for every pair", () => {
+    for (const { dimension, value, names } of DESCRIBED_PAIRS) {
+      const phrase = describeArtifact(dimension, value);
+      for (const name of names) {
+        expect(phrase, `${dimension} = ${String(value)}`).toContain(name);
+      }
+      // No phrase exposes the internal vocabulary a reader has no access to:
+      // neither a dimension key nor the raw value it was keyed by.
+      expect(phrase).not.toMatch(/validThread|implementationReport/);
+      expect(phrase).not.toMatch(/\b(true|false)\b/);
+      expect(phrase).not.toBe(String(value));
+    }
+  });
+
+  it("gives every pair its own phrase, so no two states read alike", () => {
+    const phrases = DESCRIBED_PAIRS.map(({ dimension, value }) =>
+      describeArtifact(dimension, value),
+    );
+    expect(new Set(phrases).size).toBe(phrases.length);
+  });
+});
+
+describe("formatArtifactMismatch and describeContractSide (AC-9.3, AC-9.5)", () => {
+  it("renders one row as the two table phrases the mismatch names", () => {
+    expect(
+      formatArtifactMismatch({ dimension: "spec", expected: true, observed: false }),
+    ).toBe("expected a non-empty spec.md, found no spec.md");
+    expect(
+      formatArtifactMismatch({
+        dimension: "plan",
+        expected: "brief",
+        observed: "strict",
+      }),
+    ).toBe(
+      `expected ${describeArtifact("plan", "brief")}, ` +
+        `found ${describeArtifact("plan", "strict")}`,
+    );
+  });
+
+  it("spells one contract side from the same table, in mismatch order", () => {
+    const unmet: ArtifactMismatch[] = [
+      { dimension: "spec", expected: true, observed: false },
+      { dimension: "plan", expected: "strict", observed: "malformed" },
+    ];
+    expect(describeContractSide(unmet, "expected")).toBe(
+      `a non-empty spec.md, ${describeArtifact("plan", "strict")}`,
+    );
+    expect(describeContractSide(unmet, "observed")).toBe(
+      `no spec.md, ${describeArtifact("plan", "malformed")}`,
+    );
+  });
+
+  it("says nothing at all for an empty set of mismatches", () => {
+    expect(describeContractSide([], "expected")).toBe("");
   });
 });
 

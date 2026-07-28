@@ -694,9 +694,12 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     expect(cp.waiting?.reasons[0].contract).toEqual([
       { dimension: "spec", expected: true, observed: false },
     ]);
-    expect(cp.waiting?.reasons[0].message).toContain("spec = true");
-    expect(cp.waiting?.reasons[0].message).toContain("spec = false");
-    expect(cp.waiting?.nextAction).toContain("Restore");
+    expect(cp.waiting?.reasons[0].message).toContain("a non-empty spec.md");
+    expect(cp.waiting?.reasons[0].message).toContain("no spec.md");
+    expect(cp.waiting?.reasons[0].message).not.toContain("spec = ");
+    expect(cp.waiting?.nextAction).toBe(
+      "Restore the artifacts listed above and leave the worktree clean, then resume.",
+    );
   });
 
   it("launches the stage once the required artifact state is present", async () => {
@@ -762,7 +765,13 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     expect(cp.waiting?.reasons[0].contract).toEqual([
       { dimension: "spec", expected: true, observed: false },
     ]);
-    expect(cp.waiting?.nextAction).toContain("Repair");
+    // The promised-state sentence names the file the same way the rows do.
+    expect(cp.waiting?.reasons[0].message).toContain("a non-empty spec.md");
+    expect(cp.waiting?.reasons[0].message).toContain("no spec.md");
+    expect(cp.waiting?.nextAction).toBe(
+      "Repair the promised artifact and resume to finalize the completed attempt, " +
+        "or revert the attempt's unvalidated changes and resume to run the stage again.",
+    );
     // The completed attempt is preserved with its DONE, and its evidence is
     // what a later repaired resume finalizes from.
     expect(cp.attempts[0].result).toBe("waiting");

@@ -44,6 +44,7 @@ import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import {
+  describeContractSide,
   evaluatePromisedState,
   inspectArtifactState,
 } from "../thread/artifacts.js";
@@ -61,19 +62,6 @@ function replaceLast(
   record: AttemptRecord,
 ): AttemptRecord[] {
   return [...attempts.slice(0, -1), record];
-}
-
-/**
- * One side of a set of unmet contract dimensions, spelled as the
- * `dimension = value` pairs a contract diagnostic reads with.
- */
-function describeContractSide(
-  unmet: readonly ArtifactMismatch[],
-  side: "expected" | "observed",
-): string {
-  return unmet
-    .map((mismatch) => `${mismatch.dimension} = ${JSON.stringify(mismatch[side])}`)
-    .join(", ");
 }
 
 function stillUnmetContractMessage(unmet: readonly ArtifactMismatch[]): string {

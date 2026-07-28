@@ -385,27 +385,44 @@ describe("runPaused", () => {
     expect(out.lines.some((line) => line.startsWith("Outcome:"))).toBe(false);
   });
 
-  it("announces an unmet prerequisite and lists every dimension it names", () => {
+  it("announces an unmet prerequisite and lists every artifact it names", () => {
     const { out } = paused({
       waiting: governedBy(
         {
           kind: "stage-prerequisite-unmet",
           message:
-            "The stage cannot start: it requires spec = true, plan = \"strict\".",
+            "The stage cannot start: it requires a non-empty spec.md, " +
+            "a non-empty plan.md and a plan-tasks/ folder holding at least one " +
+            "non-empty .md task file, but the thread's current artifact state " +
+            "has no spec.md, a non-empty plan.md and no plan-tasks/ folder.",
           contract: [
             { dimension: "spec", expected: true, observed: false },
             { dimension: "plan", expected: "strict", observed: "brief" },
           ],
         },
-        { nextAction: "Restore the artifact state the stage requires, then resume." },
+        {
+          nextAction:
+            "Restore the artifacts listed above and leave the worktree clean, then resume.",
+        },
       ),
       logAbsPath: null,
     });
     expect(out.text).toContain("FAILED — stage prerequisite unmet ❌");
     expect(out.text).toContain("Artifacts:");
-    expect(out.text).toContain("- spec: expected true, found false");
-    expect(out.text).toContain('- plan: expected "strict", found "brief"');
+    // Each row reads as the concrete files it is about, in the same words the
+    // sentence above it used.
+    expect(out.text).toContain("- expected a non-empty spec.md, found no spec.md");
+    expect(out.text).toContain(
+      "- expected a non-empty plan.md and a plan-tasks/ folder holding at least " +
+        "one non-empty .md task file, found a non-empty plan.md and no " +
+        "plan-tasks/ folder",
+    );
+    // The action line is the pause's own instruction, not a restatement of the
+    // rows: restore what the list named, leave the tree clean, resume.
     expect(out.text).toContain("Next:");
+    expect(out.text).toContain(
+      "Restore the artifacts listed above and leave the worktree clean, then resume.",
+    );
   });
 
   it("announces a promised artifact the stage never left behind", () => {
@@ -419,7 +436,11 @@ describe("runPaused", () => {
       }),
     });
     expect(out.text).toContain("FAILED — promised artifact state unmet ❌");
-    expect(out.text).toContain("- implementationReport: expected true, found false");
+    expect(out.text).toContain(
+      "- expected a non-empty implementation-report.md, found no implementation-report.md",
+    );
+    // The rendering names files, never the executor's internal dimension keys.
+    expect(out.text).not.toContain("implementationReport");
   });
 
   it("lists no artifact block for a reason that carries no contract", () => {

@@ -5,6 +5,7 @@ import type {
   WaitingKind,
   WaitingReason,
 } from "../state/checkpoint.js";
+import { formatArtifactMismatch } from "../thread/artifacts.js";
 import type { Display, StageDisposition } from "./types.js";
 
 /**
@@ -494,9 +495,7 @@ function reasonBlock(paint: Painter, reason: WaitingReason): string[] {
   if (reason.contract !== undefined && reason.contract.length > 0) {
     lines.push(`  ${paint("Artifacts:", ...KEY_STYLE)}`);
     for (const mismatch of reason.contract) {
-      lines.push(
-        `    - ${mismatch.dimension}: expected ${JSON.stringify(mismatch.expected)}, found ${JSON.stringify(mismatch.observed)}`,
-      );
+      lines.push(`    - ${formatArtifactMismatch(mismatch)}`);
     }
   }
   if (reason.kind === "malformed-outcome" && reason.candidateLine !== undefined) {

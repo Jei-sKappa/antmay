@@ -29,6 +29,98 @@ export type ArtifactMismatch = {
   observed: boolean | PlanState;
 };
 
+/**
+ * The plain-language phrase for every value of every artifact-state dimension.
+ *
+ * The type is a mapped type over `ArtifactState`, so a new dimension or a new
+ * legal value for one has no phrase until it is written here and the typecheck
+ * says so. Nothing falls back to the raw value.
+ */
+type ArtifactDescriptions = {
+  [Dimension in keyof ArtifactState]: {
+    [Value in `${ArtifactState[Dimension]}`]: string;
+  };
+};
+
+/**
+ * What each artifact state means on disk, as a phrase naming the concrete file
+ * or folder and the shape it has to be in.
+ *
+ * Every phrase is a bare noun phrase, so the same words read correctly both
+ * inside a sentence ("it requires …, but the thread has …") and as a row of a
+ * list. A present artifact means a non-empty regular file, so its absent phrase
+ * covers a missing file and an empty one alike.
+ */
+const ARTIFACT_DESCRIPTIONS: ArtifactDescriptions = {
+  validThread: {
+    true: "a thread folder holding a non-empty seed.md and decisions.md",
+    false: "no thread folder holding a non-empty seed.md and decisions.md",
+  },
+  proposal: {
+    true: "a non-empty proposal.md",
+    false: "no proposal.md",
+  },
+  spec: {
+    true: "a non-empty spec.md",
+    false: "no spec.md",
+  },
+  plan: {
+    absent: "no plan.md and no plan-tasks/ folder",
+    brief: "a non-empty plan.md and no plan-tasks/ folder",
+    strict:
+      "a non-empty plan.md and a plan-tasks/ folder holding at least one " +
+      "non-empty .md task file",
+    malformed:
+      "a plan.md and plan-tasks/ folder pair in a combination that is no " +
+      "usable plan",
+  },
+  implementationReport: {
+    true: "a non-empty implementation-report.md",
+    false: "no implementation-report.md",
+  },
+};
+
+/**
+ * The phrase describing one dimension holding one value. Total by construction:
+ * the signature admits only a value the dimension can actually hold, and every
+ * such pair has an entry in the table.
+ */
+export function describeArtifact<Dimension extends keyof ArtifactState>(
+  dimension: Dimension,
+  value: ArtifactState[Dimension],
+): string {
+  // The signature pairs each dimension with its own value type, so the row this
+  // reads always exists even though the lookup erases the correlation.
+  const phrases = ARTIFACT_DESCRIPTIONS[dimension] as Record<string, string>;
+  return phrases[`${value}`];
+}
+
+/**
+ * One unmet dimension as a single readable row: the artifact the contract asked
+ * for, then the one the thread actually holds.
+ */
+export function formatArtifactMismatch(mismatch: ArtifactMismatch): string {
+  return (
+    `expected ${describeArtifact(mismatch.dimension, mismatch.expected)}, ` +
+    `found ${describeArtifact(mismatch.dimension, mismatch.observed)}`
+  );
+}
+
+/**
+ * One side of a set of unmet contract dimensions, spelled as the phrases a
+ * contract diagnostic reads with — so a sentence built from this and a list
+ * built from `formatArtifactMismatch` describe the same artifacts in the same
+ * words.
+ */
+export function describeContractSide(
+  unmet: readonly ArtifactMismatch[],
+  side: "expected" | "observed",
+): string {
+  return unmet
+    .map((mismatch) => describeArtifact(mismatch.dimension, mismatch[side]))
+    .join(", ");
+}
+
 const GENESIS_FILES = ["seed.md", "decisions.md"] as const;
 const PROPOSAL_FILE = "proposal.md";
 const SPEC_FILE = "spec.md";
