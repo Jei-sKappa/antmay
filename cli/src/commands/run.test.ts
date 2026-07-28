@@ -313,6 +313,29 @@ async function dropPendingDecision(
   await fs.writeFile(path.join(dir, name), "open decision", "utf8");
 }
 
+/**
+ * Break the thread's temporary workspaces on both counts at once: two of them
+ * lose their ignore rule, and the third — still ignored — gains force-added
+ * tracked content. Rewriting `.gitignore` also leaves the worktree dirty, which
+ * is what makes the refusal's precedence over the clean-worktree gate visible.
+ */
+async function makeWorkspacesUnsafe(fixture: RepoFixture): Promise<void> {
+  await fs.writeFile(
+    path.join(fixture.root, ".gitignore"),
+    ".implementation-runs/\n",
+    "utf8",
+  );
+  const runs = path.join(fixture.threadPath as string, ".implementation-runs");
+  await fs.mkdir(runs, { recursive: true });
+  await fs.writeFile(path.join(runs, "leftover.md"), "x", "utf8");
+  await fixture.git([
+    "add",
+    "-f",
+    "--",
+    `${fixture.threadRelPath as string}/.implementation-runs`,
+  ]);
+}
+
 async function commitSubjects(fixture: RepoFixture): Promise<string[]> {
   const result = await fixture.git(["log", "--pretty=%s"]);
   return result.stdout.trim().split("\n");
@@ -816,6 +839,30 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     expect(result.err).toContain("not found on PATH");
   });
 
+  it("refuses unsafe temporary workspaces before the clean-worktree gate", async () => {
+    const h = await setup();
+    await makeWorkspacesUnsafe(h.fixture);
+
+    const result = await run(h, standardSteps(h.fixture));
+
+    await expectClean(h, result);
+    const rel = h.fixture.threadRelPath as string;
+    // One refusal covers every failing workspace from both probes.
+    expect(result.err).toContain("Antmay skills write .pending-decisions/");
+    expect(result.err).toContain(`  - ${rel}/.pending-decisions/`);
+    expect(result.err).toContain(`  - ${rel}/.pending-reviews/`);
+    expect(result.err).toContain(`  - ${rel}/.implementation-runs/leftover.md`);
+    expect(result.err).toContain(
+      `  git rm -r --cached -- ${rel}/.implementation-runs`,
+    );
+    // The tree is dirty too, and the advice a dirty tree earns — commit or
+    // revert — would commit the residue this refusal exists to keep out.
+    expect(result.err).not.toContain("not clean");
+    expect(result.invoker.calls.length).toBe(0);
+    // `expectClean` already proved no run directory exists, so no `state.json`
+    // was written either.
+  });
+
   it("rejects a dirty worktree", async () => {
     const h = await setup();
     await fs.writeFile(path.join(h.fixture.root, "stray.txt"), "dirty\n", "utf8");
@@ -833,17 +880,27 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
 
   it("rejects when a pending queue cannot be scanned", async () => {
     const h = await setup();
-    // A committed regular file where the queue directory is expected makes the
-    // scan's readdir fail with ENOTDIR while keeping the worktree clean.
+    // A regular file where the queue directory is expected makes the scan's
+    // readdir fail with ENOTDIR. It has to be both untracked and ignored: Git
+    // tracking anything at a temporary-workspace path is refused before the
+    // scan is reached, and an unignored file would leave the worktree dirty.
+    await fs.appendFile(
+      path.join(h.fixture.root, ".gitignore"),
+      ".pending-decisions\n",
+      "utf8",
+    );
+    await h.fixture.git(["add", "--", ".gitignore"]);
+    await h.fixture.git(["commit", "-m", "chore: ignore the queue path itself"]);
     await fs.writeFile(
       path.join(h.fixture.threadPath as string, ".pending-decisions"),
       "not a directory",
       "utf8",
     );
-    await h.fixture.git(["add", "-A"]);
-    await h.fixture.git(["commit", "-m", "chore: block queue"]);
     const result = await run(h, []);
     await expectClean(h, result);
+    // The scan failure is what refused this run, not an earlier gate.
+    expect(result.err).toContain("Cannot scan ");
+    expect(result.err).toContain(".pending-decisions");
   });
 
   it("refuses when an unfinished run already exists for the same thread (AC-7.1, DR55)", async () => {

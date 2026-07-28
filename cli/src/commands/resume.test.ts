@@ -292,10 +292,57 @@ function dropPendingSync(fixture: RepoFixture, name: string): void {
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, name), "open decision", "utf8");
 }
+/**
+ * Break the thread's temporary workspaces on both counts at once: two of them
+ * lose their ignore rule, and the third — still ignored — gains force-added
+ * tracked content. Rewriting `.gitignore` also leaves the worktree dirty, which
+ * is what makes the refusal's precedence over the clean-worktree rule visible.
+ */
+async function makeWorkspacesUnsafe(fixture: RepoFixture): Promise<void> {
+  await fs.writeFile(
+    path.join(fixture.root, ".gitignore"),
+    ".implementation-runs/\n",
+    "utf8",
+  );
+  const runs = path.join(fixture.threadPath as string, ".implementation-runs");
+  await fs.mkdir(runs, { recursive: true });
+  await fs.writeFile(path.join(runs, "leftover.md"), "x", "utf8");
+  await fixture.git([
+    "add",
+    "-f",
+    "--",
+    `${fixture.threadRelPath as string}/.implementation-runs`,
+  ]);
+}
+
 async function removePending(fixture: RepoFixture, name: string): Promise<void> {
   await fs.rm(path.join(fixture.threadPath as string, ".pending-decisions", name), {
     force: true,
   });
+}
+
+/**
+ * Make one queue's scan fail with `ENOTDIR` by putting a regular file where its
+ * directory is expected. The file has to be both untracked and ignored: Git
+ * tracking anything at a temporary-workspace path is refused before the scan is
+ * reached, and an unignored file would leave the worktree dirty.
+ */
+async function blockQueueScan(
+  fixture: RepoFixture,
+  queueName: ".pending-decisions" | ".pending-reviews",
+): Promise<void> {
+  await fs.appendFile(
+    path.join(fixture.root, ".gitignore"),
+    `${queueName}\n`,
+    "utf8",
+  );
+  await fixture.git(["add", "--", ".gitignore"]);
+  await fixture.git(["commit", "-m", "chore: ignore the queue path itself"]);
+  await fs.writeFile(
+    path.join(fixture.threadPath as string, queueName),
+    "not a directory",
+    "utf8",
+  );
 }
 
 /**
@@ -463,6 +510,89 @@ describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
   });
 });
 
+/**
+ * The three pauses the clean-worktree rule exempts, each seeded through a real
+ * run. The temporary-workspace check is exempt from nothing, so every one of
+ * them has to reach it.
+ */
+const CLEAN_WORKTREE_EXEMPT_PAUSES: {
+  kind: string;
+  seedPause: (h: Harness) => Promise<void>;
+}[] = [
+  {
+    kind: "git-policy-violation",
+    seedPause: async (h) => {
+      await seed(h, [
+        {
+          before: () => {
+            writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+            writeRootFileSync(h.fixture, "stray.txt", "x");
+          },
+          outcome: DONE,
+        },
+      ]);
+    },
+  },
+  {
+    kind: "commit-error",
+    seedPause: async (h) => {
+      // A rejecting pre-commit hook fails the boundary commit itself; it is
+      // removed again so only the workspace state can refuse the resume.
+      const hook = path.join(h.fixture.root, ".git", "hooks", "pre-commit");
+      await fs.writeFile(hook, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+      await fs.chmod(hook, 0o755);
+      await seed(h, [
+        {
+          before: () => writeThreadFileSync(h.fixture, "spec.md", "# Spec\n"),
+          outcome: DONE,
+        },
+      ]);
+      await fs.rm(hook, { force: true });
+    },
+  },
+  {
+    kind: "stage-contract-violation",
+    seedPause: async (h) => {
+      // The `spec` stage reports DONE and writes nothing, so the spec it
+      // promises is missing.
+      await seed(h, [{}]);
+    },
+  },
+];
+
+describe.concurrent("resumeCommand — temporary-workspace safety (AC-1.7, AC-2.2, AC-2.4)", () => {
+  for (const pause of CLEAN_WORKTREE_EXEMPT_PAUSES) {
+    it(`refuses unsafe temporary workspaces for a ${pause.kind} pause`, async () => {
+      const h = await setup();
+      await pause.seedPause(h);
+      const runId = await soleRunId(h);
+      expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe(pause.kind);
+      const checkpointFile = path.join(
+        runDirectoryFor(h.stateRoot, runId),
+        "state.json",
+      );
+      const before = await fs.readFile(checkpointFile, "utf8");
+
+      await makeWorkspacesUnsafe(h.fixture);
+      const result = await resume(h, runId, standardSteps(h.fixture));
+
+      expect(result.code).toBe(1);
+      const rel = h.fixture.threadRelPath as string;
+      expect(result.err).toContain("Antmay skills write .pending-decisions/");
+      expect(result.err).toContain(`  - ${rel}/.pending-decisions/`);
+      expect(result.err).toContain(`  - ${rel}/.pending-reviews/`);
+      expect(result.err).toContain(`  - ${rel}/.implementation-runs/leftover.md`);
+      // This pause is exempt from the clean-worktree rule, so nothing else here
+      // would have stopped the resume — and the workspace refusal never offers
+      // the commit-or-revert advice that would commit the residue.
+      expect(result.err).not.toContain("not clean");
+      expect(result.invoker.calls.length).toBe(0);
+      expect(await fs.readFile(checkpointFile, "utf8")).toBe(before);
+      expect(await lockNames(h.stateRoot)).toEqual([]);
+    });
+  }
+});
+
 describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, AC-11.6)", () => {
   it("leaves a waiting run with non-empty queues byte-for-byte unchanged, prints files, exits 2", async () => {
     const h = await setup();
@@ -497,15 +627,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
-    // A committed regular file where the queue directory is expected makes the
-    // scan fail with ENOTDIR while the worktree stays clean.
-    await fs.writeFile(
-      path.join(h.fixture.threadPath as string, ".pending-reviews"),
-      "not a directory",
-      "utf8",
-    );
-    await h.fixture.git(["add", "-A"]);
-    await h.fixture.git(["commit", "-m", "chore: block queue"]);
+    await blockQueueScan(h.fixture, ".pending-reviews");
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
@@ -895,16 +1017,9 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
   it("keeps the contract kind when the locked queue scan fails, folding the diagnostic in", async () => {
     const h = await setup();
     const runId = await seedContractViolation(h);
-    // A committed regular file where the queue directory is expected makes the
-    // scan fail with ENOTDIR while the worktree stays clean. Downgrading the
-    // pause to a gate-error would throw away the saved DONE's recovery path.
-    await fs.writeFile(
-      path.join(h.fixture.threadPath as string, ".pending-reviews"),
-      "not a directory",
-      "utf8",
-    );
-    await h.fixture.git(["add", "-A"]);
-    await h.fixture.git(["commit", "-m", "chore: block queue"]);
+    // The queue scan fails while the pause is held. Downgrading the pause to a
+    // gate-error would throw away the saved DONE's recovery path.
+    await blockQueueScan(h.fixture, ".pending-reviews");
 
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(2);

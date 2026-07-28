@@ -17,6 +17,7 @@ import {
   isWorktreeClean,
   readHead,
 } from "../gitops/status.js";
+import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import {
   interpretScriptedHarnessToggle,
   loadScriptedScenario,
@@ -315,6 +316,17 @@ export async function resumeCommand(
     }
     sig = signalCode();
     if (sig !== null) return sig;
+
+    // The thread's temporary workspaces must be Git-safe, whatever the durable
+    // condition is: the clean-worktree exemptions below do not extend here.
+    // Leftover files in an unignored workspace are themselves what makes the
+    // worktree dirty, and the commit-or-revert advice the next gate gives would
+    // commit work in progress into the repository. This runs before lock
+    // acquisition and every checkpoint mutation.
+    const workspaces = await checkTemporaryWorkspaces(repoRoot, threadRelPath);
+    if (!workspaces.ok) {
+      return fail(workspaces.message);
+    }
 
     // Clean-worktree rule: required for every waiting kind except
     // git-policy-violation, commit-error, and stage-contract-violation, and for

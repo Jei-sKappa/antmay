@@ -21,6 +21,7 @@ import {
 } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { isWorktreeClean } from "../gitops/status.js";
+import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import type { probeHarnessExecutables } from "../harness/probe.js";
 import { createScriptedInvoker } from "../harness/scripted/invoker.js";
 import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
@@ -323,7 +324,20 @@ export async function runCommand(
       );
     }
 
-    // Preflight 11: clean-worktree requirement (boundary status set).
+    // Preflight 11: the thread's temporary workspaces must be Git-safe. It comes
+    // before the clean-worktree gate on purpose: leftover files in an unignored
+    // workspace are themselves what makes the worktree dirty, and the
+    // commit-or-revert advice that gate gives would commit work in progress into
+    // the repository.
+    const workspaces = await checkTemporaryWorkspaces(
+      thread.repoRoot,
+      thread.threadRelPath,
+    );
+    if (!workspaces.ok) {
+      return fail(workspaces.message);
+    }
+
+    // Preflight 12: clean-worktree requirement (boundary status set).
     let clean: boolean;
     try {
       clean = await isWorktreeClean(thread.repoRoot);
@@ -338,7 +352,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 12: both pending queues must be empty; a non-empty queue or a scan
+    // Preflight 13: both pending queues must be empty; a non-empty queue or a scan
     // error both fail preflight with no run.
     const preScan = await scanPendingQueues(thread.repoRoot, thread.threadRelPath);
     if (!preScan.ok) {
@@ -350,7 +364,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 13: unfinished same-thread-run guard. An absent runs directory
+    // Preflight 14: unfinished same-thread-run guard. An absent runs directory
     // means no runs and creates nothing; a corrupt sibling checkpoint warns
     // without blocking; a non-completed run recording this workspace AND thread
     // refuses.
