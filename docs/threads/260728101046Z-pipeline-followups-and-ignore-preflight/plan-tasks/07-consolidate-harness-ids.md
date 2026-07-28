@@ -17,7 +17,7 @@
 **Verification:**
 
 - `npm --prefix cli run test -- src/config/execution.test.ts src/state/checkpoint.test.ts` exits `0`.
-- `test "$(rg -l 'HARNESS_IDS.*\\[|HARNESS_IDS.*new Set' cli/src | wc -l | tr -d ' ')" -eq 1` exits `0`.
+- `test "$(rg -l 'HARNESS_IDS.*\[|HARNESS_IDS.*new Set' cli/src | wc -l | tr -d ' ')" -eq 1` exits `0` (it matches two files before the change).
 - `rg -n 'as HarnessId' cli/src/config/execution.ts` returns no matches.
 - `npm --prefix cli run check` exits `0`.
 

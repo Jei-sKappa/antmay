@@ -37,7 +37,7 @@
 - Either side of that inequality drifting alone is observed to fail the test.
 - The scenario comment describes exit `1` for too early and exit `0` for too late, with both mismatching declared exit `2`.
 - The runner, checkpoint validator, and documentation assertion each carry the required local reasoning.
-- No behavior, validator breadth, documentation threshold, demo driver, or demo step vocabulary changes.
+- No behavior, validator breadth, or documentation threshold changes, and neither `cli/scripts/demo.mjs` nor `cli/scripts/demo/steps.mjs` gains an output assertion — the demo still verifies exactly one exit code per invocation.
 
 **Consumes:** the concrete artifact-contract terminal output produced by Task 9 and exhibited by scenario `07-runtime-prerequisite`.
 

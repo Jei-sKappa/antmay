@@ -1,6 +1,6 @@
 ### Task 8: Consolidate queue-reason helpers
 
-**Objective:** Make the classifier the sole owner of queue-reason wording, assembly, and gate-error-before-pending-files precedence.
+**Objective:** Make the classifier the sole owner of queue-reason wording, assembly, and gate-error-before-pending-queues precedence.
 
 **Input / context:** `spec.md` FR-8 AC-8.1 and AC-8.7; `decisions.md DR9` and `decisions.md DR15`; the focused message expectations in `cli/src/runner/classify.test.ts`; the duplicate helpers in `classify.ts`, `runner.ts`, and `resume.ts`; and the reduced runner/resume cursor code produced by Task 5.
 

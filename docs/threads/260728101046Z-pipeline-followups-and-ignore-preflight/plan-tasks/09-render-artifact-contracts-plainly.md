@@ -31,7 +31,7 @@
 
 - `npm --prefix cli run test -- src/thread/artifacts.test.ts src/display/terminal.test.ts src/runner/runner.test.ts src/commands/resume.test.ts` exits `0`.
 - The temporary extra `ArtifactState` dimension makes `npm --prefix cli run typecheck` exit non-zero at the description table; restoring it makes typecheck exit `0`.
-- `rg -n 'mismatch\\.dimension|JSON\\.stringify\\(mismatch' cli/src/display/terminal.ts` returns no matches.
+- `rg -n 'mismatch\.dimension|JSON\.stringify\(mismatch' cli/src/display/terminal.ts` returns no matches (it matches the row-rendering line before the change).
 - `npm --prefix cli run demo -- --scenario 07-runtime-prerequisite --no-color` reports `[PASS]` and shows concrete artifact phrases.
 - `npm --prefix cli run demo -- --scenario 08-stage-contract-violation --no-color` reports `[PASS]` and shows concrete artifact phrases.
 - `npm --prefix cli run check` exits `0`.

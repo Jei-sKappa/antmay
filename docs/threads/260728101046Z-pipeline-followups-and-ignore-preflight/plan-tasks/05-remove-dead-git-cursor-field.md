@@ -5,8 +5,8 @@
 **Input / context:** `spec.md` FR-7 AC-7.2 through AC-7.4; `decisions.md DR8`; the pre-release schema licence in `cli/AGENTS.md`; Task 2's run/resume preflight order; and Task 3's renamed `cli/scripts/scenarios/21-list.mjs`.
 
 **Steps:**
-1. Change `RunCheckpoint.gitCursor` in `cli/src/state/checkpoint.ts` to `{ stageIndex, observedHead }`. Make checkpoint validation accept exactly those fields, reject `headAtStageEntry`, validate only `observedHead` as a commit string or `null`, and keep the cross-field invariant keyed to `observedHead` with a diagnostic that names it.
-2. Add or adapt a checkpoint test that first fails against the old validator by supplying `headAtStageEntry`, then passes after removal by proving the property is rejected. Update every valid checkpoint fixture to the new shape.
+1. Change `RunCheckpoint.gitCursor` in `cli/src/state/checkpoint.ts` to `{ stageIndex, observedHead }`. Make checkpoint validation require and validate exactly `stageIndex` and `observedHead` — the latter a commit string or `null` — stop reading `headAtStageEntry` at all, and keep the cross-field invariant keyed to `observedHead` with a diagnostic that names it. Add no unknown-property strictness: whether a previously written `state.json` still validates is not a design consideration.
+2. Add or adapt a checkpoint test whose `gitCursor` is exactly `{ stageIndex, observedHead }`, and run it once before the change to observe the pre-change validator reject it for the absent `headAtStageEntry`. Update every valid checkpoint fixture to the new shape.
 3. Remove stage-entry cursor propagation from `run.ts`, `resume.ts`, and `runner.ts`. Every executing, paused, advanced, interrupted, and completed cursor writes only `stageIndex` and `observedHead`; attempt-boundary behavior continues to use its existing attempt-start HEAD, and resume continues to compare `observedHead` with current `HEAD`.
 4. Update runner and persistence expectations, list-command fixtures, and the renamed list demo's seeded checkpoints. Preserve the observed-HEAD comparison and its user-visible diagnostic.
 5. Run checkpoint-focused tests, typecheck, the aggregate list demo, and the full CLI gate. Confirm the removed identifier is absent under `cli/`.
@@ -33,7 +33,7 @@
 
 **Acceptance criteria:**
 
-- Every Git cursor contains only `stageIndex` and `observedHead`, and a checkpoint carrying `headAtStageEntry` is rejected.
+- Every Git cursor contains only `stageIndex` and `observedHead`, and a checkpoint whose cursor carries exactly those two properties validates.
 - Every checkpoint literal in the test suite and list demo uses the exact reduced shape.
 - No migration, compatibility shim, optional removed field, or schema-version bump is introduced.
 - Resume still reports an `observedHead` difference against current `HEAD`, and the cursor-index invariant still applies whenever `observedHead` is populated.
