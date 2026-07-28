@@ -81,10 +81,6 @@ Explicitly out of scope:
 - **Running the manual smoke checklist.** It is deleted rather than performed
   (per DR12); the four properties only a real harness can prove are recorded as
   unproven by automation.
-- **`pendingQueuesMessage` in `cli/src/commands/resume.ts`.** DR9's queue-reason
-  consolidation covers the `runner.ts`/`classify.ts` pair it names; `resume.ts`
-  holds a third verbatim copy of that one function which DR9 does not reach. It
-  is left as it is, deliberately — a reviewer should not read it as an oversight.
 - **New commands, subcommands, or flags.** The surface stays `antmay afk run`,
   `antmay afk resume`, `antmay afk list`.
 - **Checkpoint migrations.** See `## Constraints`.
