@@ -25,6 +25,7 @@ export const SCRIPTED_CASE_NAMES = [
   "harness-idle-timeout",
   "harness-hang",
   "spec-correct",
+  "spec-correct-delayed",
   "reconcile-spec-correct",
   "reconcile-spec-pending-decision",
   "plan-strict-correct",
@@ -44,6 +45,7 @@ const STAGE_SPECIFIC_CASE_STAGE: Readonly<
   Partial<Record<ScriptedCaseName, string>>
 > = {
   "spec-correct": "spec",
+  "spec-correct-delayed": "spec",
   "reconcile-spec-correct": "reconcile-spec",
   "reconcile-spec-pending-decision": "reconcile-spec",
   "plan-strict-correct": "plan-strict",

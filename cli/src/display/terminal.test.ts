@@ -401,7 +401,7 @@ describe("runPaused", () => {
       ),
       logAbsPath: null,
     });
-    expect(out.text).toContain("BLOCKED — stage prerequisite unmet 🛑");
+    expect(out.text).toContain("FAILED — stage prerequisite unmet ❌");
     expect(out.text).toContain("Artifacts:");
     expect(out.text).toContain("- spec: expected true, found false");
     expect(out.text).toContain('- plan: expected "strict", found "brief"');
@@ -418,7 +418,7 @@ describe("runPaused", () => {
         ],
       }),
     });
-    expect(out.text).toContain("FAILED — promised artifact missing ❌");
+    expect(out.text).toContain("FAILED — promised artifact state unmet ❌");
     expect(out.text).toContain("- implementationReport: expected true, found false");
   });
 
@@ -553,25 +553,107 @@ describe("color discipline", () => {
 });
 
 describe("printRunSummary", () => {
-  const info = {
+  type SummaryInfo = Parameters<typeof printRunSummary>[1];
+  const info: SummaryInfo = {
     runId: "run-9",
     pipelineName: "standard",
+    pipelineSourcePath: "/cfg/pipelines/standard.json",
+    profileSelection: { kind: "settings-only" } as const,
     threadRelPath: "docs/threads/t",
     workspacePath: "/repo",
     dangerouslySkipPermissions: false,
-    stageIds: ["spec", "reconcile-spec", "review-spec"],
+    stages: [
+      {
+        id: "spec",
+        harness: "codex",
+        model: "gpt-5",
+        target: "docs/threads/t/",
+      },
+      {
+        id: "reconcile-spec",
+        harness: "claude-code",
+        model: "claude-sonnet-5",
+        target: "docs/threads/t/spec.md",
+      },
+    ],
   };
 
-  it("prints run ID, pipeline, thread, workspace, permission mode, and stage names", () => {
+  /** The block with color codes removed, as a list of lines. */
+  function render(overrides: Partial<SummaryInfo> = {}): string[] {
+    const { options, out } = makeOptions();
+    printRunSummary(options, { ...info, ...overrides });
+    return out.text.replace(new RegExp(ANSI_PATTERN, "g"), "").split("\n");
+  }
+
+  it("prints the run identity, thread, workspace, and permission mode", () => {
     const { options, out, err } = makeOptions();
     printRunSummary(options, info);
     expect(out.text).toContain("run-9");
-    expect(out.text).toContain("standard");
     expect(out.text).toContain("docs/threads/t");
     expect(out.text).toContain("/repo");
     expect(out.text).toContain("restricted");
-    expect(out.text).toContain("spec, reconcile-spec, review-spec");
     // No unrestricted warning when permissions are restricted.
+    expect(err.text).toBe("");
+  });
+
+  it("prints the pipeline's declared name with the source it was read from", () => {
+    expect(render()).toContainEqual(
+      expect.stringContaining("standard (/cfg/pipelines/standard.json)"),
+    );
+  });
+
+  it("reports `settings only` when no execution profile was selected", () => {
+    const profileLine = render().find((line) => line.includes("Profile:"));
+    expect(profileLine).toContain("settings only");
+  });
+
+  it("prints a selected profile's declared name with its source", () => {
+    const profileLine = render({
+      profileSelection: {
+        kind: "profile",
+        name: "quality",
+        sourcePath: "/cfg/profiles/quality.json",
+      },
+    }).find((line) => line.includes("Profile:"));
+    expect(profileLine).toContain("quality (/cfg/profiles/quality.json)");
+  });
+
+  it("omits the entry-point line when the invocation named no `--from`", () => {
+    expect(render().some((line) => line.includes("From:"))).toBe(false);
+  });
+
+  it("prints the entry point when the invocation named one", () => {
+    const fromLine = render({ fromStage: "reconcile-spec" }).find((line) =>
+      line.includes("From:"),
+    );
+    expect(fromLine).toContain("reconcile-spec");
+  });
+
+  it("lists every stage in execution order with its harness, model, and target", () => {
+    const lines = render();
+    const first = lines.findIndex((line) => line.includes("1. spec"));
+    const second = lines.findIndex((line) => line.includes("2. reconcile-spec"));
+    expect(first).toBeGreaterThan(-1);
+    expect(second).toBe(first + 1);
+    expect(lines[first]).toContain("codex · gpt-5");
+    expect(lines[first]).toContain("→ docs/threads/t/");
+    expect(lines[second]).toContain("claude-code · claude-sonnet-5");
+    expect(lines[second]).toContain("→ docs/threads/t/spec.md");
+  });
+
+  it("aligns the stage columns so the targets share one column", () => {
+    const lines = render();
+    const rows = lines.filter((line) => /^ {4}\d+\. /.test(line));
+    expect(rows.length).toBe(2);
+    const arrows = new Set(rows.map((row) => row.indexOf("→")));
+    expect(arrows.size).toBe(1);
+  });
+
+  it("asks nothing: the block ends without a prompt", () => {
+    const { options, out, err } = makeOptions();
+    printRunSummary(options, info);
+    expect(out.text).not.toMatch(/[?]\s*$/);
+    expect(out.text).not.toMatch(/\b(y\/n|confirm|continue\?)\b/i);
     expect(err.text).toBe("");
   });
 

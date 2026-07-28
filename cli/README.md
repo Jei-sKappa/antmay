@@ -105,10 +105,10 @@ captured a session, the column is omitted.
 
 ## Scripted demo
 
-`npm run demo` drives the built CLI through the `standard` pipeline without
-contacting Codex or Claude Code, so you end up with a real disposable
-repository and run directory to inspect. It runs `npm run build` without tests,
-then executes the scenario you pick.
+`npm run demo` drives the built CLI through a pipeline document it writes into a
+throwaway config root, without contacting Codex or Claude Code, so you end up
+with a real disposable repository and run directory to inspect. It runs
+`npm run build` without tests, then executes the scenario you pick.
 
 Every launched scripted attempt prints a `[DEV] Resolved prompt` block directly
 from its invocation request after the attempt header and before simulated agent
@@ -132,30 +132,32 @@ whatever it exists to show is the last thing on screen. Ids carry an ordering
 prefix and are listed in reading order — a normal run, then the pauses you meet
 routinely, then the ways a stage fails, then the rare and the cosmetic. Attempt-
 backed pauses and the run listing already show native-session surfaces through
-existing scenarios (`04-waiting-for-user` for `Continue`, `18-list` for the
+existing scenarios (`04-waiting-for-user` for `Continue`, `20-list` for the
 latest-session column); neither needs a separate scenario. `--list` prints them
 all:
 
 | Scenario | Ends on |
 | --- | --- |
-| `01-all-done` | `SUCCESS` after six clean stages, with all six resolved prompts shown as `[DEV]` input |
+| `01-all-done` | `SUCCESS` after six clean stages on a selected execution profile, with all six resolved prompts shown as `[DEV]` input |
 | `02-blocked` | the `BLOCKED` banner |
 | `03-refused` | the `REFUSED` banner |
 | `04-waiting-for-user` | `WAITING FOR USER`, its pending list, and native `Continue` with `scripted-session-reconcile-spec-1` |
 | `05-multiple-reasons` | two stacked reason banners under a `2 reasons` header |
-| `06-retry` | a resumed stage's `· attempt 2` header, then `SUCCESS` |
-| `07-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
-| `08-failed-harness-error` | `FAILED — harness error` |
-| `09-failed-idle-timeout` | `FAILED — idle timeout` |
-| `10-failed-git-policy` | `FAILED — git policy violation` |
-| `11-failed-commit` | `FAILED — commit failed` |
-| `12-failed-queue-scan` | `FAILED — queue scan error` |
-| `13-interrupted` | `INTERRUPTED`, after a signal lands mid-stage |
-| `14-checkpoint-write-failure` | `FAILED — checkpoint write` |
-| `15-permissions-warning` | a clean run opening on the boxed unrestricted warning |
-| `16-heartbeat` | the repeating `· still working` line |
-| `17-long-content` | oversized reasons, paths and tool arguments |
-| `18-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
+| `06-retry` | a `--from` suffix run's resumed `· attempt 2` header, then `SUCCESS` |
+| `07-runtime-prerequisite` | `FAILED — stage prerequisite unmet` and its `Artifacts:` list |
+| `08-stage-contract-violation` | `FAILED — promised artifact state unmet` and its `Artifacts:` list |
+| `09-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
+| `10-failed-harness-error` | `FAILED — harness error` |
+| `11-failed-idle-timeout` | `FAILED — idle timeout` |
+| `12-failed-git-policy` | `FAILED — git policy violation` |
+| `13-failed-commit` | `FAILED — commit failed` |
+| `14-failed-queue-scan` | `FAILED — queue scan error` |
+| `15-interrupted` | `INTERRUPTED`, after a signal lands mid-stage |
+| `16-checkpoint-write-failure` | `FAILED — checkpoint write` |
+| `17-permissions-warning` | a clean run opening on the boxed unrestricted warning |
+| `18-heartbeat` | the repeating `· still working` line |
+| `19-long-content` | oversized reasons, paths and tool arguments |
+| `20-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
 
 `--scenario` takes any of three forms, so you need not remember a number to ask
 for a scenario by name:
@@ -174,20 +176,24 @@ otherwise exits non-zero listing the ids.
 
 A scenario's steps are `run`, `resume` and `list` invocations, each checked
 against an expected exit code, interleaved with `action` steps holding whatever
-setup that one scenario needs. Only `06-retry`, `12-failed-queue-scan` and
-`14-checkpoint-write-failure` invoke `resume` at all; everything else is a single
+setup that one scenario needs. Only `06-retry`, `14-failed-queue-scan` and
+`16-checkpoint-write-failure` invoke `resume` at all; everything else is a single
 invocation. A scenario whose shape is not self-evident carries a `note` the demo
 prints before running, so the reason for a second invocation is on screen rather
-than in the source. A scenario may also declare `settingsDefaults`, merged over
-`afk.defaults` in the copied settings file — how `16-heartbeat` shortens its
-interval, using the same field a real user would set.
+than in the source. A scenario may also declare `pipeline` (a pipeline document
+of its own, in place of the six-stage Standard one), `profile` (an execution
+profile written under `profiles/`, which its `run` step then selects with
+`--profile`), and `settingsStages` (per-stage binding overrides merged into the
+settings document — how `18-heartbeat` shortens its interval, through the same
+field a real user would set).
 
 Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding
 an isolated config root, an isolated state root, and the disposable Git
-repository. Your real `settings.json` is copied into that config root so the
-demo exercises your own harness and model profiles; nothing under your real
-config or state root is written, and no run record or workspace lock of yours is
-touched.
+repository. The config root is built from scratch out of the same documents you
+would write — a `settings.json` binding every stage, the scenario's pipeline
+under `pipelines/`, and its profile under `profiles/` — so the demo needs no
+configuration of yours: nothing under your real config or state root is read or
+written, and no run record or workspace lock of yours is touched.
 
 The only thing the demo verifies is each invocation's exit code, reported as one
 `[PASS]` or `[FAIL]` line; a `[FAIL]` skips the remaining invocations and exits

@@ -39,6 +39,16 @@ export function git(ctx, args) {
   return result.stdout ?? "";
 }
 
+/**
+ * Commit everything currently in the worktree under one subject. A scenario
+ * that seeds thread state before the run uses this, because the executor's
+ * preflight requires a clean worktree.
+ */
+export function commitAll(ctx, subject) {
+  git(ctx, ["add", "-A"]);
+  git(ctx, ["commit", "--quiet", "-m", subject]);
+}
+
 /** Absolute path of a thread-relative path inside the fixture's active thread. */
 export function threadPath(ctx, threadRelativePath) {
   return path.join(ctx.threadRoot, threadRelativePath);

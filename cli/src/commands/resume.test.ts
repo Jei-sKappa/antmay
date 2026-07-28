@@ -1132,6 +1132,45 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     ).toBe(true);
   });
 
+  it("renders the same resolved-execution block after every source document is gone (AC-11, DR11)", async () => {
+    const h = await setup();
+    await fs.mkdir(path.join(h.configRoot, "profiles"), { recursive: true });
+    await fs.writeFile(
+      path.join(h.configRoot, "profiles", "quality.json"),
+      JSON.stringify({
+        schemaVersion: 0,
+        name: "quality",
+        stages: Object.fromEntries(
+          STANDARD_STAGE_IDS.map((stage) => [
+            stage,
+            { agent: { harness: "codex", model: "profile-model" } },
+          ]),
+        ),
+      }),
+      "utf8",
+    );
+    /** The startup block alone, which both commands print before stage 1. */
+    const startupBlock = (output: string): string =>
+      output.slice(output.indexOf("Run details"), output.indexOf("Stage 1/"));
+
+    const seeded = await seed(h, [{ outcome: BLOCKED }], { profile: "quality" });
+    const atAllocation = startupBlock(seeded.out);
+    expect(atAllocation).toContain("quality (");
+    expect(atAllocation).toContain("codex · profile-model");
+    expect(atAllocation).toContain("1. spec");
+
+    // Every document the block was resolved from is deleted; the snapshot is
+    // the only thing resume has left to render from.
+    const runId = await soleRunId(h);
+    await fs.rm(path.join(h.configRoot, "pipelines", "standard.json"));
+    await fs.rm(path.join(h.configRoot, "profiles", "quality.json"));
+    await fs.rm(path.join(h.configRoot, "settings.json"));
+
+    const resumed = await resume(h, runId, standardSteps(h.fixture));
+    expect(resumed.code).toBe(0);
+    expect(startupBlock(resumed.out)).toBe(atAllocation);
+  });
+
   it("re-prints the unrestricted-permissions warning on resume (DR56)", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }], { dangerouslySkipPermissions: true });

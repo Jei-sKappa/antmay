@@ -25,6 +25,7 @@ import {
   RECONCILE_SPEC_PENDING_DECISION_PATH,
   SCRIPTED_HARNESS_ERROR_CLASS,
   SPEC_CORRECT_CONTENT,
+  SPEC_CORRECT_DELAY_MS,
   scriptedSessionId,
 } from "./invoker.js";
 import {
@@ -160,7 +161,7 @@ async function initAttemptLog(
 }
 
 describe("createScriptedInvoker", () => {
-  it("exposes exactly the fifteen built-in scripted cases", () => {
+  it("exposes exactly the sixteen built-in scripted cases", () => {
     expect([...SCRIPTED_CASE_NAMES].sort()).toEqual(
       [
         "outcome-done",
@@ -173,6 +174,7 @@ describe("createScriptedInvoker", () => {
         "harness-idle-timeout",
         "harness-hang",
         "spec-correct",
+        "spec-correct-delayed",
         "reconcile-spec-correct",
         "reconcile-spec-pending-decision",
         "plan-strict-correct",
@@ -476,6 +478,27 @@ describe("createScriptedInvoker", () => {
 
     const outcome = await invoker.invoke(request);
     expect(outcome.kind).toBe("completed");
+    const content = await readFile(path.join(fixture.threadPath!, "spec.md"), "utf8");
+    expect(content).toBe(SPEC_CORRECT_CONTENT);
+  });
+
+  it("writes the same spec bytes for spec-correct-delayed and holds the attempt open", async () => {
+    const fixture = await newFixture();
+    const invoker = createScriptedInvoker(
+      makeScenario({ spec: ["spec-correct-delayed"] }),
+    );
+    const request = buildRequest(fixture, stageById("spec"));
+    await initAttemptLog(fixture, request);
+
+    const startedAt = Date.now();
+    const outcome = await invoker.invoke(request);
+    const elapsed = Date.now() - startedAt;
+
+    expect(outcome.kind).toBe("completed");
+    // The delay is the whole point: it is the window a caller changes the world
+    // in while the attempt is still in flight.
+    expect(elapsed).toBeGreaterThanOrEqual(SPEC_CORRECT_DELAY_MS);
+    // The spec is written before the wait, so the file exists throughout it.
     const content = await readFile(path.join(fixture.threadPath!, "spec.md"), "utf8");
     expect(content).toBe(SPEC_CORRECT_CONTENT);
   });

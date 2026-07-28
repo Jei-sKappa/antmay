@@ -638,13 +638,26 @@ export async function resumeCommand(
       if (scenarioPath !== undefined) {
         printScriptedModeStartup(displayOptions, scenarioPath);
       }
+      // Every value here comes from the checkpoint, so a resume renders the
+      // execution the run was allocated with whatever later happened to the
+      // pipeline, profile, or settings documents it was resolved from.
       printRunSummary(displayOptions, {
         runId,
         pipelineName,
+        pipelineSourcePath: checkpoint.pipelineSourcePath,
+        profileSelection: checkpoint.profileSelection,
+        ...(checkpoint.fromStage !== undefined
+          ? { fromStage: checkpoint.fromStage }
+          : {}),
         threadRelPath,
         workspacePath: checkpoint.workspace.path,
         dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,
-        stageIds: checkpoint.stages.map((stage) => stage.id),
+        stages: checkpoint.stages.map((stage) => ({
+          id: stage.id,
+          harness: stage.binding.agent.harness,
+          model: stage.binding.agent.model,
+          target: stage.resolvedTarget,
+        })),
       });
 
       sig = signalCode();

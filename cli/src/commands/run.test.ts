@@ -630,6 +630,86 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
   });
 });
 
+describe.concurrent("runCommand — resolved-execution startup display (AC-11, DR11)", () => {
+  it("shows the pipeline source, `settings only`, and every stage's binding and target", async () => {
+    const h = await setup();
+    const result = await run(h, standardSteps(h.fixture));
+    expect(result.code).toBe(0);
+
+    const startup = result.out.slice(
+      result.out.indexOf("Run details"),
+      result.out.indexOf("Stage 1/6"),
+    );
+    expect(startup).toContain(
+      `standard (${path.join(h.configRoot, "pipelines", "standard.json")})`,
+    );
+    expect(startup).toContain("settings only");
+    // Every selected stage, in execution order, with its resolved binding and
+    // the concrete repository-relative target composition settled on.
+    const thread = h.fixture.threadFolder as string;
+    expect(startup).toContain(`1. spec`);
+    expect(startup).toContain(`codex · test-model`);
+    expect(startup).toContain(`→ docs/threads/${thread}/`);
+    expect(startup).toContain(`2. reconcile-spec`);
+    expect(startup).toContain(`→ docs/threads/${thread}/spec.md`);
+    expect(startup).toContain(`6. implement-plan-with-subagents`);
+    expect(startup).toContain(`→ docs/threads/${thread}/plan.md`);
+    // The block never mentions an entry point it was not given.
+    expect(startup).not.toContain("From:");
+  });
+
+  it("shows the selected profile's declared name and source, and the entry point", async () => {
+    const h = await setup({
+      profile: {
+        schemaVersion: 0,
+        name: "maximum-quality",
+        stages: {
+          "plan-strict": {
+            agent: { harness: "claude-code", model: "profile-model" },
+          },
+        },
+      },
+      profileName: "maximum-quality",
+    });
+    await writeThreadFile(h.fixture, "spec.md", "# Spec\n");
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "docs: spec"]);
+
+    const result = await run(h, standardSteps(h.fixture).slice(3), {
+      from: "plan-strict",
+      profile: "maximum-quality",
+      probe: async (harnesses, repoRoot) => okProbe(harnesses, repoRoot),
+    });
+    expect(result.code).toBe(0);
+
+    const startup = result.out.slice(
+      result.out.indexOf("Run details"),
+      result.out.indexOf("Stage 1/3"),
+    );
+    expect(startup).toContain(
+      `maximum-quality (${path.join(h.configRoot, "profiles", "maximum-quality.json")})`,
+    );
+    expect(startup).toContain("plan-strict");
+    // The profile binds only the entry stage; the rest keep the settings agent.
+    expect(startup).toContain("claude-code · profile-model");
+    expect(startup).toContain("codex · test-model");
+  });
+
+  it("prints the whole block before the first attempt and prompts for nothing", async () => {
+    const h = await setup();
+    const result = await run(h, standardSteps(h.fixture));
+    expect(result.code).toBe(0);
+    expect(result.out.indexOf("Run details")).toBeLessThan(
+      result.out.indexOf("Stage 1/6"),
+    );
+    expect(result.out.indexOf("Stages:")).toBeLessThan(
+      result.out.indexOf("Stage 1/6"),
+    );
+    // Non-interactive: nothing reads stdin and no confirmation is solicited.
+    expect(result.out).not.toMatch(/\b(y\/n|\[Y\/n\]|press enter|confirm)\b/i);
+  });
+});
+
 describe.concurrent("runCommand — preflight failures leave no run, no checkpoint, no lock (AC-7.1)", () => {
   async function expectClean(h: Harness, result: RunResult): Promise<void> {
     expect(result.code).toBe(1);
@@ -660,6 +740,11 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     const result = await run(h, []);
     await expectClean(h, result);
     expect(result.err).toContain("schemaVersion must be 0.");
+    // A field-level problem names no file of its own, so the diagnostic has to
+    // name the resolved source the rejected document was read from.
+    expect(result.err).toContain(
+      `The pipeline document at ${path.join(h.configRoot, "pipelines", "standard.json")} was rejected:`,
+    );
   });
 
   it("rejects a named profile whose document does not exist", async () => {
@@ -667,6 +752,9 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     const result = await run(h, [], { profile: "nope" });
     await expectClean(h, result);
     expect(result.err).toContain("No execution profile document exists at");
+    expect(result.err).toContain(
+      `The execution profile at ${path.join(h.configRoot, "profiles", "nope.json")} was rejected:`,
+    );
   });
 
   it("rejects an unresolvable thread", async () => {
@@ -689,6 +777,9 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     const result = await run(h, []);
     await expectClean(h, result);
     expect(result.err).toContain("afk.defaults");
+    expect(result.err).toContain(
+      `The settings document at ${path.join(h.configRoot, "settings.json")} was rejected:`,
+    );
   });
 
   it("refuses an impossible composition before allocation", async () => {

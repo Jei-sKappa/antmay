@@ -13,18 +13,17 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import {
-  copyFileSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { settingsDocument, STANDARD_PIPELINE } from "./demo/pipeline.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLI_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -34,7 +33,6 @@ const SCENARIO_DIR = path.join(SCRIPT_DIR, "scenarios");
 // prefix, so this is also the one that sorts first.
 const DEFAULT_SCENARIO_ID = "01-all-done";
 const SCRIPTED_TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
-const DEFAULT_PIPELINE = "standard";
 const USAGE =
   "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--no-color] [--show-demo-summary]";
 
@@ -281,27 +279,6 @@ async function selectScenario(scenarios, requestedId) {
   return picked;
 }
 
-function resolveRealConfigRoot() {
-  for (const [variable, segments] of [
-    ["ANTMAY_CONFIG_HOME", []],
-    ["XDG_CONFIG_HOME", ["antmay"]],
-  ]) {
-    const value = process.env[variable];
-    if (value === undefined || value === "") {
-      continue;
-    }
-    if (!path.isAbsolute(value)) {
-      fail(`${variable} must be an absolute path, got: ${value}`);
-    }
-    return path.normalize(path.join(value, ...segments));
-  }
-  const userHome = homedir();
-  if (userHome === "") {
-    fail("Cannot resolve the config root: the home directory is empty.");
-  }
-  return path.join(userHome, ".config", "antmay");
-}
-
 function threadTimestamp() {
   return `${new Date()
     .toISOString()
@@ -359,21 +336,10 @@ function prepareFixtureRepo(repoRoot, threadSlug) {
   return { threadName, threadRoot };
 }
 
-/**
- * Merge a scenario's profile overrides into the copied settings file's
- * `afk.defaults`. The developer's own harness and model survive; only the fields
- * the scenario names are replaced.
- */
-function applySettingsDefaults(settingsPath, overrides) {
-  let document;
-  try {
-    document = JSON.parse(readFileSync(settingsPath, "utf8"));
-  } catch (error) {
-    fail(`Cannot read the demo settings at ${settingsPath}: ${error.message}`);
-  }
-  document.afk ??= {};
-  document.afk.defaults = { ...(document.afk.defaults ?? {}), ...overrides };
-  writeFileSync(settingsPath, `${JSON.stringify(document, null, 2)}\n`);
+/** Write one JSON document, creating the directory it lives in. */
+function writeDocument(absPath, document) {
+  mkdirSync(path.dirname(absPath), { recursive: true });
+  writeFileSync(absPath, `${JSON.stringify(document, null, 2)}\n`);
 }
 
 function listRunIds(stateRoot) {
@@ -447,9 +413,6 @@ async function main() {
   }
   const scenario = await selectScenario(scenarios, args.scenarioId);
 
-  const realConfigRoot = resolveRealConfigRoot();
-  const realSettings = path.join(realConfigRoot, "settings.json");
-
   console.log("\nBuilding CLI (tests are not run)...");
   const build = command("npm", ["run", "build"], { cwd: CLI_ROOT });
   if (!build.ok) {
@@ -464,26 +427,32 @@ async function main() {
   mkdirSync(stateRoot);
   mkdirSync(repoRoot);
 
-  const demoSettings = path.join(configRoot, "settings.json");
-  try {
-    copyFileSync(realSettings, demoSettings);
-  } catch (error) {
-    fail(
-      `Cannot copy ${realSettings} into the demo config root: ${error.message}\nCreate that settings file before running the demo.`,
+  // The config root is built from scratch out of the same documents a user
+  // writes: one settings file binding every stage, the pipeline the run selects,
+  // and the execution profile when the scenario selects one. Nothing under the
+  // developer's own config or state root is read or written.
+  writeDocument(
+    path.join(configRoot, "settings.json"),
+    settingsDocument(scenario.settingsStages),
+  );
+  const pipeline = scenario.pipeline ?? STANDARD_PIPELINE;
+  writeDocument(
+    path.join(configRoot, "pipelines", `${pipeline.name}.json`),
+    pipeline,
+  );
+  if (scenario.profile !== undefined) {
+    writeDocument(
+      path.join(configRoot, "profiles", `${scenario.profile.name}.json`),
+      scenario.profile,
     );
-  }
-  // A scenario that needs a different profile than the developer's own says so
-  // in `settingsDefaults`, which is merged over the copied `afk.defaults`.
-  if (scenario.settingsDefaults !== undefined) {
-    applySettingsDefaults(demoSettings, scenario.settingsDefaults);
   }
   // A scenario that drives no attempt declares no scripted document, and gets
   // no scripted-harness file: writing one would state a harness plan nothing
   // ever reads.
   if (scenario.scenario !== undefined) {
-    writeFileSync(
+    writeDocument(
       path.join(configRoot, "scripted-harness.json"),
-      `${JSON.stringify(scenario.scenario, null, 2)}\n`,
+      scenario.scenario,
     );
   }
 
@@ -516,7 +485,9 @@ async function main() {
     stateRoot,
     configRoot,
     demoRoot,
-    pipeline: scenario.pipeline ?? DEFAULT_PIPELINE,
+    // The reference an ordinary `run` step passes: the pipeline document's own
+    // declared name, resolved from the isolated config root like any other.
+    pipeline: pipeline.name,
     runId: () => soleRunId(stateRoot),
     runDir: () => path.join(stateRoot, "afk-runs", soleRunId(stateRoot)),
     // Registered by an action that made something unreadable or unwritable, so

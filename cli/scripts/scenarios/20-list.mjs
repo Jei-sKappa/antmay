@@ -20,25 +20,142 @@ import { action, list } from "../demo/steps.mjs";
  * schema change that these rows do not follow fails the scenario.
  */
 
+/** One fully resolved local binding, as preflight settles it onto a stage. */
 const CLAUDE = {
-  harness: "claude-code",
-  model: "claude-sonnet-5",
-  prompt: "Do not stop for confirmation. Assume the user is AFK.",
+  agent: { harness: "claude-code", model: "claude-sonnet-5" },
   idleTimeoutSeconds: 86_400,
   heartbeatSeconds: 300,
 };
 
-const CODEX = { ...CLAUDE, harness: "codex", model: "gpt-5.6-terra" };
+const CODEX = {
+  ...CLAUDE,
+  agent: { harness: "codex", model: "gpt-5.6-terra" },
+};
 
-/** The `standard` pipeline's stages, each with the file its boundary commits. */
+const THREAD_ROOT = { kind: "fixed", target: { kind: "thread-root" } };
+const SPEC_TARGET = {
+  kind: "fixed",
+  target: { kind: "thread-file", path: "spec.md" },
+};
+const PLAN_TARGET = {
+  kind: "fixed",
+  target: { kind: "thread-file", path: "plan.md" },
+};
+
+const SPEC_FILE = { kind: "exact-file", threadRelativePath: "spec.md" };
+const PLAN_FILE = { kind: "exact-file", threadRelativePath: "plan.md" };
+const PLAN_TASKS = { kind: "subtree", threadRelativePath: "plan-tasks" };
+const REPORT_FILE = {
+  kind: "exact-file",
+  threadRelativePath: "implementation-report.md",
+};
+
+/**
+ * The six stages the `standard` pipeline selects, copied field for field from
+ * `src/pipeline/catalog.ts` — the same descriptors a real run snapshots, minus
+ * the two fields only a run can settle (`resolvedTarget` and `binding`), which
+ * `stageFor` adds. The rows are what a reader learns a snapshotted stage looks
+ * like from, so they follow the catalog rather than a uniform placeholder.
+ */
 const STAGES = [
-  ["spec", "spec.md"],
-  ["reconcile-spec", "spec.md"],
-  ["review-spec", "review-spec.md"],
-  ["plan-strict", "plan.md"],
-  ["reconcile-plan", "plan.md"],
-  ["implement-plan-with-subagents", "implementation-report.md"],
+  {
+    id: "spec",
+    targetRule: THREAD_ROOT,
+    prerequisite: { validThread: true },
+    promises: { spec: true },
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [SPEC_FILE],
+      changeRequired: true,
+      commitSubjectTemplate: "docs(<thread-folder>): spec",
+    },
+    queueResolution: "advance",
+  },
+  {
+    id: "reconcile-spec",
+    targetRule: SPEC_TARGET,
+    prerequisite: { validThread: true, spec: true },
+    promises: { spec: true },
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [SPEC_FILE],
+      changeRequired: false,
+      commitSubjectTemplate: "docs(<thread-folder>): reconcile spec",
+    },
+    queueResolution: "rerun",
+  },
+  {
+    id: "review-spec",
+    targetRule: SPEC_TARGET,
+    prerequisite: { validThread: true, spec: true },
+    promises: { spec: true },
+    // The one read-only stage: it may leave nothing behind, so it commits
+    // nothing and declares no subject to commit it under.
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [],
+      changeRequired: false,
+      commitSubjectTemplate: null,
+    },
+    queueResolution: "rerun",
+  },
+  {
+    id: "plan-strict",
+    targetRule: SPEC_TARGET,
+    prerequisite: { validThread: true, spec: true },
+    promises: { plan: "strict" },
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [PLAN_FILE, PLAN_TASKS],
+      changeRequired: true,
+      commitSubjectTemplate: "docs(<thread-folder>): plan",
+    },
+    queueResolution: "advance",
+  },
+  {
+    id: "reconcile-plan",
+    targetRule: PLAN_TARGET,
+    prerequisite: { validThread: true, spec: true, plan: "strict" },
+    promises: { plan: "strict" },
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [PLAN_FILE, PLAN_TASKS],
+      changeRequired: false,
+      commitSubjectTemplate: "docs(<thread-folder>): reconcile plan",
+    },
+    queueResolution: "rerun",
+  },
+  {
+    id: "implement-plan-with-subagents",
+    targetRule: PLAN_TARGET,
+    prerequisite: { validThread: true, plan: "strict" },
+    promises: { implementationReport: true },
+    // The skill makes its own per-task code commits, so `HEAD` moves during
+    // the attempt and the report is the only change the boundary commits.
+    gitPolicy: {
+      headMayChange: true,
+      allowedChanges: [REPORT_FILE],
+      changeRequired: true,
+      commitSubjectTemplate: "docs(<thread-folder>): implementation report",
+    },
+    queueResolution: "rerun",
+  },
 ];
+
+/** One snapshotted stage: the catalog descriptor, the concrete target the run
+ * settled on, and the binding it resolved to. */
+function stageFor(stage, threadRelPath, binding) {
+  const { target } = stage.targetRule;
+  return {
+    ...stage,
+    skill: stage.id,
+    resolvedTarget:
+      target.kind === "thread-root"
+        ? `${threadRelPath}/`
+        : `${threadRelPath}/${target.path}`,
+    binding,
+  };
+}
 
 /**
  * The four rows, in the order the listing sorts them: `updatedAt` descending.
@@ -52,7 +169,7 @@ const ROWS = [
     condition: "waiting-for-user",
     stageIndex: 2,
     slug: "extract-the-boundary-selector-resolver",
-    profile: CLAUDE,
+    binding: CLAUDE,
   },
   {
     runId: "20260726T084500000Z-33cc44dd",
@@ -60,7 +177,7 @@ const ROWS = [
     condition: "executing",
     stageIndex: 1,
     slug: "normalize-thread-relative-paths-before-comparison",
-    profile: CODEX,
+    binding: CODEX,
   },
   {
     runId: "20260726T081000000Z-55ee66ff",
@@ -68,7 +185,7 @@ const ROWS = [
     condition: "ready",
     stageIndex: 4,
     slug: "retry-budget",
-    profile: CLAUDE,
+    binding: CLAUDE,
   },
   {
     runId: "20260725T173000000Z-77aa88bb",
@@ -76,7 +193,7 @@ const ROWS = [
     condition: "completed",
     stageIndex: STAGES.length,
     slug: "teach-the-executor-to-report-its-own-version",
-    profile: CLAUDE,
+    binding: CLAUDE,
   },
 ];
 
@@ -104,7 +221,7 @@ const WAITING = {
 function attemptsFor(condition, stageIndex) {
   const attempts = [];
   for (let i = 0; i < Math.min(stageIndex, STAGES.length); i += 1) {
-    const [id] = STAGES[i];
+    const { id } = STAGES[i];
     attempts.push({
       attempt: 1,
       stageIndex: i,
@@ -125,7 +242,7 @@ function attemptsFor(condition, stageIndex) {
     });
   }
   if (condition === "executing" || condition === "waiting-for-user") {
-    const [id] = STAGES[stageIndex];
+    const { id } = STAGES[stageIndex];
     attempts.push({
       attempt: 1,
       stageIndex,
@@ -168,21 +285,12 @@ function checkpointFor(ctx, row) {
     },
     dangerouslySkipPermissions: false,
     pipelineName: "standard",
-    stages: STAGES.map(([id, file]) => ({
-      id,
-      skill: id,
-      target: { kind: "thread-root" },
-      gitPolicy: {
-        headMayChange: false,
-        allowedChanges: [{ kind: "exact-file", threadRelativePath: file }],
-        changeRequired: true,
-        commitSubjectTemplate: `docs(<thread-folder>): ${id}`,
-      },
-      queueResolution: "advance",
-      profile: row.profile,
-      resolvedTarget: `${threadRelPath}/`,
-    })),
-    observedHarnessVersions: { [row.profile.harness]: `${row.profile.harness} 1.0.0` },
+    pipelineSourcePath: path.join(ctx.configRoot, "pipelines", "standard.json"),
+    profileSelection: { kind: "settings-only" },
+    stages: STAGES.map((stage) => stageFor(stage, threadRelPath, row.binding)),
+    observedHarnessVersions: {
+      [row.binding.agent.harness]: `${row.binding.agent.harness} 1.0.0`,
+    },
     stageIndex: row.stageIndex,
     condition: row.condition,
     attempts: attemptsFor(row.condition, row.stageIndex),

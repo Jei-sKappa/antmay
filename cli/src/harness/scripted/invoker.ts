@@ -14,8 +14,17 @@ import { isCaseCompatibleWithStage } from "./scenario.js";
 /** Error class name surfaced on scripted adapter failures. */
 export const SCRIPTED_HARNESS_ERROR_CLASS = "ScriptedHarnessError";
 
-/** Exact bytes written by `spec-correct`. */
+/** Exact bytes written by `spec-correct` and `spec-correct-delayed`. */
 export const SPEC_CORRECT_CONTENT = "# Spec: Fake\n\nPlaceholder\n";
+
+/**
+ * How long `spec-correct-delayed` keeps its attempt in flight after writing the
+ * spec. The wait performs no work of its own; it exists so the world can be
+ * changed underneath a live attempt at a moment the caller chooses, which is
+ * what makes drift between preflight and a later stage reproducible without
+ * letting a scenario supply code of its own.
+ */
+export const SPEC_CORRECT_DELAY_MS = 3_000;
 
 /** Fixed newline-terminated append for `reconcile-spec-correct`. */
 export const RECONCILE_SPEC_APPEND_LINE =
@@ -874,6 +883,29 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress: ["Writing spec.md.", writeFileToolLine("spec.md", SPEC_CORRECT_CONTENT)],
+      finalText: "Outcome: DONE — Fake spec written: spec.md",
+    };
+  },
+  "spec-correct-delayed": async ({ threadRelPath, threadAbsRoot }) => {
+    const result = await writeOwnedFile(
+      threadRelPath,
+      threadAbsRoot,
+      "spec.md",
+      SPEC_CORRECT_CONTENT,
+    );
+    if (!result.ok) {
+      return result;
+    }
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, SPEC_CORRECT_DELAY_MS);
+    });
+    return {
+      ok: true,
+      progress: [
+        "Writing spec.md.",
+        writeFileToolLine("spec.md", SPEC_CORRECT_CONTENT),
+        `Waiting ${SPEC_CORRECT_DELAY_MS / 1000}s before finishing.`,
+      ],
       finalText: "Outcome: DONE — Fake spec written: spec.md",
     };
   },

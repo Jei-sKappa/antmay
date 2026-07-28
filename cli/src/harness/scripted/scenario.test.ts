@@ -141,7 +141,7 @@ describe("resolveScriptedScenarioPath", () => {
 });
 
 describe("case catalog", () => {
-  it("exposes exactly the fifteen built-in names", () => {
+  it("exposes exactly the sixteen built-in names", () => {
     expect([...SCRIPTED_CASE_NAMES]).toEqual([
       "outcome-done",
       "outcome-blocked",
@@ -153,6 +153,7 @@ describe("case catalog", () => {
       "harness-idle-timeout",
       "harness-hang",
       "spec-correct",
+      "spec-correct-delayed",
       "reconcile-spec-correct",
       "reconcile-spec-pending-decision",
       "plan-strict-correct",
@@ -167,6 +168,8 @@ describe("case catalog", () => {
     ["outcome-refused", "implement-plan-with-subagents", true],
     ["spec-correct", "spec", true],
     ["spec-correct", "review-spec", false],
+    ["spec-correct-delayed", "spec", true],
+    ["spec-correct-delayed", "reconcile-spec", false],
     ["reconcile-spec-correct", "reconcile-spec", true],
     ["reconcile-spec-correct", "spec", false],
     ["reconcile-spec-pending-decision", "reconcile-spec", true],

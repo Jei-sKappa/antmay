@@ -13,6 +13,10 @@
 /**
  * Run `antmay afk run <pipeline> --thread <thread>` and require `expectExit`.
  *
+ * The pipeline reference is the declared name of the document the driver wrote
+ * into the isolated config root, so the run resolves it exactly as a user's
+ * would. A scenario adds `--from` or `--profile` through `flags`.
+ *
  * `flags` are appended to the command line. `during` is an optional hook fired
  * once the child has been running for `afterMs`, receiving the fixture context
  * and the live child process — the seam a scenario uses to signal the run or to

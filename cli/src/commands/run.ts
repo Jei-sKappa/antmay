@@ -128,6 +128,17 @@ export async function runCommand(
     return EXIT_FAILURE;
   };
 
+  /**
+   * Report a rejected loadable document. Field-level schema problems name no
+   * file of their own, and three different documents can produce them, so the
+   * one place that knows every resolved source is where the source is named.
+   */
+  const failDocument = (
+    label: string,
+    sourcePath: string,
+    errors: string[],
+  ): number => fail(`The ${label} at ${sourcePath} was rejected:\n${bullets(errors)}`);
+
   // Install the signal handlers before preflight so a Ctrl-C at any point drives
   // the graceful stop; uninstall them on every ordinary return path.
   const controller = (deps.createAbortController ?? (() => new AbortController()))();
@@ -166,7 +177,7 @@ export async function runCommand(
     const pipelineSourcePath = pipelineRef.reference.sourcePath;
     const pipelineLoad = loadPipelineDocument(pipelineSourcePath);
     if (!pipelineLoad.ok) {
-      return fail(pipelineLoad.errors.join("\n"));
+      return failDocument("pipeline document", pipelineSourcePath, pipelineLoad.errors);
     }
     const document = pipelineLoad.document;
 
@@ -187,7 +198,11 @@ export async function runCommand(
       }
       const profileLoad = loadExecutionProfile(profileRef.reference.sourcePath);
       if (!profileLoad.ok) {
-        return fail(profileLoad.errors.join("\n"));
+        return failDocument(
+          "execution profile",
+          profileRef.reference.sourcePath,
+          profileLoad.errors,
+        );
       }
       profileStages = profileLoad.profile.stages;
       profileSelection = {
@@ -201,7 +216,7 @@ export async function runCommand(
     // map, so a complete profile runs without one.
     const settings = loadStageSettings(roots.configRoot);
     if (!settings.ok) {
-      return fail(settings.errors.join("\n"));
+      return failDocument("settings document", settings.sourcePath, settings.errors);
     }
 
     // Preflight 5: thread resolution and validation (owning Git root, active
@@ -505,10 +520,18 @@ export async function runCommand(
     printRunSummary(displayOptions, {
       runId: checkpoint.runId,
       pipelineName: document.name,
+      pipelineSourcePath,
+      profileSelection,
+      ...(fromStage !== null ? { fromStage } : {}),
       threadRelPath: thread.threadRelPath,
       workspacePath: workspace.path,
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,
-      stageIds: stages.map((stage) => stage.id),
+      stages: stages.map((stage) => ({
+        id: stage.id,
+        harness: stage.binding.agent.harness,
+        model: stage.binding.agent.model,
+        target: stage.resolvedTarget,
+      })),
     });
 
     const display = createTerminalDisplay(displayOptions);

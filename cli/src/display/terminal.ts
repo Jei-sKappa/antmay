@@ -1,5 +1,10 @@
 import type { HarnessEvent } from "../harness/types.js";
-import type { WaitingInfo, WaitingKind, WaitingReason } from "../state/checkpoint.js";
+import type {
+  ProfileSelection,
+  WaitingInfo,
+  WaitingKind,
+  WaitingReason,
+} from "../state/checkpoint.js";
 import type { Display, StageDisposition } from "./types.js";
 
 /**
@@ -122,14 +127,19 @@ const REASON_BANNER: Record<
     color: "red",
     group: "stage",
   },
+  // The two artifact-contract banners stay out of the BLOCKED/REFUSED words,
+  // which belong to the skill's own terminal tokens: these are the executor's
+  // own verdict on the thread's artifact state. Neither says "missing", because
+  // a dimension can also hold the wrong shape — a `strict` plan promised where
+  // a `brief` one is present is unmet with nothing absent.
   "stage-prerequisite-unmet": {
-    label: "BLOCKED — stage prerequisite unmet",
-    icon: "🛑",
+    label: "FAILED — stage prerequisite unmet",
+    icon: "❌",
     color: "red",
     group: "stage",
   },
   "stage-contract-violation": {
-    label: "FAILED — promised artifact missing",
+    label: "FAILED — promised artifact state unmet",
     icon: "❌",
     color: "red",
     group: "stage",
@@ -308,20 +318,59 @@ export function printScriptedResolvedPrompt(
 }
 
 /**
- * Render the compact new-run/resume startup details to stdout — run ID,
- * pipeline, thread, workspace, permission mode, and the ordered stage IDs. When
- * permissions are unrestricted the prominent warning goes to stderr first, so
- * it leads the startup output rather than trailing it.
+ * One selected stage as the startup block draws it: what will run, on which
+ * agent, against which concrete repository-relative target.
+ */
+export type StageSummaryEntry = {
+  id: string;
+  harness: string;
+  model: string;
+  target: string;
+};
+
+/** Every `key:` label the startup block prints, so one alignment column serves
+ * the whole block. */
+const STARTUP_KEYS = [
+  "Run",
+  "Pipeline",
+  "Profile",
+  "From",
+  "Thread",
+  "Workspace",
+  "Permissions",
+] as const;
+
+const STARTUP_WIDTH = keyWidth(...STARTUP_KEYS);
+
+/** Pad `text` to `width` outside any color codes, so a column stays aligned
+ * whether or not color is on. */
+function pad(text: string, width: number): string {
+  return " ".repeat(Math.max(0, width - text.length));
+}
+
+/**
+ * Render the new-run/resume startup details to stdout: the run's identity, the
+ * pipeline and execution profile that were selected with the sources they were
+ * read from, the `--from` entry point when the invocation named one, and every
+ * selected stage in execution order with its resolved harness, model, and
+ * concrete target.
+ *
+ * The block is informational and never prompts, so an unattended run reads it
+ * and proceeds. When permissions are unrestricted the prominent warning goes to
+ * stderr first, so it leads the startup output rather than trailing it.
  */
 export function printRunSummary(
   options: DisplayOptions,
   info: {
     runId: string;
     pipelineName: string;
+    pipelineSourcePath: string;
+    profileSelection: ProfileSelection;
+    fromStage?: string;
     threadRelPath: string;
     workspacePath: string;
     dangerouslySkipPermissions: boolean;
-    stageIds: readonly string[];
+    stages: readonly StageSummaryEntry[];
   },
 ): void {
   const paint = createPainter(options);
@@ -329,33 +378,54 @@ export function printRunSummary(
   const permissionMode = info.dangerouslySkipPermissions
     ? "unrestricted (--dangerously-skip-permissions)"
     : "restricted";
-  const width = keyWidth(
-    "Run",
-    "Pipeline",
-    "Thread",
-    "Workspace",
-    "Permissions",
-    "Stages",
-  );
   const line = (key: string, value: string): string =>
-    infoLine(paint, "  ", key, value, width);
+    infoLine(paint, "  ", key, value, STARTUP_WIDTH);
 
   if (info.dangerouslySkipPermissions) {
     printUnrestrictedWarning(options);
   }
 
-  emit(
-    options.stdout,
-    [
-      paint("Run details", "bold"),
-      line("Run", info.runId),
-      line("Pipeline", info.pipelineName),
-      line("Thread", info.threadRelPath),
-      line("Workspace", info.workspacePath),
-      line("Permissions", permissionMode),
-      line("Stages", info.stageIds.join(", ")),
-    ].join("\n"),
+  // A document's declared name and the source it was read from are independent
+  // identities, so both are shown: moving a file changes one and not the other.
+  const lines = [
+    paint("Run details", "bold"),
+    line("Run", info.runId),
+    line("Pipeline", `${info.pipelineName} (${info.pipelineSourcePath})`),
+    line(
+      "Profile",
+      info.profileSelection.kind === "profile"
+        ? `${info.profileSelection.name} (${info.profileSelection.sourcePath})`
+        : "settings only",
+    ),
+  ];
+  if (info.fromStage !== undefined) {
+    lines.push(line("From", info.fromStage));
+  }
+  lines.push(
+    line("Thread", info.threadRelPath),
+    line("Workspace", info.workspacePath),
+    line("Permissions", permissionMode),
   );
+
+  // The stages are a list rather than a value, so they get the sub-block form
+  // the closing block's `Pending:` already uses, with their own columns.
+  lines.push(`  ${paint("Stages:", ...KEY_STYLE)}`);
+  const ordinalWidth = String(info.stages.length).length;
+  const idWidth = Math.max(...info.stages.map((stage) => stage.id.length));
+  const agents = info.stages.map((stage) => `${stage.harness} · ${stage.model}`);
+  const agentWidth = Math.max(...agents.map((agent) => agent.length));
+  info.stages.forEach((stage, index) => {
+    const ordinal = `${String(index + 1).padStart(ordinalWidth)}.`;
+    const agent = agents[index]!;
+    lines.push(
+      `    ${paint(ordinal, "dim")} ` +
+        `${paint(stage.id, ...VALUE_STYLE)}${pad(stage.id, idWidth)}  ` +
+        `${paint(agent, ...VALUE_STYLE)}${pad(agent, agentWidth)}  ` +
+        `${paint("→", "dim")} ${paint(stage.target, ...VALUE_STYLE)}`,
+    );
+  });
+
+  emit(options.stdout, lines.join("\n"));
 }
 
 /** The one alignment column every closing block shares. */

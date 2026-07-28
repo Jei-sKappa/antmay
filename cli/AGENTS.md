@@ -251,7 +251,7 @@ session ID `scripted-session-<stage-id>-<attempt>` once through
 idle-timeout, and abort paths), with the same ID written to the attempt log
 before case execution. The shape is deliberately non-provider-like so demo
 coverage of the pause `Continue` line (`04-waiting-for-user`) and the list
-latest-session column (`18-list`) needs no real harness and no scenario-specific
+latest-session column (`20-list`) needs no real harness and no scenario-specific
 session setup beyond the shared list seed.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
@@ -273,17 +273,25 @@ which is how a scenario signals a live run or changes the world underneath one.
 Anything a single scenario needs — a rejecting Git hook, an unreadable queue, a
 revoked permission — belongs in that scenario's own file, never in the driver.
 `scripts/demo/fixture.mjs` holds the helpers those actions share, and
-`scripts/demo/pipeline.mjs` supplies the all-correct scripted document a scenario
-overrides one stage of, so each file reads as "the standard run, except this".
+`scripts/demo/pipeline.mjs` supplies the documents the isolated config root is
+built from — the Standard pipeline document, the canonical settings document,
+the demo execution profile, and the all-correct scripted document a scenario
+overrides one stage of — so each file reads as "the standard run, except this".
 
 Besides `label`, `scenario` and `steps`, a scenario may declare `note` — printed
 before the run, for a scenario whose shape is not self-evident, so a reader
-learns why it takes two invocations without opening the file — and
-`settingsDefaults`, merged over `afk.defaults` in the copied settings file. A
-scenario that needs different executor configuration uses that field rather than
-a demo-only hook, so the demo exercises the same path a user would. `scenario`
-itself is optional: a scenario that drives no attempt declares no scripted
-document and is given no scripted-harness file.
+learns why it takes two invocations without opening the file — plus `pipeline`
+(a pipeline document of its own, written under `pipelines/` and referenced by
+its declared name), `profile` (an execution profile written under `profiles/`,
+which the scenario's own `run` step selects with `--profile`), and
+`settingsStages` (per-stage binding overrides merged into the settings
+document). A scenario that needs different executor configuration uses those
+fields rather than a demo-only hook, so the demo exercises the same path a user
+would. `scenario` itself is optional: a scenario that drives no attempt declares
+no scripted document and is given no scripted-harness file. The scripted
+document is keyed by exactly the stage IDs the run selects, which is what the
+executor validates it against, so a `--from` suffix scenario names only its
+suffix.
 
 Most scenarios reach their rendering by running the executor. A rendering that
 draws an aggregate over many runs cannot be reached that way — one invocation
@@ -309,10 +317,10 @@ whole line confirmed with Enter, so the catalog has no size limit. Each demo run
 allocates a unique `/tmp` directory holding an isolated
 config root, an isolated state root, and the disposable repository, and injects
 `ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the scripted toggle only into the
-child CLI processes. The developer's real `settings.json` is copied in so their
-harness and model profiles are exercised; that copy is the only read of real
-config, and nothing under the developer's real config or state root is written.
-Everything temporary is preserved for inspection.
+child CLI processes. That config root is built from scratch out of the same
+production-schema documents a user writes, so the demo depends on no
+configuration of the developer's: nothing under their real config or state root
+is read or written. Everything temporary is preserved for inspection.
 
 The demo verifies exactly one thing per invocation — the exit code — as a single
 `[PASS]`/`[FAIL]` line, and stops at the first `[FAIL]`. Broader behavioral
