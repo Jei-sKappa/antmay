@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { HARNESS_IDS } from "../config/execution.js";
 import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStage } from "../pipeline/catalog.js";
@@ -223,11 +224,6 @@ export type CheckpointResult =
   | { ok: true; checkpoint: RunCheckpoint }
   | { ok: false; errors: string[] };
 
-const HARNESS_IDS: ReadonlySet<string> = new Set<HarnessId>([
-  "codex",
-  "claude-code",
-]);
-
 const RUN_CONDITIONS: ReadonlySet<string> = new Set<RunCondition>([
   "ready",
   "executing",
@@ -380,7 +376,7 @@ function validateStageBinding(value: unknown, label: string, errors: string[]): 
   if (!isPlainObject(agent)) {
     errors.push(`${label}.agent must be an object.`);
   } else {
-    if (typeof agent.harness !== "string" || !HARNESS_IDS.has(agent.harness)) {
+    if (typeof agent.harness !== "string" || !HARNESS_IDS.includes(agent.harness)) {
       errors.push(`${label}.agent.harness must be a known harness id.`);
     }
     if (!isNonEmptyString(agent.model)) {
@@ -900,7 +896,7 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     errors.push(`observedHarnessVersions must be an object.`);
   } else {
     for (const [key, val] of Object.entries(doc.observedHarnessVersions)) {
-      if (!HARNESS_IDS.has(key)) {
+      if (!HARNESS_IDS.includes(key)) {
         errors.push(`observedHarnessVersions.${key} is not a known harness id.`);
       } else if (!isNonEmptyString(val)) {
         errors.push(`observedHarnessVersions.${key} must be a non-empty string.`);

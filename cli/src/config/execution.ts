@@ -11,7 +11,24 @@ import { isValidDocumentName, DOCUMENT_NAME_PATTERN } from "./references.js";
  */
 export type HarnessId = "codex" | "claude-code";
 
-const HARNESS_IDS: readonly HarnessId[] = ["codex", "claude-code"];
+/**
+ * Every harness id the executor recognizes, in the order user-facing diagnostics
+ * list them. This is the one such collection: every membership test and every
+ * diagnostic that names the supported ids reads it. It is typed as strings so an
+ * untrusted value can be tested directly, while `satisfies` keeps its entries
+ * pinned to `HarnessId`.
+ */
+export const HARNESS_IDS: readonly string[] = [
+  "codex",
+  "claude-code",
+] satisfies readonly HarnessId[];
+
+/**
+ * Whether an untrusted value names a supported harness.
+ */
+function isHarnessId(value: unknown): value is HarnessId {
+  return typeof value === "string" && HARNESS_IDS.includes(value);
+}
 
 /**
  * The external agent a stage runs on. Harness and model are one indivisible
@@ -148,13 +165,12 @@ function validateAgent(
   let harness: HarnessId | undefined;
   if (!("harness" in value)) {
     errors.push(`${basePath}.harness is required.`);
-  } else if (
-    typeof value.harness !== "string" ||
-    !HARNESS_IDS.includes(value.harness as HarnessId)
-  ) {
-    errors.push(`${basePath}.harness must be one of "codex" or "claude-code".`);
+  } else if (!isHarnessId(value.harness)) {
+    errors.push(
+      `${basePath}.harness must be one of ${HARNESS_IDS.map((id) => `"${id}"`).join(" or ")}.`,
+    );
   } else {
-    harness = value.harness as HarnessId;
+    harness = value.harness;
   }
 
   let model: string | undefined;
