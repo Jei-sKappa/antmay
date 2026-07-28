@@ -119,3 +119,53 @@ Context: the CLI's README carries a fifteen-step, human-run smoke checklist agai
 Decision: the checklist section is deleted from `cli/README.md`. A short paragraph — roughly four sentences, no checkboxes and no numbered ceremony — records in `cli/AGENTS.md` that the test suite fakes every harness and names the four things only a real harness can prove. It sits with that file's existing test-suite and scripted-harness material, and the phrase listing the checklist among the README's contents is removed in the same edit. The note claims no schedule and asserts that nobody runs it periodically.
 
 Rationale: the note belongs in the agent- and developer-facing guidance rather than the published README because it describes this codebase's verification strategy, not the CLI's contract with a user; that placement also resolves the pointer rather than leaving the guidance referring to a README section that no longer exists. Deleting the section outright was weighed and rejected: the reason for removing the checklist is that its ceremony is never performed, and that reason applies to the fifteen boxes but not to the fact that every harness in the suite is faked, which is worth a paragraph where a maintainer will meet it. A consequence carried forward is that DR11's one-line note on the settings example becomes the only surviving warning that the example models are not reachable accounts, since that warning previously lived only in the deleted checklist.
+
+## DR13: Operational-workspace probe failures are classified independently
+
+Scope: the operational-workspace refusal defined by DR1–DR4
+
+Context: this record supersedes DR2 only where it says that a workspace holding tracked content reports only the tracked-content problem. DR1 defines ignore coverage and tracked content as independent properties with different corrections. A workspace may fail either property or both, while `git check-ignore --no-index` makes the coverage result depend on ignore-pattern coverage rather than index membership.
+
+Decision: each workspace appears in every failure group whose probe it fails. An ignore-covered workspace with tracked content appears only in the tracked-content group; an unignored workspace with no tracked content appears only in the missing-coverage group; and an unignored workspace with tracked content appears in both groups.
+
+Rationale: an unignored, tracked workspace needs both corrections. Suppressing its missing-coverage result would tell the user to untrack the workspace but leave the next invocation to fail on the still-missing ignore rule. `--no-index` prevents the separate case of an ignore-covered, tracked workspace from being misclassified as missing coverage, so that case correctly produces only the tracked-content correction.
+
+## DR14: The reference-field removal is scoped to `DocumentReference`
+
+Scope: the acceptance boundary for DR8 in `cli/src/config/references.ts` and its consumers
+
+Context: DR8 removes the `form` and `raw` fields from `DocumentReference`, but both words also have unrelated legitimate uses under `cli/`, including raw JSON text, raw provider events, and prose describing reference forms. Treating those words as globally forbidden tokens would expand a type-focused cleanup into unrelated code and documentation changes.
+
+Decision: acceptance for the reference-field removal is limited to the `DocumentReference` shape and its consumers. `DocumentReference` is exactly `{ role, sourcePath }`; resolved-reference object literals contain neither a `form` nor a `raw` property; and no code or test accesses `.form` or `.raw` on a `DocumentReference`. Unrelated uses of either word remain untouched.
+
+Rationale: the narrowed boundary proves the dead fields and their consumers are gone while preserving surgical scope. A repository-wide word search cannot distinguish those fields from unrelated concepts and therefore provides neither a sound acceptance check nor useful additional assurance.
+
+## DR15: Consolidation preserves helper behavior, not every surrounding test expectation
+
+Scope: the acceptance boundary for DR9 in `cli/src/runner/`
+
+Context: DR9 requires the duplicated queue-reason helpers to be consolidated without changing their messages or gate-error-before-pending-queues precedence. The same thread separately removes `headAtStageEntry` under DR8 and changes artifact-contract rendering under DR10, so runner fixtures and expectations covering those behaviors must change even though the helper consolidation itself is behavior-preserving.
+
+Decision: the queue-reason text and classification precedence remain identical across the consolidation, and focused expectations that cover those helper outputs remain unchanged. Runner and classifier fixtures or expectations may change where DR8's checkpoint shape or DR10's intended rendering requires it. No user-visible change may be introduced solely by moving or deduplicating a helper.
+
+Rationale: this boundary preserves the evidence that consolidation is behavior-neutral without making that evidence contradict intentional changes elsewhere in the same files and test suites. Requiring every surrounding expectation to remain byte-identical would prevent the already-settled field removal and rendering correction from passing the gate.
+
+## DR16: Model schema validation remains; provider-aware validation is excluded
+
+Scope: the model-validation boundary in DR11
+
+Context: DR11 rejects validation that would require knowledge of a provider's changing model catalog or the user's account, while the existing settings and profile schemas require `model` to be a non-empty string. A blanket prohibition on model validation would also remove that ordinary document-shape check, which does not claim that a model exists or is usable.
+
+Decision: the CLI continues to validate that each configured `model` field is present and is a non-empty string. It adds no provider-aware model allowlist, catalog lookup, availability probe, authentication probe, reachability check, or model-name warning. The README note states that its example model strings are not validated against a provider.
+
+Rationale: structural validation is stable knowledge the CLI owns and prevents malformed documents. Provider existence and account availability are external, changing facts the CLI cannot determine reliably, so attempting to validate them would create a stale or misleading contract.
+
+## DR17: Checklist-reference removal applies only to living documentation
+
+Scope: the acceptance boundary for DR12 in `cli/README.md` and `cli/AGENTS.md`
+
+Context: DR12 removes the manual smoke checklist from the CLI's living documentation and replaces it with a concise verification-strategy note. Thread artifacts are historical records of how work was understood and delivered, so this thread, its predecessor, and other durable artifacts legitimately retain references explaining why the checklist was considered and removed.
+
+Decision: `cli/README.md` has no manual-smoke-checklist section, and `cli/AGENTS.md` no longer says that the README contains one. The replacement paragraph in `cli/AGENTS.md` describes the real-harness verification gap without presenting a checklist or periodic procedure. Historical thread artifacts remain untouched and may continue referring to the removed checklist.
+
+Rationale: acceptance should prove the current documentation no longer presents or points to a dead procedure, not erase the historical record of the decision. A repository-wide reference ban would violate the thread model's distinction between durable historical artifacts and living project documentation while expanding the work outside DR12's scope.

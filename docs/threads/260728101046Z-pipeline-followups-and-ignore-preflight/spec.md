@@ -37,7 +37,7 @@ operational directories — `.pending-decisions/`, `.pending-reviews/`, and
 `.implementation-runs/` — and when a repository does not ignore them, preflight
 passes while they are absent and a later stage's Git boundary then fails on
 operational files whose creation was entirely correct. `seed.md` records the
-list as the report left it; `decisions.md` records the twelve decisions this
+list as the report left it; `decisions.md` records the seventeen decisions this
 spec encodes.
 
 ## Scope
@@ -64,9 +64,12 @@ Explicitly out of scope:
 - **Narrowing the workspace check to the directories the selected stages could
   create.** All three are checked on every run unconditionally (per
   `decisions.md` DR1); no per-stage workspace mapping is introduced.
-- **Any model validation.** The CLI cannot know a provider's catalog, so no
-  allowlist, probe, or warning beyond the one-line note is added anywhere (per
-  DR11).
+- **Any provider-aware model validation.** The CLI cannot know a provider's
+  catalog or the user's account availability. Model fields retain their existing
+  document-schema validation as required non-empty strings, but no provider
+  allowlist, catalog lookup, availability, authentication, or reachability
+  probe, or warning beyond the one-line note, is added anywhere (per DR11 and
+  DR16).
 - **Closing the other three verification gaps.** No test is written for the
   unverifiable-postcondition branch, the checkpoint validator is not tightened
   beyond its stage-`id` check, and the documentation test's "user-visible
@@ -103,8 +106,9 @@ invocation per workspace, the trailing slash mandatory (per DR2). Exit code `0`
 is coverage; `1` is missing coverage for that workspace; `128` or a spawn failure
 aborts the invocation as a Git error and is never read as missing coverage.
 `--no-index` keeps the probe purely about pattern coverage, so a workspace that
-holds tracked content reports only the tracked-content problem rather than both
-problems for one root cause.
+is ignore-covered but holds tracked content passes this probe and reports only
+the tracked-content problem. An unignored workspace that holds tracked content
+fails both independent probes and appears in both failure groups (per DR13).
 
 Tracked content is probed separately with a single
 `git ls-files -z -- <p1> <p2> <p3>` over the three paths written without trailing
@@ -210,7 +214,10 @@ they will never open.
 `{ role, sourcePath }`; `gitCursor` becomes `{ stageIndex, observedHead }`. The
 type's doc comment loses the claim that `form` and `raw` exist for a diagnostic,
 because every diagnostic in that module is composed before a `DocumentReference`
-is constructed.
+is constructed. This boundary is property-specific: resolved-reference object
+literals and `DocumentReference` consumers contain neither field, while
+unrelated uses of the words `form` and `raw` under `cli/` remain untouched (per
+DR14).
 
 `headAtStageEntry` was read in exactly one place, to compute the value written
 straight back into itself, and printed nowhere; its removal deletes that
@@ -227,7 +234,10 @@ type checker drives that sweep to completion.
 ### 7. Consolidated duplications
 
 All five recorded duplications are resolved (per DR9), with no change to any
-message text or classification order:
+message text or classification order attributable to the consolidation. Focused
+queue-reason expectations remain unchanged as evidence of that preservation;
+runner and classifier expectations affected by DR8's checkpoint shape or DR10's
+rendering changes change with those requirements (per DR15):
 
 - The queue-reason functions — the reason assembly and its precedence
   (gate-error before pending-queues), `gateErrorMessage`, and
@@ -290,6 +300,10 @@ Four surfaces are corrected (per DR11):
 - The README's copyable settings block gains a one-line note at the block itself
   recording that the models are examples validated against no provider.
 
+The settings and profile loaders still require every `model` field to be a
+non-empty string. No provider-aware model allowlist, catalog lookup,
+availability, authentication, or reachability probe is introduced (per DR16).
+
 The fifteen-step manual smoke checklist is deleted from `cli/README.md`, and a
 short paragraph in `cli/AGENTS.md` — roughly four sentences, no checkboxes and no
 numbered ceremony — records that the test suite fakes every harness and names the
@@ -299,7 +313,9 @@ log, a real boundary commit following a genuine `DONE`, and native session
 capture with out-of-band continuation. It sits with that file's existing
 test-suite and scripted-harness material, claims no schedule, and asserts that
 nobody runs it periodically. The phrase listing the checklist among the README's
-contents is removed from `cli/AGENTS.md` in the same edit (per DR12).
+contents is removed from `cli/AGENTS.md` in the same edit (per DR12). Historical
+thread artifacts remain untouched and may continue to refer to the removed
+checklist (per DR17).
 
 ## Constraints
 
@@ -361,7 +377,7 @@ reader who copies the profile example alone meets no warning.
 
 ## Acceptance criteria
 
-### FR-1 — The operational-workspace check (DR1, DR2)
+### FR-1 — The operational-workspace check (DR1, DR2, DR13)
 
 - **AC-1.1** Both `run` and `resume` check all three of
   `.pending-decisions/`, `.pending-reviews/`, `.implementation-runs/` under the
@@ -467,12 +483,13 @@ reader who copies the profile example alone meets no warning.
   descriptor checking is not widened, and the "user-visible reason" assertion
   remains the same structural threshold.
 
-### FR-7 — Removed fields (DR8)
+### FR-7 — Removed fields (DR8, DR14)
 
 - **AC-7.1** `DocumentReference` is exactly `{ role, sourcePath }`; `form` and
-  `raw` appear nowhere under `cli/`, including in
-  `cli/src/config/references.test.ts`, and the type's doc comment no longer
-  claims a diagnostic reads them.
+  `raw` are absent as properties from every resolved-reference object literal,
+  and no code or test accesses `.form` or `.raw` on a `DocumentReference`. The
+  type's doc comment no longer claims a diagnostic reads them. Unrelated uses of
+  either word under `cli/` are outside this removal.
 - **AC-7.2** `gitCursor` is exactly `{ stageIndex, observedHead }` in the
   checkpoint type, its validator, and every writer and reader;
   `headAtStageEntry` appears nowhere under `cli/`.
@@ -483,13 +500,13 @@ reader who copies the profile example alone meets no warning.
   still holds over `observedHead`, and its diagnostic names that field
   accurately.
 
-### FR-8 — Consolidated duplications (DR9)
+### FR-8 — Consolidated duplications (DR9, DR15)
 
 - **AC-8.1** `cli/src/runner/classify.ts` exports the queue-reason assembly,
   `gateErrorMessage`, and `pendingQueuesMessage`; `cli/src/runner/runner.ts`
   defines none of them and imports all it uses. Gate-error-before-pending-queues
-  precedence is preserved, and every existing runner and classifier test passes
-  with its expectations unchanged.
+  precedence and queue-reason text are preserved, and the focused expectations
+  covering those helper outputs remain unchanged.
 - **AC-8.2** `describeContractSide` is defined once, in
   `cli/src/thread/artifacts.ts`, and imported by `runner.ts` and
   `cli/src/commands/resume.ts`.
@@ -505,9 +522,11 @@ reader who copies the profile example alone meets no warning.
   `cli/`.
 - **AC-8.6** `cli/AGENTS.md`'s module-layout section names that new directory and
   says what belongs in it.
-- **AC-8.7** No user-visible string changes: the messages produced by the
-  consolidated helpers are identical to those produced before, evidenced by the
-  existing tests passing without expectation edits.
+- **AC-8.7** No user-visible string changes are attributable to consolidation:
+  the messages produced by the consolidated helpers are identical, evidenced by
+  their focused message expectations remaining unchanged. Runner and classifier
+  fixtures or expectations change where FR-7's checkpoint shape or FR-9's
+  intended rendering requires it.
 
 ### FR-9 — Artifact contracts in plain language (DR10)
 
@@ -534,7 +553,7 @@ reader who copies the profile example alone meets no warning.
   `08-stage-contract-violation` run at their declared exit codes and their
   `Artifacts:` lists show the plain-language phrasing.
 
-### FR-10 — Documentation corrections (DR11)
+### FR-10 — Documentation corrections (DR11, DR16)
 
 - **AC-10.1** `docs/glossary.md`'s **stage** entry names the artifact
   prerequisite and the promised transition alongside the id, skill, target, Git
@@ -550,15 +569,18 @@ reader who copies the profile example alone meets no warning.
 - **AC-10.4** A one-line note at the settings block records that its model
   strings are examples validated against no provider. The note sits outside the
   fenced JSON, `documentation.test.ts` still loads that block through the
-  production settings loader successfully, and no model validation exists
-  anywhere in `cli/src/`.
+  production settings loader successfully, which still requires every `model`
+  field to be a non-empty string. No provider-aware model allowlist, catalog
+  lookup, availability, authentication, or reachability probe exists anywhere
+  in `cli/src/`.
 - **AC-10.5** No edited passage in `docs/` or `cli/README.md` contains a
   before/after contrast or a negation whose only referent is the removed wording.
 
-### FR-11 — The smoke checklist is replaced (DR12)
+### FR-11 — The smoke checklist is replaced (DR12, DR17)
 
-- **AC-11.1** `cli/README.md` has no `## Manual smoke checklist` section, and no
-  file in the repository refers to one.
+- **AC-11.1** `cli/README.md` has no `## Manual smoke checklist` section, and
+  `cli/AGENTS.md` does not say that the README contains one. Historical thread
+  artifacts remain unchanged and may refer to the removed checklist.
 - **AC-11.2** `cli/AGENTS.md` carries a short paragraph — prose, no checkboxes
   and no numbered steps — stating that the test suite fakes every harness and
   naming the four properties only a real harness can prove: a real session
