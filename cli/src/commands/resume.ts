@@ -24,6 +24,7 @@ import {
   SCRIPTED_HARNESS_TOGGLE_VAR,
 } from "../harness/scripted/scenario.js";
 import { nativeContinuationCommand } from "../harness/native-session.js";
+import { gateErrorMessage, pendingQueuesMessage } from "../runner/classify.js";
 import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import type {
@@ -60,14 +61,6 @@ function replaceLast(
   record: AttemptRecord,
 ): AttemptRecord[] {
   return [...attempts.slice(0, -1), record];
-}
-
-function pendingQueuesMessage(sorted: string[]): string {
-  const subject =
-    sorted.length === 1
-      ? "a pending bundle file awaits"
-      : "pending bundle files await";
-  return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
 }
 
 /**
@@ -709,7 +702,7 @@ export async function resumeCommand(
           renderPause(waiting, lastAttempt);
           return EXIT_WAITING;
         }
-        const message = `The advancement invariant could not be evaluated because the pending-queue scan failed: ${scan.message}`;
+        const message = gateErrorMessage(scan.message);
         const waiting: WaitingInfo = {
           reasons: [
             {

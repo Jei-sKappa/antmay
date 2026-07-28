@@ -35,7 +35,12 @@ import {
 } from "../thread/artifacts.js";
 import { scanPendingQueues } from "../thread/queues.js";
 import type { BoundaryDisposition } from "./classify.js";
-import { classifyAttempt } from "./classify.js";
+import {
+  classifyAttempt,
+  gateErrorMessage,
+  pendingQueuesMessage,
+  queueReasons,
+} from "./classify.js";
 import type { OutcomeParse } from "./outcome.js";
 import { parseTerminalOutcome } from "./outcome.js";
 import { SignalInterruption } from "./signals.js";
@@ -164,44 +169,6 @@ function withAgentSession(
 ): AttemptRecord {
   if (session === undefined) return record;
   return { ...record, agentSession: session };
-}
-
-function gateErrorMessage(scanError: string): string {
-  return (
-    "The advancement invariant could not be evaluated because the " +
-    `pending-queue scan failed: ${scanError}`
-  );
-}
-
-function pendingQueuesMessage(sorted: string[]): string {
-  const subject =
-    sorted.length === 1
-      ? "a pending bundle file awaits"
-      : "pending bundle files await";
-  return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
-}
-
-/**
- * Every queue-level reason that held at the post-attempt gates, in the same
- * order the classifier reports them. A contract violation governs its own pause
- * but never silences what the queues said alongside it.
- */
-function queueReasonsFor(
-  pendingFiles: string[],
-  queueScanError: string | null,
-): WaitingReason[] {
-  const reasons: WaitingReason[] = [];
-  if (queueScanError !== null) {
-    reasons.push({ kind: "gate-error", message: gateErrorMessage(queueScanError) });
-  }
-  if (pendingFiles.length > 0) {
-    reasons.push({
-      kind: "pending-queues",
-      message: pendingQueuesMessage(pendingFiles),
-      pendingFiles,
-    });
-  }
-  return reasons;
 }
 
 /**
@@ -700,7 +667,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
             // rule judges this attempt's own movement — never a commit an
             // earlier attempt or an earlier pause left behind.
             { ...violation, headAtAttemptStart: attemptStartHead },
-            ...queueReasonsFor(pendingFiles, queueScanError),
+            ...queueReasons(pendingFiles, queueScanError),
           ],
           nextAction: CONTRACT_REPAIR_NOTE,
         };

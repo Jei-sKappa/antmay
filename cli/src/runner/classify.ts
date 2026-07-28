@@ -58,7 +58,13 @@ function sortPending(pendingFiles: string[]): string[] {
   return [...pendingFiles].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-function pendingQueuesMessage(sorted: string[]): string {
+/**
+ * The reason text a pending-queue pause carries, over the paths in the order
+ * they are listed. Every caller that names pending bundle files — a pre-attempt
+ * gate, a post-attempt gate, a resume that rescanned — words it through here, so
+ * one sentence covers them all.
+ */
+export function pendingQueuesMessage(sorted: string[]): string {
   const subject =
     sorted.length === 1
       ? "a pending bundle file awaits"
@@ -66,7 +72,11 @@ function pendingQueuesMessage(sorted: string[]): string {
   return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
 }
 
-function gateErrorMessage(queueScanError: string): string {
+/**
+ * The reason text a failed pending-queue scan carries: the invariant could not be
+ * evaluated at all, and the concrete diagnostic says why.
+ */
+export function gateErrorMessage(queueScanError: string): string {
   return (
     "The advancement invariant could not be evaluated because the " +
     `pending-queue scan failed: ${queueScanError}`
@@ -107,12 +117,18 @@ function candidateLineOf(parse: OutcomeParse | null): string | undefined {
 /**
  * Every queue-level reason that holds, scan failure first: a scan that could not
  * complete and a pending list that was observed are separate problems, and a
- * caller that reports both gets both.
+ * caller that reports both gets both. The listed paths are sorted, so the pause
+ * reads the same however the scan enumerated them.
+ *
+ * This is the one assembly every queue pause goes through — the classifier's own
+ * precedence and the runner's post-attempt gates alike — so the wording and the
+ * order cannot drift apart.
  */
-function queueReasons(
-  sorted: string[],
+export function queueReasons(
+  pendingFiles: string[],
   queueScanError: string | null,
 ): WaitingReason[] {
+  const sorted = sortPending(pendingFiles);
   const reasons: WaitingReason[] = [];
   if (queueScanError !== null) {
     reasons.push({ kind: "gate-error", message: gateErrorMessage(queueScanError) });
@@ -169,8 +185,7 @@ function stageReason(
 export function classifyAttempt(input: ClassificationInput): Classification {
   const { attemptOutcome, parse, pendingFiles, queueScanError, boundary } = input;
   const isDone = parse !== null && parse.token === "DONE";
-  const sorted = sortPending(pendingFiles);
-  const queues = queueReasons(sorted, queueScanError);
+  const queues = queueReasons(pendingFiles, queueScanError);
 
   // 1. A parsed DONE with a failed boundary is governed by its boundary kind
   //    rather than downgrading to gate-error (DR57).
