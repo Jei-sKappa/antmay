@@ -525,7 +525,7 @@ whatever it exists to show is the last thing on screen. Ids carry an ordering
 prefix and are listed in reading order — a normal run, then the pauses you meet
 routinely, then the ways a stage fails, then the rare and the cosmetic. Attempt-
 backed pauses and the run listing already show native-session surfaces through
-existing scenarios (`04-waiting-for-user` for `Continue`, `20-list` for the
+existing scenarios (`04-waiting-for-user` for `Continue`, `21-list` for the
 latest-session column); neither needs a separate scenario. `--list` prints them
 all:
 
@@ -550,7 +550,8 @@ all:
 | `17-permissions-warning` | a clean run opening on the boxed unrestricted warning |
 | `18-heartbeat` | the repeating `· still working` line |
 | `19-long-content` | oversized reasons, paths and tool arguments |
-| `20-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
+| `20-temporary-workspace-refusal` | the preflight refusal for unsafe temporary workspaces, listing the unignored directories and the tracked content with a copyable correction for each |
+| `21-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
 
 `--scenario` takes any of three forms, so you need not remember a number to ask
 for a scenario by name:

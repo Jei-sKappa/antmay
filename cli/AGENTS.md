@@ -295,7 +295,7 @@ session ID `scripted-session-<stage-id>-<attempt>` once through
 idle-timeout, and abort paths), with the same ID written to the attempt log
 before case execution. The shape is deliberately non-provider-like so demo
 coverage of the pause `Continue` line (`04-waiting-for-user`) and the list
-latest-session column (`20-list`) needs no real harness and no scenario-specific
+latest-session column (`21-list`) needs no real harness and no scenario-specific
 session setup beyond the shared list seed.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
@@ -331,11 +331,14 @@ which the scenario's own `run` step selects with `--profile`), and
 `settingsStages` (per-stage binding overrides merged into the settings
 document). A scenario that needs different executor configuration uses those
 fields rather than a demo-only hook, so the demo exercises the same path a user
-would. `scenario` itself is optional: a scenario that drives no attempt declares
-no scripted document and is given no scripted-harness file. The scripted
-document is keyed by exactly the stage IDs the run selects, which is what the
-executor validates it against, so a `--from` suffix scenario names only its
-suffix.
+would. `scenario` itself is optional where no invocation interprets the scripted
+toggle: a `list`-only scenario declares no scripted document and is given no
+scripted-harness file. A scenario that invokes `run` or `resume` declares one
+even when it stops before any attempt launches, because the scripted document is
+loaded and validated in preflight, ahead of the checks such a scenario ends on.
+The scripted document is keyed by exactly the stage IDs the run selects, which is
+what the executor validates it against, so a `--from` suffix scenario names only
+its suffix.
 
 Most scenarios reach their rendering by running the executor. A rendering that
 draws an aggregate over many runs cannot be reached that way — one invocation
@@ -403,6 +406,14 @@ all yes. Then:
   a second invocation.
 - **Update the table in `README.md`** in the same change, and run the scenario to
   confirm the exit code it declares.
+
+A preflight refusal earns a scenario when it is **structured** — grouped failure
+lists, a copyable correction block, or both. The grouping, the order of the
+groups, and whether a command can be copied straight off the screen are visual
+properties nothing else verifies, and `20-temporary-workspace-refusal` is where
+they are shown. A refusal that is a single sentence earns none: it draws the same
+one-line failure every other early exit already draws, and belongs in the
+`*.test.ts` suite alone.
 
 This obligation covers renderings only. Behavior with no visible output belongs
 in the `*.test.ts` suite, which is the actual correctness gate — the demo checks
