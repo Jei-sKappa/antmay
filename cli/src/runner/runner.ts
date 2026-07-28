@@ -633,6 +633,16 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       const postInspection = await inspectArtifactState(repoRoot, threadRelPath);
       let violation: WaitingReason | null = null;
       if (!postInspection.ok) {
+        // No end-to-end path reaches this branch, and none is expected to. An
+        // inspection fails only when the thread directory cannot be read at all,
+        // preflight refuses to start a run whose thread it cannot inspect, and
+        // nothing the executor, a stage's skill, or a boundary commit does
+        // revokes that readability mid-run — so producing it takes an outside
+        // actor, and a test for it would have to fabricate a state the system
+        // does not reach. It is written anyway because pausing is the
+        // fail-closed direction: a promise that could not be evaluated is never
+        // credited as kept, so an unreadable thread stops the pipeline with the
+        // completed attempt preserved rather than advancing past it (DR6).
         violation = {
           kind: "stage-contract-violation",
           message: `The stage reported DONE but its promised artifact state could not be verified: ${postInspection.message}`,

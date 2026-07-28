@@ -533,6 +533,14 @@ function validateStage(
     return undefined;
   }
   let id: string | undefined;
+  // Naming a catalog stage is the whole of what the id has to do: the rest of
+  // the snapshotted descriptor is validated for shape alone and never compared
+  // with the catalog's current entry for that id. Deliberately so — it is what
+  // lets the generic runner be proven pipeline-agnostic with synthetic fixtures,
+  // which snapshot target rules, prerequisites, promises, and Git policies no
+  // catalog entry carries and drive the runner through contracts the catalog
+  // never offers. Comparing the descriptor would reject every such checkpoint
+  // and take that coverage with it (DR6).
   if (typeof value.id !== "string" || !isCatalogStageId(value.id)) {
     errors.push(`${label}.id must name a catalog stage.`);
   } else {

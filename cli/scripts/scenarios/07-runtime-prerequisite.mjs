@@ -43,13 +43,19 @@ export default {
     }),
     run({
       expectExit: 2,
-      // The delete must land inside `spec-correct-delayed`'s 3 s window, which
-      // opens once the spec is written — so any value above the cost of
-      // preflight works, and the low one leaves the widest margin. Landing
-      // after the window instead lets `spec` finish, and the run then ends on
-      // the postcondition banner `08-stage-contract-violation` owns: still
-      // exit 2, so the demo would still say `[PASS]` while showing the wrong
-      // rendering.
+      // The delete must land inside the window `spec-correct-delayed` holds
+      // open once it has written the spec: above the cost of preflight, and
+      // below the moment that case settles. This value clears preflight and
+      // leaves the widest margin at the far end, and
+      // `src/harness/scripted/demo-timing.test.ts` holds it under the case's
+      // delay constant under the test gate.
+      //
+      // Either miss fails the demo rather than passing it on another scenario's
+      // rendering. Landing too early puts the delete ahead of preflight, so
+      // composition finds `implement`'s prerequisite already gone and the run
+      // refuses at exit 1. Landing too late lets `spec` settle and `implement`
+      // recheck its prerequisite while the plan is still there, so both stages
+      // complete at exit 0. This step declares exit 2, which neither produces.
       afterMs: 1000,
       during: (ctx) => {
         rmSync(threadPath(ctx, "plan.md"));

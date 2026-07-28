@@ -781,7 +781,10 @@ export async function resumeCommand(
           // finalizable once the thread can be read again: running the stage on
           // "cannot verify" would move the governing kind off this pause and
           // discard that recovery for good (DR15). The reason's recorded
-          // dimensions describe the earlier inspection, not this one, so they go.
+          // dimensions describe the earlier inspection, not this one, so they
+          // go. What can make an inspection fail, and why pausing on it is the
+          // fail-closed direction, is recorded beside the runner's post-DONE
+          // verification in `runner/runner.ts`.
           const { contract: _staleContract, ...withoutContract } = governing;
           refreshed = {
             ...withoutContract,
