@@ -22,10 +22,12 @@ The documented normal path threads a specification and a strict plan between the
 
 The unbracketed steps — including `reconcile-spec` and `reconcile-plan` — are the documented normal path, kept faithful as ordinary maintenance rather than mechanically enforced. Reconciliation corrects a specification or plan where the fix follows from authoritative decisions and routes irreducible human intent into the pending-decision queue; it produces no review report. The bracketed proposal and review steps are suggestions to reach for when they earn their keep. Skipping an optional activity or adding an unlisted one never makes the thread invalid.
 
-The `standard` pipeline — the CLI's unattended automation of this recipe, run by
-`antmay afk run standard` — covers steps 4 through 9 only: it begins at a thread
-that already exists and stops before the steps that need a person. For its final
-stage it uses `implement-plan-with-subagents` in place of step 9's single-agent
+The CLI's unattended automation of this recipe is the Standard pipeline: a
+document you author or save, published ready to copy in
+[`cli/README.md`](../../cli/README.md) and run with `antmay afk run standard`
+once it is saved. It covers steps 4 through 9 only: it begins at a thread that
+already exists and stops before the steps that need a person. For its final stage
+it uses `implement-plan-with-subagents` in place of step 9's single-agent
 `implement-plan`, while preserving the same strict plan as input and the same
 implementation report as the durable outcome.
 

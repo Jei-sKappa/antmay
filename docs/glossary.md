@@ -28,18 +28,18 @@ that owns the concept — [thread-model.md](thread-model.md),
 | **recipe** | A named, ordered path through the skills, written for a human to follow: the complete advisory sequence in `docs/recipes/<name>.md`, optional steps included. Countable — the method ships three. A recipe guides and never governs. Defined in [README.md](README.md). |
 | **Quick / Standard / Roadmap** | The three shipped recipes, distinguished only by process shape — how much ceremony a change earns — never by subject matter. |
 | **step** | One numbered entry in a recipe, naming the skill to invoke. Always a suggestion. |
-| **pipeline** | A named, ordered sequence of stages the CLI executes unattended. A pipeline automates the automatable core of a recipe, and enforces what a recipe only suggests: Git boundaries, queue gates, and a required outcome per stage. `cli/src/pipeline/`. |
-| **stage** | One entry in a pipeline: an id, a skill name, a target, a Git policy, and a queue resolution. A recipe has steps; a pipeline has stages. |
+| **pipeline** | A named, ordered sequence of stages the CLI executes unattended, carried in a document the user authors or saves — `cli/README.md` publishes a ready-made Standard one. A pipeline automates the automatable core of a recipe, and enforces what a recipe only suggests: Git boundaries, queue gates, and a required outcome per stage. `cli/src/pipeline/`. |
+| **stage** | One entry in a pipeline: an id, a skill name, a target, the artifact prerequisite it needs, the artifact-state transition it promises, a Git policy, and a queue resolution. A recipe has steps; a pipeline has stages. |
 | **process shape** | How much ceremony a recipe applies. The only axis the three recipes differ on. |
 
 A pipeline is deliberately **not** a transcription of a recipe, and the two are
-never spoken of as one thing. The `standard` pipeline begins at a thread that
-already exists, omits every recipe step that needs a person (discussion,
-finishing, archival), and runs `implement-plan-with-subagents` where the
-Standard recipe's step 9 names `implement-plan`. The sharpest difference is
-authority: a recipe is a recommendation a user may ignore, while a pipeline
-refuses to advance when a stage leaves the wrong files changed or a pending
-queue is non-empty.
+never spoken of as one thing. The Standard pipeline document published in
+`cli/README.md` begins at a thread that already exists, omits every recipe step
+that needs a person (discussion, finishing, archival), and runs
+`implement-plan-with-subagents` where the Standard recipe's step 9 names
+`implement-plan`. The sharpest difference is authority: a recipe is a
+recommendation a user may ignore, while a pipeline refuses to advance when a
+stage leaves the wrong files changed or a pending queue is non-empty.
 
 ## Threads and artifacts
 

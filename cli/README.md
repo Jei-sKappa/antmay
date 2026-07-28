@@ -284,11 +284,11 @@ fixed yet; it is expected to become a stage once the underlying workflow has bee
 exercised enough to settle what a stage of it must promise.
 
 Each supported stage also declares what it must leave behind and how far its
-tracked changes may reach. `spec`, `reconcile-spec`, and `review-spec` may touch
-only `spec.md`; `plan-brief`, `plan-strict`, and `reconcile-plan` may touch
-`plan.md` and `plan-tasks/`; the three implementation stages make their own
-per-task code commits and leave `implementation-report.md` for the stage boundary
-to commit.
+tracked changes may reach. `spec` and `reconcile-spec` may touch only `spec.md`;
+`review-spec` is the one read-only stage and permits no tracked change at all;
+`plan-brief`, `plan-strict`, and `reconcile-plan` may touch `plan.md` and
+`plan-tasks/`; the three implementation stages make their own per-task code
+commits and leave `implementation-report.md` for the stage boundary to commit.
 
 ## Local execution bindings
 
@@ -327,6 +327,8 @@ while `{"afk": {"stages": {}}}` is valid. Unknown fields at the root, under
 `afk`, inside a binding, or inside `agent` are errors, and one load reports every
 problem it finds. No environment interpolation is performed and no credential is
 ever read or stored.
+
+The model strings below are examples and are not validated against any provider.
 
 ```json
 {
@@ -599,107 +601,3 @@ working-tree state, and the paths (plus a copy-pasteable environment) you need
 to keep poking at the result by hand. Pass `--no-color` to strip color from the
 CLI's output and check that the rendering still reads without it.
 The demo is developer-run and is not part of `npm run check` or CI.
-
-## Manual smoke checklist
-
-This checklist is **human-run documentation, not an automated gate and not part
-of CI.** It exercises the executor against *real* agentic harnesses, so it needs
-working local credentials for both Codex and Claude Code and the actual Antmay
-skills installed. Run it by hand in disposable, throwaway Git repositories; the
-automated `npm --prefix cli run check` suite covers everything reproducible
-without paid model calls or credentials, and this checklist proves the pieces
-that only a real harness can prove. Nothing here should ever run unattended in
-an automated pipeline.
-
-Work through the steps in order, checking each box as you confirm it:
-
-1. [ ] **Build and install.** From the `cli/` directory, run `npm run check`
-   and confirm it exits `0` (typecheck, tests, build). Then run `npm link`
-   and confirm `antmay --version` resolves the linked binary on `PATH` and
-   exits `0`. (If you prefer not to mutate global npm state, run
-   `node dist/main.js --version` instead and confirm it exits `0`; the
-   `npm link` path is still the documented install and should be verified at
-   least once.)
-2. [ ] **Create a disposable repository.** In a scratch directory, `git init` a
-   throwaway repo, make an initial commit, and add a thread under
-   `docs/threads/<YYMMDDHHMMSSZ-slug>/` containing a non-empty `seed.md`
-   and a non-empty `decisions.md`.
-3. [ ] **Commit ignore rules for the operational directories.** Add and commit a
-   `.gitignore` that ignores the three thread operational directories so they
-   never enter the boundary status set: `.pending-decisions/`,
-   `.pending-reviews/`, and `.implementation-runs/`. Confirm `git status` is
-   clean afterward.
-4. [ ] **Install the Standard pipeline.** Copy the Standard pipeline document
-   from "The Standard pipeline, ready to copy" above to
-   `<config-root>/pipelines/standard.json`, and copy the `settings.json` example
-   to `<config-root>/settings.json`, editing the models to ones your accounts can
-   actually reach. Confirm `antmay afk run standard --thread <thread>` gets past
-   preflight rather than reporting a rejected document.
-5. [ ] **Full run through both harnesses.** Start a full run of `standard`
-   against the thread and let it reach at least the second stage. With the
-   settings above, the early stages contact Codex and `review-spec` contacts
-   Claude Code; confirm each stage launches a real session on the harness its
-   binding names.
-6. [ ] **The resolved startup summary is accurate.** On that run's opening `Run
-   details` block, confirm the `Pipeline:` line shows `standard` with the exact
-   config-root source path, `Profile:` reads `settings only`, and every stage row
-   shows the harness, model, and resolved target you expect — `spec.md` for
-   `plan-strict`, `plan.md` for `reconcile-plan`.
-7. [ ] **A named profile overrides the whole binding.** Write a profile like the
-   `codex-planning` example above to `<config-root>/profiles/codex-planning.json`
-   and start a run with `--profile codex-planning`. Confirm the summary's
-   `Profile:` line names it with its source path, that the profile-bound stages
-   show the profile's agent, and that every other stage still shows its settings
-   agent. Repeat once with `--profile ./profiles/codex-planning.json` (an explicit
-   path) and confirm it resolves the same document.
-8. [ ] **Reference errors are unambiguous.** Run `antmay afk run standard.json
-   --thread <thread>` and confirm it is rejected with guidance offering both
-   `standard` and `./standard.json`, and that no run directory is created.
-9. [ ] **Suffix run.** In a repository whose thread already holds a spec, run
-   `antmay afk run standard --thread <thread> --from plan-strict`. Confirm the
-   summary shows the `From:` line and only the three remaining stages, and that
-   the run starts at `plan-strict` through a real harness.
-10. [ ] **Streaming vs. log, side by side.** While a stage runs, watch the curated
-    live terminal stream (normalized assistant text, concise tool-call lines, the
-    elapsed-time heartbeat) and open the corresponding verbose attempt log under
-    the run's `logs/` directory. Confirm the curated stream is readable and
-    truncated for display while the attempt log holds the full verbose record,
-    and that raw provider JSON never reaches the terminal.
-11. [ ] **Recognized outcome advances the stage and commits the boundary.** Let a
-    stage complete so the skill prints a recognized `Outcome: DONE` final line.
-    Confirm the executor advanced the stage and produced the declared boundary
-    commit for that stage (for the `spec` stage, a commit whose subject is
-    `docs(<thread-folder>): spec`), staging only the validated thread paths.
-12. [ ] **Break a contract deliberately, then repair it.** Start a run whose first
-    stage is `spec` and, while that attempt is still executing, delete the
-    thread's `spec.md` if the skill has already written it — or let the stage
-    finish and delete the file before the next stage begins. Confirm the run
-    pauses (exit `2`) reporting either `stage prerequisite unmet` or
-    `promised artifact state unmet`, with the expected and observed artifact state
-    listed. Restore the file yourself, confirm the worktree is otherwise clean,
-    then run the printed `antmay afk resume <run-id>` and confirm the executor
-    finalizes the saved stage (a contract pause) or restarts it (a prerequisite
-    pause) rather than reporting the same failure again.
-13. [ ] **Exercise one real pause and resume.** Mid-pipeline, drop a file into the
-    thread's `.pending-decisions/` directory so the next queue gate finds it.
-    Confirm the run pauses (exit `2`) and prints the pending file path, the pause
-    reason, the log path, the run ID, and the exact `antmay afk resume <run-id>`
-    command. Remove the pending file, then run the printed resume command and
-    confirm the run continues.
-14. [ ] **List shows the run.** Run `antmay afk list` and confirm the disposable
-    run appears with its condition, run ID, pipeline, stage position, and paths.
-    When any attempt captured a session, confirm the row's latest-session value
-    is `<harness>/<session-id>` for the most recent session-carrying attempt.
-15. [ ] **Native session capture and out-of-band continue.** Against whichever
-    real provider a stage is bound to (`codex` or `claude-code`), start a
-    disposable run and, while a stage attempt is still executing, open that
-    run's `state.json` and confirm the current attempt already carries
-    `agentSession.id`. Reach an attempt-backed pause (for example by leaving a
-    `.pending-decisions/` bundle so the queue gate pauses after `DONE`). Confirm
-    the pause prints a `Continue:` line with `codex resume '<id>'` or
-    `claude --resume '<id>'` matching that ID. Paste the command in a separate
-    terminal and confirm the **same** provider conversation opens. Deliberately
-    commit or revert any repository changes that conversation made so the
-    worktree is clean, then invoke the printed `antmay afk resume <run-id>` and
-    confirm the Antmay pipeline continues. This step is human-run only — it is
-    not an automated or credential-dependent gate.

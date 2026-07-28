@@ -25,8 +25,8 @@ Antmay method unattended. It runs a user-authored pipeline document stage by
 stage against one selected thread through an agentic harness (Codex or Claude
 Code), with durable checkpoints, workspace locking, and per-stage Git
 boundaries. See `README.md` for the user-facing contract (document schemas, the
-stage-support reference, lock recovery, the manual smoke checklist); this
-section is the map for agents editing the code.
+stage-support reference, lock recovery); this section is the map for agents
+editing the code.
 
 > **Platform support (v0):** macOS only. Linux/Windows behavior is incidental
 > and undocumented.
@@ -423,6 +423,22 @@ one-line failure every other early exit already draws, and belongs in the
 This obligation covers renderings only. Behavior with no visible output belongs
 in the `*.test.ts` suite, which is the actual correctness gate — the demo checks
 one exit code per invocation and nothing more, and is no substitute for a test.
+
+### What only a real harness proves
+
+Every harness under test is fake: the `*.test.ts` suite drives a fake invoker and
+the demo drives the scripted one, so no gate ever contacts Codex or Claude Code.
+Four properties therefore rest on construction alone, and only a human driving
+the built binary against real provider credentials in a throwaway repository can
+establish them: that a stage attempt launches a real session on the harness its
+binding names; that the curated live terminal stream agrees with the verbose
+attempt log written for the same attempt; that a genuine `DONE` produces the
+stage's declared boundary commit over the real worktree; and that native session
+capture supports out-of-band continuation, the printed `codex resume` or
+`claude --resume` command reopening the very conversation the attempt held. Nobody
+runs that by hand periodically and no schedule asks anyone to — it is a standing
+gap, worth spending a disposable repository on when a change reaches one of those
+four paths.
 
 ## Engineering Principles
 
