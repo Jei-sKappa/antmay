@@ -96,8 +96,6 @@ describe("bare name references", () => {
   it("resolves a pipeline name below the config root's pipelines directory", () => {
     expect(resolveOk("standard", "pipeline")).toEqual({
       role: "pipeline",
-      raw: "standard",
-      form: "name",
       sourcePath: path.join(CONFIG_ROOT, "pipelines", "standard.json"),
     });
   });
@@ -105,8 +103,6 @@ describe("bare name references", () => {
   it("resolves a profile name below the config root's profiles directory", () => {
     expect(resolveOk("maximum-quality", "profile")).toEqual({
       role: "profile",
-      raw: "maximum-quality",
-      form: "name",
       sourcePath: path.join(CONFIG_ROOT, "profiles", "maximum-quality.json"),
     });
   });
@@ -133,18 +129,24 @@ describe("explicit path references", () => {
     ["/etc/antmay/../antmay/p.json", "/etc/antmay/p.json"],
   ];
 
-  it.each(cases)("resolves %j against the working directory", (raw, expected) => {
-    const reference = resolveOk(raw);
-    expect(reference.form).toBe("path");
-    expect(reference.sourcePath).toBe(expected);
-    expect(reference.raw).toBe(raw);
+  it.each(cases)("resolves %j against the working directory", (reference, expected) => {
+    // The path form is evidenced by the source path itself: it lands below the
+    // working directory, never below the config root.
+    expect(resolveOk(reference)).toEqual({
+      role: "pipeline",
+      sourcePath: expected,
+    });
   });
 
   it("keeps a path a path whatever its filename, for either role", () => {
-    expect(resolveOk("./Weird Name.json", "profile").sourcePath).toBe(
-      path.join(CWD, "Weird Name.json"),
-    );
-    expect(resolveOk("./Weird Name.json", "profile").form).toBe("path");
+    expect(resolveOk("./Weird Name.json", "profile")).toEqual({
+      role: "profile",
+      sourcePath: path.join(CWD, "Weird Name.json"),
+    });
+    expect(resolveOk("./Weird Name.json", "pipeline")).toEqual({
+      role: "pipeline",
+      sourcePath: path.join(CWD, "Weird Name.json"),
+    });
   });
 });
 

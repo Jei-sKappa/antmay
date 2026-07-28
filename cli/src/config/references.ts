@@ -30,15 +30,12 @@ export function isValidDocumentName(value: string): boolean {
 /**
  * A reference resolved to one absolute source path.
  *
- * `raw` is the reference exactly as the user wrote it and `form` records which
- * strategy resolved it, so a diagnostic can explain the routing. `sourcePath`
- * is the resolved source provenance and is deliberately separate from the
- * document's declared identity, which only the loaded document itself carries.
+ * `sourcePath` is the resolved source provenance, and it is deliberately
+ * separate from the document's declared identity, which only the loaded
+ * document itself carries.
  */
 export type DocumentReference = {
   role: DocumentRole;
-  raw: string;
-  form: "name" | "path";
   sourcePath: string;
 };
 
@@ -115,8 +112,6 @@ export function resolveDocumentReference(
       ok: true,
       reference: {
         role,
-        raw: reference,
-        form: "path",
         sourcePath: path.resolve(cwd, reference),
       },
     };
@@ -127,8 +122,6 @@ export function resolveDocumentReference(
       ok: true,
       reference: {
         role,
-        raw: reference,
-        form: "name",
         sourcePath: path.join(
           configRoot,
           ROLE_DIRECTORIES[role],
