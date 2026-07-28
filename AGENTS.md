@@ -36,22 +36,45 @@ keep them consistent. This is published content: end users install it with
 stay stable. Read `suite/AGENTS.md` before touching anything under `suite/`.
 
 **`cli/` — the Antmay CLI.** A TypeScript/Node executor (`antmay`) that drives
-the method unattended, running a built-in pipeline stage by stage against one
-selected thread through an agentic harness (Codex or Claude Code), with durable
-checkpoints, workspace locking, and per-stage Git boundaries. Its command
-surface is one namespace: `antmay afk run`, `antmay afk resume`,
+the method unattended, running a user-authored pipeline document stage by stage
+against one selected thread through an agentic harness (Codex or Claude Code),
+with durable checkpoints, workspace locking, and per-stage Git boundaries. Its
+command surface is one namespace: `antmay afk run`, `antmay afk resume`,
 `antmay afk list`. Unlike the skill content, it is a real codebase with its own
 build/test gate (`npm run check`). Read `cli/AGENTS.md` before touching anything
 under `cli/`.
 
-The two are independent on disk — the CLI reads no file inside `suite/`, and no
-skill knows the CLI exists — but they are coupled by contract. The CLI's
-built-in pipeline invokes skills by name (`cli/src/pipeline/standard.ts` names
-`spec`, `reconcile-spec`, `review-spec`, `plan-strict`, `reconcile-plan`, and
-`implement-plan-with-subagents`) and classifies the terminal outcome those
-skills emit. Renaming or retiring one of them, or changing the outcome
-protocol, breaks the CLI even though no path changes. That shared contract is
-documented in `docs/`.
+The two are independent on disk — the executor reads no file inside `suite/` at
+runtime, and no skill knows the CLI exists — but they are coupled by contract.
+The CLI's trusted stage catalog (`cli/src/pipeline/catalog.ts`) invokes nine
+skills by name — `spec`, `reconcile-spec`, `review-spec`, `plan-brief`,
+`plan-strict`, `reconcile-plan`, `implement`, `implement-plan`, and
+`implement-plan-with-subagents` — points each at a thread artifact, and
+classifies the terminal outcome those skills emit. Renaming or retiring one of
+them, or changing the outcome protocol, breaks the CLI even though no path
+changes. That shared contract is documented in `docs/`.
+
+## Keep the CLI stage support reference current
+
+`cli/README.md` carries the one published table of which Antmay skills run as
+CLI stages and what artifact state each supported stage requires. It answers
+both questions for users. `cli/src/pipeline/documentation.test.ts` — the one
+place in the CLI that reads `suite/`, and it does so only under the test gate —
+holds the table's rows to the published skill list and each supported row to the
+catalog's own prerequisite; no check can tell whether a row still describes the
+skill it names, so the rest is maintained by this rule.
+
+Update that table in the same change whenever either side of the coupling moves:
+
+- a suite skill's invocation posture, accepted inputs, durable outputs, or
+  side-effect boundaries change in a way that affects whether it can be a stage
+  or what a stage of it would require;
+- the CLI's stage catalog, target resolution, artifact-state interpretation, or
+  stage prerequisites change.
+
+Wording, formatting, and internal changes that cannot move either answer need no
+edit. This rule lives here and only here, because it spans both modules; do not
+restate it in `cli/AGENTS.md` or `suite/AGENTS.md`.
 
 ## Layout
 

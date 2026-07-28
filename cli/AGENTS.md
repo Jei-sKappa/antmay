@@ -21,11 +21,12 @@ three files.
 ## Antmay CLI
 
 `antmay` is a strict, non-interactive command-line executor that drives the
-Antmay method unattended. It runs a built-in pipeline stage by stage
-against one selected thread through an agentic harness (Codex or Claude Code),
-with durable checkpoints, workspace locking, and per-stage Git boundaries. See
-`README.md` for the user-facing contract (settings, lock recovery, the manual
-smoke checklist); this section is the map for agents editing the code.
+Antmay method unattended. It runs a user-authored pipeline document stage by
+stage against one selected thread through an agentic harness (Codex or Claude
+Code), with durable checkpoints, workspace locking, and per-stage Git
+boundaries. See `README.md` for the user-facing contract (document schemas, the
+stage-support reference, lock recovery, the manual smoke checklist); this
+section is the map for agents editing the code.
 
 > **Platform support (v0):** macOS only. Linux/Windows behavior is incidental
 > and undocumented.
@@ -80,42 +81,79 @@ behavior stay stable.
 
 One top-level namespace, three subcommands:
 
-- `antmay afk run <pipeline> --thread <path> [--dangerously-skip-permissions]`
+- `antmay afk run <pipeline-ref> --thread <path> [--from <stage-id>] [--profile <profile-ref>] [--dangerously-skip-permissions]`
 - `antmay afk resume <run-id>`
 - `antmay afk list`
 
 All usage/help/version strings are pure constants in `src/cli/help.ts` and must
 never touch config, state, Git, or harnesses.
 
+The surface is exactly these three subcommands. Stage discovery is documentation
+(`README.md`), never a command, and the CLI provisions no configuration: it
+creates no config root, no `settings.json`, and no pipeline or profile document.
+
 ### Execution model
 
-- A **pipeline** (`src/pipeline/`) is an ordered array of serializable
-  `StageDescriptor`s. V0 ships one built-in pipeline, `standard`, whose six
-  stages map to suite skills (`spec`, `reconcile-spec`, `review-spec`,
-  `plan-strict`, `reconcile-plan`, `implement-plan-with-subagents`).
+- The **trusted catalog** (`src/pipeline/catalog.ts`) holds the nine stages the
+  executor can run: `spec`, `reconcile-spec`, `review-spec`, `plan-brief`,
+  `plan-strict`, `reconcile-plan`, `implement`, `implement-plan`, and
+  `implement-plan-with-subagents`. Each entry is plain JSON — no functions — so
+  a checkpoint persists it verbatim, and it owns everything safety-critical: the
+  skill name the trigger renders from, the declarative **target rule**, the
+  **artifact prerequisite** and promised **transition**, the three-part **Git
+  policy** (`headMayChange`, `allowedChanges` selectors, `changeRequired`,
+  `commitSubjectTemplate` with the literal `<thread-folder>` placeholder), and
+  the **queue resolution** (`advance` vs `rerun`).
+- A **pipeline document** is a user-authored JSON file: `schemaVersion`, a
+  declared `name`, and an ordered `stages` array whose entries carry only a
+  catalog `stage` ID and optional opaque `instructions`. An entry selects; it
+  never defines. Widening what an entry may carry is what would let author text
+  reach a contract the catalog owns, so unknown-field rejection in
+  `pipeline/documents.ts` is load bearing.
 - A pipeline automates the automatable core of a **recipe** — one of the three
   documented paths under `docs/recipes/`. The two are deliberately not 1:1: the
-  `standard` pipeline starts at an existing thread, omits every recipe step that
-  needs a human, and substitutes `implement-plan-with-subagents` for the
-  recipe's `implement-plan`. A recipe guides and never governs; a pipeline
-  enforces Git boundaries and queue gates. Never call a pipeline a recipe.
-- Each stage carries a declarative **target**, a three-part **Git policy**
-  (`headMayChange`, `allowedChanges` selectors, `changeRequired`,
-  `commitSubjectTemplate` with the literal `<thread-folder>` placeholder), and a
-  **queue resolution** (`advance` vs `rerun`). Descriptors hold no functions so
-  the checkpoint can persist them verbatim.
+  Standard pipeline the README publishes starts at an existing thread, omits
+  every recipe step that needs a human, and substitutes
+  `implement-plan-with-subagents` for the recipe's `implement-plan`. A recipe
+  guides and never governs; a pipeline enforces Git boundaries and queue gates.
+  Never call a pipeline a recipe.
+- **Composition** (`pipeline/composition.ts`) walks the selected suffix against
+  the thread's freshly inspected artifact state, checking each stage's
+  prerequisite at its position, applying its promise for the stages after it, and
+  resolving its concrete target from that simulated state. A `--from` suffix
+  credits nothing a skipped stage would have promised.
+- **Local bindings** (`config/execution.ts`) supply the agent and timings the
+  pipeline deliberately does not: one binding per selected stage, from the
+  selected execution profile when it binds that stage and from `settings.json`
+  otherwise. The whole binding comes from one document — fields never merge
+  across the two — and only the intrinsic defaults fill an omitted timing.
 - The generic **runner** (`src/runner/`) drives a stage through the harness,
   classifies the attempt, and recognizes the skill's terminal `Outcome:` line.
-  On a recognized `DONE`, the **boundary engine** (`src/gitops/`) validates that
+  It rechecks the stage's prerequisite against fresh concrete state immediately
+  before every attempt, and verifies the promised artifact state after a
+  recognized `DONE`. That verification runs **before** the Git boundary, so a
+  `DONE` implement attempt that left no `implementation-report.md` reports
+  `stage-contract-violation` and never reaches boundary evaluation.
+- Once the promise holds, the **boundary engine** (`src/gitops/`) validates that
   post-DONE changes fall within the stage's allowed selectors and produces the
-  declared boundary commit. This includes the implement stage: the skill makes
-  its own per-task code commits and leaves the thread's
+  declared boundary commit — the `git-policy-violation` path, which fires when
+  changes fall outside the selectors, `HEAD` moved where the stage forbids it, or
+  a `changeRequired` stage left nothing. This includes the implementation
+  stages: the skill makes its own per-task code commits and leaves the thread's
   `implementation-report.md` uncommitted, and the stage boundary is what commits
-  that report. Because the report is `changeRequired`, a DONE implement attempt
-  that left none pauses rather than advancing silently.
+  that report.
 - **Pauses** surface as exit code `2` (waiting): when a queue gate finds pending
   work (e.g. a file under the thread's `.pending-decisions/`), the run
   checkpoints and prints the exact `antmay afk resume <run-id>` command.
+- **Resume reads only the checkpoint.** Every resolved value a run needs — both
+  document identities and their source paths, the selected stages with their
+  catalog definitions, resolved targets, instructions, and bindings — is
+  snapshotted at allocation, so `resume` rereads no pipeline, profile, or
+  settings document. A `stage-contract-violation` pause is the one pause exempt
+  from the clean-worktree rule, because the repair it waits for arrives
+  uncommitted; its four recoveries (finalize the saved `DONE`, rerun the stage,
+  stay paused dirty, stay paused uninspectable) are decided by rechecking the
+  promise first.
 
 ### Module layout (`src/`)
 
@@ -127,18 +165,24 @@ never touch config, state, Git, or harnesses.
 - `cli/` — argument parsing (`parse.ts`), help text (`help.ts`), and the fixed
   exit codes (`exit-codes.ts`).
 - `commands/` — the three subcommand implementations (`run`, `resume`, `list`).
-- `config/` — settings loading/validation (`settings.ts`) and root path
-  resolution (`roots.ts`).
-- `pipeline/` — pipeline/stage types, the `standard` pipeline, and
-  profile/target resolution.
+- `config/` — root path resolution (`roots.ts`), syntax-directed pipeline/profile
+  reference resolution (`references.ts`), and the local binding documents:
+  settings and execution-profile loading plus per-stage binding resolution
+  (`execution.ts`).
+- `pipeline/` — the shared declarative types (`types.ts`), the trusted stage
+  catalog (`catalog.ts`), pipeline-document loading and validation
+  (`documents.ts`), suffix selection and artifact-state composition
+  (`composition.ts`), and target-rule resolution (`targets.ts`).
 - `runner/` — the generic stage runner, attempt classification, outcome
   recognition, and signal handling.
 - `gitops/` — Git wrapper, working-tree status, and the boundary engine.
 - `harness/` — the Sandcastle invoker, executable probing, and prompt assembly.
 - `state/` — durable run state: checkpoints, logs, run records, and the
   exclusive workspace lock.
-- `thread/`, `workspace/`, `display/` — thread resolution and queue gates,
-  current-checkout detection, and the curated terminal stream.
+- `thread/`, `workspace/`, `display/` — thread resolution, queue gates and
+  bounded artifact-state inspection (`artifacts.ts`, shared by composition and
+  the runtime contract checks), current-checkout detection, and the curated
+  terminal stream.
 - `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
 - `scripts/demo.mjs` + `scripts/demo/` + `scripts/scenarios/` —
   dependency-free developer demo: a generic driver, its step/fixture/pipeline
