@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { isPlainObject } from "../../shared/validation.js";
+
 /**
  * The sole environment variable that enables scripted harness mode for `run` and
  * `resume`. No other test-mode toggle exists.
@@ -88,10 +90,6 @@ export type LoadScriptedScenarioResult =
   | { ok: false; scenarioPath: string; errors: string[] };
 
 export type ReadScenarioFile = (scenarioPath: string) => Promise<string>;
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function readToggleValue(env: NodeJS.ProcessEnv): string | undefined {
   const value = env[SCRIPTED_HARNESS_TOGGLE_VAR];

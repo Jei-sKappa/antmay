@@ -4,6 +4,7 @@ import {
   DOCUMENT_NAME_PATTERN,
   isValidDocumentName,
 } from "../config/references.js";
+import { isPlainObject } from "../shared/validation.js";
 import { isCatalogStageId } from "./catalog.js";
 import type {
   CatalogStageId,
@@ -18,10 +19,6 @@ import type {
 export type PipelineDocumentResult =
   | { ok: true; document: PipelineDocument }
   | { ok: false; errors: string[] };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Validate one `stages` entry: an object with a required catalog `stage` and an

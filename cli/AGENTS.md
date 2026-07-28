@@ -183,6 +183,11 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   bounded artifact-state inspection (`artifacts.ts`, shared by composition and
   the runtime contract checks), current-checkout detection, and the curated
   terminal stream.
+- `shared/` — low-level validation primitives with no domain knowledge, used by
+  more than one module: `validation.ts` holds the plain-object guard every
+  document validator narrows parsed JSON with. Only a primitive that answers a
+  question about a raw value belongs here; anything that knows about stages,
+  threads, checkpoints, or configuration lives in the module that owns it.
 - `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
 - `scripts/demo.mjs` + `scripts/demo/` + `scripts/scenarios/` —
   dependency-free developer demo: a generic driver, its step/fixture/pipeline

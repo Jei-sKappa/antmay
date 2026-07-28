@@ -4,6 +4,7 @@ import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStage } from "../pipeline/catalog.js";
 import type { CatalogStageId, PlanState } from "../pipeline/types.js";
+import { isPlainObject } from "../shared/validation.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import type { WorkspaceConfig } from "../workspace/types.js";
 
@@ -263,10 +264,6 @@ const TERMINAL_TOKENS: ReadonlySet<string> = new Set([
 ]);
 
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isIsoUtc(value: unknown): value is string {
   return (

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStageId } from "../pipeline/types.js";
+import { isPlainObject } from "../shared/validation.js";
 import { isValidDocumentName, DOCUMENT_NAME_PATTERN } from "./references.js";
 
 /**
@@ -101,10 +102,6 @@ export type ExecutionProfileResult =
 export type StageBindingsResult =
   | { ok: true; bindings: ResolvedStageBinding[] }
   | { ok: false; errors: string[] };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Validate one optional positive-integer timing field, appending a problem when
