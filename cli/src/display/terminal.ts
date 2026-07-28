@@ -122,6 +122,18 @@ const REASON_BANNER: Record<
     color: "red",
     group: "stage",
   },
+  "stage-prerequisite-unmet": {
+    label: "BLOCKED — stage prerequisite unmet",
+    icon: "🛑",
+    color: "red",
+    group: "stage",
+  },
+  "stage-contract-violation": {
+    label: "FAILED — promised artifact missing",
+    icon: "❌",
+    color: "red",
+    group: "stage",
+  },
   interrupted: { label: "INTERRUPTED", icon: "⏹️", color: "yellow", group: "stage" },
   "pending-queues": {
     label: "WAITING FOR USER",
@@ -154,6 +166,7 @@ const CLOSING_KEYS = [
   "Reason",
   "Detail",
   "Pending",
+  "Artifacts",
   "Next",
   "Log",
   "Continue",
@@ -406,6 +419,14 @@ function reasonBlock(paint: Painter, reason: WaitingReason): string[] {
     lines.push(`  ${paint("Pending:", ...KEY_STYLE)}`);
     for (const file of reason.pendingFiles) {
       lines.push(`    - ${file}`);
+    }
+  }
+  if (reason.contract !== undefined && reason.contract.length > 0) {
+    lines.push(`  ${paint("Artifacts:", ...KEY_STYLE)}`);
+    for (const mismatch of reason.contract) {
+      lines.push(
+        `    - ${mismatch.dimension}: expected ${JSON.stringify(mismatch.expected)}, found ${JSON.stringify(mismatch.observed)}`,
+      );
     }
   }
   if (reason.kind === "malformed-outcome" && reason.candidateLine !== undefined) {

@@ -279,6 +279,11 @@ async function commitSubjects(fixture: RepoFixture): Promise<string[]> {
 function writeThreadFileSync(fixture: RepoFixture, rel: string, content: string): void {
   writeFileSync(path.join(fixture.threadPath as string, rel), content, "utf8");
 }
+function writePlanTaskSync(fixture: RepoFixture, name: string, content: string): void {
+  const dir = path.join(fixture.threadPath as string, "plan-tasks");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, name), content, "utf8");
+}
 function writeRootFileSync(fixture: RepoFixture, rel: string, content: string): void {
   writeFileSync(path.join(fixture.root, rel), content, "utf8");
 }
@@ -293,13 +298,23 @@ async function removePending(fixture: RepoFixture, name: string): Promise<void> 
   });
 }
 
-/** The six standard stage side effects; resume from stage k slices from k. */
+/**
+ * The six standard stage side effects; resume from stage k slices from k. Each
+ * step leaves the artifact state its catalog stage promises, so `plan-strict`
+ * writes an index *and* a task file: a DONE that leaves less is a contract
+ * violation rather than a finished stage.
+ */
 function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
   return [
     { before: () => writeThreadFileSync(fixture, "spec.md", "# Spec\n") },
     { before: () => writeThreadFileSync(fixture, "spec.md", "# Spec v2\n") },
     {},
-    { before: () => writeThreadFileSync(fixture, "plan.md", "# Plan\n") },
+    {
+      before: () => {
+        writeThreadFileSync(fixture, "plan.md", "# Plan\n");
+        writePlanTaskSync(fixture, "01-task.md", "# Task 01\n");
+      },
+    },
     {},
     {
       before: () =>
@@ -731,6 +746,191 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
   });
 });
 
+describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.5, AC-7.6)", () => {
+  /**
+   * Pause stage 0 on its contract: the `spec` stage reports DONE and writes
+   * nothing, so the spec it promises is missing.
+   */
+  async function seedContractViolation(h: Harness): Promise<string> {
+    const seeded = await seed(h, [{}]);
+    expect(seeded.code).toBe(2);
+    const runId = await soleRunId(h);
+    const cp = await readCp(h, runId);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.attempts[0]?.terminalResult?.token).toBe("DONE");
+    return runId;
+  }
+
+  it("pauses on a prerequisite lost while stopped, then starts the stage once it is restored", async () => {
+    const h = await setup();
+    // Stage 0 writes the spec and finishes; stage 1 pauses on its own verdict.
+    await seed(h, [
+      { before: () => writeThreadFileSync(h.fixture, "spec.md", "# Spec\n") },
+      { outcome: BLOCKED },
+    ]);
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).stageIndex).toBe(1);
+
+    // The spec is deleted and the deletion committed: the worktree is clean, so
+    // nothing but the contract check can refuse this resume.
+    const specPath = path.join(h.fixture.threadPath as string, "spec.md");
+    await fs.rm(specPath);
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "chore: drop the spec"]);
+
+    const first = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(first.code).toBe(2);
+    expect(first.invoker.calls.length).toBe(0);
+    const paused = await readCp(h, runId);
+    expect(paused.stageIndex).toBe(1);
+    expect(paused.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");
+    expect(paused.waiting?.reasons[0].contract).toEqual([
+      { dimension: "spec", expected: true, observed: false },
+    ]);
+    expect(attemptCountAt(paused, 1)).toBe(1);
+
+    // Restored and committed, the stage starts.
+    writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "chore: restore the spec"]);
+    const second = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(second.code).toBe(0);
+    expect(attemptCountAt(await readCp(h, runId), 1)).toBe(2);
+  });
+
+  it("finalizes the saved DONE without another attempt once the promised artifact is repaired", async () => {
+    const h = await setup();
+    const runId = await seedContractViolation(h);
+    // The human writes the missing spec, leaving the worktree dirty — which
+    // this pause is allowed to inspect.
+    writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+
+    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(result.err).not.toContain("not clean");
+    expect(result.code).toBe(0);
+    const folder = h.fixture.threadFolder as string;
+    expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
+    const cp = await readCp(h, runId);
+    expect(cp.condition).toBe("completed");
+    // Stage 0 was finalized from its saved DONE, never run again.
+    expect(attemptCountAt(cp, 0)).toBe(1);
+    expect(cp.attempts[0]?.result).toBe("done");
+  });
+
+  it("enforces the HEAD rule the runner never reached when finalizing a repaired promise", async () => {
+    const h = await setup();
+    // The stage-0 attempt commits on its own — movement the `spec` stage
+    // forbids — and reports DONE without the spec it promises, so the runner
+    // stops at the contract and never evaluates the boundary.
+    const seeded = await seed(h, [
+      {
+        before: async () => {
+          writeRootFileSync(h.fixture, "stray.txt", "x");
+          await h.fixture.git(["add", "-A"]);
+          await h.fixture.git(["commit", "-m", "chore: attempt commit"]);
+        },
+      },
+    ]);
+    expect(seeded.code).toBe(2);
+    const runId = await soleRunId(h);
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe(
+      "stage-contract-violation",
+    );
+
+    // The human repairs the promise. The contract now holds, so finalization is
+    // reached — and it is the first and only evaluation of a HEAD rule this
+    // attempt already broke.
+    writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(result.code).toBe(2);
+    expect(result.invoker.calls.length).toBe(0);
+    const cp = await readCp(h, runId);
+    expect(cp.stageIndex).toBe(0);
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons[0].message).toContain("forbids HEAD movement");
+  });
+
+  it("judges the HEAD rule against the second attempt's own start, not the stage entry", async () => {
+    const h = await setup();
+    // Attempt 1 of stage 0 reports DONE without the spec it promises.
+    const runId = await seedContractViolation(h);
+
+    // The human commits across the pause — HEAD moves without the promise being
+    // met — so the clean-worktree resume runs the stage again.
+    writeRootFileSync(h.fixture, "notes.txt", "partial repair\n");
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "chore: human commit across the pause"]);
+    const relaunched = await resume(h, runId, [{}]);
+    expect(relaunched.code).toBe(2);
+    const paused = await readCp(h, runId);
+    expect(attemptCountAt(paused, 0)).toBe(2);
+    expect(paused.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+
+    // Attempt 2 started after that commit and moved HEAD no further, so the
+    // `spec` stage's forbidden-HEAD-movement rule holds and the repaired
+    // promise finalizes.
+    writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+    const finalized = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(finalized.out).not.toContain("forbids HEAD movement");
+    expect(finalized.code).toBe(0);
+    const folder = h.fixture.threadFolder as string;
+    expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
+    const cp = await readCp(h, runId);
+    expect(cp.condition).toBe("completed");
+    // The saved DONE of attempt 2 was finalized, never run a third time.
+    expect(attemptCountAt(cp, 0)).toBe(2);
+  });
+
+  it("starts a fresh same-stage attempt when the promise is still unmet and the worktree is clean", async () => {
+    const h = await setup();
+    const runId = await seedContractViolation(h);
+
+    const result = await resume(h, runId, standardSteps(h.fixture));
+    expect(result.code).toBe(0);
+    const cp = await readCp(h, runId);
+    expect(cp.condition).toBe("completed");
+    expect(attemptCountAt(cp, 0)).toBe(2);
+  });
+
+  it("keeps the contract kind when the locked queue scan fails, folding the diagnostic in", async () => {
+    const h = await setup();
+    const runId = await seedContractViolation(h);
+    // A committed regular file where the queue directory is expected makes the
+    // scan fail with ENOTDIR while the worktree stays clean. Downgrading the
+    // pause to a gate-error would throw away the saved DONE's recovery path.
+    await fs.writeFile(
+      path.join(h.fixture.threadPath as string, ".pending-reviews"),
+      "not a directory",
+      "utf8",
+    );
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "chore: block queue"]);
+
+    const result = await resume(h, runId, standardSteps(h.fixture));
+    expect(result.code).toBe(2);
+    const cp = await readCp(h, runId);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
+  });
+
+  it("stays paused with repair-or-revert guidance when the promise is still unmet and the worktree is dirty", async () => {
+    const h = await setup();
+    const runId = await seedContractViolation(h);
+    writeRootFileSync(h.fixture, "stray.txt", "x");
+
+    const result = await resume(h, runId, standardSteps(h.fixture));
+    expect(result.code).toBe(2);
+    expect(result.invoker.calls.length).toBe(0);
+    const cp = await readCp(h, runId);
+    expect(cp.stageIndex).toBe(0);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].detail).toContain("dirty");
+    expect(cp.waiting?.nextAction).toContain("revert");
+    expect(attemptCountAt(cp, 0)).toBe(1);
+    expect(result.out).toContain("expected true, found false");
+  });
+});
+
 describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC-15.4)", () => {
   /** Seed a durable ready checkpoint (post-allocation, pre-launch signal). */
   async function seedReady(h: Harness): Promise<string> {
@@ -1101,7 +1301,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
   });
 
-  it("requires a valid scenario for boundary-finalization resume paths", async () => {
+  it("requires a valid scenario for no-harness finalization resume paths", async () => {
     const h = await setup();
     await writeScriptedScenario(
       h.configRoot,
@@ -1109,7 +1309,9 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     );
     await seed(h, [], { env: scriptedEnv(h) });
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe(
+      "stage-contract-violation",
+    );
     await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
 
     const result = await resume(h, runId, standardSteps(h.fixture).slice(1), {

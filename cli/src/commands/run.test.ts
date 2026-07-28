@@ -1,4 +1,4 @@
-import { mkdirSync, promises as fs, writeFileSync } from "node:fs";
+import { mkdirSync, promises as fs, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
@@ -333,13 +333,22 @@ async function soleCheckpointDir(stateRoot: string): Promise<string> {
  * Standard-pipeline script: the two authoring stages (spec, plan-strict), the
  * first reconciliation stage, and the implementation stage change their
  * boundary; review-spec and reconcile-plan change nothing.
+ *
+ * Every step leaves the artifact state its catalog stage promises, because a
+ * DONE that does not is a contract violation rather than a finished stage —
+ * which is why `plan-strict` writes an index *and* a task file.
  */
 function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
   return [
     { before: () => writeThreadFile(fixture, "spec.md", "# Spec\n") },
     { before: () => writeThreadFile(fixture, "spec.md", "# Spec v2\n") },
     {},
-    { before: () => writeThreadFile(fixture, "plan.md", "# Plan\n") },
+    {
+      before: async () => {
+        await writeThreadFile(fixture, "plan.md", "# Plan\n");
+        await writeThreadFile(fixture, "plan-tasks/01-task.md", "# Task 01\n");
+      },
+    },
     {},
     {
       before: () =>
@@ -827,6 +836,41 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
   });
 });
 
+describe.concurrent("runCommand — artifact drift after preflight (AC-7.1)", () => {
+  it("pauses the stage without a harness call when its prerequisite disappears after composition", async () => {
+    const h = await setup({
+      pipeline: pipelineDocument(["reconcile-spec"]),
+      settings: settingsFor(["reconcile-spec"]),
+    });
+    const specPath = path.join(h.fixture.threadPath as string, "spec.md");
+    await fs.writeFile(specPath, "# Spec\n", "utf8");
+    await h.fixture.git(["add", "-A"]);
+    await h.fixture.git(["commit", "-m", "docs: spec"]);
+
+    // `generateId` runs after composition simulated the thread's state and
+    // before the runner re-inspects it, which is the drift window.
+    const result = await run(h, [{}], {
+      generateId: () => {
+        rmSync(specPath);
+        return "artifactdrift-0000";
+      },
+    });
+
+    expect(result.code).toBe(2);
+    expect(result.invoker.calls.length).toBe(0);
+    const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
+    expect(cp.ok).toBe(true);
+    if (!cp.ok) return;
+    expect(cp.checkpoint.condition).toBe("waiting-for-user");
+    expect(cp.checkpoint.stageIndex).toBe(0);
+    expect(cp.checkpoint.attempts).toEqual([]);
+    expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");
+    expect(cp.checkpoint.waiting?.reasons[0].contract).toEqual([
+      { dimension: "spec", expected: true, observed: false },
+    ]);
+  });
+});
+
 describe.concurrent("runCommand — non-blocking and pause behavior (AC-7.6, AC-1.3)", () => {
   it("warns about a corrupt sibling checkpoint without blocking creation (AC-7.6)", async () => {
     const h = await setup();
@@ -1002,7 +1046,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     expect(subjects).toContain(`docs(${folder}): implementation report`);
   });
 
-  it("rejects outcome-done on a required-change stage via the ordinary Git-policy pause", async () => {
+  it("rejects a bare outcome-done that leaves the promised spec absent (AC-7.2, AC-7.3)", async () => {
     const h = await setup();
     await writeScriptedScenario(
       h.configRoot,
@@ -1014,7 +1058,13 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     const cp = await readCheckpoint(runDir);
     expect(cp.ok).toBe(true);
     if (cp.ok) {
-      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("git-policy-violation");
+      // The promised state is checked before the boundary is looked at, so the
+      // pause names the missing artifact rather than the empty diff.
+      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+      expect(cp.checkpoint.waiting?.reasons[0].contract).toEqual([
+        { dimension: "spec", expected: true, observed: false },
+      ]);
+      expect(cp.checkpoint.stageIndex).toBe(0);
     }
   });
 
@@ -1032,10 +1082,10 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     expect(cp.ok).toBe(true);
     if (cp.ok) {
       expect(cp.checkpoint.stageIndex).toBe(5);
-      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("git-policy-violation");
-      expect(cp.checkpoint.waiting?.reasons[0].message).toContain(
-        "at least one allowed change",
-      );
+      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+      expect(cp.checkpoint.waiting?.reasons[0].contract).toEqual([
+        { dimension: "implementationReport", expected: true, observed: false },
+      ]);
     }
     const folder = h.fixture.threadFolder as string;
     expect(await commitSubjects(h.fixture)).not.toContain(

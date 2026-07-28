@@ -13,6 +13,7 @@ import { resolveStageTarget } from "../pipeline/targets.js";
 import type {
   CatalogStageId,
   GitPolicy,
+  PartialArtifactState,
   QueueResolution,
   StageTarget,
 } from "../pipeline/types.js";
@@ -72,6 +73,9 @@ type SyntheticStage = {
   target: StageTarget;
   gitPolicy: GitPolicy;
   queueResolution: QueueResolution;
+  /** Both default to the empty pattern, which every artifact state satisfies. */
+  prerequisite?: PartialArtifactState;
+  promises?: PartialArtifactState;
 };
 
 const alphaStage: SyntheticStage = {
@@ -156,8 +160,8 @@ function buildCheckpoint(
       id: descriptor.id,
       skill: descriptor.skill,
       targetRule: { kind: "fixed", target: descriptor.target },
-      prerequisite: {},
-      promises: {},
+      prerequisite: descriptor.prerequisite ?? {},
+      promises: descriptor.promises ?? {},
       gitPolicy: descriptor.gitPolicy,
       queueResolution: descriptor.queueResolution,
       resolvedTarget: target.path,
@@ -628,6 +632,207 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     expect(cp.waiting?.reasons[0].kind).toBe("commit-error");
     expect(cp.attempts[0].result).toBe("waiting");
     expect(await commitCount(fixture)).toBe(before);
+  });
+});
+
+describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)", () => {
+  /** Requires a spec in the thread; it promises nothing of its own. */
+  const needsSpecStage: SyntheticStage = {
+    id: "reconcile-spec",
+    skill: "needs-spec-skill",
+    target: { kind: "thread-file", path: "spec.md" },
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [{ kind: "exact-file", threadRelativePath: "spec.md" }],
+      changeRequired: false,
+      commitSubjectTemplate: null,
+    },
+    queueResolution: "rerun",
+    prerequisite: { validThread: true, spec: true },
+  };
+
+  /** Promises a spec, so a DONE that leaves none violates its contract. */
+  const promisesSpecStage: SyntheticStage = {
+    id: "spec",
+    skill: "promises-spec-skill",
+    target: { kind: "thread-root" },
+    gitPolicy: {
+      headMayChange: false,
+      allowedChanges: [{ kind: "exact-file", threadRelativePath: "spec.md" }],
+      changeRequired: true,
+      commitSubjectTemplate: "docs(<thread-folder>): spec",
+    },
+    queueResolution: "advance",
+    promises: { spec: true },
+  };
+
+  it("pauses on the stage without an attempt, log, or harness call when the prerequisite is unmet", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const harness = createFakeHarness([{}]);
+
+    const rec = recorder();
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [needsSpecStage]), runDir, harness, rec.display),
+    );
+
+    expect(result.status).toBe("paused");
+    expect(harness.calls.length).toBe(0);
+    expect(rec.attemptStarted.length).toBe(0);
+    expect(rec.stageStopped.length).toBe(0);
+    expect(rec.runPaused[0]!.logAbsPath).toBeNull();
+    await expect(fs.access(path.join(runDir, "logs"))).rejects.toThrow();
+
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("waiting-for-user");
+    expect(cp.stageIndex).toBe(0);
+    expect(cp.attempts.length).toBe(0);
+    expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
+      "stage-prerequisite-unmet",
+    ]);
+    // The pause names what was required and what the thread actually held.
+    expect(cp.waiting?.reasons[0].contract).toEqual([
+      { dimension: "spec", expected: true, observed: false },
+    ]);
+    expect(cp.waiting?.reasons[0].message).toContain("spec = true");
+    expect(cp.waiting?.reasons[0].message).toContain("spec = false");
+    expect(cp.waiting?.nextAction).toContain("Restore");
+  });
+
+  it("launches the stage once the required artifact state is present", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    const harness = createFakeHarness([{}]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [needsSpecStage]), runDir, harness),
+    );
+
+    expect(result.status).toBe("completed");
+    expect(harness.calls.length).toBe(1);
+  });
+
+  it("re-inspects state per attempt, so a stage runnable at entry can still be refused later", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    // Stage 1 requires the spec that stage 0's attempt deletes.
+    const harness = createFakeHarness([
+      { before: () => fs.rm(path.join(fixture.threadPath as string, "spec.md")) },
+      {},
+    ]);
+
+    const result = await executeRun(
+      makeContext(
+        buildCheckpoint(fixture, [betaStage, needsSpecStage]),
+        runDir,
+        harness,
+      ),
+    );
+
+    expect(result.status).toBe("paused");
+    expect(harness.calls.length).toBe(1);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.stageIndex).toBe(1);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");
+    expect(cp.attempts.length).toBe(1);
+  });
+
+  it("pauses stage-contract-violation when a DONE leaves the promised artifact absent", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const before = await commitCount(fixture);
+    const headBefore = await readHead(fixture.root);
+    const harness = createFakeHarness([{}]);
+
+    const rec = recorder();
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [promisesSpecStage]), runDir, harness, rec.display),
+    );
+
+    expect(result.status).toBe("paused");
+    expect(rec.stageSucceeded.length).toBe(0);
+    expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["failed"]);
+
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("waiting-for-user");
+    expect(cp.stageIndex).toBe(0);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].contract).toEqual([
+      { dimension: "spec", expected: true, observed: false },
+    ]);
+    expect(cp.waiting?.nextAction).toContain("Repair");
+    // The completed attempt is preserved with its DONE, and its evidence is
+    // what a later repaired resume finalizes from.
+    expect(cp.attempts[0].result).toBe("waiting");
+    expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
+    expect(cp.gitCursor).toEqual({
+      stageIndex: 0,
+      headAtStageEntry: headBefore,
+      observedHead: headBefore,
+    });
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
+  it("checks the promised state before evaluating the Git boundary", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const before = await commitCount(fixture);
+    // The attempt leaves an out-of-bounds change and no spec: both the contract
+    // and the boundary would refuse, and the contract is what governs.
+    const harness = createFakeHarness([
+      { before: () => writeThreadFile(fixture, "stray.md", "unexpected\n") },
+    ]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [promisesSpecStage]), runDir, harness),
+    );
+
+    expect(result.status).toBe("paused");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
+      "stage-contract-violation",
+    ]);
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
+  it("reports the queue reasons that held alongside a contract violation", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    let pendingRel = "";
+    const harness = createFakeHarness([
+      { before: async () => { pendingRel = await dropPendingDecision(fixture, "d1.md"); } },
+    ]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [promisesSpecStage]), runDir, harness),
+    );
+
+    expect(result.status).toBe("paused");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
+      "stage-contract-violation",
+      "pending-queues",
+    ]);
+    expect(cp.waiting?.reasons[1].pendingFiles).toEqual([pendingRel]);
+    expect(cp.attempts[0].pendingFiles).toEqual([pendingRel]);
+  });
+
+  it("still pauses git-policy-violation when the promise holds but a required change is missing", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    // alphaStage promises nothing, so an empty boundary reaches the Git policy.
+    const harness = createFakeHarness([{}]);
+
+    const result = await executeRun(
+      makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness),
+    );
+
+    expect(result.status).toBe("paused");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons[0].message).toContain("at least one allowed change");
   });
 });
 

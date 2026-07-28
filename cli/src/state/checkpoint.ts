@@ -4,6 +4,7 @@ import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStage } from "../pipeline/catalog.js";
 import type { CatalogStageId, PlanState } from "../pipeline/types.js";
+import type { ArtifactMismatch } from "../thread/artifacts.js";
 import type { WorkspaceConfig } from "../workspace/types.js";
 
 /**
@@ -33,7 +34,9 @@ export type WaitingKind =
   | "interrupted"
   | "gate-error"
   | "git-policy-violation"
-  | "commit-error";
+  | "commit-error"
+  | "stage-prerequisite-unmet"
+  | "stage-contract-violation";
 
 /**
  * Structured harness/gate diagnostics about the reason that carries them. They
@@ -55,6 +58,17 @@ export const UNVALIDATED_CHANGES_NOTE =
   "commit them before resuming.";
 
 /**
+ * The instruction a `stage-contract-violation` pause carries. The attempt
+ * reported `DONE` without leaving the artifact state its stage promises, so the
+ * human chooses which of the two recoveries resume takes (DR15): repairing the
+ * artifact finalizes the completed attempt, and reverting its changes runs the
+ * stage again.
+ */
+export const CONTRACT_REPAIR_NOTE =
+  "Repair the promised artifact and resume to finalize the completed attempt, " +
+  "or revert the attempt's unvalidated changes and resume to run the stage again.";
+
+/**
  * One reason a run stopped. Several can hold at once — a stage that reported
  * REFUSED while a pending bundle also awaits resolution stops for both — so a
  * pause records every reason it observed rather than only the one that governs
@@ -67,6 +81,23 @@ export type WaitingReason = {
   pendingFiles?: string[];
   candidateLine?: string;
   diagnostics?: WaitingDiagnostics;
+  /**
+   * Every artifact-state dimension an artifact-contract check found unmet, with
+   * what the stage's contract required and what the thread actually held. It is
+   * recorded so the terminal diagnostic and any later reading of the checkpoint
+   * describe the failure without consulting a live pipeline document.
+   */
+  contract?: ArtifactMismatch[];
+  /**
+   * The `HEAD` the attempt this pause preserves started from. A
+   * `stage-contract-violation` stops the run before the stage's Git boundary is
+   * ever judged, so it is the later finalization that applies the stage's
+   * `HEAD` rule, and this is the only value that rule may be measured against:
+   * the stage-entry baseline spans every earlier attempt of the stage and every
+   * commit a human made across an earlier pause, while this is the movement the
+   * preserved attempt itself caused.
+   */
+  headAtAttemptStart?: string;
 };
 
 /**
@@ -222,6 +253,8 @@ const WAITING_KINDS: ReadonlySet<string> = new Set<WaitingKind>([
   "gate-error",
   "git-policy-violation",
   "commit-error",
+  "stage-prerequisite-unmet",
+  "stage-contract-violation",
 ]);
 
 const TERMINAL_TOKENS: ReadonlySet<string> = new Set([
@@ -443,6 +476,56 @@ function validateArtifactPattern(
 }
 
 /**
+ * Whether `value` is a legal value for the named artifact-state dimension: a
+ * plan state for `plan`, and a boolean for every other dimension.
+ */
+function isArtifactDimensionValue(dimension: string, value: unknown): boolean {
+  if (dimension === "plan") {
+    return typeof value === "string" && PLAN_STATES.has(value);
+  }
+  return typeof value === "boolean";
+}
+
+/**
+ * Validate a recorded contract failure: a non-empty list of unmet dimensions,
+ * each naming one artifact-state dimension and carrying an expected and an
+ * observed value of that dimension's own type.
+ */
+function validateContractMismatches(
+  value: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`${label} must be a non-empty array.`);
+    return;
+  }
+  value.forEach((entry, index) => {
+    const entryLabel = `${label}[${index}]`;
+    if (!isPlainObject(entry)) {
+      errors.push(`${entryLabel} must be an object.`);
+      return;
+    }
+    const dimension = entry.dimension;
+    if (
+      typeof dimension !== "string" ||
+      (dimension !== "plan" &&
+        !(BOOLEAN_ARTIFACT_DIMENSIONS as readonly string[]).includes(dimension))
+    ) {
+      errors.push(`${entryLabel}.dimension is not an artifact-state dimension.`);
+      return;
+    }
+    for (const side of ["expected", "observed"] as const) {
+      if (!isArtifactDimensionValue(dimension, entry[side])) {
+        errors.push(
+          `${entryLabel}.${side} must be a valid value for the "${dimension}" dimension.`,
+        );
+      }
+    }
+  });
+}
+
+/**
  * Validate one snapshotted stage: its catalog descriptor and artifact contract,
  * the concrete resolved target, the optional portable instructions, and the
  * resolved local binding. Returns the stage id and bound harness when
@@ -633,6 +716,25 @@ function validateWaitingReasons(value: unknown, errors: string[]): void {
     }
     if (entry.candidateLine !== undefined && typeof entry.candidateLine !== "string") {
       errors.push(`${label}.candidateLine must be a string.`);
+    }
+    if (entry.contract !== undefined) {
+      validateContractMismatches(entry.contract, `${label}.contract`, errors);
+    }
+    if (
+      entry.headAtAttemptStart !== undefined &&
+      !isNonEmptyString(entry.headAtAttemptStart)
+    ) {
+      errors.push(`${label}.headAtAttemptStart must be a commit string.`);
+    } else if (
+      entry.kind === "stage-contract-violation" &&
+      entry.headAtAttemptStart === undefined
+    ) {
+      // The finalization this pause exists to enable judges the stage's HEAD
+      // rule against the attempt's own start, so a contract pause that does not
+      // carry one is not recoverable.
+      errors.push(
+        `${label}.headAtAttemptStart is required on a stage-contract-violation reason.`,
+      );
     }
     if (entry.diagnostics !== undefined) {
       const d = entry.diagnostics;

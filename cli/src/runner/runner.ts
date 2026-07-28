@@ -17,12 +17,22 @@ import type {
   TerminalResult,
   WaitingDiagnostics,
   WaitingInfo,
+  WaitingReason,
   WaitingReasons,
 } from "../state/checkpoint.js";
-import { UNVALIDATED_CHANGES_NOTE } from "../state/checkpoint.js";
+import {
+  CONTRACT_REPAIR_NOTE,
+  UNVALIDATED_CHANGES_NOTE,
+} from "../state/checkpoint.js";
 import { attemptLogPaths, createAttemptLog } from "../state/logs.js";
 import type { AttemptLogHeader } from "../state/logs.js";
 import { writeCheckpoint } from "../state/persist.js";
+import type { ArtifactMismatch } from "../thread/artifacts.js";
+import {
+  evaluateArtifactPrerequisite,
+  evaluatePromisedState,
+  inspectArtifactState,
+} from "../thread/artifacts.js";
 import { scanPendingQueues } from "../thread/queues.js";
 import type { BoundaryDisposition } from "./classify.js";
 import { classifyAttempt } from "./classify.js";
@@ -32,6 +42,14 @@ import { SignalInterruption } from "./signals.js";
 
 /** Milliseconds per second, for turning the binding's interval into a timer. */
 const MS_PER_SECOND = 1000;
+
+/**
+ * The instruction a pre-attempt prerequisite pause carries: the stage was never
+ * launched, so there is nothing to revert — the missing artifact state has to
+ * come back before the stage can run.
+ */
+const RESTORE_PREREQUISITE_NOTE =
+  "Restore the artifact state the stage requires in the thread, then resume.";
 
 /**
  * The unstable and injected dependencies plus the durable inputs the runner
@@ -161,6 +179,58 @@ function pendingQueuesMessage(sorted: string[]): string {
       ? "a pending bundle file awaits"
       : "pending bundle files await";
   return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
+}
+
+/**
+ * Every queue-level reason that held at the post-attempt gates, in the same
+ * order the classifier reports them. A contract violation governs its own pause
+ * but never silences what the queues said alongside it.
+ */
+function queueReasonsFor(
+  pendingFiles: string[],
+  queueScanError: string | null,
+): WaitingReason[] {
+  const reasons: WaitingReason[] = [];
+  if (queueScanError !== null) {
+    reasons.push({ kind: "gate-error", message: gateErrorMessage(queueScanError) });
+  }
+  if (pendingFiles.length > 0) {
+    reasons.push({
+      kind: "pending-queues",
+      message: pendingQueuesMessage(pendingFiles),
+      pendingFiles,
+    });
+  }
+  return reasons;
+}
+
+/**
+ * One side of a set of unmet contract dimensions, spelled as the
+ * `dimension = value` pairs a contract diagnostic reads with.
+ */
+function describeContractSide(
+  unmet: readonly ArtifactMismatch[],
+  side: "expected" | "observed",
+): string {
+  return unmet
+    .map((mismatch) => `${mismatch.dimension} = ${JSON.stringify(mismatch[side])}`)
+    .join(", ");
+}
+
+function prerequisiteMessage(unmet: readonly ArtifactMismatch[]): string {
+  return (
+    "The stage cannot start: it requires " +
+    `${describeContractSide(unmet, "expected")}, but the thread's current ` +
+    `artifact state has ${describeContractSide(unmet, "observed")}.`
+  );
+}
+
+function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
+  return (
+    "The stage reported DONE without leaving the artifact state it promises: " +
+    `it promises ${describeContractSide(unmet, "expected")}, but the thread ` +
+    `has ${describeContractSide(unmet, "observed")}.`
+  );
 }
 
 /**
@@ -373,7 +443,48 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       return { status: "paused", waiting };
     }
 
-    // 2. Attempt setup: read attempt-start HEAD, init/preserve the stage-entry
+    // 2. Pre-attempt artifact contract. Composition proved the stage runnable
+    //    against the state it simulated at allocation time; the concrete state
+    //    can have moved since, so it is re-inspected here. An unmet
+    //    prerequisite pauses on this stage having allocated no attempt, created
+    //    no log, and invoked no harness.
+    const preInspection = await inspectArtifactState(repoRoot, threadRelPath);
+    let prerequisiteReason: WaitingReason | null = null;
+    if (!preInspection.ok) {
+      prerequisiteReason = {
+        kind: "stage-prerequisite-unmet",
+        message: `The stage's artifact prerequisite could not be evaluated: ${preInspection.message}`,
+        diagnostics: { errorMessage: preInspection.message },
+      };
+    } else {
+      const unmet = evaluateArtifactPrerequisite(
+        preInspection.state,
+        stage.prerequisite,
+      );
+      if (unmet.length > 0) {
+        prerequisiteReason = {
+          kind: "stage-prerequisite-unmet",
+          message: prerequisiteMessage(unmet),
+          contract: unmet,
+        };
+      }
+    }
+    if (prerequisiteReason !== null) {
+      const waiting: WaitingInfo = {
+        reasons: [prerequisiteReason],
+        nextAction: RESTORE_PREREQUISITE_NOTE,
+      };
+      const persisted = await persist({
+        ...checkpoint,
+        condition: "waiting-for-user",
+        waiting,
+      });
+      if (!persisted.ok) return fatal(persisted.message);
+      renderPause(waiting);
+      return { status: "paused", waiting };
+    }
+
+    // 3. Attempt setup: read attempt-start HEAD, init/preserve the stage-entry
     //    baseline, persist the executing attempt BEFORE creating its log.
     const attemptStartHead = await readHead(repoRoot);
     const cursorEntry =
@@ -433,7 +544,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       return fatal(`Failed to initialize the attempt log: ${errorMessage(error)}`);
     }
 
-    // 3. Invoke. The prompt is pure and deterministic from the snapshot.
+    // 4. Invoke. The prompt is pure and deterministic from the snapshot.
     display.attemptStarted({
       stagePosition,
       stageId: stage.id,
@@ -528,7 +639,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
 
     const agentSession = resolveAttemptSession(outcome, liveSession);
 
-    // 4. Post-attempt gates: re-scan queues, parse on completion, read the
+    // 5. Post-attempt gates: re-scan queues, parse on completion, read the
     //    post-attempt HEAD for every settled attempt, finalize a DONE boundary.
     const postScan = await scanPendingQueues(repoRoot, threadRelPath);
     const pendingFiles = postScan.ok ? postScan.pendingFiles : [];
@@ -560,6 +671,78 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         },
         agentSession,
       });
+    }
+
+    // A recognized DONE claims the stage's promised artifact state, so that
+    // claim is verified against freshly inspected concrete state before the
+    // boundary is looked at. Nothing downstream — Git evaluation, the executor
+    // commit, the stage advance, the queue resolution — runs on an unmet
+    // promise; the completed attempt is preserved instead, so a human repair can
+    // finalize it later without running the stage again (DR15).
+    if (isDone) {
+      const postInspection = await inspectArtifactState(repoRoot, threadRelPath);
+      let violation: WaitingReason | null = null;
+      if (!postInspection.ok) {
+        violation = {
+          kind: "stage-contract-violation",
+          message: `The stage reported DONE but its promised artifact state could not be verified: ${postInspection.message}`,
+          diagnostics: { errorMessage: postInspection.message },
+        };
+      } else {
+        const unmet = evaluatePromisedState(postInspection.state, stage.promises);
+        if (unmet.length > 0) {
+          violation = {
+            kind: "stage-contract-violation",
+            message: contractViolationMessage(unmet),
+            contract: unmet,
+          };
+        }
+      }
+      if (violation !== null) {
+        const endedAt = clock().toISOString();
+        const waiting: WaitingInfo = {
+          reasons: [
+            // The attempt's own start HEAD travels with the pause. This stage's
+            // boundary is never reached, so the finalization that a repair
+            // unlocks has nothing else to judge the HEAD rule against — and
+            // judging it against the stage-entry baseline would charge the
+            // attempt with every commit an earlier attempt or an earlier pause
+            // left behind.
+            { ...violation, headAtAttemptStart: attemptStartHead },
+            ...queueReasonsFor(pendingFiles, queueScanError),
+          ],
+          nextAction: CONTRACT_REPAIR_NOTE,
+        };
+        const settled: AttemptRecord = withAgentSession(
+          {
+            ...executingAttempt,
+            result: "waiting",
+            endedAt,
+            terminalResult: terminalResultFrom(parse),
+            pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
+            failure: { kind: violation.kind, message: violation.message },
+          },
+          agentSession,
+        );
+        const persisted = await persist({
+          ...checkpoint,
+          attempts: replaceLast(checkpoint.attempts, settled),
+          condition: "waiting-for-user",
+          waiting,
+          // The cursor keeps this stage's entry baseline and the attempt's own
+          // HEAD observation, which is what a later finalization compares
+          // against.
+          gitCursor: { stageIndex, headAtStageEntry: cursorEntry, observedHead },
+        });
+        if (!persisted.ok) return fatal(persisted.message);
+        display.stageStopped({
+          stagePosition,
+          durationMs: Date.parse(endedAt) - Date.parse(startedAt),
+          disposition: stageDisposition(false, parse),
+        });
+        renderPause(waiting, settled);
+        return { status: "paused", waiting };
+      }
     }
 
     let boundary: BoundaryDisposition = { evaluated: false };
@@ -606,7 +789,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       boundary,
     });
 
-    // 5. Transition. Persist the final HEAD observation on the git cursor so a
+    // 6. Transition. Persist the final HEAD observation on the git cursor so a
     //    later resume compares against the actual pause-time boundary.
     const endedAt = clock().toISOString();
     const durationMs = Date.parse(endedAt) - Date.parse(startedAt);

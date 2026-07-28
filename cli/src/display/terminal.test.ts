@@ -385,6 +385,48 @@ describe("runPaused", () => {
     expect(out.lines.some((line) => line.startsWith("Outcome:"))).toBe(false);
   });
 
+  it("announces an unmet prerequisite and lists every dimension it names", () => {
+    const { out } = paused({
+      waiting: governedBy(
+        {
+          kind: "stage-prerequisite-unmet",
+          message:
+            "The stage cannot start: it requires spec = true, plan = \"strict\".",
+          contract: [
+            { dimension: "spec", expected: true, observed: false },
+            { dimension: "plan", expected: "strict", observed: "brief" },
+          ],
+        },
+        { nextAction: "Restore the artifact state the stage requires, then resume." },
+      ),
+      logAbsPath: null,
+    });
+    expect(out.text).toContain("BLOCKED — stage prerequisite unmet 🛑");
+    expect(out.text).toContain("Artifacts:");
+    expect(out.text).toContain("- spec: expected true, found false");
+    expect(out.text).toContain('- plan: expected "strict", found "brief"');
+    expect(out.text).toContain("Next:");
+  });
+
+  it("announces a promised artifact the stage never left behind", () => {
+    const { out } = paused({
+      waiting: governedBy({
+        kind: "stage-contract-violation",
+        message: "The stage reported DONE without leaving the state it promises.",
+        contract: [
+          { dimension: "implementationReport", expected: true, observed: false },
+        ],
+      }),
+    });
+    expect(out.text).toContain("FAILED — promised artifact missing ❌");
+    expect(out.text).toContain("- implementationReport: expected true, found false");
+  });
+
+  it("lists no artifact block for a reason that carries no contract", () => {
+    const { out } = paused();
+    expect(out.text).not.toContain("Artifacts:");
+  });
+
   it("does not echo a candidate line the reason already accounts for", () => {
     const { out } = paused({
       waiting: governedBy({

@@ -625,6 +625,138 @@ describe("validateCheckpoint — attempt agentSession (AC-2.1)", () => {
   });
 });
 
+describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () => {
+  it("round-trips an unmet-prerequisite pause with its expected and observed state", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy(
+      {
+        kind: "stage-prerequisite-unmet",
+        message: "The stage cannot start: it requires spec = true.",
+        contract: [{ dimension: "spec", expected: true, observed: false }],
+      },
+      { nextAction: "Restore the artifact state the stage requires." },
+    );
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.checkpoint.waiting?.reasons[0].contract).toEqual([
+        { dimension: "spec", expected: true, observed: false },
+      ]);
+    }
+  });
+
+  it("accepts a stage-contract-violation carrying a plan-state mismatch", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "stage-contract-violation",
+      message: "The stage reported DONE without leaving its promised plan.",
+      contract: [{ dimension: "plan", expected: "strict", observed: "brief" }],
+      headAtAttemptStart: "abc123",
+    });
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.checkpoint.waiting?.reasons[0].headAtAttemptStart).toBe("abc123");
+    }
+  });
+
+  it("rejects a stage-contract-violation that records no attempt-start HEAD", () => {
+    // Without it the finalization a repair unlocks has nothing to judge the
+    // stage's HEAD rule against, so the pause is unrecoverable.
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "stage-contract-violation",
+      message: "The stage reported DONE without leaving its promised spec.",
+      contract: [{ dimension: "spec", expected: true, observed: false }],
+    });
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) =>
+          /headAtAttemptStart is required on a stage-contract-violation reason/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a non-string attempt-start HEAD on any reason", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "outcome-blocked",
+      message: "blocked",
+      headAtAttemptStart: 7 as unknown as string,
+    });
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) =>
+          /headAtAttemptStart must be a commit string/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a contract entry naming something that is not a dimension", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "stage-contract-violation",
+      message: "unmet",
+      contract: [
+        { dimension: "roadmap" as unknown as "spec", expected: true, observed: false },
+      ],
+    });
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) =>
+          /contract\[0\]\.dimension is not an artifact-state dimension/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a value of the wrong type for its dimension", () => {
+    const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "stage-contract-violation",
+      message: "unmet",
+      contract: [
+        { dimension: "plan", expected: true as unknown as "strict", observed: "brief" },
+      ],
+    });
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) =>
+          /contract\[0\]\.expected must be a valid value for the "plan" dimension/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an empty or non-array contract", () => {
+    for (const contract of [[], "spec" as unknown as []]) {
+      const doc = validCheckpoint();
+      doc.waiting = governedBy({
+        kind: "stage-prerequisite-unmet",
+        message: "unmet",
+        contract,
+      });
+      const result = validateCheckpoint(doc);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(
+          result.errors.some((e) => /contract must be a non-empty array/.test(e)),
+        ).toBe(true);
+      }
+    }
+  });
+});
+
 describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => {
   it("accepts marker-less checkpoints", () => {
     const result = validateCheckpoint(validCheckpoint());
