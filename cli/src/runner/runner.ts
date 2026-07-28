@@ -318,7 +318,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     executingAttempt: AttemptRecord;
     finalCursor: {
       stageIndex: number;
-      headAtStageEntry: string | null;
       observedHead: string | null;
     };
     pendingFiles: string[];
@@ -484,14 +483,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       return { status: "paused", waiting };
     }
 
-    // 3. Attempt setup: read attempt-start HEAD, init/preserve the stage-entry
-    //    baseline, persist the executing attempt BEFORE creating its log.
+    // 3. Attempt setup: read attempt-start HEAD, persist the executing attempt
+    //    BEFORE creating its log.
     const attemptStartHead = await readHead(repoRoot);
-    const cursorEntry =
-      checkpoint.gitCursor.stageIndex === stageIndex &&
-      checkpoint.gitCursor.headAtStageEntry !== null
-        ? checkpoint.gitCursor.headAtStageEntry
-        : attemptStartHead;
     const attemptNumber = nextAttemptNumber(checkpoint.attempts, stageIndex);
     const logPaths = attemptLogPaths(runDir, ordinal, stage.id, attemptNumber);
     const startedAt = clock().toISOString();
@@ -513,7 +507,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       attempts: [...checkpoint.attempts, executingAttempt],
       gitCursor: {
         stageIndex,
-        headAtStageEntry: cursorEntry,
         observedHead: attemptStartHead,
       },
     });
@@ -571,7 +564,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         executingAttempt,
         finalCursor: {
           stageIndex,
-          headAtStageEntry: cursorEntry,
           observedHead: attemptStartHead,
         },
         pendingFiles: [],
@@ -663,7 +655,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       return finishInterrupted({
         sig: abortSig,
         executingAttempt,
-        finalCursor: { stageIndex, headAtStageEntry: cursorEntry, observedHead },
+        finalCursor: { stageIndex, observedHead },
         pendingFiles,
         failure: {
           errorClass: outcome.errorClass,
@@ -704,10 +696,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           reasons: [
             // The attempt's own start HEAD travels with the pause. This stage's
             // boundary is never reached, so the finalization that a repair
-            // unlocks has nothing else to judge the HEAD rule against — and
-            // judging it against the stage-entry baseline would charge the
-            // attempt with every commit an earlier attempt or an earlier pause
-            // left behind.
+            // unlocks has nothing else to judge the HEAD rule against, and that
+            // rule judges this attempt's own movement — never a commit an
+            // earlier attempt or an earlier pause left behind.
             { ...violation, headAtAttemptStart: attemptStartHead },
             ...queueReasonsFor(pendingFiles, queueScanError),
           ],
@@ -729,10 +720,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           attempts: replaceLast(checkpoint.attempts, settled),
           condition: "waiting-for-user",
           waiting,
-          // The cursor keeps this stage's entry baseline and the attempt's own
-          // HEAD observation, which is what a later finalization compares
-          // against.
-          gitCursor: { stageIndex, headAtStageEntry: cursorEntry, observedHead },
+          // The cursor keeps the attempt's own HEAD observation, which is what
+          // a later finalization compares against.
+          gitCursor: { stageIndex, observedHead },
         });
         if (!persisted.ok) return fatal(persisted.message);
         display.stageStopped({
@@ -795,7 +785,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     const durationMs = Date.parse(endedAt) - Date.parse(startedAt);
     const finalCursor = {
       stageIndex,
-      headAtStageEntry: cursorEntry,
       observedHead,
     };
     const terminalResult = terminalResultFrom(parse);
@@ -818,7 +807,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         stageIndex: nextIndex,
         condition: completed ? "completed" : "ready",
         waiting: null,
-        gitCursor: { stageIndex: nextIndex, headAtStageEntry: null, observedHead: null },
+        gitCursor: { stageIndex: nextIndex, observedHead: null },
       });
       if (!persisted.ok) return fatal(persisted.message);
       display.stageSucceeded({ stagePosition, durationMs });

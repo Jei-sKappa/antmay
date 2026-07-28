@@ -469,7 +469,6 @@ export async function resumeCommand(
         waiting: null,
         gitCursor: {
           stageIndex: nextIndex,
-          headAtStageEntry: null,
           observedHead: null,
         },
       });
@@ -603,7 +602,6 @@ export async function resumeCommand(
           waiting: null,
           gitCursor: {
             stageIndex,
-            headAtStageEntry: checkpoint.gitCursor.headAtStageEntry,
             observedHead: newHead,
           },
         });

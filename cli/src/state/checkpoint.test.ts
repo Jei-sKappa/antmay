@@ -92,7 +92,7 @@ function validCheckpoint(): RunCheckpoint {
       message: "The spec stage reported BLOCKED.",
       candidateLine: "Outcome: BLOCKED — x",
     }),
-    gitCursor: { stageIndex: 0, headAtStageEntry: "abc123", observedHead: "abc123" },
+    gitCursor: { stageIndex: 0, observedHead: "abc123" },
   };
 }
 
@@ -113,7 +113,6 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
     if (result.ok) {
       expect(result.checkpoint.gitCursor).toEqual({
         stageIndex: 0,
-        headAtStageEntry: "abc123",
         observedHead: "abc123",
       });
       expect(result.checkpoint.observedHarnessVersions).toEqual({
@@ -459,7 +458,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
       candidateLine: "Outcome: DONE",
       detail: "ok",
     };
-    doc.gitCursor = { stageIndex: 2, headAtStageEntry: null, observedHead: null };
+    doc.gitCursor = { stageIndex: 2, observedHead: null };
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
   });
@@ -534,7 +533,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("requires gitCursor.stageIndex to name the current stage when HEAD set", () => {
     const doc = validCheckpoint();
-    doc.gitCursor = { stageIndex: 1, headAtStageEntry: "abc", observedHead: null };
+    doc.gitCursor = { stageIndex: 1, observedHead: "abc" };
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /name the current stage/.test(e))).toBe(true);
@@ -859,7 +858,7 @@ describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => 
         condition: "completed",
         stageIndex: 2,
         waiting: null,
-        gitCursor: { stageIndex: 2, headAtStageEntry: null, observedHead: null },
+        gitCursor: { stageIndex: 2, observedHead: null },
         attempts: [
           {
             attempt: 1,

@@ -297,10 +297,10 @@ function checkpointFor(ctx, row) {
     waiting: row.condition === "waiting-for-user" ? WAITING : null,
     // A completed run parks its cursor past the last stage and holds no HEAD;
     // every other cursor names the stage it sits on, which the validator ties
-    // to `stageIndex` whenever the HEAD fields are populated.
+    // to `stageIndex` whenever the HEAD observation is populated.
     gitCursor: completed
-      ? { stageIndex: STAGES.length, headAtStageEntry: null, observedHead: null }
-      : { stageIndex: row.stageIndex, headAtStageEntry: HEAD, observedHead: HEAD },
+      ? { stageIndex: STAGES.length, observedHead: null }
+      : { stageIndex: row.stageIndex, observedHead: HEAD },
   };
 }
 

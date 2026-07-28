@@ -69,7 +69,7 @@ function checkpoint(): RunCheckpoint {
     condition: "ready",
     attempts: [],
     waiting: null,
-    gitCursor: { stageIndex: 0, headAtStageEntry: null, observedHead: null },
+    gitCursor: { stageIndex: 0, observedHead: null },
   };
 }
 

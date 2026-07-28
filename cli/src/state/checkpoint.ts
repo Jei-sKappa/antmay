@@ -93,9 +93,9 @@ export type WaitingReason = {
    * `stage-contract-violation` stops the run before the stage's Git boundary is
    * ever judged, so it is the later finalization that applies the stage's
    * `HEAD` rule, and this is the only value that rule may be measured against:
-   * the stage-entry baseline spans every earlier attempt of the stage and every
-   * commit a human made across an earlier pause, while this is the movement the
-   * preserved attempt itself caused.
+   * it isolates the movement the preserved attempt itself caused from every
+   * earlier attempt of the stage and every commit a human made across an
+   * earlier pause.
    */
   headAtAttemptStart?: string;
 };
@@ -209,7 +209,6 @@ export type RunCheckpoint = {
   waiting: WaitingInfo | null;
   gitCursor: {
     stageIndex: number;
-    headAtStageEntry: string | null;
     observedHead: string | null;
   };
   /** Present only when the run started in scripted test harness mode. */
@@ -961,7 +960,7 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
 
   // gitCursor.
   let cursorIndex: number | undefined;
-  let cursorHeadsNonNull = false;
+  let cursorHeadObserved = false;
   if (!isPlainObject(doc.gitCursor)) {
     errors.push(`gitCursor must be an object.`);
   } else {
@@ -975,13 +974,11 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     } else {
       cursorIndex = gc.stageIndex;
     }
-    for (const key of ["headAtStageEntry", "observedHead"] as const) {
-      const v = gc[key];
-      if (v !== null && !isNonEmptyString(v)) {
-        errors.push(`gitCursor.${key} must be a commit string or null.`);
-      } else if (isNonEmptyString(v)) {
-        cursorHeadsNonNull = true;
-      }
+    const observed = gc.observedHead;
+    if (observed !== null && !isNonEmptyString(observed)) {
+      errors.push(`gitCursor.observedHead must be a commit string or null.`);
+    } else if (isNonEmptyString(observed)) {
+      cursorHeadObserved = true;
     }
   }
 
@@ -1025,10 +1022,10 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     );
   }
 
-  // gitCursor names the current stage when its HEAD fields are populated.
-  if (cursorHeadsNonNull && cursorIndex !== checkpoint.stageIndex) {
+  // gitCursor names the current stage when its HEAD observation is populated.
+  if (cursorHeadObserved && cursorIndex !== checkpoint.stageIndex) {
     errors.push(
-      `gitCursor.stageIndex (${cursorIndex}) must name the current stage (${checkpoint.stageIndex}) when its HEAD fields are set.`,
+      `gitCursor.stageIndex (${cursorIndex}) must name the current stage (${checkpoint.stageIndex}) when gitCursor.observedHead is set.`,
     );
   }
 

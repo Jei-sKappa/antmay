@@ -123,7 +123,7 @@ function makeCheckpoint(overrides: {
     condition: overrides.condition,
     attempts: overrides.attempts ?? [],
     waiting: null,
-    gitCursor: { stageIndex: overrides.stageIndex, headAtStageEntry: null, observedHead: null },
+    gitCursor: { stageIndex: overrides.stageIndex, observedHead: null },
   };
   if (overrides.condition === "waiting-for-user") {
     checkpoint.waiting = governedBy({

@@ -196,7 +196,7 @@ function buildCheckpoint(
     condition: "ready",
     attempts: [],
     waiting: null,
-    gitCursor: { stageIndex: 0, headAtStageEntry: null, observedHead: null },
+    gitCursor: { stageIndex: 0, observedHead: null },
   };
 }
 
@@ -325,7 +325,7 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     expect(cp.condition).toBe("completed");
     expect(cp.stageIndex).toBe(2);
     expect(cp.waiting).toBeNull();
-    expect(cp.gitCursor).toEqual({ stageIndex: 2, headAtStageEntry: null, observedHead: null });
+    expect(cp.gitCursor).toEqual({ stageIndex: 2, observedHead: null });
     expect(cp.attempts.map((a) => a.result)).toEqual(["done", "done"]);
     expect(cp.attempts.every((a) => a.terminalResult?.token === "DONE")).toBe(true);
 
@@ -362,7 +362,7 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("completed");
     expect(cp.stageIndex).toBe(6);
-    expect(cp.gitCursor).toEqual({ stageIndex: 6, headAtStageEntry: null, observedHead: null });
+    expect(cp.gitCursor).toEqual({ stageIndex: 6, observedHead: null });
     expect(await commitCount(fixture)).toBe(before + 3);
   });
 });
@@ -769,7 +769,6 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
     expect(cp.gitCursor).toEqual({
       stageIndex: 0,
-      headAtStageEntry: headBefore,
       observedHead: headBefore,
     });
     expect(await commitCount(fixture)).toBe(before);
@@ -1106,7 +1105,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     });
     expect(provisional.attempts[0].endedAt).toBeUndefined();
     expect(provisional.gitCursor.stageIndex).toBe(0);
-    expect(provisional.gitCursor.headAtStageEntry).not.toBeNull();
+    expect(provisional.gitCursor.observedHead).not.toBeNull();
 
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("completed");
@@ -1643,7 +1642,6 @@ describe.concurrent("executeRun — harness stage context", () => {
     checkpoint.waiting = governedBy({ kind: "outcome-blocked", message: "blocked" });
     checkpoint.gitCursor = {
       stageIndex: 0,
-      headAtStageEntry: await readHead(fixture.root),
       observedHead: await readHead(fixture.root),
     };
     const harness = createFakeHarness([{}]);

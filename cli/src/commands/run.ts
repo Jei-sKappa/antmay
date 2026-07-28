@@ -489,7 +489,7 @@ export async function runCommand(
           condition: "ready",
           attempts: [],
           waiting: null,
-          gitCursor: { stageIndex: 0, headAtStageEntry: null, observedHead: null },
+          gitCursor: { stageIndex: 0, observedHead: null },
           ...(useScripted ? { startedScripted: true as const } : {}),
         };
         try {
