@@ -591,7 +591,13 @@ export function printRunSummary(
   lines.push(`  ${paint("Stages:", ...KEY_STYLE)}`);
   const ordinalWidth = String(info.stages.length).length;
   const idWidth = Math.max(...info.stages.map((stage) => stage.id.length));
-  const agents = info.stages.map((stage) => `${stage.harness} · ${stage.model}`);
+  const harnessWidth = Math.max(
+    ...info.stages.map((stage) => stage.harness.length),
+  );
+  const agents = info.stages.map(
+    (stage) =>
+      `${stage.harness}${pad(stage.harness, harnessWidth)} · ${stage.model}`,
+  );
   const agentWidth = Math.max(...agents.map((agent) => agent.length));
   info.stages.forEach((stage, index) => {
     const ordinal = `${String(index + 1).padStart(ordinalWidth)}.`;

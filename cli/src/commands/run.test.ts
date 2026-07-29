@@ -715,7 +715,7 @@ describe.concurrent("runCommand — resolved-execution startup display (AC-11, D
     expect(startup).toContain("plan-strict");
     // The profile binds only the entry stage; the rest keep the settings agent.
     expect(startup).toContain("claude-code · profile-model");
-    expect(startup).toContain("codex · test-model");
+    expect(startup).toMatch(/codex +· test-model/);
   });
 
   it("prints the whole block before the first attempt and prompts for nothing", async () => {

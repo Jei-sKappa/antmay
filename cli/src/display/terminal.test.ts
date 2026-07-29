@@ -781,17 +781,24 @@ describe("printRunSummary", () => {
     const second = lines.findIndex((line) => line.includes("2. reconcile-spec"));
     expect(first).toBeGreaterThan(-1);
     expect(second).toBe(first + 1);
-    expect(lines[first]).toContain("codex · gpt-5");
+    expect(lines[first]).toMatch(/codex +· gpt-5/);
     expect(lines[first]).toContain("→ docs/threads/t/");
     expect(lines[second]).toContain("claude-code · claude-sonnet-5");
     expect(lines[second]).toContain("→ docs/threads/t/spec.md");
   });
 
-  it("aligns the stage columns so the targets share one column", () => {
+  it("aligns the stage harness separators, models, and targets", () => {
     const lines = render();
     const rows = lines.filter((line) => /^ {4}\d+\. /.test(line));
     expect(rows.length).toBe(2);
+    const separators = new Set(rows.map((row) => row.indexOf("·")));
+    const models = new Set([
+      rows[0]!.indexOf("gpt-5"),
+      rows[1]!.indexOf("claude-sonnet-5"),
+    ]);
     const arrows = new Set(rows.map((row) => row.indexOf("→")));
+    expect(separators.size).toBe(1);
+    expect(models.size).toBe(1);
     expect(arrows.size).toBe(1);
   });
 
