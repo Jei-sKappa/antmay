@@ -1,10 +1,10 @@
 ---
 name: open-ticket
-description: Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative, marked so it is recognizable as ready to work from — use when an idea should be captured in the tracker rather than started now.
+description: Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative — use when an idea should be captured in the tracker rather than started now.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.3.1
+  version: 0.4.0
 ---
 
 # Open Ticket
@@ -59,28 +59,27 @@ Do this once the title and body exist.
 Determine which tracker the project's repository belongs to from the git
 remote's host, then read the matching reference under `references/trackers/` —
 for a `github.com` remote that is `references/trackers/github.md`. It carries
-the availability check, the repository resolution, the exact commands, and the
-label handling for that tracker.
+the availability check, the repository resolution, and the exact commands for
+that tracker.
 
 When the checkout has several remotes and the target repository is genuinely
 ambiguous, ask which one is meant; never pick one by order or by name.
 
 ## Confirm once, then file
 
-Show the user the composed title, the composed body, and the labels you will
-apply. When the marker label does not yet exist in the target repository, say so
-in this same message — its creation is part of what the user is approving, not a
-silent side effect.
+Show the user the composed title, body, and any labels required by the
+repository's convention.
 
-Where a convention shaped the title or added a label, this message is also where
-the value you chose for it is visible, and where you ask about any choice the
-idea did not settle.
+Where a convention shaped the title or requires a label, this message is also
+where the value you chose for it is visible, and where you ask about any choice
+the idea did not settle.
 
 Invite one round of corrections, fold any adjustment in, and file the ticket.
 This is a brief confirmation, not a drawn-out dialogue — one pass is enough. The
 user's approval here is what authorizes the write; file nothing before it.
 
-Apply the marker label by default. Drop it only if the user asks you to.
+Apply the labels the repository's convention requires. When it requires none,
+file the ticket without labels.
 
 ## When the tracker cannot be reached
 
@@ -91,7 +90,8 @@ a copy and paste.
 
 ## Report
 
-Report the filed ticket's URL, and let that be the end of it. Do not propose a
-next action and do not offer to start the work: filing a ticket is how a person
-defers something deliberately, so pushing them onward works against the reason
-they invoked this at all.
+Report the filed ticket's URL. If a required repository label could not be
+applied, name it alongside the URL; otherwise let the URL be the whole report.
+Do not propose a next action and do not offer to start the work: filing a ticket
+is how a person defers something deliberately, so pushing them onward works
+against the reason they invoked this at all.

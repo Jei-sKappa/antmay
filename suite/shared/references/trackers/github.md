@@ -74,35 +74,26 @@ gh issue view <number-or-url> --json number,title,body,labels,state,url
 ## Creating a ticket
 
 ```sh
-gh issue create --title "<title>" --body-file <path> --label <label>
+gh issue create --title "<title>" --body-file <path> [--label "<required-label>" ...]
 ```
 
 Pass the body through `--body-file` (`-` reads standard input) rather than
 `--body`, so newlines and Markdown survive intact.
 
-`--label` fails when the label does not exist in the repository, so check
-first and create it when needed:
+Include one `--label` option for each label required by the repository's
+convention, and omit it when the convention requires none. GitHub may omit
+requested labels when the authenticated user lacks permission to apply them, so
+verify required labels on the created ticket:
 
 ```sh
-gh label list --json name -q '.[].name'
-gh label create <label> --description "<description>"
+gh issue view <number-or-url> --json labels -q '.labels[].name'
 ```
 
-The command prints the created ticket's URL; that URL is what the invoking
-skill reports.
+If a required label is absent, report it with the created ticket's URL so a
+maintainer can apply it. Do not discard or recreate the ticket.
 
-## The marker label
-
-`antmay` marks a ticket whose body is written as a thread's genesis narrative,
-which is what makes it ready to open a thread from. It records nothing about
-ownership or progress, and no skill changes its behavior according to whether a
-ticket carries it.
-
-Listing the marked tickets is an ordinary query:
-
-```sh
-gh issue list --label antmay --state open
-```
+The command prints the created ticket's URL; retain it for the invoking skill's
+report.
 
 ## Linking a ticket from a pull request
 

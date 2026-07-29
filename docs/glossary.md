@@ -68,7 +68,6 @@ stage leaves the wrong files changed or a pending queue is non-empty.
 | **tracker** | The external issue tracker a project's work is filed in. GitHub is the one implemented tracker; the vocabulary and the skills stay tracker-neutral, and a skill resolves which tracker applies from a reference's host. |
 | **ticket** | One entry in a tracker. The reserved word for the concept across the suite, the CLI, and these documents — on GitHub a ticket is an issue, and only tracker-specific reference material says so. |
 | **ticket reference** | A ticket's identity as recorded in the seed's `External:` field: its real URL. Two references denote one ticket when their parts match, so references are compared by meaning rather than as raw strings. |
-| **marker label** | The `antmay` label on a ticket, meaning its body is written as a genesis narrative and the ticket is therefore ready to open a thread from. Carries nothing about ownership or progress, and no skill branches on its presence. |
 | **tracker mutation** | Any write to a tracker — filing a ticket, labelling, commenting, transitioning, closing. Authorized only by a deliberate user-invoked operation that confirms the specific write, never by holding a reference. [thread-model.md](thread-model.md) |
 
 ## Running and reporting

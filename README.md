@@ -68,7 +68,7 @@ npx skills add Jei-sKappa/antmay --skill open-thread
 
 #### [`open-ticket`](./suite/skills/capture-discussion/open-ticket/SKILL.md)
 
-Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative, marked so it is recognizable as ready to work from — use when an idea should be captured in the tracker rather than started now.
+Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative — use when an idea should be captured in the tracker rather than started now.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-ticket

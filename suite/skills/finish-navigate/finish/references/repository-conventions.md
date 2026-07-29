@@ -26,8 +26,8 @@ are run, how a review proceeds, how a release is cut. Take the part that
 governs the artifact you are creating and leave the rest alone.
 
 **A ticket.** A title shape — a required prefix, tag, bracketed scope, or
-identifier, and where in the line it sits. Required labels, beyond any label
-the invoking skill applies for its own reasons. A body structure.
+identifier, and where in the line it sits. Required labels and which values to
+use. A body structure.
 
 **A commit.** A message shape — a prescribed subject form such as a type, an
 optional scope and a summary; a length limit; a required trailer. Where the
