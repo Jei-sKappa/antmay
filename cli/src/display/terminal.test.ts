@@ -13,12 +13,14 @@ import type { Display, StageDisposition } from "./types.js";
 import {
   createTerminalDisplay,
   printCompositionRefusal,
+  printRunList,
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
   printTemporaryWorkspaceRefusal,
   printUnrestrictedWarning,
   type DisplayOptions,
+  type RunListSummary,
 } from "./terminal.js";
 
 /** An in-memory writable stream that accumulates everything written to it. */
@@ -56,6 +58,44 @@ function makeOptions(
 }
 
 const ANSI_PATTERN = /\x1b\[\d+m/;
+
+describe("printRunList", () => {
+  it("gives every run condition a distinct color", () => {
+    const { options, out, err } = makeOptions({
+      isTTY: true,
+      noColor: false,
+    });
+    const common = {
+      updatedAt: "2026-07-26T09:18:42.000Z",
+      pipelineName: "standard",
+      stage: { position: 1, count: 2, id: "spec" },
+      threadRelPath: "docs/threads/260726091842Z-example",
+      repoRoot: "/repo",
+    };
+    const summaries: RunListSummary[] = [
+      { ...common, condition: "ready", runId: "ready-run" },
+      { ...common, condition: "executing", runId: "executing-run" },
+      {
+        ...common,
+        condition: "waiting-for-user",
+        runId: "waiting-run",
+      },
+      { ...common, condition: "completed", runId: "completed-run" },
+    ];
+
+    printRunList(options, summaries);
+
+    expect(out.text).toContain("\x1b[1m\x1b[36mREADY\x1b[0m");
+    expect(out.text).toContain(
+      "\x1b[1m\x1b[35mEXECUTING (UNVERIFIED)\x1b[0m",
+    );
+    expect(out.text).toContain(
+      "\x1b[1m\x1b[33mWAITING FOR USER\x1b[0m",
+    );
+    expect(out.text).toContain("\x1b[1m\x1b[32mCOMPLETED\x1b[0m");
+    expect(err.text).toBe("");
+  });
+});
 
 describe("printTemporaryWorkspaceRefusal", () => {
   const problems = {

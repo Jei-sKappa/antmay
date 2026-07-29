@@ -3,17 +3,20 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK } from "../cli/exit-codes.js";
 import { resolveStateRoot } from "../config/roots.js";
+import {
+  printRunList,
+  type RunListSummary,
+} from "../display/terminal.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
-  RunCondition,
 } from "../state/checkpoint.js";
 import { readCheckpoint } from "../state/persist.js";
 import { runsDirectory } from "../state/runs.js";
 
 /**
  * The dependency bag `listCommand` runs against. `env` and `homedir` resolve the
- * state root; `stdout`/`stderr` carry rows and warnings; `isTTY` (with a
+ * state root; `stdout`/`stderr` carry summaries and warnings; `isTTY` (with a
  * non-empty `NO_COLOR`) decides whether meaning-free color is emitted. `list`
  * never resolves a config root, reads settings, acquires a lock, or writes.
  */
@@ -23,18 +26,6 @@ export type ListDeps = {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   isTTY: boolean;
-};
-
-const ANSI = {
-  reset: "\x1b[0m",
-  cyan: "\x1b[36m",
-} as const;
-
-const CONDITION_LABELS: Record<RunCondition, string> = {
-  ready: "Ready",
-  "waiting-for-user": "Waiting for user",
-  completed: "Completed",
-  executing: "Executing (unverified)",
 };
 
 function errorMessage(error: unknown): string {
@@ -58,54 +49,62 @@ function latestSessionAttempt(
 }
 
 /**
- * Format the optional latest-session column as `<snapshotted-harness>/<id>`,
- * resolving the harness from the selected attempt's stage snapshot. Returns
- * `undefined` when no attempt captured a session.
+ * Resolve the optional latest session from the selected attempt and its stage
+ * snapshot. Returns `undefined` when no attempt captured a session.
  */
-function formatLatestSession(checkpoint: RunCheckpoint): string | undefined {
+function latestSessionOf(
+  checkpoint: RunCheckpoint,
+): RunListSummary["latestSession"] | undefined {
   const attempt = latestSessionAttempt(checkpoint.attempts);
   if (attempt?.agentSession === undefined) {
     return undefined;
   }
   const stage = checkpoint.stages[attempt.stageIndex]!;
-  return `${stage.binding.agent.harness}/${attempt.agentSession.id}`;
+  return {
+    harness: stage.binding.agent.harness,
+    id: attempt.agentSession.id,
+  };
 }
 
 /**
- * Build one whitespace-separated row for a valid checkpoint: updated time,
- * friendly condition, run ID, pipeline, one-based stage position with stage ID,
- * current harness/model, optional latest captured session, absolute repository
- * path, and repository-relative thread path. A completed run shows the final
- * stage count and omits the current stage ID and harness/model, since it has no
- * live stage. The session column, when present, is always the newest
- * session-carrying attempt's snapshotted harness and ID — independent of the
- * displayed stage position.
+ * Project one valid checkpoint into the facts the list renderer presents. A
+ * completed run has no current stage ID or agent. The latest session, when
+ * present, belongs to the newest session-carrying attempt and can therefore
+ * come from a different stage than the checkpoint cursor.
  */
-function renderRow(checkpoint: RunCheckpoint): string {
-  const condition = CONDITION_LABELS[checkpoint.condition];
+function summarizeRun(checkpoint: RunCheckpoint): RunListSummary {
   const stageCount = checkpoint.stages.length;
-  const columns: string[] = [
-    checkpoint.updatedAt,
-    condition,
-    checkpoint.runId,
-    checkpoint.pipelineName,
-  ];
+  const latestSession = latestSessionOf(checkpoint);
+  const common = {
+    condition: checkpoint.condition,
+    updatedAt: checkpoint.updatedAt,
+    runId: checkpoint.runId,
+    pipelineName: checkpoint.pipelineName,
+    threadRelPath: checkpoint.threadRelPath,
+    repoRoot: checkpoint.repoRoot,
+    ...(latestSession !== undefined ? { latestSession } : {}),
+  };
 
   if (checkpoint.condition === "completed") {
-    columns.push(`${stageCount}/${stageCount}`);
-  } else {
-    const stage = checkpoint.stages[checkpoint.stageIndex]!;
-    columns.push(`${checkpoint.stageIndex + 1}/${stageCount} [${stage.id}]`);
-    columns.push(`${stage.binding.agent.harness}/${stage.binding.agent.model}`);
+    return {
+      ...common,
+      stage: { position: stageCount, count: stageCount },
+    };
   }
 
-  const latestSession = formatLatestSession(checkpoint);
-  if (latestSession !== undefined) {
-    columns.push(latestSession);
-  }
-
-  columns.push(checkpoint.repoRoot, checkpoint.threadRelPath);
-  return columns.join("  ");
+  const stage = checkpoint.stages[checkpoint.stageIndex]!;
+  return {
+    ...common,
+    stage: {
+      position: checkpoint.stageIndex + 1,
+      count: stageCount,
+      id: stage.id,
+    },
+    currentAgent: {
+      harness: stage.binding.agent.harness,
+      model: stage.binding.agent.model,
+    },
+  };
 }
 
 /**
@@ -165,13 +164,15 @@ export async function listCommand(deps: ListDeps): Promise<number> {
 
   checkpoints.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 
-  const useColor = deps.isTTY && (deps.env.NO_COLOR ?? "") === "";
-  const paint = (text: string): string =>
-    useColor ? `${ANSI.cyan}${text}${ANSI.reset}` : text;
-
-  for (const checkpoint of checkpoints) {
-    deps.stdout.write(`${paint(renderRow(checkpoint))}\n`);
-  }
+  printRunList(
+    {
+      stdout: deps.stdout,
+      stderr: deps.stderr,
+      isTTY: deps.isTTY,
+      noColor: (deps.env.NO_COLOR ?? "") !== "",
+    },
+    checkpoints.map(summarizeRun),
+  );
 
   return warned ? EXIT_FAILURE : EXIT_OK;
 }

@@ -479,6 +479,25 @@ stage requires a change and the worktree holds none.
 **Pauses** surface as exit code `2` (waiting). Every pause prints its reason, the
 log path, the run ID, and the exact `antmay afk resume <run-id>` command.
 
+## Listing runs
+
+`antmay afk list` prints every valid run checkpoint as a labeled summary, sorted
+globally by `updatedAt` from newest to oldest. Conditions are never grouped, so
+two runs with the same condition can have a differently conditioned run between
+them when its update time falls between theirs.
+
+Each summary begins with one of the four possible run conditions:
+
+| Label | Meaning |
+| --- | --- |
+| `READY` | The run has a current stage but no active attempt; that stage can start or be retried. |
+| `EXECUTING (UNVERIFIED)` | The checkpoint records an executing attempt. `list` does not verify that its process is still alive. |
+| `WAITING FOR USER` | The run is durably paused for a recorded reason and requires human attention before it can continue. |
+| `COMPLETED` | Every selected stage finished and the run is terminal. |
+
+The summary also identifies the pipeline, current stage and agent when one
+exists, thread, workspace, and most recent captured provider session.
+
 ## Stale workspace locks
 
 While a run holds the workspace, `antmay` writes an exclusive lock file under
@@ -524,10 +543,10 @@ Typical journey after an attempt-backed `WAITING FOR USER` pause:
    worktree is clean.
 4. Run the printed `antmay afk resume <run-id>` to continue the pipeline.
 
-`antmay afk list` adds the run's **most recent attempt that carries a session**,
-rendered as `<snapshotted-harness>/<session-id>`. That value can belong to an
-earlier stage than the row's currently displayed stage position; when no attempt
-captured a session, the column is omitted.
+The `Latest session` field in `antmay afk list` selects the run's **most recent
+attempt that carries a session** and renders its snapshotted harness beside the
+session ID. That value can belong to an earlier stage than the summary's current
+stage; when no attempt captured a session, the field is omitted.
 
 ## Scripted demo
 

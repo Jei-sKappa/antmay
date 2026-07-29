@@ -4,15 +4,16 @@ import path from "node:path";
 import { action, list } from "../demo/steps.mjs";
 
 /**
- * Four runs in four conditions, listed in one table. Ends on the run listing —
- * the only rendering that draws many runs at once, and the only one where a
- * completed row's missing harness column sits next to rows that have it.
+ * Five runs across all four conditions, listed as structured summaries. Two
+ * waiting runs sit on opposite sides of the executing run, making the global
+ * updated-time order visible instead of looking like condition grouping. The
+ * completed entry omits `Current agent` beside entries that include it.
  *
  * The checkpoints are written straight into the state root rather than produced
- * by four runs, because two of the four conditions are not reachable on demand:
+ * by five runs, because two of the four conditions are not reachable on demand:
  * `ready` survives only microseconds between two writes, and `executing` needs a
  * run killed mid-attempt. Seeding is also what lets the timestamps be fixed, so
- * the table renders identically every time and a rendering change is the only
+ * the list renders identically every time and a rendering change is the only
  * thing a diff of two runs can show.
  *
  * `list` validates every checkpoint it reads and exits 1 on an invalid one, so
@@ -158,7 +159,7 @@ function stageFor(stage, threadRelPath, binding) {
 }
 
 /**
- * The four rows, in the order the listing sorts them: `updatedAt` descending.
+ * The five entries, in the order the listing sorts them: `updatedAt` descending.
  * Each names only what distinguishes it; everything else comes from the one
  * checkpoint shape below, so a schema change is a single edit.
  */
@@ -178,6 +179,14 @@ const ROWS = [
     stageIndex: 1,
     slug: "normalize-thread-relative-paths-before-comparison",
     binding: CODEX,
+  },
+  {
+    runId: "20260726T083000000Z-44dd55ee",
+    updatedAt: "2026-07-26T08:33:26.000Z",
+    condition: "waiting-for-user",
+    stageIndex: 3,
+    slug: "choose-the-plan-review-remediation-order",
+    binding: CLAUDE,
   },
   {
     runId: "20260726T081000000Z-55ee66ff",
@@ -234,8 +243,8 @@ function attemptsFor(condition, stageIndex) {
         candidateLine: `Outcome: DONE — ${id} finished.`,
         detail: `— ${id} finished.`,
       },
-      // Every settled attempt carries an ID-only session so each row shows a
-      // latest-session column; multiple sessions on one run exercise newest
+      // Every settled attempt carries an ID-only session so each entry shows a
+      // `Latest session` field; multiple sessions on one run exercise newest
       // selection (only the final session-carrying attempt is rendered).
       agentSession: { id: `scripted-session-${id}-1` },
       logPath: `logs/${String(i + 1).padStart(2, "0")}-${id}-attempt-01.log`,
@@ -266,7 +275,7 @@ function attemptsFor(condition, stageIndex) {
   return attempts;
 }
 
-/** One complete checkpoint. Only the fields a row names differ between rows. */
+/** One complete checkpoint. Only the fields an entry names differ between entries. */
 function checkpointFor(ctx, row) {
   const threadRelPath = `docs/threads/260726081500Z-${row.slug}`;
   const completed = row.condition === "completed";
@@ -316,8 +325,8 @@ function seedRuns(ctx) {
 }
 
 export default {
-  label: "Four runs in four conditions — ends on the run listing",
-  note: "Writes four checkpoints straight into the state root, because `ready` and `executing` cannot be produced on demand by a run. `list` validates every one of them, so the scenario fails if the checkpoint schema moves out from under these rows.",
+  label: "Five runs across four conditions — ends on the run listing",
+  note: "Writes five checkpoints straight into the state root, including two interleaved waiting runs that expose global updated-time ordering. `ready` and `executing` cannot be produced on demand; `list` validates every seed, so the scenario fails if the checkpoint schema moves out from under them.",
   steps: [
     action(`seed ${ROWS.length} runs into the state root`, seedRuns),
     list({ expectExit: 0 }),

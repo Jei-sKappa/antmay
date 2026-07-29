@@ -298,7 +298,7 @@ event loop and exit before any signal arrived.
 Every launched scripted attempt reports a deterministic synthetic session ID on
 every path a real capture would take. Its shape is deliberately
 non-provider-like, which is what lets the demo cover the pause `Continue` line
-and the list latest-session column with no real harness and no per-scenario
+and the list's `Latest session` field with no real harness and no per-scenario
 session setup.
 
 The demo driver is generic and holds no scenario-specific knowledge: it builds

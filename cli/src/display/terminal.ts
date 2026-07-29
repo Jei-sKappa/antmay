@@ -7,6 +7,7 @@ import type {
 } from "../pipeline/composition.js";
 import type {
   ProfileSelection,
+  RunCondition,
   WaitingInfo,
   WaitingKind,
   WaitingReason,
@@ -33,6 +34,29 @@ export interface DisplayOptions {
   isTTY: boolean;
   noColor: boolean;
 }
+
+/** One run as the list renderer needs it, independent of checkpoint storage. */
+export type RunListSummary = {
+  condition: RunCondition;
+  updatedAt: string;
+  runId: string;
+  pipelineName: string;
+  stage: {
+    position: number;
+    count: number;
+    id?: string;
+  };
+  currentAgent?: {
+    harness: string;
+    model: string;
+  };
+  latestSession?: {
+    harness: string;
+    id: string;
+  };
+  threadRelPath: string;
+  repoRoot: string;
+};
 
 /** Displayed tool-call arguments are truncated to this many characters; the
  * full data always survives untouched in the attempt log. */
@@ -63,6 +87,7 @@ const ANSI = {
   red: "\x1b[31m",
   green: "\x1b[32m",
   yellow: "\x1b[33m",
+  magenta: "\x1b[35m",
   cyan: "\x1b[36m",
   white: "\x1b[37m",
   brightBlue: "\x1b[94m",
@@ -70,6 +95,16 @@ const ANSI = {
 } as const;
 
 type Ansi = Exclude<keyof typeof ANSI, "reset">;
+
+const RUN_CONDITION: Record<
+  RunCondition,
+  { label: string; color: Ansi }
+> = {
+  ready: { label: "READY", color: "cyan" },
+  "waiting-for-user": { label: "WAITING FOR USER", color: "yellow" },
+  completed: { label: "COMPLETED", color: "green" },
+  executing: { label: "EXECUTING (UNVERIFIED)", color: "magenta" },
+};
 
 /** The style every `key: value` label carries, so the key reads as a label
  * distinct from its value. */
@@ -319,6 +354,72 @@ export function printScriptedModeStartup(
       infoLine(paint, "  ", "config", scenarioPath, width),
     ].join("\n"),
   );
+}
+
+/**
+ * Render runs as individually labeled list entries. Status and update time form
+ * each entry's scannable heading; identifiers, paths, and optional session data
+ * keep their own lines so one long value cannot shift the meaning of another.
+ */
+export function printRunList(
+  options: DisplayOptions,
+  summaries: readonly RunListSummary[],
+): void {
+  const paint = createPainter(options);
+  const width = keyWidth(
+    "Run ID",
+    "Pipeline",
+    "Stage",
+    "Current agent",
+    "Latest session",
+    "Thread",
+    "Workspace",
+  );
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, width);
+  const lines = [paint(`AFK runs (${summaries.length})`, "bold")];
+
+  for (const summary of summaries) {
+    const condition = RUN_CONDITION[summary.condition];
+    const stage =
+      summary.stage.id === undefined
+        ? `${summary.stage.position}/${summary.stage.count}`
+        : `${summary.stage.position}/${summary.stage.count} · ${summary.stage.id}`;
+
+    lines.push(
+      "",
+      `${paint(condition.label, "bold", condition.color)}${paint(
+        ` · updated ${summary.updatedAt}`,
+        "dim",
+      )}`,
+      line("Run ID", summary.runId),
+      line("Pipeline", summary.pipelineName),
+      line("Stage", stage),
+    );
+
+    if (summary.currentAgent !== undefined) {
+      lines.push(
+        line(
+          "Current agent",
+          `${summary.currentAgent.harness} · ${summary.currentAgent.model}`,
+        ),
+      );
+    }
+    if (summary.latestSession !== undefined) {
+      lines.push(
+        line(
+          "Latest session",
+          `${summary.latestSession.harness} · ${summary.latestSession.id}`,
+        ),
+      );
+    }
+    lines.push(
+      line("Thread", summary.threadRelPath),
+      line("Workspace", summary.repoRoot),
+    );
+  }
+
+  emit(options.stdout, lines.join("\n"));
 }
 
 type TemporaryWorkspaceRefusalBase = {

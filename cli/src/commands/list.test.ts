@@ -132,7 +132,7 @@ function makeCheckpoint(overrides: {
     });
   }
   // Guard the fixtures themselves: a test-authored invalid checkpoint would
-  // otherwise silently exercise the warning path instead of the row path.
+  // otherwise silently exercise the warning path instead of the summary path.
   const validated = validateCheckpoint(JSON.parse(JSON.stringify(checkpoint)));
   if (!validated.ok) {
     throw new Error(`test fixture is invalid: ${validated.errors.join("; ")}`);
@@ -213,13 +213,22 @@ describe("listCommand (AC-2.4)", () => {
 });
 
 describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
-  it("renders valid runs sorted by updatedAt descending with every column", async () => {
+  it("sorts globally by updatedAt instead of grouping matching conditions", async () => {
     const stateRoot = await tempDir("antmay-list-");
     await seedRun(
       stateRoot,
       makeCheckpoint({
         runId: "20260723T120000000Z-old00000",
         updatedAt: "2026-07-23T12:10:00.000Z",
+        condition: "waiting-for-user",
+        stageIndex: 0,
+      }),
+    );
+    await seedRun(
+      stateRoot,
+      makeCheckpoint({
+        runId: "20260723T130000000Z-middle00",
+        updatedAt: "2026-07-23T13:00:00.000Z",
         condition: "ready",
         stageIndex: 0,
       }),
@@ -239,24 +248,25 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
 
     expect(code).toBe(0);
     expect(err.text).toBe("");
-    const lines = out.text.trimEnd().split("\n");
-    expect(lines).toHaveLength(2);
-    // Descending: the 13:45 run comes first.
-    expect(lines[0]).toContain("20260723T130000000Z-new00000");
-    expect(lines[1]).toContain("20260723T120000000Z-old00000");
+    const [heading, first, second, third] = out.text.trimEnd().split("\n\n");
+    expect(heading).toBe("AFK runs (3)");
+    // Descending timestamps interleave two runs with the same condition.
+    expect(first).toContain("20260723T130000000Z-new00000");
+    expect(second).toContain("20260723T130000000Z-middle00");
+    expect(third).toContain("20260723T120000000Z-old00000");
 
-    const first = lines[0]!;
     expect(first).toContain("2026-07-23T13:45:00.000Z"); // updated time
-    expect(first).toContain("Waiting for user"); // friendly condition
+    expect(first).toContain("WAITING FOR USER"); // friendly condition
     expect(first).toContain("standard"); // pipeline
-    expect(first).toContain("2/3 [plan-strict]"); // one-based stage position + id
-    expect(first).toContain("codex/gpt-plan"); // current harness/model
+    expect(first).toContain("2/3 · plan-strict"); // one-based stage position + id
+    expect(first).toContain("codex · gpt-plan"); // current harness/model
     expect(first).toContain("/Users/dev/repo"); // absolute repo path
     expect(first).toContain("docs/threads/260723121015Z-demo"); // repo-relative thread
 
-    expect(lines[1]).toContain("Ready");
-    expect(lines[1]).toContain("1/3 [spec]");
-    expect(lines[1]).toContain("codex/gpt-spec");
+    expect(second).toContain("READY");
+    expect(second).toContain("1/3 · spec");
+    expect(second).toContain("codex · gpt-spec");
+    expect(third).toContain("WAITING FOR USER");
   });
 
   it("renders an executing run with the unverified condition label", async () => {
@@ -286,7 +296,7 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
     const code = await listCommand(d);
 
     expect(code).toBe(0);
-    expect(out.text).toContain("Executing (unverified)");
+    expect(out.text).toContain("EXECUTING (UNVERIFIED)");
   });
 
   it("shows the final stage count and no harness/model for a completed run", async () => {
@@ -305,10 +315,11 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
     const code = await listCommand(d);
 
     expect(code).toBe(0);
-    const row = out.text.trimEnd();
-    expect(row).toContain("Completed");
-    expect(row).toContain("3/3");
-    expect(row).not.toContain("codex/");
+    const summary = out.text.trimEnd();
+    expect(summary).toContain("COMPLETED");
+    expect(summary).toContain("3/3");
+    expect(summary).not.toContain("Current agent:");
+    expect(summary).not.toContain("codex ·");
   });
 
   it("emits meaning-free color only on a TTY with NO_COLOR unset", async () => {
@@ -338,7 +349,7 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
 });
 
 describe("listCommand corruption handling (AC-16.3)", () => {
-  it("warns per corrupt checkpoint, still prints valid rows, and exits 1", async () => {
+  it("warns per corrupt checkpoint, still prints valid summaries, and exits 1", async () => {
     const stateRoot = await tempDir("antmay-list-");
     await seedRun(
       stateRoot,
@@ -381,7 +392,7 @@ describe("listCommand corruption handling (AC-16.3)", () => {
 
     expect(code).toBe(0);
     expect(err.text).toBe("");
-    expect(out.text.trimEnd().split("\n")).toHaveLength(1);
+    expect(out.text.match(/Run ID:/g)).toHaveLength(1);
 
     // No lock directory or lock file may appear anywhere under the state root.
     const stateEntries = await fs.readdir(stateRoot);
@@ -412,7 +423,7 @@ describe("listCommand corruption handling (AC-16.3)", () => {
   });
 });
 
-describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
+describe("listCommand latest session field (AC-4.1, AC-4.2)", () => {
   const stagesWithMixedHarnesses = [
     makeStage("spec", "gpt-spec", "codex"),
     makeStage("plan-strict", "claude-plan", "claude-code"),
@@ -444,7 +455,7 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
   it("selects the newest session-carrying attempt and its snapshotted harness", async () => {
     const stateRoot = await tempDir("antmay-list-");
     // Cursor sits on impl (codex), but the newest captured session is on plan
-    // (claude-code) — the column must use plan's snapshotted harness, not the
+    // (claude-code) — the field must use plan's snapshotted harness, not the
     // current stage's.
     await seedRun(
       stateRoot,
@@ -467,13 +478,14 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
 
     expect(code).toBe(0);
     expect(err.text).toBe("");
-    const row = out.text.trimEnd();
-    expect(row).toContain("claude-code/session-newest-plan");
-    expect(row).not.toContain("session-old-spec");
-    expect(row).toContain("3/3 [implement-plan]");
-    expect(row).toContain("codex/gpt-impl"); // current stage harness/model unchanged
-    // Session column sits immediately before the repository path.
-    expect(row).toMatch(/claude-code\/session-newest-plan {2}\/Users\/dev\/repo {2}/);
+    const summary = out.text.trimEnd();
+    expect(summary).toContain("claude-code · session-newest-plan");
+    expect(summary).not.toContain("session-old-spec");
+    expect(summary).toContain("3/3 · implement-plan");
+    expect(summary).toContain("codex · gpt-impl"); // current stage harness/model unchanged
+    expect(summary.indexOf("Current agent:")).toBeLessThan(
+      summary.indexOf("Latest session:"),
+    );
   });
 
   it("renders the latest session for ready, executing, waiting, and completed", async () => {
@@ -561,21 +573,22 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
 
     expect(code).toBe(0);
     expect(err.text).toBe("");
-    const lines = out.text.trimEnd().split("\n");
-    expect(lines).toHaveLength(4);
-    expect(lines[0]).toContain("Completed");
-    expect(lines[0]).toContain("codex/sess-done-latest");
-    expect(lines[0]).not.toContain("sess-done-old");
-    expect(lines[0]).not.toContain("sess-done-mid");
-    expect(lines[1]).toContain("Waiting for user");
-    expect(lines[1]).toContain("claude-code/sess-wait-now");
-    expect(lines[2]).toContain("Executing (unverified)");
-    expect(lines[2]).toContain("claude-code/sess-exec-live");
-    expect(lines[3]).toContain("Ready");
-    expect(lines[3]).toContain("codex/sess-ready");
+    const summaries = out.text.trimEnd().split("\n\n");
+    expect(summaries).toHaveLength(5);
+    expect(summaries[0]).toBe("AFK runs (4)");
+    expect(summaries[1]).toContain("COMPLETED");
+    expect(summaries[1]).toContain("codex · sess-done-latest");
+    expect(summaries[1]).not.toContain("sess-done-old");
+    expect(summaries[1]).not.toContain("sess-done-mid");
+    expect(summaries[2]).toContain("WAITING FOR USER");
+    expect(summaries[2]).toContain("claude-code · sess-wait-now");
+    expect(summaries[3]).toContain("EXECUTING (UNVERIFIED)");
+    expect(summaries[3]).toContain("claude-code · sess-exec-live");
+    expect(summaries[4]).toContain("READY");
+    expect(summaries[4]).toContain("codex · sess-ready");
   });
 
-  it("omits the session column when no attempt captured a session", async () => {
+  it("omits the session field when no attempt captured a session", async () => {
     const stateRoot = await tempDir("antmay-list-");
     await seedRun(
       stateRoot,
@@ -592,9 +605,8 @@ describe("listCommand latest session column (AC-4.1, AC-4.2)", () => {
     const code = await listCommand(d);
 
     expect(code).toBe(0);
-    const row = out.text.trimEnd();
-    expect(row).toContain("codex/gpt-spec");
-    expect(row).toMatch(/codex\/gpt-spec {2}\/Users\/dev\/repo {2}/);
-    expect(row).not.toMatch(/codex\/gpt-spec {2}\S+\/\S+ {2}\/Users\/dev\/repo/);
+    const summary = out.text.trimEnd();
+    expect(summary).toContain("codex · gpt-spec");
+    expect(summary).not.toContain("Latest session:");
   });
 });
