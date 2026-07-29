@@ -23,22 +23,22 @@ jobs:
         with:
           script: |
             const SCOPES = {
-              suite:    { name: 'scope: suite',    color: '0e8a16', description: 'The skill suite (suite/)' },
-              cli:      { name: 'scope: cli',      color: '1d76db', description: 'The Antmay CLI (cli/)' },
-              contract: { name: 'scope: contract', color: '5319e7', description: 'The suite/CLI contract' },
-              repo:     { name: 'scope: repo',     color: 'c5def5', description: 'Neither module: method docs, tooling, README' },
+              suite:    { name: 'scope: suite',    color: 'd7e3d7', description: 'The skill suite (suite/)' },
+              cli:      { name: 'scope: cli',      color: 'd5deea', description: 'The Antmay CLI (cli/)' },
+              contract: { name: 'scope: contract', color: 'dfd9ea', description: 'The suite/CLI contract' },
+              repo:     { name: 'scope: repo',     color: 'e5e0d7', description: 'Neither module: method docs, tooling, README' },
             };
             const TYPES = {
-              bug:         { name: 'type: bug',         color: 'd73a4a', description: 'Existing behavior contradicts an accepted expectation' },
-              feature:     { name: 'type: feature',     color: 'a2eeef', description: 'Adds a capability or supported use case' },
-              improvement: { name: 'type: improvement', color: '84b6eb', description: 'Makes an existing capability work better' },
-              task:        { name: 'type: task',        color: 'cfd3d7', description: 'Maintenance, refactoring, migration, tooling, or investigation' },
+              bug:         { name: 'type: bug',         color: 'e04572', description: 'Existing behavior contradicts an accepted expectation' },
+              feature:     { name: 'type: feature',     color: '5e97d4', description: 'Adds a capability or supported use case' },
+              improvement: { name: 'type: improvement', color: '6fae8c', description: 'Makes an existing capability work better' },
+              task:        { name: 'type: task',        color: '9c7b57', description: 'Maintenance, refactoring, migration, tooling, or investigation' },
             };
             const NEEDS_SCOPE = {
-              name: 'needs-scope', color: 'd93f0b', description: 'Title is missing a [suite|cli|contract|repo] prefix',
+              name: 'needs-scope', color: 'e51c23', description: 'Title is missing a [suite|cli|contract|repo] prefix',
             };
             const NEEDS_TYPE = {
-              name: 'needs-type', color: 'd93f0b', description: 'Title is missing one valid [bug|feature|improvement|task] prefix',
+              name: 'needs-type', color: 'e51c23', description: 'Title is missing one valid [bug|feature|improvement|task] prefix',
             };
             const MARKER = '<!-- antmay:issue-classification -->';
 
