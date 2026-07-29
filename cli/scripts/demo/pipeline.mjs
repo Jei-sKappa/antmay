@@ -86,8 +86,8 @@ export const DEMO_PROFILE = {
   schemaVersion: 0,
   name: "codex-planning",
   stages: {
-    "plan-strict": { agent: { harness: "codex", model: "gpt-5-codex" } },
-    "reconcile-plan": { agent: { harness: "codex", model: "gpt-5-codex" } },
+    "plan-strict": { agent: { harness: "codex", model: "gpt-5.6-sol" } },
+    "reconcile-plan": { agent: { harness: "codex", model: "gpt-5.6-sol" } },
   },
 };
 

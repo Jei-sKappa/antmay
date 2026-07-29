@@ -336,11 +336,11 @@ The model strings below are examples and are not validated against any provider.
 {
   "afk": {
     "stages": {
-      "spec": { "agent": { "harness": "codex", "model": "gpt-5.6-sol" } },
-      "reconcile-spec": { "agent": { "harness": "codex", "model": "gpt-5.6-sol" } },
+      "spec": { "agent": { "harness": "codex", "model": "gpt-5.6-terra" } },
+      "reconcile-spec": { "agent": { "harness": "codex", "model": "gpt-5.6-terra" } },
       "review-spec": { "agent": { "harness": "claude-code", "model": "claude-sonnet-5" } },
-      "plan-strict": { "agent": { "harness": "codex", "model": "gpt-5.6-sol" } },
-      "reconcile-plan": { "agent": { "harness": "codex", "model": "gpt-5.6-sol" } },
+      "plan-strict": { "agent": { "harness": "codex", "model": "gpt-5.6-terra" } },
+      "reconcile-plan": { "agent": { "harness": "codex", "model": "gpt-5.6-terra" } },
       "implement-plan-with-subagents": {
         "agent": { "harness": "claude-code", "model": "claude-sonnet-5" },
         "idleTimeoutSeconds": 3600,
@@ -370,9 +370,9 @@ like and address it by path.
   "schemaVersion": 0,
   "name": "codex-planning",
   "stages": {
-    "plan-strict": { "agent": { "harness": "codex", "model": "gpt-5-codex" } },
+    "plan-strict": { "agent": { "harness": "codex", "model": "gpt-5.6-sol" } },
     "reconcile-plan": {
-      "agent": { "harness": "codex", "model": "gpt-5-codex" },
+      "agent": { "harness": "codex", "model": "gpt-5.6-sol" },
       "idleTimeoutSeconds": 7200
     }
   }
@@ -429,8 +429,8 @@ Run details
   Workspace:   /Users/you/code/project
   Permissions: restricted
   Stages:
-    1. plan-strict                     codex · gpt-5-codex           → docs/threads/260727135009Z-my-feature/spec.md
-    2. reconcile-plan                  codex · gpt-5-codex           → docs/threads/260727135009Z-my-feature/plan.md
+    1. plan-strict                     codex · gpt-5.6-sol           → docs/threads/260727135009Z-my-feature/spec.md
+    2. reconcile-plan                  codex · gpt-5.6-sol           → docs/threads/260727135009Z-my-feature/plan.md
     3. implement-plan-with-subagents   claude-code · claude-sonnet-5 → docs/threads/260727135009Z-my-feature/plan.md
 ```
 
