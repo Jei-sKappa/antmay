@@ -31,12 +31,6 @@ async function newFixture(): Promise<RepoFixture> {
 const REPO = "/repo";
 const THREAD = "docs/threads/260728000000Z-thread";
 
-const INTRO =
-  "Antmay skills write .pending-decisions/, .pending-reviews/, and " +
-  ".implementation-runs/ inside the thread while a run is in progress. Git " +
-  "has to ignore all three and track nothing under them, or the files a " +
-  "skill writes there make a later stage fail its Git boundary.";
-
 type Call = { cwd: string; args: string[] };
 
 type StubOptions = {
@@ -83,6 +77,26 @@ function nul(...paths: string[]): string {
   return paths.map((p) => `${p}\0`).join("");
 }
 
+function unsafe(
+  result: Awaited<ReturnType<typeof checkTemporaryWorkspaces>>,
+) {
+  expect(result).toMatchObject({ ok: false, kind: "unsafe" });
+  if (result.ok || result.kind !== "unsafe") {
+    throw new Error("expected an unsafe temporary-workspace result");
+  }
+  return result.problems;
+}
+
+function inspectionError(
+  result: Awaited<ReturnType<typeof checkTemporaryWorkspaces>>,
+): string {
+  expect(result).toMatchObject({ ok: false, kind: "inspection-error" });
+  if (result.ok || result.kind !== "inspection-error") {
+    throw new Error("expected a temporary-workspace inspection error");
+  }
+  return result.message;
+}
+
 describe("checkTemporaryWorkspaces against a real repository", () => {
   it("passes when trailing-slash directory rules cover all three workspaces", async () => {
     const fixture = await newFixture();
@@ -108,16 +122,27 @@ describe("checkTemporaryWorkspaces against a real repository", () => {
 
     const rel = fixture.threadRelPath as string;
     const result = await checkTemporaryWorkspaces(fixture.root, rel);
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
-    expect(message).toContain(`  - ${rel}/.pending-decisions/`);
-    expect(message).toContain("  docs/threads/**/.pending-decisions/");
+    const problems = unsafe(result);
+    expect(problems.uncovered).toEqual([
+      {
+        directory: `${rel}/.pending-decisions`,
+        repositoryRule: "docs/threads/**/.pending-decisions/",
+      },
+    ]);
     // The two workspaces a trailing-slash rule still covers stay out of the
-    // group and out of the correction block.
-    expect(message).not.toContain(`  - ${rel}/.pending-reviews/`);
-    expect(message).not.toContain(`  - ${rel}/.implementation-runs/`);
-    expect(message).not.toContain("  docs/threads/**/.pending-reviews/");
-    expect(message).not.toContain("  docs/threads/**/.implementation-runs/");
+    // facts and out of the correction rules.
+    expect(problems.uncovered).not.toContainEqual(
+      expect.objectContaining({
+        directory: `${rel}/.pending-reviews`,
+      }),
+    );
+    expect(problems.uncovered).not.toContainEqual(
+      expect.objectContaining({
+        directory: `${rel}/.implementation-runs`,
+      }),
+    );
+    expect(problems.trackedPaths).toEqual([]);
+    expect(problems.trackedDirectories).toEqual([]);
   });
 
   it("reports a force-added file under an ignored workspace as tracked", async () => {
@@ -129,14 +154,12 @@ describe("checkTemporaryWorkspaces against a real repository", () => {
     await fixture.git(["add", "-f", "--", `${rel}/.implementation-runs`]);
 
     const result = await checkTemporaryWorkspaces(fixture.root, rel);
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
-    expect(message).toContain("Tracked by Git:");
-    expect(message).toContain(`  - ${rel}/.implementation-runs/leftover.md`);
-    expect(message).toContain(
-      `  git rm -r --cached -- ${rel}/.implementation-runs`,
-    );
-    expect(message).not.toContain("Not covered by Git's ignore rules:");
+    const problems = unsafe(result);
+    expect(problems).toEqual({
+      uncovered: [],
+      trackedPaths: [`${rel}/.implementation-runs/leftover.md`],
+      trackedDirectories: [`${rel}/.implementation-runs`],
+    });
   });
 });
 
@@ -195,11 +218,12 @@ describe("checkTemporaryWorkspaces probes", () => {
     const { runner } = stub({ coverage: { ".pending-reviews": 1 } });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
-    expect(message).toContain(`  - ${THREAD}/.pending-reviews/`);
-    expect(message).not.toContain(`  - ${THREAD}/.pending-decisions/`);
-    expect(message).not.toContain(`  - ${THREAD}/.implementation-runs/`);
+    expect(unsafe(result).uncovered).toEqual([
+      {
+        directory: `${THREAD}/.pending-reviews`,
+        repositoryRule: "docs/threads/**/.pending-reviews/",
+      },
+    ]);
   });
 
   it("attributes every NUL-delimited tracked path to its workspace", async () => {
@@ -212,18 +236,17 @@ describe("checkTemporaryWorkspaces probes", () => {
     });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
-    expect(message).toContain(`  - ${THREAD}/.pending-decisions/DR-open.md`);
-    expect(message).toContain(
-      `  - ${THREAD}/.pending-reviews/bundle/finding.md`,
-    );
-    expect(message).toContain(`  - ${THREAD}/.pending-reviews/bundle/second.md`);
+    const problems = unsafe(result);
+    expect(problems.trackedPaths).toEqual([
+      `${THREAD}/.pending-decisions/DR-open.md`,
+      `${THREAD}/.pending-reviews/bundle/finding.md`,
+      `${THREAD}/.pending-reviews/bundle/second.md`,
+    ]);
     // One correction per affected directory, never one per file.
-    expect(message).toContain(
-      `  git rm -r --cached -- ${THREAD}/.pending-decisions ${THREAD}/.pending-reviews`,
-    );
-    expect(message).not.toContain(`${THREAD}/.implementation-runs`);
+    expect(problems.trackedDirectories).toEqual([
+      `${THREAD}/.pending-decisions`,
+      `${THREAD}/.pending-reviews`,
+    ]);
   });
 
   it("returns a check-ignore exit 128 as a Git error, not missing coverage", async () => {
@@ -233,25 +256,20 @@ describe("checkTemporaryWorkspaces probes", () => {
     });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
+    const message = inspectionError(result);
     expect(message).toContain(REPO);
     expect(message).toContain("exited with code 128");
     expect(message).toContain("fatal: not a git repository");
-    expect(message).not.toContain("Not covered by Git's ignore rules:");
-    expect(message).not.toContain("docs/threads/**/");
   });
 
   it("returns a non-zero ls-files result as a Git error", async () => {
     const { runner } = stub({ lsCode: 128, lsStderr: "fatal: bad pathspec\n" });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
+    const message = inspectionError(result);
     expect(message).toContain("ls-files");
     expect(message).toContain("exited with code 128");
     expect(message).toContain("fatal: bad pathspec");
-    expect(message).not.toContain("Tracked by Git:");
   });
 
   it("returns a spawn failure as a Git error", async () => {
@@ -260,16 +278,14 @@ describe("checkTemporaryWorkspaces probes", () => {
       Promise.reject(new GitSpawnError(args, new Error("spawn ENOENT")));
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    const message = result.ok ? "" : result.message;
+    const message = inspectionError(result);
     expect(message).toContain(REPO);
     expect(message).toContain("spawn ENOENT");
-    expect(message).not.toContain("Not covered by Git's ignore rules:");
   });
 });
 
-describe("the temporary-workspace refusal", () => {
-  it("groups both failure kinds with their own corrections", async () => {
+describe("the temporary-workspace problem facts", () => {
+  it("groups both failure kinds with their own correction facts", async () => {
     // `.pending-decisions` is covered but tracked, `.pending-reviews` is
     // neither covered nor untracked, `.implementation-runs` passes both probes.
     const { runner } = stub({
@@ -281,25 +297,22 @@ describe("the temporary-workspace refusal", () => {
     });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    expect(result.ok ? "" : result.message).toBe(
-      [
-        INTRO,
-        "",
-        "Not covered by Git's ignore rules:",
-        `  - ${THREAD}/.pending-reviews/`,
-        "",
-        `Add these repository-wide rules to the .gitignore of ${REPO}:`,
-        "  docs/threads/**/.pending-reviews/",
-        "",
-        "Tracked by Git:",
-        `  - ${THREAD}/.pending-decisions/DR-open.md`,
-        `  - ${THREAD}/.pending-reviews/bundle/finding.md`,
-        "",
-        "Untrack these directories and commit the removal:",
-        `  git rm -r --cached -- ${THREAD}/.pending-decisions ${THREAD}/.pending-reviews`,
-      ].join("\n"),
-    );
+    expect(unsafe(result)).toEqual({
+      uncovered: [
+        {
+          directory: `${THREAD}/.pending-reviews`,
+          repositoryRule: "docs/threads/**/.pending-reviews/",
+        },
+      ],
+      trackedPaths: [
+        `${THREAD}/.pending-decisions/DR-open.md`,
+        `${THREAD}/.pending-reviews/bundle/finding.md`,
+      ],
+      trackedDirectories: [
+        `${THREAD}/.pending-decisions`,
+        `${THREAD}/.pending-reviews`,
+      ],
+    });
   });
 
   it("omits the tracked group when only ignore coverage fails", async () => {
@@ -308,20 +321,20 @@ describe("the temporary-workspace refusal", () => {
     });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    expect(result.ok ? "" : result.message).toBe(
-      [
-        INTRO,
-        "",
-        "Not covered by Git's ignore rules:",
-        `  - ${THREAD}/.pending-decisions/`,
-        `  - ${THREAD}/.implementation-runs/`,
-        "",
-        `Add these repository-wide rules to the .gitignore of ${REPO}:`,
-        "  docs/threads/**/.pending-decisions/",
-        "  docs/threads/**/.implementation-runs/",
-      ].join("\n"),
-    );
+    expect(unsafe(result)).toEqual({
+      uncovered: [
+        {
+          directory: `${THREAD}/.pending-decisions`,
+          repositoryRule: "docs/threads/**/.pending-decisions/",
+        },
+        {
+          directory: `${THREAD}/.implementation-runs`,
+          repositoryRule: "docs/threads/**/.implementation-runs/",
+        },
+      ],
+      trackedPaths: [],
+      trackedDirectories: [],
+    });
   });
 
   it("never returns success for a tracked path it cannot attribute", async () => {
@@ -330,15 +343,11 @@ describe("the temporary-workspace refusal", () => {
     const { runner } = stub({ tracked: nul("docs/threads/other/stray.md") });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    expect(result.ok ? "" : result.message).toBe(
-      [
-        INTRO,
-        "",
-        "Tracked by Git:",
-        "  - docs/threads/other/stray.md",
-      ].join("\n"),
-    );
+    expect(unsafe(result)).toEqual({
+      uncovered: [],
+      trackedPaths: ["docs/threads/other/stray.md"],
+      trackedDirectories: [],
+    });
   });
 
   it("omits the missing-coverage group when only tracked content fails", async () => {
@@ -347,17 +356,10 @@ describe("the temporary-workspace refusal", () => {
     });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
 
-    expect(result.ok).toBe(false);
-    expect(result.ok ? "" : result.message).toBe(
-      [
-        INTRO,
-        "",
-        "Tracked by Git:",
-        `  - ${THREAD}/.implementation-runs/260728Z/report.md`,
-        "",
-        "Untrack these directories and commit the removal:",
-        `  git rm -r --cached -- ${THREAD}/.implementation-runs`,
-      ].join("\n"),
-    );
+    expect(unsafe(result)).toEqual({
+      uncovered: [],
+      trackedPaths: [`${THREAD}/.implementation-runs/260728Z/report.md`],
+      trackedDirectories: [`${THREAD}/.implementation-runs`],
+    });
   });
 });

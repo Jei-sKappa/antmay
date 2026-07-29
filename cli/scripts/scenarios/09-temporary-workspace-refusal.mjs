@@ -8,10 +8,9 @@ import { action, run } from "../demo/steps.mjs";
 /**
  * The thread's temporary workspaces are not Git-safe, so preflight refuses
  * before any state, lock, checkpoint or agent effect. Ends on the structured
- * refusal — the explanation, the missing-coverage list with its copyable
+ * refusal — command context, the missing-coverage list with its copyable
  * `.gitignore` rules, then the tracked-content list with its copyable
- * `git rm -r --cached` command — which is the one refusal that prints grouped
- * failures and copyable corrections rather than a single sentence.
+ * `git rm -r --cached` command, followed by the reason and the explicit result.
  *
  * Both failure kinds are provoked at once and independently, so one invocation
  * shows both groups: the ignore rules covering `.pending-decisions/` and
@@ -34,7 +33,7 @@ const OUTCOME = "# Implementer Outcome — Task 01\n\nStatus: DONE\n";
 const TRACKED = ".implementation-runs/260101000000Z-demo/task-01/01-outcome.md";
 
 export default {
-  label: "Unsafe temporary workspaces — ends on the grouped preflight refusal",
+  label: "Unsafe temporary workspaces — ends on the structured preflight refusal",
   scenario: standardScenario(),
   steps: [
     action(

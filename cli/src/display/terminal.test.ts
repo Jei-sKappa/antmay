@@ -16,6 +16,7 @@ import {
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
+  printTemporaryWorkspaceRefusal,
   printUnrestrictedWarning,
   type DisplayOptions,
 } from "./terminal.js";
@@ -55,6 +56,60 @@ function makeOptions(
 }
 
 const ANSI_PATTERN = /\x1b\[\d+m/;
+
+describe("printTemporaryWorkspaceRefusal", () => {
+  const problems = {
+    uncovered: [
+      {
+        directory: "docs/threads/260101000000Z-example/.pending-decisions",
+        repositoryRule: "docs/threads/**/.pending-decisions/",
+      },
+      {
+        directory: "docs/threads/260101000000Z-example/.pending-reviews",
+        repositoryRule: "docs/threads/**/.pending-reviews/",
+      },
+    ],
+    trackedPaths: [
+      "docs/threads/260101000000Z-example/.implementation-runs/run/task/outcome.md",
+    ],
+    trackedDirectories: [
+      "docs/threads/260101000000Z-example/.implementation-runs",
+    ],
+  };
+
+  it("renders a structured new-run refusal with separate problems and fixes", () => {
+    const { options, out, err } = makeOptions();
+    printTemporaryWorkspaceRefusal(options, {
+      mode: "run",
+      pipelineName: "standard",
+      threadRelPath: "docs/threads/260101000000Z-example",
+      repoRoot: "/repo",
+      problems,
+    });
+
+    expect(out.text).toBe("");
+    expect(err.text).toMatchSnapshot();
+  });
+
+  it("renders the same diagnosis as a resume refusal with durable-state context", () => {
+    const { options, out, err } = makeOptions();
+    printTemporaryWorkspaceRefusal(options, {
+      mode: "resume",
+      runId: "260101T000000000Z-run",
+      pipelineName: "standard",
+      threadRelPath: "docs/threads/260101000000Z-example",
+      repoRoot: "/repo",
+      problems,
+    });
+
+    expect(out.text).toBe("");
+    expect(err.text).toMatchSnapshot();
+    const lines = err.text.trimEnd().split("\n");
+    expect(lines.at(-1)).toContain(
+      "Resume:   antmay afk resume 260101T000000000Z-run",
+    );
+  });
+});
 
 describe("printCompositionRefusal", () => {
   const state = (overrides: Partial<ArtifactState> = {}): ArtifactState => ({

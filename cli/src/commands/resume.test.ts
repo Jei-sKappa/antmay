@@ -578,10 +578,23 @@ describe.concurrent("resumeCommand — temporary-workspace safety (AC-1.7, AC-2.
 
       expect(result.code).toBe(1);
       const rel = h.fixture.threadRelPath as string;
-      expect(result.err).toContain("Antmay skills write .pending-decisions/");
-      expect(result.err).toContain(`  - ${rel}/.pending-decisions/`);
-      expect(result.err).toContain(`  - ${rel}/.pending-reviews/`);
-      expect(result.err).toContain(`  - ${rel}/.implementation-runs/leftover.md`);
+      expect(result.err).toContain("Run cannot resume ❌");
+      expect(result.err).toContain(`Run ID:   ${runId}`);
+      expect(result.err).toContain("Check:    Temporary workspace Git safety");
+      expect(result.err).toContain("Missing ignore coverage");
+      expect(result.err).toContain("    - .pending-decisions/");
+      expect(result.err).toContain("    - .pending-reviews/");
+      expect(result.err).toContain("Tracked temporary content");
+      expect(result.err).toContain("    - .implementation-runs/leftover.md");
+      expect(result.err).toContain(
+        `      git rm -r --cached -- ${rel}/.implementation-runs`,
+      );
+      expect(result.err).toContain(
+        "Result:   Checkpoint unchanged. No lock was acquired and no stage was run.",
+      );
+      expect(result.err.trimEnd().split("\n").at(-1)).toContain(
+        `Resume:   antmay afk resume ${runId}`,
+      );
       // This pause is exempt from the clean-worktree rule, so nothing else here
       // would have stopped the resume — and the workspace refusal never offers
       // the commit-or-revert advice that would commit the residue.

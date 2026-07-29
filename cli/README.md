@@ -405,11 +405,13 @@ Each rule has to cover the directory itself. A rule restricted to filenames insi
 one — `docs/threads/**/.implementation-runs/*.md`, say — leaves that directory
 uncovered, and the check refuses.
 
-Both `run` and `resume` check this in preflight, ahead of the clean-worktree gate
-and before any state exists — no run directory, no checkpoint, no workspace lock.
-A repository that does not satisfy it exits `1` and prints exactly which
-directories are uncovered or tracked, the rules to add, and the
-`git rm -r --cached` command to untrack what is already committed.
+Both `run` and `resume` check this ahead of the clean-worktree gate, lock
+acquisition, and stage execution. For a new run, rejection happens before a run
+directory or checkpoint exists; for a resume, the existing checkpoint remains
+unchanged. A repository that does not satisfy the check exits `1` with a
+structured Git-safety refusal: command and thread context, separate sections for
+missing ignore coverage and tracked temporary content, the correction for each,
+the reason the check is required, and an explicit result.
 
 ## What a run prints before it starts
 
@@ -541,7 +543,7 @@ From `cli/`, or from the repository root by replacing `npm` with
 
 ```sh
 npm run demo -- --list                  # every scenario, and the state it ends on
-npm run demo -- --scenario 11-refused   # by full id
+npm run demo -- --scenario 12-refused   # by full id
 npm run demo -- --scenario refused      # by name
 npm run demo -- --scenario 11           # by number
 ```

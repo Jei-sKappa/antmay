@@ -19,6 +19,7 @@ import {
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
+  printTemporaryWorkspaceRefusal,
 } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { isWorktreeClean } from "../gitops/status.js";
@@ -340,7 +341,17 @@ export async function runCommand(
       thread.threadRelPath,
     );
     if (!workspaces.ok) {
-      return fail(workspaces.message);
+      if (workspaces.kind === "inspection-error") {
+        return fail(workspaces.message);
+      }
+      printTemporaryWorkspaceRefusal(displayOptions, {
+        mode: "run",
+        pipelineName: document.name,
+        threadRelPath: thread.threadRelPath,
+        repoRoot: thread.repoRoot,
+        problems: workspaces.problems,
+      });
+      return EXIT_FAILURE;
     }
 
     // Preflight 12: clean-worktree requirement (boundary status set).

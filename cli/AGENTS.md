@@ -236,6 +236,11 @@ bearing.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
   something new to draw and you add or extend one in the same change — see
   "Scenarios are the executable UI contract" below.
+- **Multiline operational diagnostics belong to `display/`.** Domain modules
+  return structured facts, and commands add the run or resume context before
+  calling a terminal renderer. A short single-line diagnostic may remain a
+  message, but never assemble a paragraph/list/command wall in a checker and
+  pass it through a command's generic failure printer.
 - **Artifact-prerequisite diagnostics form one interface across execution
   phases.** Both a composition refusal and a runtime recheck identify the
   affected stage, show the concrete thread files found and required, explain
@@ -326,7 +331,7 @@ quietly drifting away from the schema it imitates.
 
 Discovery is automatic: a scenario's id is its filename stem under
 `scripts/scenarios/`, so a new scenario is a new file and nothing else. The
-zero-padded prefix each id carries (`11-refused`) is what puts the catalog in
+zero-padded prefix each id carries (`12-refused`) is what puts the catalog in
 reading order everywhere it appears — on disk, in `--list`, and in the prompt —
 rather than in the alphabetical order the names alone would give.
 

@@ -1,4 +1,5 @@
 import type { HarnessEvent } from "../harness/types.js";
+import type { TemporaryWorkspaceProblems } from "../gitops/temporary-workspaces.js";
 import type {
   CompositionFailure,
   DependencyProjection,
@@ -318,6 +319,134 @@ export function printScriptedModeStartup(
       infoLine(paint, "  ", "config", scenarioPath, width),
     ].join("\n"),
   );
+}
+
+type TemporaryWorkspaceRefusalBase = {
+  pipelineName: string;
+  threadRelPath: string;
+  repoRoot: string;
+  problems: TemporaryWorkspaceProblems;
+};
+
+/** Context that distinguishes refusing a new run from refusing a resume. */
+export type TemporaryWorkspaceRefusalInfo =
+  | (TemporaryWorkspaceRefusalBase & { mode: "run" })
+  | (TemporaryWorkspaceRefusalBase & {
+      mode: "resume";
+      runId: string;
+    });
+
+function relativeToThread(threadRelPath: string, trackedPath: string): string {
+  const prefix = `${threadRelPath}/`;
+  return trackedPath.startsWith(prefix)
+    ? trackedPath.slice(prefix.length)
+    : trackedPath;
+}
+
+/**
+ * Render an unsafe temporary-workspace refusal to stderr. The Git checker owns
+ * the repository facts; this renderer supplies command context, separates each
+ * problem from its correction, and states what durable work did not happen.
+ */
+export function printTemporaryWorkspaceRefusal(
+  options: DisplayOptions,
+  info: TemporaryWorkspaceRefusalInfo,
+): void {
+  const paint = createPainter(options);
+  const width = keyWidth(
+    "Run ID",
+    "Pipeline",
+    "Thread",
+    "Check",
+    "Problem",
+    "Result",
+    "Resume",
+  );
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, width);
+  const lines = [
+    paint(
+      info.mode === "run"
+        ? "Pipeline cannot start ❌"
+        : "Run cannot resume ❌",
+      "bold",
+      "red",
+    ),
+  ];
+
+  if (info.mode === "resume") {
+    lines.push(line("Run ID", info.runId));
+  }
+  lines.push(
+    line("Pipeline", info.pipelineName),
+    line("Thread", info.threadRelPath),
+    line("Check", "Temporary workspace Git safety"),
+    line("Problem", "Antmay's temporary workspaces are not Git-safe."),
+  );
+
+  if (info.problems.uncovered.length > 0) {
+    lines.push(
+      "",
+      paint("Missing ignore coverage", "bold"),
+      `  ${paint("Directories:", ...KEY_STYLE)}`,
+      ...info.problems.uncovered.map(
+        (workspace) =>
+          `    - ${relativeToThread(info.threadRelPath, workspace.directory)}/`,
+      ),
+      "",
+      `  ${paint("Fix:", ...KEY_STYLE)}`,
+      `    Add these lines to ${info.repoRoot}/.gitignore:`,
+      ...info.problems.uncovered.map(
+        (workspace) => `      ${workspace.repositoryRule}`,
+      ),
+    );
+  }
+
+  if (info.problems.trackedPaths.length > 0) {
+    lines.push(
+      "",
+      paint("Tracked temporary content", "bold"),
+      `  ${paint("Files:", ...KEY_STYLE)}`,
+      ...info.problems.trackedPaths.map(
+        (trackedPath) =>
+          `    - ${relativeToThread(info.threadRelPath, trackedPath)}`,
+      ),
+      "",
+      `  ${paint("Fix:", ...KEY_STYLE)}`,
+    );
+
+    if (info.problems.trackedDirectories.length > 0) {
+      lines.push(
+        `    Run from ${info.repoRoot}:`,
+        `      git rm -r --cached -- ${info.problems.trackedDirectories.join(" ")}`,
+        "    Then commit the removal.",
+      );
+    } else {
+      lines.push(
+        "    Review and untrack the files above, then commit the removal.",
+      );
+    }
+  }
+
+  lines.push(
+    "",
+    `  ${paint("Why:", ...KEY_STYLE)}`,
+    "    - Antmay writes temporary work-in-progress files into these directories.",
+    "    - Git must ignore them and track nothing inside them.",
+    "    - Files written during a run can otherwise make a later stage fail its Git boundary.",
+    line(
+      "Result",
+      info.mode === "run"
+        ? "No run was created and no stages were run."
+        : "Checkpoint unchanged. No lock was acquired and no stage was run.",
+    ),
+  );
+
+  if (info.mode === "resume") {
+    lines.push(line("Resume", `antmay afk resume ${info.runId}`));
+  }
+
+  emit(options.stderr, lines.join("\n"));
 }
 
 /** Identity shared by every pipeline-composition refusal. */

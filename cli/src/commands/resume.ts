@@ -9,6 +9,7 @@ import {
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
+  printTemporaryWorkspaceRefusal,
 } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
 import { evaluateBoundary, finalizeBoundary } from "../gitops/boundary.js";
@@ -306,7 +307,18 @@ export async function resumeCommand(
     // acquisition and every checkpoint mutation.
     const workspaces = await checkTemporaryWorkspaces(repoRoot, threadRelPath);
     if (!workspaces.ok) {
-      return fail(workspaces.message);
+      if (workspaces.kind === "inspection-error") {
+        return fail(workspaces.message);
+      }
+      printTemporaryWorkspaceRefusal(displayOptions, {
+        mode: "resume",
+        runId: checkpoint.runId,
+        pipelineName: checkpoint.pipelineName,
+        threadRelPath,
+        repoRoot,
+        problems: workspaces.problems,
+      });
+      return EXIT_FAILURE;
     }
 
     // Clean-worktree rule: required for every waiting kind except

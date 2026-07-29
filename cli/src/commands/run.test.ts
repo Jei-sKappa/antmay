@@ -871,12 +871,21 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     await expectClean(h, result);
     const rel = h.fixture.threadRelPath as string;
     // One refusal covers every failing workspace from both probes.
-    expect(result.err).toContain("Antmay skills write .pending-decisions/");
-    expect(result.err).toContain(`  - ${rel}/.pending-decisions/`);
-    expect(result.err).toContain(`  - ${rel}/.pending-reviews/`);
-    expect(result.err).toContain(`  - ${rel}/.implementation-runs/leftover.md`);
+    expect(result.err).toContain("Pipeline cannot start ❌");
+    expect(result.err).toContain("Check:    Temporary workspace Git safety");
     expect(result.err).toContain(
-      `  git rm -r --cached -- ${rel}/.implementation-runs`,
+      "Problem:  Antmay's temporary workspaces are not Git-safe.",
+    );
+    expect(result.err).toContain("Missing ignore coverage");
+    expect(result.err).toContain("    - .pending-decisions/");
+    expect(result.err).toContain("    - .pending-reviews/");
+    expect(result.err).toContain("Tracked temporary content");
+    expect(result.err).toContain("    - .implementation-runs/leftover.md");
+    expect(result.err).toContain(
+      `      git rm -r --cached -- ${rel}/.implementation-runs`,
+    );
+    expect(result.err).toContain(
+      "Result:   No run was created and no stages were run.",
     );
     // The tree is dirty too, and the advice a dirty tree earns — commit or
     // revert — would commit the residue this refusal exists to keep out.

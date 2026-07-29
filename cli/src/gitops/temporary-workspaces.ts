@@ -14,6 +14,17 @@ const WORKSPACE_NAMES = [
   ".implementation-runs",
 ] as const;
 
+type TemporaryWorkspaceName = (typeof WORKSPACE_NAMES)[number];
+
+export type TemporaryWorkspaceProblems = {
+  uncovered: {
+    directory: string;
+    repositoryRule: string;
+  }[];
+  trackedPaths: string[];
+  trackedDirectories: string[];
+};
+
 /**
  * How this check reaches `git`. It defaults to the package's `runGit` and is
  * injectable only so a focused test can drive the completed-error and
@@ -22,19 +33,19 @@ const WORKSPACE_NAMES = [
 export type GitRunner = (cwd: string, args: string[]) => Promise<GitResult>;
 
 /**
- * The outcome of the check. A failure carries the entire user-visible text —
- * either the structured refusal or the Git-error report — so a command prints
- * it as-is and composes no wording of its own.
+ * The outcome of the check. An unsafe repository carries facts and correction
+ * inputs for the terminal layer to present in the context of either a new run
+ * or a resume. A failure to inspect Git remains a short diagnostic because the
+ * check has no trustworthy repository-state facts to report.
  */
 export type TemporaryWorkspaceCheckResult =
   | { ok: true }
-  | { ok: false; message: string };
-
-const INTRO =
-  "Antmay skills write .pending-decisions/, .pending-reviews/, and " +
-  ".implementation-runs/ inside the thread while a run is in progress. Git " +
-  "has to ignore all three and track nothing under them, or the files a " +
-  "skill writes there make a later stage fail its Git boundary.";
+  | {
+      ok: false;
+      kind: "unsafe";
+      problems: TemporaryWorkspaceProblems;
+    }
+  | { ok: false; kind: "inspection-error"; message: string };
 
 /**
  * Verify that every one of the thread's three temporary directories is covered
@@ -64,7 +75,7 @@ export async function checkTemporaryWorkspaces(
   const relPathOf = (name: string): string =>
     path.posix.join(threadRelPath, name);
 
-  const uncovered: string[] = [];
+  const uncovered: TemporaryWorkspaceName[] = [];
   let trackedPaths: string[] = [];
 
   try {
@@ -105,6 +116,7 @@ export async function checkTemporaryWorkspaces(
     const reason = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
+      kind: "inspection-error",
       message: `Cannot inspect the Git state of ${repoRoot}: ${reason}`,
     };
   }
@@ -125,12 +137,15 @@ export async function checkTemporaryWorkspaces(
 
   return {
     ok: false,
-    message: refusal(repoRoot, {
-      uncovered: uncovered.map((name) => relPathOf(name)),
-      uncoveredRules: uncovered.map((name) => `docs/threads/**/${name}/`),
+    kind: "unsafe",
+    problems: {
+      uncovered: uncovered.map((name) => ({
+        directory: relPathOf(name),
+        repositoryRule: `docs/threads/**/${name}/`,
+      })),
       trackedPaths,
-      trackedDirs: trackedWorkspaces.map((name) => relPathOf(name)),
-    }),
+      trackedDirectories: trackedWorkspaces.map((name) => relPathOf(name)),
+    },
   };
 }
 
@@ -147,64 +162,7 @@ function gitFailure(
   const detail = new GitCommandError(args, result).message;
   return {
     ok: false,
+    kind: "inspection-error",
     message: `Cannot inspect the Git state of ${repoRoot}: ${detail}`,
   };
-}
-
-/**
- * Render the refusal: the explanation, then one group per failure kind, each
- * immediately followed by its own copyable correction. Missing coverage comes
- * first because its rules are repository-wide and fix every thread at once. A
- * group with nothing to report is omitted entirely.
- *
- * Every tracked path Git emitted is listed, and the `git rm` correction names
- * the directories those paths belong to — so a path that belongs to none of
- * them is still shown, with no correction claiming to remove it.
- */
-function refusal(
-  repoRoot: string,
-  failures: {
-    uncovered: string[];
-    uncoveredRules: string[];
-    trackedPaths: string[];
-    trackedDirs: string[];
-  },
-): string {
-  const sections: string[] = [INTRO];
-
-  if (failures.uncovered.length > 0) {
-    sections.push(
-      block(
-        "Not covered by Git's ignore rules:",
-        failures.uncovered.map((rel) => `  - ${rel}/`),
-      ),
-      block(
-        `Add these repository-wide rules to the .gitignore of ${repoRoot}:`,
-        failures.uncoveredRules.map((rule) => `  ${rule}`),
-      ),
-    );
-  }
-
-  if (failures.trackedPaths.length > 0) {
-    sections.push(
-      block(
-        "Tracked by Git:",
-        failures.trackedPaths.map((tracked) => `  - ${tracked}`),
-      ),
-    );
-  }
-
-  if (failures.trackedDirs.length > 0) {
-    sections.push(
-      block("Untrack these directories and commit the removal:", [
-        `  git rm -r --cached -- ${failures.trackedDirs.join(" ")}`,
-      ]),
-    );
-  }
-
-  return sections.join("\n\n");
-}
-
-function block(heading: string, lines: string[]): string {
-  return [heading, ...lines].join("\n");
 }
