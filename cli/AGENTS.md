@@ -400,11 +400,13 @@ through its public command surface against isolated configuration, state, and
 repository fixtures, using the scripted harness whenever execution reaches an
 agent.
 
-Every change that introduces or modifies user-visible terminal output must add
-or update a scenario that reaches that output. This applies to every command and
-execution phase, including startup, success, pauses, failures, warnings,
+Every change that introduces or modifies user-visible terminal output must be
+exercised by a scenario that reaches that output. This applies to every command
+and execution phase, including startup, success, pauses, failures, warnings,
 preflight refusals, and listings. Output length, rarity, and whether an agent was
-invoked do not affect the requirement.
+invoked do not affect the requirement. When an existing scenario already
+exercises the changed rendering, run it; the scenario source and its README row
+need no edit.
 
 A supported rendering without a scenario is a UI coverage gap: developers
 cannot readily discover, run, or review an interface the CLI claims to support.
@@ -416,6 +418,8 @@ differ only in interpolated values may share a scenario; outputs with different
 sections, ordering, causal explanations, corrections, wrapping-sensitive
 content, or interaction paths require separate scenarios. Then:
 
+- **If an existing scenario already covers it, run that scenario without
+  changing its source or documentation.**
 - **If an existing scenario nearly covers it, extend that one.** Two scenarios
   that end on renderings a reader cannot tell apart are one scenario too many.
 - **Otherwise add a file**, and give it a number that places it where it belongs
@@ -427,7 +431,8 @@ content, or interaction paths require separate scenarios. Then:
   what it exists to show, so that thing is the last output on screen and needs no
   scrolling to find. Add a `note` if its shape needs explaining, such as needing
   a second invocation.
-- **Update the table in `README.md`** in the same change, and run the scenario to
+- **Update the table in `README.md`** only when the scenario catalog or the
+  terminal state a row describes changes, and run the affected scenario to
   confirm the exit code it declares.
 
 Unit tests remain responsible for exact behavior, edge cases, and output

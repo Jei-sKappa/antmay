@@ -121,6 +121,29 @@ This applies to every document and skill body in the repository.
 
 When an edit replaces design A with design B, the resulting skill body or document must describe B as if A had never existed. Never write a negation or before/after contrast whose only referent is the removed design — "X is no longer …", "there is no X anymore", "unlike before, …": once A is removed it is not materially written anywhere, so a fresh reader cannot know it existed, and the sentence's only effect is to teach a dead concept while reading as a changelog. Test every negative statement you keep or add: does it forbid something a fresh reader with no memory of the old design would plausibly do anyway? A live guardrail against natural drift ("never treat the sequence as a checklist", "add no owner field") passes the test; a contrast with a previous version of the text does not.
 
+## Document only durable, properly scoped information
+
+Do not add comments, sections, or documentation notes merely because a change
+was made or to ensure that every changed behavior is mentioned somewhere.
+Explanatory prose belongs only where it gives a future reader useful, durable
+information such as a contract, non-obvious constraint, rationale, or workflow.
+Place each fact at the narrowest location whose scope matches it: broad behavior
+does not belong under one example, scenario, or component, and the same fact
+does not need to be repeated across documents. If existing documentation remains
+accurate and useful after a change, leave it unchanged.
+
+README files are user-facing. Include only information an end user needs to
+understand, choose, configure, or operate the software; do not expose internal
+implementation or maintenance details that have no practical value to that
+audience.
+
+AGENTS.md files are durable working memory for agents that lose session context.
+Use them to make the repository or module structure quickly understandable and
+to preserve non-obvious constraints, rationale, workflows, and rules that cannot
+be expressed or enforced practically in code. Do not use them as an inventory of
+ordinary implementation details. Code is the source of truth for behavior and
+structure that are immediately apparent from reading it.
+
 ## Commits
 
 Never commit unless explicitly asked to do so.
