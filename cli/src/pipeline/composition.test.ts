@@ -5,7 +5,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { composePipeline } from "./composition.js";
-import type { PreparedStage } from "./composition.js";
+import type {
+  CompositionFailure,
+  PreparedStage,
+} from "./composition.js";
 import { loadPipelineDocument } from "./documents.js";
 import type {
   ArtifactState,
@@ -45,7 +48,9 @@ function compose(
 ): PreparedStage[] {
   const result = composePipeline(document(stages), artifactState, THREAD, fromStage);
   if (!result.ok) {
-    throw new Error(`expected a composable pipeline: ${result.errors.join(" ")}`);
+    throw new Error(
+      `expected a composable pipeline: ${JSON.stringify(result.failure)}`,
+    );
   }
   return result.stages;
 }
@@ -54,12 +59,12 @@ function refuse(
   stages: PipelineStageEntry[],
   artifactState: ArtifactState,
   fromStage: string | null = null,
-): string[] {
+): CompositionFailure {
   const result = composePipeline(document(stages), artifactState, THREAD, fromStage);
   if (result.ok) {
     throw new Error("expected the composition to be refused");
   }
-  return result.errors;
+  return result.failure;
 }
 
 function ids(prepared: PreparedStage[]): string[] {
@@ -124,9 +129,14 @@ describe("composePipeline — suffix selection (AC-4.1, AC-4.2, AC-4.3)", () => 
   it("refuses a --from stage the pipeline does not select, naming it", () => {
     expect(
       refuse([{ stage: "spec" }, { stage: "plan-strict" }], state(), "implement"),
-    ).toEqual([
-      'Stage "implement" is not in pipeline "example"; its stages are "spec", "plan-strict".',
-    ]);
+    ).toEqual({
+      kind: "entry-point-not-selected",
+      requestedStage: "implement",
+      pipelineStages: [
+        { stageId: "spec", pipelinePosition: 1 },
+        { stageId: "plan-strict", pipelinePosition: 2 },
+      ],
+    });
   });
 });
 
@@ -138,11 +148,27 @@ describe("composePipeline — simulated artifact state (AC-4.4)", () => {
         state(),
         "plan-strict",
       ),
-    ).toEqual([
-      'Stage "plan-strict" (selected position 1) cannot run: it requires a ' +
-        "non-empty spec.md, but the thread's current state has no spec.md.",
-      "No earlier stage is selected, so that state must already exist in the thread.",
-    ]);
+    ).toEqual({
+      kind: "stage-prerequisite-unmet",
+      stage: {
+        stageId: "plan-strict",
+        pipelinePosition: 2,
+        selectedPosition: 1,
+      },
+      pipelineStageCount: 2,
+      selectedStageCount: 1,
+      fromStage: "plan-strict",
+      earlierStages: [],
+      dependencies: [
+        {
+          dimension: "spec",
+          expected: true,
+          observed: false,
+          initial: false,
+          transitions: [],
+        },
+      ],
+    });
   });
 
   it("admits a later entry point whose prerequisite already exists in the thread", () => {
@@ -183,13 +209,29 @@ describe("composePipeline — simulated artifact state (AC-4.4)", () => {
   });
 
   it("refuses a stage whose plan prerequisite is malformed", () => {
-    expect(refuse([{ stage: "implement-plan" }], state({ plan: "malformed" }))).toEqual([
-      'Stage "implement-plan" (selected position 1) cannot run: it requires a ' +
-        "non-empty plan.md and a plan-tasks/ folder holding at least one " +
-        "non-empty .md task file, but the thread's current state has a plan.md " +
-        "and plan-tasks/ folder pair in a combination that is no usable plan.",
-      "No earlier stage is selected, so that state must already exist in the thread.",
-    ]);
+    expect(
+      refuse([{ stage: "implement-plan" }], state({ plan: "malformed" })),
+    ).toEqual({
+      kind: "stage-prerequisite-unmet",
+      stage: {
+        stageId: "implement-plan",
+        pipelinePosition: 1,
+        selectedPosition: 1,
+      },
+      pipelineStageCount: 1,
+      selectedStageCount: 1,
+      fromStage: null,
+      earlierStages: [],
+      dependencies: [
+        {
+          dimension: "plan",
+          expected: "strict",
+          observed: "malformed",
+          initial: "malformed",
+          transitions: [],
+        },
+      ],
+    });
   });
 });
 
@@ -201,43 +243,196 @@ describe("composePipeline — the first impossible stage (AC-4.5, AC-4.7)", () =
     ] as const) {
       expect(
         refuse([{ stage: "plan-brief" }, { stage: implementation }], state()),
-      ).toEqual([
-        `Stage "${implementation}" (selected position 2) cannot run: it requires a ` +
-          "non-empty plan.md and a plan-tasks/ folder holding at least one " +
-          "non-empty .md task file, but the simulated state at that point has a " +
-          "non-empty plan.md and no plan-tasks/ folder.",
-        'Earlier selected stages leaving that state: "plan-brief" (position 1) ' +
-          "promises a non-empty plan.md and no plan-tasks/ folder.",
-      ]);
+      ).toEqual({
+        kind: "stage-prerequisite-unmet",
+        stage: {
+          stageId: implementation,
+          pipelinePosition: 2,
+          selectedPosition: 2,
+        },
+        pipelineStageCount: 2,
+        selectedStageCount: 2,
+        fromStage: null,
+        earlierStages: [
+          { stageId: "plan-brief", pipelinePosition: 1, selectedPosition: 1 },
+        ],
+        dependencies: [
+          {
+            dimension: "plan",
+            expected: "strict",
+            observed: "brief",
+            initial: "absent",
+            transitions: [
+              {
+                stageId: "plan-brief",
+                pipelinePosition: 1,
+                selectedPosition: 1,
+                value: "brief",
+              },
+            ],
+          },
+        ],
+      });
     }
   });
 
   it("names the thread's own state when nothing precedes the failing stage", () => {
-    expect(refuse([{ stage: "implement" }], state())).toEqual([
-      'Stage "implement" (selected position 1) cannot run: it requires a ' +
-        "non-empty plan.md and no plan-tasks/ folder, but the thread's current " +
-        "state has no plan.md and no plan-tasks/ folder.",
-      "No earlier stage is selected, so that state must already exist in the thread.",
-    ]);
+    expect(refuse([{ stage: "implement" }], state())).toEqual({
+      kind: "stage-prerequisite-unmet",
+      stage: {
+        stageId: "implement",
+        pipelinePosition: 1,
+        selectedPosition: 1,
+      },
+      pipelineStageCount: 1,
+      selectedStageCount: 1,
+      fromStage: null,
+      earlierStages: [],
+      dependencies: [
+        {
+          dimension: "plan",
+          expected: "brief",
+          observed: "absent",
+          initial: "absent",
+          transitions: [],
+        },
+      ],
+    });
   });
 
   it("says so when no preceding selected stage bears on the failing dimension", () => {
-    expect(refuse([{ stage: "spec" }, { stage: "implement" }], state())).toEqual([
-      'Stage "implement" (selected position 2) cannot run: it requires a ' +
-        "non-empty plan.md and no plan-tasks/ folder, but the simulated state at " +
-        "that point has no plan.md and no plan-tasks/ folder.",
-      "No earlier selected stage produces that state, so it must already exist in the thread.",
-    ]);
+    expect(
+      refuse([{ stage: "spec" }, { stage: "implement" }], state()),
+    ).toEqual({
+      kind: "stage-prerequisite-unmet",
+      stage: {
+        stageId: "implement",
+        pipelinePosition: 2,
+        selectedPosition: 2,
+      },
+      pipelineStageCount: 2,
+      selectedStageCount: 2,
+      fromStage: null,
+      earlierStages: [
+        { stageId: "spec", pipelinePosition: 1, selectedPosition: 1 },
+      ],
+      dependencies: [
+        {
+          dimension: "plan",
+          expected: "brief",
+          observed: "absent",
+          initial: "absent",
+          transitions: [],
+        },
+      ],
+    });
   });
 
   it("reports every unmet dimension of the failing stage together", () => {
-    expect(refuse([{ stage: "reconcile-plan" }], state())).toEqual([
-      'Stage "reconcile-plan" (selected position 1) cannot run: it requires a ' +
-        "non-empty spec.md, a non-empty plan.md and a plan-tasks/ folder holding " +
-        "at least one non-empty .md task file, but the thread's current state has " +
-        "no spec.md, no plan.md and no plan-tasks/ folder.",
-      "No earlier stage is selected, so that state must already exist in the thread.",
-    ]);
+    expect(refuse([{ stage: "reconcile-plan" }], state())).toEqual({
+      kind: "stage-prerequisite-unmet",
+      stage: {
+        stageId: "reconcile-plan",
+        pipelinePosition: 1,
+        selectedPosition: 1,
+      },
+      pipelineStageCount: 1,
+      selectedStageCount: 1,
+      fromStage: null,
+      earlierStages: [],
+      dependencies: [
+        {
+          dimension: "spec",
+          expected: true,
+          observed: false,
+          initial: false,
+          transitions: [],
+        },
+        {
+          dimension: "plan",
+          expected: "strict",
+          observed: "absent",
+          initial: "absent",
+          transitions: [],
+        },
+      ],
+    });
+  });
+
+  it("traces the inverse incompatibility from a strict-plan producer to brief implementation", () => {
+    expect(
+      refuse(
+        [{ stage: "plan-strict" }, { stage: "implement" }],
+        state({ spec: true }),
+      ),
+    ).toMatchObject({
+      kind: "stage-prerequisite-unmet",
+      dependencies: [
+        {
+          dimension: "plan",
+          initial: "absent",
+          observed: "strict",
+          expected: "brief",
+          transitions: [{ stageId: "plan-strict", value: "strict" }],
+        },
+      ],
+    });
+  });
+
+  it("retains every earlier transition when a later one overwrites a compatible value", () => {
+    expect(
+      refuse(
+        [
+          { stage: "spec" },
+          { stage: "plan-strict" },
+          { stage: "plan-brief" },
+          { stage: "implement-plan" },
+        ],
+        state(),
+      ),
+    ).toMatchObject({
+      kind: "stage-prerequisite-unmet",
+      stage: { stageId: "implement-plan", pipelinePosition: 4 },
+      dependencies: [
+        {
+          dimension: "plan",
+          initial: "absent",
+          observed: "brief",
+          expected: "strict",
+          transitions: [
+            { stageId: "plan-strict", pipelinePosition: 2, value: "strict" },
+            { stageId: "plan-brief", pipelinePosition: 3, value: "brief" },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("keeps separate origins for several unmet dependencies", () => {
+    expect(
+      refuse(
+        [{ stage: "plan-brief" }, { stage: "reconcile-plan" }],
+        state(),
+      ),
+    ).toMatchObject({
+      kind: "stage-prerequisite-unmet",
+      dependencies: [
+        {
+          dimension: "spec",
+          initial: false,
+          observed: false,
+          expected: true,
+          transitions: [],
+        },
+        {
+          dimension: "plan",
+          initial: "absent",
+          observed: "brief",
+          expected: "strict",
+          transitions: [{ stageId: "plan-brief", value: "brief" }],
+        },
+      ],
+    });
   });
 
   it("stops at the first impossible stage and prepares nothing after it", () => {
@@ -253,7 +448,10 @@ describe("composePipeline — the first impossible stage (AC-4.5, AC-4.7)", () =
     );
 
     expect(result.ok).toBe(false);
-    expect(result.ok ? "" : result.errors[0]).toContain('Stage "implement"');
+    expect(result.ok ? null : result.failure).toMatchObject({
+      kind: "stage-prerequisite-unmet",
+      stage: { stageId: "implement" },
+    });
   });
 
   it("admits a strict-plan implementation stage after an existing strict plan", () => {

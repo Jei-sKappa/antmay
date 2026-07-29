@@ -1,0 +1,156 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`printCompositionRefusal > renders a compatible transition overwritten by a later stage 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  overwritten-output
+  Source:    /config/pipelines/overwritten-output.json
+  Where:     pipeline stage 4 of 4 · implement-plan
+  Error:     1 prerequisite for "implement-plan" is not satisfied.
+
+Plan projection (assuming earlier selected stages succeed)
+  Thread before run:
+    no plan.md and no plan-tasks/ folder
+  After stage 2 · plan-strict:
+    a non-empty plan.md and a plan-tasks/ folder holding at least one non-empty .md task file
+  After stage 3 · plan-brief:
+    a non-empty plan.md and no plan-tasks/ folder
+  Required by stage 4 · implement-plan:
+    a non-empty plan.md and a plan-tasks/ folder holding at least one non-empty .md task file
+
+  Why:
+    - Stage 3 "plan-brief" would replace the compatible plan projected after stage 2 "plan-strict" with one that does not satisfy the prerequisite for stage 4 "implement-plan".
+  Result:    No stages were run.
+"
+`;
+
+exports[`printCompositionRefusal > renders a later prerequisite unchanged by earlier stages 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  missing-later
+  Source:    /config/pipelines/missing-later.json
+  Where:     pipeline stage 2 of 2 · implement
+  Error:     1 prerequisite for "implement" is not satisfied.
+
+Plan projection (assuming earlier selected stages succeed)
+  Thread before run:
+    no plan.md and no plan-tasks/ folder
+  Earlier stage changes:
+    none — stage 1 "spec" does not change the plan
+  Required by stage 2 · implement:
+    a non-empty plan.md and no plan-tasks/ folder
+
+  Why:
+    - The thread's plan does not satisfy the prerequisite for stage 2 "implement", and no earlier selected stage changes it.
+  Result:    No stages were run.
+"
+`;
+
+exports[`printCompositionRefusal > renders a malformed artifact already present in the thread 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  malformed-plan
+  Source:    /config/pipelines/malformed-plan.json
+  Where:     pipeline stage 1 of 1 · implement-plan
+  Error:     1 prerequisite for "implement-plan" is not satisfied.
+
+Plan projection (assuming earlier selected stages succeed)
+  Thread before run:
+    a plan.md and plan-tasks/ folder combination that does not form a usable plan
+  Earlier stage changes:
+    none — this is the first selected stage
+  Required by stage 1 · implement-plan:
+    a non-empty plan.md and a plan-tasks/ folder holding at least one non-empty .md task file
+
+  Why:
+    - The thread's plan does not satisfy the prerequisite for stage 1 "implement-plan", and this is the first selected stage.
+  Result:    No stages were run.
+"
+`;
+
+exports[`printCompositionRefusal > renders a missing prerequisite on the first selected --from stage 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  missing-first
+  Source:    /config/pipelines/missing-first.json
+  Where:     pipeline stage 2 of 2 · plan-strict
+  Selection: selected stage 1 of 1 from --from plan-strict
+  Error:     1 prerequisite for "plan-strict" is not satisfied.
+
+Spec projection (assuming earlier selected stages succeed)
+  Thread before run:
+    no spec.md
+  Earlier stage changes:
+    none — this is the first selected stage
+  Required by stage 2 · plan-strict:
+    a non-empty spec.md
+
+  Why:
+    - The thread's spec does not satisfy the prerequisite for stage 2 "plan-strict", and this is the first selected stage.
+  Result:    No stages were run.
+"
+`;
+
+exports[`printCompositionRefusal > renders an invalid --from entry point 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  invalid-entry
+  Source:    /config/pipelines/invalid-entry.json
+  Where:     --from implement
+  Error:     The requested entry point is not selected by this pipeline.
+
+  Pipeline stages:
+    1. spec
+    2. plan-strict
+
+  Why:
+    - --from selects a suffix beginning at a stage in the pipeline, but "implement" does not occur in this one.
+  Result:    No stages were run.
+"
+`;
+
+exports[`printCompositionRefusal > renders one incompatible earlier transition 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  incompatible-output
+  Source:    /config/pipelines/incompatible-output.json
+  Where:     pipeline stage 2 of 2 · implement-plan
+  Error:     1 prerequisite for "implement-plan" is not satisfied.
+
+Plan projection (assuming earlier selected stages succeed)
+  Thread before run:
+    no plan.md and no plan-tasks/ folder
+  After stage 1 · plan-brief:
+    a non-empty plan.md and no plan-tasks/ folder
+  Required by stage 2 · implement-plan:
+    a non-empty plan.md and a plan-tasks/ folder holding at least one non-empty .md task file
+
+  Why:
+    - Stage 1 "plan-brief" is the last earlier stage to change the plan; its projected output does not satisfy the prerequisite for stage 2 "implement-plan".
+  Result:    No stages were run.
+"
+`;
+
+exports[`printCompositionRefusal > renders several failed dependencies with independent origins 1`] = `
+"Pipeline cannot start ❌
+  Pipeline:  multiple-prerequisites
+  Source:    /config/pipelines/multiple-prerequisites.json
+  Where:     pipeline stage 2 of 2 · reconcile-plan
+  Error:     2 prerequisites for "reconcile-plan" are not satisfied.
+
+Spec projection (assuming earlier selected stages succeed)
+  Thread before run:
+    no spec.md
+  Earlier stage changes:
+    none — stage 1 "plan-brief" does not change the spec
+  Required by stage 2 · reconcile-plan:
+    a non-empty spec.md
+
+Plan projection (assuming earlier selected stages succeed)
+  Thread before run:
+    no plan.md and no plan-tasks/ folder
+  After stage 1 · plan-brief:
+    a non-empty plan.md and no plan-tasks/ folder
+  Required by stage 2 · reconcile-plan:
+    a non-empty plan.md and a plan-tasks/ folder holding at least one non-empty .md task file
+
+  Why:
+    - The thread's spec does not satisfy the prerequisite for stage 2 "reconcile-plan", and no earlier selected stage changes it.
+    - Stage 1 "plan-brief" is the last earlier stage to change the plan; its projected output does not satisfy the prerequisite for stage 2 "reconcile-plan".
+  Result:    No stages were run.
+"
+`;

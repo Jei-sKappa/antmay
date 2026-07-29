@@ -812,26 +812,47 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     });
     const result = await run(h, []);
     await expectClean(h, result);
-    expect(result.err).toContain('Stage "implement-plan" (selected position 2)');
-    // Short substrings: the phrases are long enough that the rendered stream
-    // may wrap them.
-    expect(result.err).toContain("a plan-tasks/ folder holding at least one");
-    expect(result.err).toContain('"plan-brief" (position 1) promises');
+    expect(result.err).toContain("Pipeline cannot start ❌");
+    expect(result.err).toContain("Pipeline:  standard");
+    expect(result.err).toContain(
+      "Where:     pipeline stage 2 of 2 · implement-plan",
+    );
+    expect(result.err).toContain(
+      "After stage 1 · plan-brief:\n    a non-empty plan.md and no plan-tasks/ folder",
+    );
+    expect(result.err).toContain(
+      'Stage 1 "plan-brief" is the last earlier stage to change the plan',
+    );
+    expect(result.err).toContain("Result:    No stages were run.");
   });
 
   it("refuses an unknown --from stage before allocation, naming it", async () => {
     const h = await setup();
     const result = await run(h, [], { from: "implement" });
     await expectClean(h, result);
-    expect(result.err).toContain('Stage "implement" is not in pipeline "standard"');
+    expect(result.err).toContain("Pipeline cannot start ❌");
+    expect(result.err).toContain("Where:     --from implement");
+    expect(result.err).toContain(
+      "Error:     The requested entry point is not selected by this pipeline.",
+    );
+    expect(result.err).toContain(
+      '"implement" does not occur in this one.',
+    );
   });
 
   it("refuses a --from entry point the thread cannot satisfy", async () => {
     const h = await setup();
     const result = await run(h, [], { from: "plan-strict" });
     await expectClean(h, result);
-    expect(result.err).toContain('Stage "plan-strict" (selected position 1)');
-    expect(result.err).toContain("No earlier stage is selected");
+    expect(result.err).toContain(
+      "Where:     pipeline stage 4 of 6 · plan-strict",
+    );
+    expect(result.err).toContain(
+      "Selection: selected stage 1 of 3 from --from plan-strict",
+    );
+    expect(result.err).toContain(
+      "none — this is the first selected stage",
+    );
   });
 
   it("rejects when a selected harness executable is unavailable", async () => {

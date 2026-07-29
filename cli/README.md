@@ -214,9 +214,11 @@ guidance rides along as `instructions`:
 Before the run is allocated, the executor inspects the thread's concrete artifact
 state and walks the selected stages in order. Each stage is checked against the
 state as it stands at that position, then its promised state is applied for the
-stages after it. The walk stops at the first stage that cannot run, naming what
-it required, what the state at that point actually holds, and which earlier
-selected stages bear on the dimensions that failed.
+stages after it. The walk stops at the first stage that cannot run and prints a
+structured dependency projection: the pipeline and failing stage, the relevant
+thread state before the run, every earlier stage that would change each failed
+dependency, what the failing stage requires, and why those values are
+incompatible. The refusal states explicitly that no stages ran.
 
 `--from` selects a suffix, and a skipped stage is never credited: entering at
 `plan-strict` means the thread itself must already hold the `spec.md` that the
@@ -550,36 +552,43 @@ npm --prefix cli run demo -- --scenario 01-all-done
 
 Each scenario drives the run to one distinct visual state and stops there, so
 whatever it exists to show is the last thing on screen. Ids carry an ordering
-prefix and are listed in reading order — a normal run, then the pauses you meet
-routinely, then the ways a stage fails, then the rare and the cosmetic. Attempt-
-backed pauses and the run listing already show native-session surfaces through
-existing scenarios (`04-waiting-for-user` for `Continue`, `21-list` for the
-latest-session column); neither needs a separate scenario. `--list` prints them
-all:
+prefix and are listed in reading order — a normal run, pipeline and repository
+preflight refusals, the pauses you meet routinely, the ways a stage fails, then
+the rare and the cosmetic. Attempt-backed pauses and the run listing already
+show native-session surfaces through existing scenarios (`12-waiting-for-user`
+for `Continue`, `28-list` for the latest-session column); neither needs a
+separate scenario. `--list` prints them all:
 
 | Scenario | Ends on |
 | --- | --- |
 | `01-all-done` | `SUCCESS` after six clean stages on a selected execution profile, with all six resolved prompts shown as `[DEV]` input |
-| `02-blocked` | the `BLOCKED` banner |
-| `03-refused` | the `REFUSED` banner |
-| `04-waiting-for-user` | `WAITING FOR USER`, its pending list, and native `Continue` with `scripted-session-reconcile-spec-1` |
-| `05-multiple-reasons` | two stacked reason banners under a `2 reasons` header |
-| `06-retry` | a `--from` suffix run's resumed `· attempt 2` header, then `SUCCESS` |
-| `07-runtime-prerequisite` | `FAILED — stage prerequisite unmet` and its `Artifacts:` list |
-| `08-stage-contract-violation` | `FAILED — promised artifact state unmet` and its `Artifacts:` list |
-| `09-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
-| `10-failed-harness-error` | `FAILED — harness error` |
-| `11-failed-idle-timeout` | `FAILED — idle timeout` |
-| `12-failed-git-policy` | `FAILED — git policy violation` |
-| `13-failed-commit` | `FAILED — commit failed` |
-| `14-failed-queue-scan` | `FAILED — queue scan error` |
-| `15-interrupted` | `INTERRUPTED`, after a signal lands mid-stage |
-| `16-checkpoint-write-failure` | `FAILED — checkpoint write` |
-| `17-permissions-warning` | a clean run opening on the boxed unrestricted warning |
-| `18-heartbeat` | the repeating `· still working` line |
-| `19-long-content` | oversized reasons, paths and tool arguments |
-| `20-temporary-workspace-refusal` | the preflight refusal for unsafe temporary workspaces, listing the unignored directories and the tracked content with a copyable correction for each |
-| `21-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
+| `02-preflight-invalid-entry-point` | pipeline identity, requested `--from` entry point, and the available stage list |
+| `03-preflight-missing-first-prerequisite` | a `--from` suffix whose first selected stage needs an artifact already in the thread |
+| `04-preflight-missing-later-prerequisite` | a later stage's missing dependency, unchanged by the stages before it |
+| `05-preflight-incompatible-output` | one earlier projected output incompatible with the next stage's prerequisite |
+| `06-preflight-overwritten-output` | ordered earlier transitions where a later stage overwrites a compatible value |
+| `07-preflight-multiple-prerequisites` | two failed dependency projections with independent causes |
+| `08-preflight-malformed-plan` | an existing malformed plan projected into strict-plan implementation |
+| `09-temporary-workspace-refusal` | the preflight refusal for unsafe temporary workspaces, listing the unignored directories and the tracked content with a copyable correction for each |
+| `10-blocked` | the `BLOCKED` banner |
+| `11-refused` | the `REFUSED` banner |
+| `12-waiting-for-user` | `WAITING FOR USER`, its pending list, and native `Continue` with `scripted-session-reconcile-spec-1` |
+| `13-multiple-reasons` | two stacked reason banners under a `2 reasons` header |
+| `14-retry` | a `--from` suffix run's resumed `· attempt 2` header, then `SUCCESS` |
+| `15-runtime-prerequisite` | `FAILED — stage prerequisite unmet` and its `Artifacts:` list |
+| `16-stage-contract-violation` | `FAILED — promised artifact state unmet` and its `Artifacts:` list |
+| `17-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
+| `18-failed-harness-error` | `FAILED — harness error` |
+| `19-failed-idle-timeout` | `FAILED — idle timeout` |
+| `20-failed-git-policy` | `FAILED — git policy violation` |
+| `21-failed-commit` | `FAILED — commit failed` |
+| `22-failed-queue-scan` | `FAILED — queue scan error` |
+| `23-interrupted` | `INTERRUPTED`, after a signal lands mid-stage |
+| `24-checkpoint-write-failure` | `FAILED — checkpoint write` |
+| `25-permissions-warning` | a clean run opening on the boxed unrestricted warning |
+| `26-heartbeat` | the repeating `· still working` line |
+| `27-long-content` | oversized reasons, paths and tool arguments |
+| `28-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
 
 `--scenario` takes any of three forms, so you need not remember a number to ask
 for a scenario by name:
@@ -587,7 +596,7 @@ for a scenario by name:
 ```sh
 npm run demo -- --scenario 3            # by number
 npm run demo -- --scenario refused      # by name
-npm run demo -- --scenario 03-refused   # by full id
+npm run demo -- --scenario 11-refused   # by full id
 ```
 
 Adding a scenario means adding one `scripts/scenarios/<NN>-<name>.mjs` file
@@ -598,15 +607,15 @@ otherwise exits non-zero listing the ids.
 
 A scenario's steps are `run`, `resume` and `list` invocations, each checked
 against an expected exit code, interleaved with `action` steps holding whatever
-setup that one scenario needs. Only `06-retry`, `14-failed-queue-scan` and
-`16-checkpoint-write-failure` invoke `resume` at all; everything else is a single
+setup that one scenario needs. Only `14-retry`, `22-failed-queue-scan` and
+`24-checkpoint-write-failure` invoke `resume` at all; everything else is a single
 invocation. A scenario whose shape is not self-evident carries a `note` the demo
 prints before running, so the reason for a second invocation is on screen rather
 than in the source. A scenario may also declare `pipeline` (a pipeline document
 of its own, in place of the six-stage Standard one), `profile` (an execution
 profile written under `profiles/`, which its `run` step then selects with
 `--profile`), and `settingsStages` (per-stage binding overrides merged into the
-settings document — how `18-heartbeat` shortens its interval, through the same
+settings document — how `26-heartbeat` shortens its interval, through the same
 field a real user would set).
 
 Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding

@@ -43,6 +43,18 @@ type ArtifactDescriptions = {
 };
 
 /**
+ * The short name of each artifact-state dimension, used as a heading wherever
+ * the terminal explains a prerequisite or promised transition.
+ */
+const ARTIFACT_DIMENSION_NAMES: Record<keyof ArtifactState, string> = {
+  validThread: "Thread",
+  proposal: "Proposal",
+  spec: "Spec",
+  plan: "Plan",
+  implementationReport: "Implementation report",
+};
+
+/**
  * What each artifact state means on disk, as a phrase naming the concrete file
  * or folder and the shape it has to be in.
  *
@@ -71,7 +83,7 @@ const ARTIFACT_DESCRIPTIONS: ArtifactDescriptions = {
       "a non-empty plan.md and a plan-tasks/ folder holding at least one " +
       "non-empty .md task file",
     malformed:
-      "a plan.md and plan-tasks/ folder pair in a combination that is no " +
+      "a plan.md and plan-tasks/ folder combination that does not form a " +
       "usable plan",
   },
   implementationReport: {
@@ -93,6 +105,13 @@ export function describeArtifact<Dimension extends keyof ArtifactState>(
   // reads always exists even though the lookup erases the correlation.
   const phrases = ARTIFACT_DESCRIPTIONS[dimension] as Record<string, string>;
   return phrases[`${value}`];
+}
+
+/** The short terminal heading for one artifact-state dimension. */
+export function describeArtifactDimension(
+  dimension: keyof ArtifactState,
+): string {
+  return ARTIFACT_DIMENSION_NAMES[dimension];
 }
 
 /**

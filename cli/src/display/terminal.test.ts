@@ -2,10 +2,17 @@ import { Writable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
+import { composePipeline } from "../pipeline/composition.js";
+import type {
+  ArtifactState,
+  PipelineDocument,
+  PipelineStageEntry,
+} from "../pipeline/types.js";
 import { governedBy } from "../test-helpers/waiting.js";
 import type { Display, StageDisposition } from "./types.js";
 import {
   createTerminalDisplay,
+  printCompositionRefusal,
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
@@ -48,6 +55,124 @@ function makeOptions(
 }
 
 const ANSI_PATTERN = /\x1b\[\d+m/;
+
+describe("printCompositionRefusal", () => {
+  const state = (overrides: Partial<ArtifactState> = {}): ArtifactState => ({
+    validThread: true,
+    proposal: false,
+    spec: false,
+    plan: "absent",
+    implementationReport: false,
+    ...overrides,
+  });
+
+  const render = (
+    name: string,
+    stages: PipelineStageEntry[],
+    artifactState: ArtifactState,
+    fromStage: string | null = null,
+  ): string => {
+    const document: PipelineDocument = {
+      name,
+      sourcePath: `/config/pipelines/${name}.json`,
+      stages,
+    };
+    const composition = composePipeline(
+      document,
+      artifactState,
+      "docs/threads/260101000000Z-example",
+      fromStage,
+    );
+    if (composition.ok) {
+      throw new Error("expected composition to fail");
+    }
+    const { options, out, err } = makeOptions();
+    printCompositionRefusal(options, {
+      pipelineName: document.name,
+      pipelineSourcePath: document.sourcePath,
+      failure: composition.failure,
+    });
+    expect(out.text).toBe("");
+    return err.text;
+  };
+
+  it("renders an invalid --from entry point", () => {
+    expect(
+      render(
+        "invalid-entry",
+        [{ stage: "spec" }, { stage: "plan-strict" }],
+        state(),
+        "implement",
+      ),
+    ).toMatchSnapshot();
+  });
+
+  it("renders a missing prerequisite on the first selected --from stage", () => {
+    expect(
+      render(
+        "missing-first",
+        [{ stage: "spec" }, { stage: "plan-strict" }],
+        state(),
+        "plan-strict",
+      ),
+    ).toMatchSnapshot();
+  });
+
+  it("renders a later prerequisite unchanged by earlier stages", () => {
+    expect(
+      render(
+        "missing-later",
+        [{ stage: "spec" }, { stage: "implement" }],
+        state(),
+      ),
+    ).toMatchSnapshot();
+  });
+
+  it("renders one incompatible earlier transition", () => {
+    expect(
+      render(
+        "incompatible-output",
+        [{ stage: "plan-brief" }, { stage: "implement-plan" }],
+        state(),
+      ),
+    ).toMatchSnapshot();
+  });
+
+  it("renders a compatible transition overwritten by a later stage", () => {
+    expect(
+      render(
+        "overwritten-output",
+        [
+          { stage: "spec" },
+          { stage: "plan-strict" },
+          { stage: "plan-brief" },
+          { stage: "implement-plan" },
+        ],
+        state(),
+      ),
+    ).toMatchSnapshot();
+  });
+
+  it("renders several failed dependencies with independent origins", () => {
+    expect(
+      render(
+        "multiple-prerequisites",
+        [{ stage: "plan-brief" }, { stage: "reconcile-plan" }],
+        state(),
+      ),
+    ).toMatchSnapshot();
+  });
+
+  it("renders a malformed artifact already present in the thread", () => {
+    expect(
+      render(
+        "malformed-plan",
+        [{ stage: "implement-plan" }],
+        state({ plan: "malformed" }),
+      ),
+    ).toMatchSnapshot();
+  });
+});
 
 describe("attemptStarted", () => {
   const attempt = {

@@ -209,7 +209,7 @@ function describeScenarios(scenarios) {
 }
 
 /**
- * Resolve one scenario from what a human typed: the whole id (`03-refused`),
+ * Resolve one scenario from what a human typed: the whole id (`11-refused`),
  * its ordering number alone (`3`), or just its name (`refused`). Naming a
  * scenario should not require remembering which number it sits at.
  */

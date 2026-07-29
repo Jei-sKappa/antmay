@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SPEC_CORRECT_DELAY_MS } from "./invoker.js";
 
 /**
- * The demo scenario `07-runtime-prerequisite` deletes the thread's plan while a
+ * The demo scenario `15-runtime-prerequisite` deletes the thread's plan while a
  * `spec-correct-delayed` attempt is in flight, so its `during` hook has to fire
  * inside the window that case holds open. The scenario is a `.mjs` file the demo
  * runs against the built bundle, so it cannot import `SPEC_CORRECT_DELAY_MS`
@@ -15,7 +15,7 @@ import { SPEC_CORRECT_DELAY_MS } from "./invoker.js";
  * `npm run check`.
  */
 const SCENARIO_URL = new URL(
-  "../../../scripts/scenarios/07-runtime-prerequisite.mjs",
+  "../../../scripts/scenarios/15-runtime-prerequisite.mjs",
   import.meta.url,
 );
 
@@ -44,7 +44,7 @@ describe("the runtime-prerequisite demo scenario's timing", () => {
     const timed = await loadTimedInvocations();
     expect(
       timed.length,
-      "07-runtime-prerequisite must have exactly one timed invocation",
+      "15-runtime-prerequisite must have exactly one timed invocation",
     ).toBe(1);
 
     const afterMs = timed[0]?.afterMs;

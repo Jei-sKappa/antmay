@@ -120,8 +120,11 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
 - **Composition** (`pipeline/composition.ts`) walks the selected suffix against
   the thread's freshly inspected artifact state, checking each stage's
   prerequisite at its position, applying its promise for the stages after it, and
-  resolving its concrete target from that simulated state. A `--from` suffix
-  credits nothing a skipped stage would have promised.
+  resolving its concrete target from that simulated state. A refusal carries a
+  structured dependency projection — the initial value, ordered earlier
+  transitions, projected value, and requirement — which the terminal renderer
+  explains without exposing the internal simulated-state vocabulary. A `--from`
+  suffix credits nothing a skipped stage would have promised.
 - **Local bindings** (`config/execution.ts`) supply the agent and timings the
   pipeline deliberately does not: one binding per selected stage, from the
   selected execution profile when it binds that stage and from `settings.json`
@@ -185,7 +188,7 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
 - `thread/`, `workspace/`, `display/` — thread resolution, queue gates and
   bounded artifact-state inspection (`artifacts.ts`, shared by composition and
   the runtime contract checks), current-checkout detection, and the curated
-  terminal stream.
+  terminal stream, including structured pipeline-composition refusals.
 - `shared/` — low-level validation primitives with no domain knowledge, used by
   more than one module: `validation.ts` holds the plain-object guard every
   document validator narrows parsed JSON with. Only a primitive that answers a
@@ -302,8 +305,8 @@ session ID `scripted-session-<stage-id>-<attempt>` once through
 `onSessionCaptured` and again on the settled outcome (ordinary, provider-error,
 idle-timeout, and abort paths), with the same ID written to the attempt log
 before case execution. The shape is deliberately non-provider-like so demo
-coverage of the pause `Continue` line (`04-waiting-for-user`) and the list
-latest-session column (`21-list`) needs no real harness and no scenario-specific
+coverage of the pause `Continue` line (`12-waiting-for-user`) and the list
+latest-session column (`28-list`) needs no real harness and no scenario-specific
 session setup beyond the shared list seed.
 
 The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
@@ -361,7 +364,7 @@ quietly drifting away from the schema it imitates.
 Scenarios are checked in under `scripts/scenarios/`, one file per scenario; the
 id is the filename stem and discovery is automatic, so a new scenario is a new
 file and nothing else. Each id carries a zero-padded ordering prefix
-(`03-refused`), which is what puts the catalog in reading order everywhere it
+(`11-refused`), which is what puts the catalog in reading order everywhere it
 appears — on disk, in `--list`, and in the prompt — rather than in the
 alphabetical order the names alone would give. A new scenario is numbered where
 it belongs in that order; renumbering neighbours to make room is expected and
@@ -389,17 +392,29 @@ result by hand; without the flag the demo ends at the last `[PASS]`/`[FAIL]`
 line. `--no-color` strips color from the child's output, which is the way to
 check that the rendering still reads correctly when color carries nothing.
 
-### Keep the scenario catalog current
+### Scenarios are the executable UI contract
 
-**A change that gives the terminal something new to draw is not finished until a
-scenario shows it.** The catalog is how a human sees this tool's output without
-running a real harness; a rendering no scenario reaches is a rendering nobody
-ever looks at, and it rots unnoticed.
+Real-harness runs cost time and money, so the scenario catalog is the developer
+end-to-end suite for Antmay's terminal interface. A scenario drives the built CLI
+through its public command surface against isolated configuration, state, and
+repository fixtures, using the scripted harness whenever execution reaches an
+agent.
 
-Ask one question of every change: *can the terminal now produce output that no
-existing scenario already produces?* A new pause kind, banner, closing block,
-stage disposition, startup block, sub-line, or a new shape of an existing one —
-all yes. Then:
+Every change that introduces or modifies user-visible terminal output must add
+or update a scenario that reaches that output. This applies to every command and
+execution phase, including startup, success, pauses, failures, warnings,
+preflight refusals, and listings. Output length, rarity, and whether an agent was
+invoked do not affect the requirement.
+
+A supported rendering without a scenario is a UI coverage gap: developers
+cannot readily discover, run, or review an interface the CLI claims to support.
+Close such a gap by adding a scenario or by removing or consolidating the
+distinct rendering.
+
+Use one scenario for each distinct visual or explanatory state. Outputs that
+differ only in interpolated values may share a scenario; outputs with different
+sections, ordering, causal explanations, corrections, wrapping-sensitive
+content, or interaction paths require separate scenarios. Then:
 
 - **If an existing scenario nearly covers it, extend that one.** Two scenarios
   that end on renderings a reader cannot tell apart are one scenario too many.
@@ -415,17 +430,11 @@ all yes. Then:
 - **Update the table in `README.md`** in the same change, and run the scenario to
   confirm the exit code it declares.
 
-A preflight refusal earns a scenario when it is **structured** — grouped failure
-lists, a copyable correction block, or both. The grouping, the order of the
-groups, and whether a command can be copied straight off the screen are visual
-properties nothing else verifies, and `20-temporary-workspace-refusal` is where
-they are shown. A refusal that is a single sentence earns none: it draws the same
-one-line failure every other early exit already draws, and belongs in the
-`*.test.ts` suite alone.
-
-This obligation covers renderings only. Behavior with no visible output belongs
-in the `*.test.ts` suite, which is the actual correctness gate — the demo checks
-one exit code per invocation and nothing more, and is no substitute for a test.
+Unit tests remain responsible for exact behavior, edge cases, and output
+assertions. They complement scenarios but never substitute for running the built
+CLI and inspecting its interface. Conversely, behavior with no visible output
+belongs in the `*.test.ts` suite: the demo checks one exit code per invocation
+and is not the correctness gate.
 
 ### What only a real harness proves
 

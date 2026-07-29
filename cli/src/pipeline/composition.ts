@@ -1,7 +1,5 @@
 import {
   applyArtifactTransition,
-  describeArtifact,
-  describeContractSide,
   evaluateArtifactPrerequisite,
   type ArtifactMismatch,
 } from "../thread/artifacts.js";
@@ -10,6 +8,7 @@ import type { CatalogStage } from "./catalog.js";
 import { resolveStageTargetRule } from "./targets.js";
 import type {
   ArtifactState,
+  CatalogStageId,
   PipelineDocument,
   PipelineStageEntry,
   PlanState,
@@ -31,76 +30,113 @@ export type PreparedStage = {
 };
 
 /**
+ * One earlier selected stage whose promised transition changes a dependency
+ * that the failing stage needs. Positions retain both source-pipeline identity
+ * and selected-suffix identity so a `--from` refusal can explain both.
+ */
+export type ProjectedTransition = {
+  stageId: CatalogStageId;
+  pipelinePosition: number;
+  selectedPosition: number;
+  value: boolean | PlanState;
+};
+
+/**
+ * One unsatisfied dependency projected from the thread before the run through
+ * every earlier selected transition that changes it.
+ */
+export type DependencyProjection = ArtifactMismatch & {
+  initial: boolean | PlanState;
+  transitions: ProjectedTransition[];
+};
+
+export type SelectedStageIdentity = {
+  stageId: CatalogStageId;
+  pipelinePosition: number;
+  selectedPosition: number;
+};
+
+/**
+ * Every composition refusal is structured data. Rendering belongs to the
+ * terminal layer, while composition owns the causal facts the renderer needs.
+ */
+export type CompositionFailure =
+  | {
+      kind: "entry-point-not-selected";
+      requestedStage: string;
+      pipelineStages: Array<{
+        stageId: CatalogStageId;
+        pipelinePosition: number;
+      }>;
+    }
+  | {
+      kind: "stage-prerequisite-unmet";
+      stage: SelectedStageIdentity;
+      pipelineStageCount: number;
+      selectedStageCount: number;
+      fromStage: string | null;
+      earlierStages: SelectedStageIdentity[];
+      dependencies: DependencyProjection[];
+    };
+
+/**
  * The result of composing a pipeline document against a thread. Composition
- * stops at the first impossible stage, so a rejection carries that one
- * diagnostic rather than a survey of the whole selection.
+ * stops at the first impossible stage, so a refusal carries that stage's
+ * structured diagnostic rather than a survey of the whole selection.
  */
 export type CompositionResult =
   | { ok: true; stages: PreparedStage[] }
-  | { ok: false; errors: string[] };
+  | { ok: false; failure: CompositionFailure };
+
+type SelectedEntry = {
+  entry: PipelineStageEntry;
+  pipelinePosition: number;
+};
+
+function stageIdentity(
+  selected: SelectedEntry,
+  selectedPosition: number,
+): SelectedStageIdentity {
+  return {
+    stageId: selected.entry.stage,
+    pipelinePosition: selected.pipelinePosition,
+    selectedPosition,
+  };
+}
 
 /**
- * Explain why the stage at `index` of the selection cannot run: what it
- * required, what the state at that point actually holds, and which earlier
- * selected stages bear on the dimensions that failed.
- *
- * The state is the thread's own when nothing precedes the stage and the
- * simulated state otherwise, so the diagnostic never implies a preceding stage
- * produced something no selected stage promised.
+ * Trace each unmet dependency from the thread's inspected value through every
+ * earlier stage promise that changes it. The last transition, when present,
+ * equals the mismatch's projected observed value.
  */
-function describeImpossibleStage(
-  stage: CatalogStage,
-  index: number,
+function projectDependencies(
   unmet: readonly ArtifactMismatch[],
-  entries: readonly PipelineStageEntry[],
-): string[] {
-  const position = index + 1;
-  const origin =
-    index === 0 ? "the thread's current state" : "the simulated state at that point";
-  const lines = [
-    `Stage "${stage.id}" (selected position ${position}) cannot run: it requires ` +
-      `${describeContractSide(unmet, "expected")}, but ${origin} has ` +
-      `${describeContractSide(unmet, "observed")}.`,
-  ];
-
-  if (index === 0) {
-    lines.push(
-      "No earlier stage is selected, so that state must already exist in the thread.",
+  initialState: ArtifactState,
+  earlierEntries: readonly SelectedEntry[],
+): DependencyProjection[] {
+  return unmet.map((mismatch) => {
+    const transitions = earlierEntries.flatMap(
+      (selected, earlierIndex): ProjectedTransition[] => {
+        const value = STAGE_CATALOG[selected.entry.stage].promises[mismatch.dimension];
+        if (value === undefined) {
+          return [];
+        }
+        return [
+          {
+            stageId: selected.entry.stage,
+            pipelinePosition: selected.pipelinePosition,
+            selectedPosition: earlierIndex + 1,
+            value,
+          },
+        ];
+      },
     );
-    return lines;
-  }
-
-  const failedDimensions = new Set(unmet.map((mismatch) => mismatch.dimension));
-  const relevant = entries.slice(0, index).flatMap((entry, earlier) => {
-    const promised = (
-      Object.entries(STAGE_CATALOG[entry.stage].promises) as Array<
-        [keyof ArtifactState, boolean | PlanState | undefined]
-      >
-    )
-      .filter(
-        ([dimension, value]) =>
-          value !== undefined && failedDimensions.has(dimension),
-      )
-      // The pairing is sound because both halves come from one statically typed
-      // catalog entry: a dimension carrying a value it cannot hold is a type
-      // error at the catalog, not a missing phrase here.
-      .map(([dimension, value]) =>
-        describeArtifact(dimension, value as boolean | PlanState),
-      );
-    if (promised.length === 0) {
-      return [];
-    }
-    return [
-      `"${entry.stage}" (position ${earlier + 1}) promises ${promised.join(" and ")}`,
-    ];
+    return {
+      ...mismatch,
+      initial: initialState[mismatch.dimension],
+      transitions,
+    };
   });
-
-  lines.push(
-    relevant.length === 0
-      ? "No earlier selected stage produces that state, so it must already exist in the thread."
-      : `Earlier selected stages leaving that state: ${relevant.join("; ")}.`,
-  );
-  return lines;
 }
 
 /**
@@ -112,22 +148,30 @@ function selectEntries(
   document: PipelineDocument,
   fromStage: string | null,
 ):
-  | { ok: true; entries: readonly PipelineStageEntry[] }
-  | { ok: false; errors: string[] } {
+  | { ok: true; entries: readonly SelectedEntry[] }
+  | { ok: false; failure: CompositionFailure } {
+  const all = document.stages.map((entry, index) => ({
+    entry,
+    pipelinePosition: index + 1,
+  }));
   if (fromStage === null) {
-    return { ok: true, entries: document.stages };
+    return { ok: true, entries: all };
   }
   const index = document.stages.findIndex((entry) => entry.stage === fromStage);
   if (index === -1) {
-    const available = document.stages.map((entry) => `"${entry.stage}"`).join(", ");
     return {
       ok: false,
-      errors: [
-        `Stage "${fromStage}" is not in pipeline "${document.name}"; its stages are ${available}.`,
-      ],
+      failure: {
+        kind: "entry-point-not-selected",
+        requestedStage: fromStage,
+        pipelineStages: all.map((selected) => ({
+          stageId: selected.entry.stage,
+          pipelinePosition: selected.pipelinePosition,
+        })),
+      },
     };
   }
-  return { ok: true, entries: document.stages.slice(index) };
+  return { ok: true, entries: all.slice(index) };
 }
 
 /**
@@ -153,29 +197,45 @@ export function composePipeline(
 ): CompositionResult {
   const selection = selectEntries(document, fromStage);
   if (!selection.ok) {
-    return { ok: false, errors: selection.errors };
+    return { ok: false, failure: selection.failure };
   }
 
   const prepared: PreparedStage[] = [];
   let state = artifactState;
 
-  for (const [index, entry] of selection.entries.entries()) {
+  for (const [index, selected] of selection.entries.entries()) {
+    const entry = selected.entry;
     const stage = STAGE_CATALOG[entry.stage];
 
     const unmet = evaluateArtifactPrerequisite(state, stage.prerequisite);
     if (unmet.length > 0) {
       return {
         ok: false,
-        errors: describeImpossibleStage(stage, index, unmet, selection.entries),
+        failure: {
+          kind: "stage-prerequisite-unmet",
+          stage: stageIdentity(selected, index + 1),
+          pipelineStageCount: document.stages.length,
+          selectedStageCount: selection.entries.length,
+          fromStage,
+          earlierStages: selection.entries
+            .slice(0, index)
+            .map((earlier, earlierIndex) =>
+              stageIdentity(earlier, earlierIndex + 1),
+            ),
+          dependencies: projectDependencies(
+            unmet,
+            artifactState,
+            selection.entries.slice(0, index),
+          ),
+        },
       };
     }
 
     const target = resolveStageTargetRule(stage.targetRule, threadRelPath, state);
     if (!target.ok) {
-      return {
-        ok: false,
-        errors: [`Stage "${stage.id}" has an unusable target: ${target.error}.`],
-      };
+      throw new Error(
+        `Trusted catalog stage "${stage.id}" has an unusable target: ${target.error}.`,
+      );
     }
 
     const preparedStage: PreparedStage = { stage, target: target.path };

@@ -1,11 +1,20 @@
 import type { HarnessEvent } from "../harness/types.js";
 import type {
+  CompositionFailure,
+  DependencyProjection,
+  SelectedStageIdentity,
+} from "../pipeline/composition.js";
+import type {
   ProfileSelection,
   WaitingInfo,
   WaitingKind,
   WaitingReason,
 } from "../state/checkpoint.js";
-import { formatArtifactMismatch } from "../thread/artifacts.js";
+import {
+  describeArtifact,
+  describeArtifactDimension,
+  formatArtifactMismatch,
+} from "../thread/artifacts.js";
 import type { Display, StageDisposition } from "./types.js";
 
 /**
@@ -302,6 +311,175 @@ export function printScriptedModeStartup(
       infoLine(paint, "  ", "config", scenarioPath, width),
     ].join("\n"),
   );
+}
+
+/** Identity shared by every pipeline-composition refusal. */
+export type CompositionRefusalInfo = {
+  pipelineName: string;
+  pipelineSourcePath: string;
+  failure: CompositionFailure;
+};
+
+function pipelineStageLabel(
+  stage: SelectedStageIdentity,
+  pipelineStageCount: number,
+): string {
+  return `pipeline stage ${stage.pipelinePosition} of ${pipelineStageCount} · ${stage.stageId}`;
+}
+
+function dependencyCause(
+  dependency: DependencyProjection,
+  failure: Extract<CompositionFailure, { kind: "stage-prerequisite-unmet" }>,
+): string {
+  const dimension = describeArtifactDimension(dependency.dimension).toLowerCase();
+  const requiredBy = `stage ${failure.stage.pipelinePosition} "${failure.stage.stageId}"`;
+  const transitions = dependency.transitions;
+
+  if (transitions.length === 0) {
+    return failure.earlierStages.length === 0
+      ? `The thread's ${dimension} does not satisfy the prerequisite for ${requiredBy}, and this is the first selected stage.`
+      : `The thread's ${dimension} does not satisfy the prerequisite for ${requiredBy}, and no earlier selected stage changes it.`;
+  }
+
+  const last = transitions.at(-1)!;
+  const priorCompatible = [
+    {
+      stageId: null,
+      pipelinePosition: 0,
+      value: dependency.initial,
+    },
+    ...transitions.slice(0, -1),
+  ]
+    .reverse()
+    .find((point) => point.value === dependency.expected);
+
+  if (priorCompatible !== undefined) {
+    const origin =
+      priorCompatible.stageId === null
+        ? "already in the thread before the run"
+        : `projected after stage ${priorCompatible.pipelinePosition} "${priorCompatible.stageId}"`;
+    return (
+      `Stage ${last.pipelinePosition} "${last.stageId}" would replace the compatible ` +
+      `${dimension} ${origin} with one that does not satisfy the prerequisite for ${requiredBy}.`
+    );
+  }
+
+  return (
+    `Stage ${last.pipelinePosition} "${last.stageId}" is the last earlier stage ` +
+    `to change the ${dimension}; its projected output does not satisfy the prerequisite for ${requiredBy}.`
+  );
+}
+
+/**
+ * Render a pipeline-composition refusal to stderr. The block makes the
+ * executor's dependency projection explicit: the thread before the run, each
+ * relevant earlier transition, and what the failing stage requires. Nothing
+ * has been allocated or invoked when this is printed.
+ */
+export function printCompositionRefusal(
+  options: DisplayOptions,
+  info: CompositionRefusalInfo,
+): void {
+  const paint = createPainter(options);
+  const width = keyWidth("Pipeline", "Source", "Where", "Selection", "Error", "Result");
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, width);
+  const lines = [
+    paint("Pipeline cannot start ❌", "bold", "red"),
+    line("Pipeline", info.pipelineName),
+    line("Source", info.pipelineSourcePath),
+  ];
+
+  if (info.failure.kind === "entry-point-not-selected") {
+    lines.push(
+      line("Where", `--from ${info.failure.requestedStage}`),
+      line("Error", "The requested entry point is not selected by this pipeline."),
+      "",
+      `  ${paint("Pipeline stages:", ...KEY_STYLE)}`,
+      ...info.failure.pipelineStages.map(
+        (stage) => `    ${stage.pipelinePosition}. ${stage.stageId}`,
+      ),
+      "",
+      `  ${paint("Why:", ...KEY_STYLE)}`,
+      `    - --from selects a suffix beginning at a stage in the pipeline, but ` +
+        `"${info.failure.requestedStage}" does not occur in this one.`,
+      line("Result", "No stages were run."),
+    );
+    emit(options.stderr, lines.join("\n"));
+    return;
+  }
+
+  const failure = info.failure;
+  lines.push(
+    line("Where", pipelineStageLabel(failure.stage, failure.pipelineStageCount)),
+  );
+  if (failure.fromStage !== null) {
+    lines.push(
+      line(
+        "Selection",
+        `selected stage ${failure.stage.selectedPosition} of ${failure.selectedStageCount} from --from ${failure.fromStage}`,
+      ),
+    );
+  }
+  const count = failure.dependencies.length;
+  lines.push(
+    line(
+      "Error",
+      `${count} prerequisite${count === 1 ? "" : "s"} for "${failure.stage.stageId}" ${count === 1 ? "is" : "are"} not satisfied.`,
+    ),
+  );
+
+  for (const dependency of failure.dependencies) {
+    const dimension = describeArtifactDimension(dependency.dimension);
+    lines.push(
+      "",
+      paint(
+        `${dimension} projection (assuming earlier selected stages succeed)`,
+        "bold",
+      ),
+      `  ${paint("Thread before run:", ...KEY_STYLE)}`,
+      `    ${describeArtifact(dependency.dimension, dependency.initial)}`,
+    );
+
+    if (dependency.transitions.length === 0) {
+      const earlier = failure.earlierStages;
+      const explanation =
+        earlier.length === 0
+          ? "none — this is the first selected stage"
+          : `none — ${earlier
+              .map((stage) => `stage ${stage.pipelinePosition} "${stage.stageId}"`)
+              .join(", ")} ${earlier.length === 1 ? "does" : "do"} not change the ${dimension.toLowerCase()}`;
+      lines.push(
+        `  ${paint("Earlier stage changes:", ...KEY_STYLE)}`,
+        `    ${explanation}`,
+      );
+    } else {
+      for (const transition of dependency.transitions) {
+        lines.push(
+          `  ${paint(
+            `After stage ${transition.pipelinePosition} · ${transition.stageId}:`,
+            ...KEY_STYLE,
+          )}`,
+          `    ${describeArtifact(dependency.dimension, transition.value)}`,
+        );
+      }
+    }
+
+    lines.push(
+      `  ${paint(
+        `Required by stage ${failure.stage.pipelinePosition} · ${failure.stage.stageId}:`,
+        ...KEY_STYLE,
+      )}`,
+      `    ${describeArtifact(dependency.dimension, dependency.expected)}`,
+    );
+  }
+
+  lines.push("", `  ${paint("Why:", ...KEY_STYLE)}`);
+  for (const dependency of failure.dependencies) {
+    lines.push(`    - ${dependencyCause(dependency, failure)}`);
+  }
+  lines.push(line("Result", "No stages were run."));
+  emit(options.stderr, lines.join("\n"));
 }
 
 /**

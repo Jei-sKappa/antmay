@@ -15,6 +15,7 @@ import { resolveDocumentReference } from "../config/references.js";
 import { resolveRoots } from "../config/roots.js";
 import {
   createTerminalDisplay,
+  printCompositionRefusal,
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
@@ -246,7 +247,12 @@ export async function runCommand(
       args.from ?? null,
     );
     if (!composition.ok) {
-      return fail(composition.errors.join("\n"));
+      printCompositionRefusal(displayOptions, {
+        pipelineName: document.name,
+        pipelineSourcePath,
+        failure: composition.failure,
+      });
+      return EXIT_FAILURE;
     }
     const prepared = composition.stages;
 
