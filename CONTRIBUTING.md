@@ -1,6 +1,6 @@
 # Contributing to Antmay
 
-## Issue titles carry the scope
+## Issue titles carry the scope and type
 
 Antmay is two modules that ship separately — the skill suite under `suite/` and
 the CLI under `cli/` — plus the method documentation they share. Which of those
@@ -14,12 +14,22 @@ title opens with a scope prefix:
 | `[contract]` | The contract between the two modules — skill names the pipeline invokes, or the terminal-outcome protocol |
 | `[repo]` | Neither module — the method docs under `docs/`, repository tooling, the README itself |
 
-Then the title, as prose:
+The next prefix names what kind of work the issue describes:
+
+| Prefix | Type |
+| --- | --- |
+| `[bug]` | Existing behavior contradicts a documented or accepted expectation |
+| `[feature]` | Adds a capability or supported use case |
+| `[improvement]` | Makes an existing capability clearer, faster, easier, safer, or more consistent |
+| `[task]` | Maintenance, refactoring, migration, tooling, or investigation without a direct product-behavior outcome |
+
+Then the descriptive title:
 
 ```text
-[cli] afk resume loses the checkpoint after a failed stage
-[suite] reconcile-spec rewrites decisions it should only read
-[repo] the Standard recipe doc contradicts the thread model on archive timing
+[cli] [bug] afk resume loses the checkpoint after a failed stage
+[suite] [feature] add a skill for resolving pending review findings
+[repo] [improvement] make installation guidance easier to follow
+[cli] [task] reevaluate tsup as the bundler
 ```
 
 `[contract]` is for the coupling itself, not for issue counting: the suite and
@@ -28,18 +38,27 @@ pipeline names a skill or reads a terminal outcome the suite emits. Two
 independent problems that happen to touch both folders are two issues, one per
 module — that keeps each one closable on its own.
 
+Choose exactly one type. A behavior is a bug when it conflicts with an existing
+expectation, not merely because changing it would be desirable. A new supported
+outcome is a feature; a change that preserves an existing capability while
+making it work better is an improvement. Use task when the direct outcome is
+maintenance or investigation rather than product behavior.
+
 There is no issue template. File from the web UI or from the `gh` CLI,
 whichever you prefer:
 
 ```sh
-gh issue create --title "[cli] afk resume loses the checkpoint after a failed stage"
+gh issue create --title "[cli] [bug] afk resume loses the checkpoint after a failed stage"
 ```
 
-A workflow reads the prefix and applies the matching `scope:` label. A title
-with no recognizable prefix gets a `needs-scope` label and one comment
-explaining this convention; editing the title to add a prefix clears both.
-Nothing is rejected or closed for missing a prefix — the labels exist so the
-issue list can be filtered by module.
+A workflow reads both prefixes and applies the matching `scope:` and `type:`
+labels. A title with a missing or unrecognized value gets the corresponding
+`needs-scope` or `needs-type` label and one comment explaining the convention.
+Editing the title reconciles the labels automatically. Nothing is rejected or
+closed for an invalid title — the labels make incomplete classification visible
+and make valid issues filterable by either dimension. The title is authoritative:
+manually adding or removing a managed classification label causes the workflow
+to restore the labels derived from the title.
 
 ## Commits
 

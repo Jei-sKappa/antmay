@@ -60,7 +60,7 @@ suite/           the skill suite and its maintenance tooling  → suite/AGENTS.m
 cli/             the Antmay CLI                              → cli/AGENTS.md
 docs/            canonical method reference + docs/threads/
 .claude-plugin/  marketplace.json — load-bearing for skill distribution
-.github/         issue forms and the workflow that labels their scope
+.github/         the workflow that classifies issues from their title
 assets/          logos and banner
 README.md        user-facing index of the available skills
 ```
@@ -70,23 +70,27 @@ Root-level files that belong to a module rather than to the repository:
 (the rules for editing it, and the check that guards it, live in
 `suite/AGENTS.md`), and `README.md` indexes the skills.
 
-## Issue scope convention
+## Issue classification convention
 
-Every issue title in this repository opens with a scope prefix naming the
-module it belongs to: `[suite]`, `[cli]`, `[contract]` (the coupling between the
-two — skill names the pipeline invokes, the terminal-outcome protocol), or
-`[repo]` (neither module — method docs, tooling, README). There is no issue
-template, so the convention holds identically for the web UI and for
-`gh issue create`.
+Every issue title in this repository opens with `[scope] [type]`. The scope is
+one of `[suite]`, `[cli]`, `[contract]` (the coupling between the two — skill
+names the pipeline invokes, or the terminal-outcome protocol), or `[repo]`
+(neither module — method docs, tooling, README). The type is exactly one of
+`[bug]`, `[feature]`, `[improvement]`, or `[task]`. There is no issue template,
+so the convention holds identically for the web UI and for `gh issue create`.
 
-`.github/workflows/issue-scope-label.yml` parses the title into a `scope: *`
-label, and labels a title with no recognizable prefix `needs-scope` plus one
-explanatory comment. It never closes or rejects an issue — GitHub offers no
-server-side gate at creation time, so detect-and-flag is the enforcement
-ceiling.
+`.github/workflows/issue-classification.yml` parses the title into `scope: *`
+and `type: *` labels. A missing, unrecognized, or duplicate classification gets
+the corresponding `needs-scope` or `needs-type` label plus one explanatory
+comment. Editing the title reconciles all managed labels. The workflow never
+closes or rejects an issue. The title is authoritative, so manually adding or
+removing a managed classification label triggers the same reconciliation.
+GitHub offers no server-side gate at creation time, so detect-and-flag is the
+enforcement ceiling.
 
 `CONTRIBUTING.md` is where this is documented for contributors; the prefix
-table there and the workflow's `SCOPES` map must be edited together.
+tables there and the workflow's `SCOPES` and `TYPES` maps must be edited
+together.
 
 ## Describe the current state, never the diff
 

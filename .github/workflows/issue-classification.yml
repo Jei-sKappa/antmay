@@ -1,0 +1,136 @@
+name: Issue classification
+
+# Enforces the issue title classification documented in CONTRIBUTING.md.
+# Recognized `[scope] [type]` prefixes become `scope: *` and `type: *` labels;
+# a missing or unrecognized value gets the corresponding `needs-*` label and
+# one explanatory comment. Editing the title reconciles every managed label.
+# Manually adding or removing a managed label also reconciles it from the title.
+# Nothing here depends on how the issue was filed, so `gh issue create` and the
+# web UI behave identically.
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled]
+
+permissions:
+  issues: write
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const SCOPES = {
+              suite:    { name: 'scope: suite',    color: '0e8a16', description: 'The skill suite (suite/)' },
+              cli:      { name: 'scope: cli',      color: '1d76db', description: 'The Antmay CLI (cli/)' },
+              contract: { name: 'scope: contract', color: '5319e7', description: 'The suite/CLI contract' },
+              repo:     { name: 'scope: repo',     color: 'c5def5', description: 'Neither module: method docs, tooling, README' },
+            };
+            const TYPES = {
+              bug:         { name: 'type: bug',         color: 'd73a4a', description: 'Existing behavior contradicts an accepted expectation' },
+              feature:     { name: 'type: feature',     color: 'a2eeef', description: 'Adds a capability or supported use case' },
+              improvement: { name: 'type: improvement', color: '84b6eb', description: 'Makes an existing capability work better' },
+              task:        { name: 'type: task',        color: 'cfd3d7', description: 'Maintenance, refactoring, migration, tooling, or investigation' },
+            };
+            const NEEDS_SCOPE = {
+              name: 'needs-scope', color: 'd93f0b', description: 'Title is missing a [suite|cli|contract|repo] prefix',
+            };
+            const NEEDS_TYPE = {
+              name: 'needs-type', color: 'd93f0b', description: 'Title is missing one valid [bug|feature|improvement|task] prefix',
+            };
+            const MARKER = '<!-- antmay:issue-classification -->';
+
+            const { owner, repo } = context.repo;
+            const issue = context.payload.issue;
+            const issue_number = issue.number;
+            const title = issue.title || '';
+
+            const scopeMatch = title.match(/^\s*\[\s*([a-zA-Z]+)\s*\]\s*\S/);
+            const pairMatch = title.match(
+              /^\s*\[\s*([a-zA-Z]+)\s*\]\s+\[\s*([a-zA-Z]+)\s*\]\s+(\S(?:.*\S)?)\s*$/,
+            );
+            const scopeKey = scopeMatch ? scopeMatch[1].toLowerCase() : null;
+            const typeKey = pairMatch ? pairMatch[2].toLowerCase() : null;
+            const extraPrefix = pairMatch
+              ? pairMatch[3].match(/^\[\s*([a-zA-Z]+)\s*\](?:\s|$)/)
+              : null;
+            const hasExtraScope = extraPrefix && SCOPES[extraPrefix[1].toLowerCase()];
+            const hasExtraType = extraPrefix && TYPES[extraPrefix[1].toLowerCase()];
+            const wantedScope = scopeKey && SCOPES[scopeKey] && !hasExtraScope
+              ? SCOPES[scopeKey]
+              : NEEDS_SCOPE;
+            const wantedType = typeKey && TYPES[typeKey] && !hasExtraType
+              ? TYPES[typeKey]
+              : NEEDS_TYPE;
+
+            const ensureLabel = async (label) => {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: label.name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({
+                  owner, repo, name: label.name, color: label.color, description: label.description,
+                });
+              }
+            };
+
+            const current = (issue.labels || []).map((label) => label.name);
+            const reconcileFamily = async (labels, fallback, wanted) => {
+              const managed = [...Object.values(labels), fallback].map((label) => label.name);
+              for (const name of current.filter((candidate) =>
+                managed.includes(candidate) && candidate !== wanted.name)) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name });
+              }
+              if (!current.includes(wanted.name)) {
+                await ensureLabel(wanted);
+                await github.rest.issues.addLabels({
+                  owner, repo, issue_number, labels: [wanted.name],
+                });
+              }
+            };
+
+            await reconcileFamily(SCOPES, NEEDS_SCOPE, wantedScope);
+            await reconcileFamily(TYPES, NEEDS_TYPE, wantedType);
+
+            if (wantedScope !== NEEDS_SCOPE && wantedType !== NEEDS_TYPE) {
+              core.info(`Issue classified as ${wantedScope.name}, ${wantedType.name}`);
+              return;
+            }
+
+            // Explain the whole convention once, however many times the title is edited.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number, per_page: 100,
+            });
+            if (comments.some((comment) => (comment.body || '').includes(MARKER))) return;
+
+            await github.rest.issues.createComment({
+              owner, repo, issue_number,
+              body: [
+                MARKER,
+                "Thanks for the report. This repository asks every issue title to open with a scope and a type:",
+                '',
+                '`[scope] [type] descriptive title`',
+                '',
+                'Use exactly one prefix from each table.',
+                '',
+                '| Prefix | Scope |',
+                '| --- | --- |',
+                '| `[suite]` | The skill suite — `suite/` |',
+                '| `[cli]` | The Antmay CLI — `cli/` |',
+                '| `[contract]` | The contract between the two — skill names the pipeline invokes, or the terminal-outcome protocol |',
+                '| `[repo]` | Neither module — method docs, repo tooling, README |',
+                '',
+                '| Prefix | Type |',
+                '| --- | --- |',
+                '| `[bug]` | Existing behavior contradicts an accepted expectation |',
+                '| `[feature]` | Adds a capability or supported use case |',
+                '| `[improvement]` | Makes an existing capability work better |',
+                '| `[task]` | Maintenance, refactoring, migration, tooling, or investigation |',
+                '',
+                'For example: `[cli] [bug] resume loses its checkpoint`.',
+                '',
+                `Edit the title to correct the classification; the labels update automatically. See [CONTRIBUTING.md](${context.payload.repository.html_url}/blob/HEAD/CONTRIBUTING.md).`,
+              ].join('\n'),
+            });
