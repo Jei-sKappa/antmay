@@ -903,6 +903,10 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     const first = await resume(h, runId, standardSteps(h.fixture).slice(1));
     expect(first.code).toBe(2);
     expect(first.invoker.calls.length).toBe(0);
+    expect(first.out).toContain(
+      "STAGE CANNOT START — requirements not met ❌",
+    );
+    expect(first.out).toContain("stage 2 of 6 · reconcile-spec");
     const paused = await readCp(h, runId);
     expect(paused.stageIndex).toBe(1);
     expect(paused.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");

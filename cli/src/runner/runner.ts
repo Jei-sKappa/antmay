@@ -55,10 +55,10 @@ const MS_PER_SECOND = 1000;
  * to come back, and the worktree has to be clean, before the stage can run.
  *
  * One static sentence, never composed from the unmet dimensions: the pause's
- * `Artifacts:` list already says which artifacts those are.
+ * requirement sections already show which thread files need attention.
  */
 const RESTORE_PREREQUISITE_NOTE =
-  "Restore the artifacts listed above and leave the worktree clean, then resume.";
+  "Fix the thread files shown above and leave the worktree clean, then resume.";
 
 /**
  * The unstable and injected dependencies plus the durable inputs the runner
@@ -175,9 +175,13 @@ function withAgentSession(
   return { ...record, agentSession: session };
 }
 
-function prerequisiteMessage(unmet: readonly ArtifactMismatch[]): string {
+function prerequisiteMessage(
+  stagePosition: string,
+  stageId: string,
+  unmet: readonly ArtifactMismatch[],
+): string {
   return (
-    "The stage cannot start: it requires " +
+    `Stage ${stagePosition} "${stageId}" cannot start: it requires ` +
     `${describeContractSide(unmet, "expected")}, but the thread's current ` +
     `artifact state has ${describeContractSide(unmet, "observed")}.`
   );
@@ -257,6 +261,11 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         : undefined;
     display.runPaused({
       waiting,
+      currentStage: {
+        id: checkpoint.stages[checkpoint.stageIndex]!.id,
+        position: checkpoint.stageIndex + 1,
+        count: checkpoint.stages.length,
+      },
       runId,
       pipelineName,
       totalElapsedMs: elapsedMs(),
@@ -410,7 +419,9 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     if (!preInspection.ok) {
       prerequisiteReason = {
         kind: "stage-prerequisite-unmet",
-        message: `The stage's artifact prerequisite could not be evaluated: ${preInspection.message}`,
+        message:
+          `The requirements for stage ${stagePosition} "${stage.id}" could not ` +
+          `be checked: ${preInspection.message}`,
         diagnostics: { errorMessage: preInspection.message },
       };
     } else {
@@ -421,7 +432,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       if (unmet.length > 0) {
         prerequisiteReason = {
           kind: "stage-prerequisite-unmet",
-          message: prerequisiteMessage(unmet),
+          message: prerequisiteMessage(stagePosition, stage.id, unmet),
           contract: unmet,
         };
       }

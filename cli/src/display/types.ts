@@ -8,6 +8,13 @@ import type { WaitingInfo } from "../state/checkpoint.js";
  */
 export type StageDisposition = "refused" | "blocked" | "failed" | "interrupted";
 
+/** The selected stage at the checkpoint cursor when a run pauses. */
+export type CurrentStageInfo = {
+  id: string;
+  position: number;
+  count: number;
+};
+
 /**
  * The sink the stage runner emits every operational event to. Every method is
  * synchronous and fire-and-forget: the runner never awaits a display call, and
@@ -44,6 +51,7 @@ export interface Display {
    * session; omitted otherwise. */
   runPaused(info: {
     waiting: WaitingInfo;
+    currentStage: CurrentStageInfo;
     runId: string;
     pipelineName: string;
     totalElapsedMs: number;

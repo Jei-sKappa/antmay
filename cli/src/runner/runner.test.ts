@@ -681,6 +681,11 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     expect(rec.attemptStarted.length).toBe(0);
     expect(rec.stageStopped.length).toBe(0);
     expect(rec.runPaused[0]!.logAbsPath).toBeNull();
+    expect(rec.runPaused[0]!.currentStage).toEqual({
+      id: "reconcile-spec",
+      position: 1,
+      count: 1,
+    });
     await expect(fs.access(path.join(runDir, "logs"))).rejects.toThrow();
 
     const cp = await loadCheckpoint(runDir);
@@ -698,7 +703,7 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     expect(cp.waiting?.reasons[0].message).toContain("no spec.md");
     expect(cp.waiting?.reasons[0].message).not.toContain("spec = ");
     expect(cp.waiting?.nextAction).toBe(
-      "Restore the artifacts listed above and leave the worktree clean, then resume.",
+      "Fix the thread files shown above and leave the worktree clean, then resume.",
     );
   });
 
@@ -725,17 +730,24 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
       { before: () => fs.rm(path.join(fixture.threadPath as string, "spec.md")) },
       {},
     ]);
+    const rec = recorder();
 
     const result = await executeRun(
       makeContext(
         buildCheckpoint(fixture, [betaStage, needsSpecStage]),
         runDir,
         harness,
+        rec.display,
       ),
     );
 
     expect(result.status).toBe("paused");
     expect(harness.calls.length).toBe(1);
+    expect(rec.runPaused[0]!.currentStage).toEqual({
+      id: "reconcile-spec",
+      position: 2,
+      count: 2,
+    });
     const cp = await loadCheckpoint(runDir);
     expect(cp.stageIndex).toBe(1);
     expect(cp.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");

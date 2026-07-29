@@ -330,6 +330,7 @@ describe("runPaused", () => {
     const { options, out, err } = makeOptions();
     createTerminalDisplay(options).runPaused({
       waiting,
+      currentStage: { id: "implement", position: 2, count: 6 },
       runId: "260723T00Z-run",
       pipelineName: "standard",
       totalElapsedMs: 64_000,
@@ -510,7 +511,7 @@ describe("runPaused", () => {
     expect(out.lines.some((line) => line.startsWith("Outcome:"))).toBe(false);
   });
 
-  it("announces an unmet prerequisite and lists every artifact it names", () => {
+  it("identifies the stopped stage and explains every unmet requirement", () => {
     const { out } = paused({
       waiting: governedBy(
         {
@@ -527,26 +528,69 @@ describe("runPaused", () => {
         },
         {
           nextAction:
-            "Restore the artifacts listed above and leave the worktree clean, then resume.",
+            "Fix the thread files shown above and leave the worktree clean, then resume.",
         },
       ),
       logAbsPath: null,
     });
-    expect(out.text).toContain("FAILED — stage prerequisite unmet ❌");
-    expect(out.text).toContain("Artifacts:");
-    // Each row reads as the concrete files it is about, in the same words the
-    // sentence above it used.
-    expect(out.text).toContain("- expected a non-empty spec.md, found no spec.md");
+    expect(out.text).toContain("STAGE CANNOT START — requirements not met ❌");
+    expect(out.text).toContain("Where:");
+    expect(out.text).toContain("stage 2 of 6 · implement");
+    expect(out.text).toContain("Problem:");
     expect(out.text).toContain(
-      "- expected a non-empty plan.md and a plan-tasks/ folder holding at least " +
-        "one non-empty .md task file, found a non-empty plan.md and no " +
-        "plan-tasks/ folder",
+      '2 requirements for "implement" are not satisfied.',
     );
-    // The action line is the pause's own instruction, not a restatement of the
-    // rows: restore what the list named, leave the tree clean, resume.
+    expect(out.text).toContain("Plan requirement");
+    expect(out.text).toContain("Thread now:");
+    expect(out.text).toContain("Required by stage 2 · implement:");
+    expect(out.text).toContain("Why:");
+    expect(out.text).toContain(
+      `The pipeline passed preflight, but the thread's plan no longer matches ` +
+        'what stage 2 "implement" requires.',
+    );
+    expect(out.text).toContain("Result:");
+    expect(out.text).toContain(
+      'Stage 2 "implement" was not run. The pipeline is paused at this stage.',
+    );
+    // Each requirement shows the concrete observed and required files in the
+    // same vocabulary used by preflight composition refusals.
+    expect(out.text).toContain("Spec requirement");
+    expect(out.text).toContain("no spec.md");
+    expect(out.text).toContain("a non-empty spec.md");
+    expect(out.text).toContain(
+      "a non-empty plan.md and a plan-tasks/ folder holding at least one " +
+        "non-empty .md task file",
+    );
+    expect(out.text).toContain("a non-empty plan.md and no plan-tasks/ folder");
+    // The action line stays a short instruction after the evidence.
     expect(out.text).toContain("Next:");
     expect(out.text).toContain(
-      "Restore the artifacts listed above and leave the worktree clean, then resume.",
+      "Fix the thread files shown above and leave the worktree clean, then resume.",
+    );
+  });
+
+  it("identifies the stopped stage when its requirements could not be checked", () => {
+    const message =
+      'The requirements for stage 2/6 "implement" could not be checked: permission denied.';
+    const { out } = paused({
+      waiting: governedBy({
+        kind: "stage-prerequisite-unmet",
+        message,
+        diagnostics: { errorMessage: "permission denied" },
+      }),
+      logAbsPath: null,
+    });
+
+    expect(out.text).toContain(
+      "STAGE CANNOT START — requirements could not be checked ❌",
+    );
+    expect(out.text).toContain("stage 2 of 6 · implement");
+    expect(out.text).toContain(
+      'The requirements for "implement" could not be checked.',
+    );
+    expect(out.text).toContain(`- ${message}`);
+    expect(out.text).toContain(
+      'Stage 2 "implement" was not run. The pipeline is paused at this stage.',
     );
   });
 

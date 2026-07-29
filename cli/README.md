@@ -445,9 +445,12 @@ inspected state.
 
 **Before an attempt.** The stage's prerequisite is re-evaluated. If it is unmet —
 someone deleted `spec.md` between stages, a plan went malformed — the run pauses
-with `stage prerequisite unmet`, having allocated no attempt, written no log, and
-invoked no harness. Restore the state it names and resume; the stage starts once
-its requirement is back.
+before that stage with `STAGE CANNOT START — requirements not met`, having
+allocated no attempt, written no log, and invoked no harness. The diagnostic
+identifies the stage, shows the thread files it found and the files the stage
+requires, explains why execution stopped, and confirms that the pipeline is
+paused at that stage. Fix the named files, leave the worktree clean, and resume;
+the stage starts once its requirements are satisfied.
 
 **After a recognized `DONE`.** The stage's promised artifact state is verified
 before anything else happens — before the Git boundary is evaluated, before the

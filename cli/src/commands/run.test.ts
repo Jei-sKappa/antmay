@@ -833,7 +833,7 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     expect(result.err).toContain("Pipeline cannot start ❌");
     expect(result.err).toContain("Where:     --from implement");
     expect(result.err).toContain(
-      "Error:     The requested entry point is not selected by this pipeline.",
+      "Problem:   The requested entry point is not selected by this pipeline.",
     );
     expect(result.err).toContain(
       '"implement" does not occur in this one.',
@@ -1029,6 +1029,10 @@ describe.concurrent("runCommand — artifact drift after preflight (AC-7.1)", ()
 
     expect(result.code).toBe(2);
     expect(result.invoker.calls.length).toBe(0);
+    expect(result.out).toContain(
+      "STAGE CANNOT START — requirements not met ❌",
+    );
+    expect(result.out).toContain("stage 1 of 1 · reconcile-spec");
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
     if (!cp.ok) return;

@@ -7,9 +7,10 @@ import { action, run } from "../demo/steps.mjs";
 
 /**
  * The artifact state a stage requires is gone by the time that stage is reached.
- * Ends on the `FAILED — stage prerequisite unmet` banner and its `Artifacts:`
- * list, printed before the stage allocates an attempt or contacts an agent —
- * so no stage header sits between the banner and the stage that never ran.
+ * Ends on the `STAGE CANNOT START — requirements not met` banner, which names
+ * the affected stage and shows its current and required thread files, cause,
+ * result, and recovery. It is printed before the stage allocates an attempt or
+ * contacts an agent.
  *
  * The pipeline is `spec` then `implement`, and `implement` requires a brief
  * plan. The fixture starts with one, so preflight composes the whole pipeline
@@ -24,7 +25,8 @@ import { action, run } from "../demo/steps.mjs";
 const BRIEF_PLAN = "# Plan: Fake\n\nA brief plan with no task files.\n";
 
 export default {
-  label: "A prerequisite disappears mid-run — ends on the prerequisite banner",
+  label:
+    "A prerequisite disappears mid-run — identifies the stage and pauses before it",
   note:
     "The plan this run needs is deleted while the first stage is still " +
     "running, so the second stage meets a prerequisite that held at preflight " +

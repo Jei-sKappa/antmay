@@ -236,6 +236,13 @@ bearing.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
   something new to draw and you add or extend one in the same change — see
   "Scenarios are the executable UI contract" below.
+- **Artifact-prerequisite diagnostics form one interface across execution
+  phases.** Both a composition refusal and a runtime recheck identify the
+  affected stage, show the concrete thread files found and required, explain
+  why the requirement is not satisfied, and state the result. Preflight reports
+  that no stages ran; runtime reports that the affected stage did not run,
+  marks the pipeline as paused there, and closes with recovery and resume
+  instructions.
 
 ### Scripted test harness (developer-only)
 

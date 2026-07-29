@@ -402,6 +402,11 @@ export async function resumeCommand(
           : undefined;
       display.runPaused({
         waiting,
+        currentStage: {
+          id: checkpoint.stages[checkpoint.stageIndex]!.id,
+          position: checkpoint.stageIndex + 1,
+          count: checkpoint.stages.length,
+        },
         runId,
         pipelineName,
         totalElapsedMs: clock().getTime() - Date.parse(checkpoint.createdAt),

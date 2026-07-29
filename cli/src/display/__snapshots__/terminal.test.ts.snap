@@ -5,7 +5,7 @@ exports[`printCompositionRefusal > renders a compatible transition overwritten b
   Pipeline:  overwritten-output
   Source:    /config/pipelines/overwritten-output.json
   Where:     pipeline stage 4 of 4 · implement-plan
-  Error:     1 prerequisite for "implement-plan" is not satisfied.
+  Problem:   1 requirement for "implement-plan" is not satisfied.
 
 Plan projection (assuming earlier selected stages succeed)
   Thread before run:
@@ -28,7 +28,7 @@ exports[`printCompositionRefusal > renders a later prerequisite unchanged by ear
   Pipeline:  missing-later
   Source:    /config/pipelines/missing-later.json
   Where:     pipeline stage 2 of 2 · implement
-  Error:     1 prerequisite for "implement" is not satisfied.
+  Problem:   1 requirement for "implement" is not satisfied.
 
 Plan projection (assuming earlier selected stages succeed)
   Thread before run:
@@ -49,7 +49,7 @@ exports[`printCompositionRefusal > renders a malformed artifact already present 
   Pipeline:  malformed-plan
   Source:    /config/pipelines/malformed-plan.json
   Where:     pipeline stage 1 of 1 · implement-plan
-  Error:     1 prerequisite for "implement-plan" is not satisfied.
+  Problem:   1 requirement for "implement-plan" is not satisfied.
 
 Plan projection (assuming earlier selected stages succeed)
   Thread before run:
@@ -71,7 +71,7 @@ exports[`printCompositionRefusal > renders a missing prerequisite on the first s
   Source:    /config/pipelines/missing-first.json
   Where:     pipeline stage 2 of 2 · plan-strict
   Selection: selected stage 1 of 1 from --from plan-strict
-  Error:     1 prerequisite for "plan-strict" is not satisfied.
+  Problem:   1 requirement for "plan-strict" is not satisfied.
 
 Spec projection (assuming earlier selected stages succeed)
   Thread before run:
@@ -92,7 +92,7 @@ exports[`printCompositionRefusal > renders an invalid --from entry point 1`] = `
   Pipeline:  invalid-entry
   Source:    /config/pipelines/invalid-entry.json
   Where:     --from implement
-  Error:     The requested entry point is not selected by this pipeline.
+  Problem:   The requested entry point is not selected by this pipeline.
 
   Pipeline stages:
     1. spec
@@ -109,7 +109,7 @@ exports[`printCompositionRefusal > renders one incompatible earlier transition 1
   Pipeline:  incompatible-output
   Source:    /config/pipelines/incompatible-output.json
   Where:     pipeline stage 2 of 2 · implement-plan
-  Error:     1 prerequisite for "implement-plan" is not satisfied.
+  Problem:   1 requirement for "implement-plan" is not satisfied.
 
 Plan projection (assuming earlier selected stages succeed)
   Thread before run:
@@ -130,7 +130,7 @@ exports[`printCompositionRefusal > renders several failed dependencies with inde
   Pipeline:  multiple-prerequisites
   Source:    /config/pipelines/multiple-prerequisites.json
   Where:     pipeline stage 2 of 2 · reconcile-plan
-  Error:     2 prerequisites for "reconcile-plan" are not satisfied.
+  Problem:   2 requirements for "reconcile-plan" are not satisfied.
 
 Spec projection (assuming earlier selected stages succeed)
   Thread before run:

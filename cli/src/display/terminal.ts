@@ -15,7 +15,11 @@ import {
   describeArtifactDimension,
   formatArtifactMismatch,
 } from "../thread/artifacts.js";
-import type { Display, StageDisposition } from "./types.js";
+import type {
+  CurrentStageInfo,
+  Display,
+  StageDisposition,
+} from "./types.js";
 
 /**
  * The stream and rendering context every terminal renderer and standalone
@@ -143,7 +147,7 @@ const REASON_BANNER: Record<
   // a dimension can also hold the wrong shape — a `strict` plan promised where
   // a `brief` one is present is unmet with nothing absent.
   "stage-prerequisite-unmet": {
-    label: "FAILED — stage prerequisite unmet",
+    label: "STAGE CANNOT START — requirements not met",
     icon: "❌",
     color: "red",
     group: "stage",
@@ -183,6 +187,8 @@ const CLOSING_KEYS = [
   "Pipeline",
   "Elapsed",
   "Checkpoint",
+  "Where",
+  "Problem",
   "Reason",
   "Detail",
   "Pending",
@@ -191,6 +197,7 @@ const CLOSING_KEYS = [
   "Log",
   "Continue",
   "Resume",
+  "Result",
 ] as const;
 
 /** Paints text in the requested styles, or returns it unchanged when color is
@@ -327,6 +334,13 @@ function pipelineStageLabel(
   return `pipeline stage ${stage.pipelinePosition} of ${pipelineStageCount} · ${stage.stageId}`;
 }
 
+function unmetRequirementsProblem(stageId: string, count: number): string {
+  return (
+    `${count} requirement${count === 1 ? "" : "s"} for "${stageId}" ` +
+    `${count === 1 ? "is" : "are"} not satisfied.`
+  );
+}
+
 function dependencyCause(
   dependency: DependencyProjection,
   failure: Extract<CompositionFailure, { kind: "stage-prerequisite-unmet" }>,
@@ -381,7 +395,14 @@ export function printCompositionRefusal(
   info: CompositionRefusalInfo,
 ): void {
   const paint = createPainter(options);
-  const width = keyWidth("Pipeline", "Source", "Where", "Selection", "Error", "Result");
+  const width = keyWidth(
+    "Pipeline",
+    "Source",
+    "Where",
+    "Selection",
+    "Problem",
+    "Result",
+  );
   const line = (key: string, value: string): string =>
     infoLine(paint, "  ", key, value, width);
   const lines = [
@@ -393,7 +414,10 @@ export function printCompositionRefusal(
   if (info.failure.kind === "entry-point-not-selected") {
     lines.push(
       line("Where", `--from ${info.failure.requestedStage}`),
-      line("Error", "The requested entry point is not selected by this pipeline."),
+      line(
+        "Problem",
+        "The requested entry point is not selected by this pipeline.",
+      ),
       "",
       `  ${paint("Pipeline stages:", ...KEY_STYLE)}`,
       ...info.failure.pipelineStages.map(
@@ -423,10 +447,7 @@ export function printCompositionRefusal(
   }
   const count = failure.dependencies.length;
   lines.push(
-    line(
-      "Error",
-      `${count} prerequisite${count === 1 ? "" : "s"} for "${failure.stage.stageId}" ${count === 1 ? "is" : "are"} not satisfied.`,
-    ),
+    line("Problem", unmetRequirementsProblem(failure.stage.stageId, count)),
   );
 
   for (const dependency of failure.dependencies) {
@@ -657,7 +678,93 @@ function orderedReasons(waiting: WaitingInfo): WaitingReason[] {
  * is echoed here behind the agent gutter that marks it quoted, because that line
  * is the whole of the complaint.
  */
-function reasonBlock(paint: Painter, reason: WaitingReason): string[] {
+function prerequisiteReasonBlock(
+  paint: Painter,
+  reason: WaitingReason,
+  currentStage: CurrentStageInfo,
+): string[] {
+  const banner = REASON_BANNER[reason.kind];
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, CLOSING_WIDTH);
+  const stage = `stage ${currentStage.position} "${currentStage.id}"`;
+  const contract = reason.contract;
+  const hasContract = contract !== undefined && contract.length > 0;
+  const label = hasContract
+    ? banner.label
+    : "STAGE CANNOT START — requirements could not be checked";
+  const lines = [
+    "",
+    paint(`${label} ${banner.icon}`, "bold", banner.color),
+    line(
+      "Where",
+      `stage ${currentStage.position} of ${currentStage.count} · ${currentStage.id}`,
+    ),
+  ];
+
+  if (contract === undefined || contract.length === 0) {
+    lines.push(
+      line(
+        "Problem",
+        `The requirements for "${currentStage.id}" could not be checked.`,
+      ),
+      "",
+      `  ${paint("Why:", ...KEY_STYLE)}`,
+      `    - ${reason.message}`,
+      line(
+        "Result",
+        `Stage ${currentStage.position} "${currentStage.id}" was not run. The pipeline is paused at this stage.`,
+      ),
+    );
+    return lines;
+  }
+
+  lines.push(
+    line(
+      "Problem",
+      unmetRequirementsProblem(currentStage.id, contract.length),
+    ),
+  );
+
+  for (const mismatch of contract) {
+    const dimension = describeArtifactDimension(mismatch.dimension);
+    lines.push(
+      "",
+      paint(`${dimension} requirement`, "bold"),
+      `  ${paint("Thread now:", ...KEY_STYLE)}`,
+      `    ${describeArtifact(mismatch.dimension, mismatch.observed)}`,
+      `  ${paint(
+        `Required by stage ${currentStage.position} · ${currentStage.id}:`,
+        ...KEY_STYLE,
+      )}`,
+      `    ${describeArtifact(mismatch.dimension, mismatch.expected)}`,
+    );
+  }
+
+  lines.push("", `  ${paint("Why:", ...KEY_STYLE)}`);
+  for (const mismatch of contract) {
+    const dimension = describeArtifactDimension(mismatch.dimension).toLowerCase();
+    lines.push(
+      `    - The pipeline passed preflight, but the thread's ${dimension} no longer matches what ${stage} requires.`,
+    );
+  }
+  lines.push(
+    line(
+      "Result",
+      `Stage ${currentStage.position} "${currentStage.id}" was not run. The pipeline is paused at this stage.`,
+    ),
+  );
+  return lines;
+}
+
+function reasonBlock(
+  paint: Painter,
+  reason: WaitingReason,
+  currentStage: CurrentStageInfo,
+): string[] {
+  if (reason.kind === "stage-prerequisite-unmet") {
+    return prerequisiteReasonBlock(paint, reason, currentStage);
+  }
+
   const banner = REASON_BANNER[reason.kind];
   const line = (key: string, value: string): string =>
     infoLine(paint, "  ", key, value, CLOSING_WIDTH);
@@ -792,7 +899,7 @@ export function createTerminalDisplay(options: DisplayOptions): Display {
         lines.push("", paint(`Run stopped for ${reasons.length} reasons:`, "bold"));
       }
       for (const reason of reasons) {
-        lines.push(...reasonBlock(paint, reason));
+        lines.push(...reasonBlock(paint, reason, info.currentStage));
       }
 
       // The instruction and the command close the run, so the last thing on
