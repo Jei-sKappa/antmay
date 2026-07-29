@@ -111,12 +111,10 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   reach a contract the catalog owns, so unknown-field rejection in
   `pipeline/documents.ts` is load bearing.
 - A pipeline automates the automatable core of a **recipe** — one of the three
-  documented paths under `docs/recipes/`. The two are deliberately not 1:1: the
-  Standard pipeline the README publishes starts at an existing thread, omits
-  every recipe step that needs a human, and substitutes
-  `implement-plan-with-subagents` for the recipe's `implement-plan`. A recipe
-  guides and never governs; a pipeline enforces Git boundaries and queue gates.
-  Never call a pipeline a recipe.
+  documented paths under `docs/recipes/`. The two are deliberately not 1:1, and
+  `docs/glossary.md` owns how they differ. What binds the executor: a recipe
+  guides and never governs, while a pipeline enforces Git boundaries and queue
+  gates. Never call a pipeline a recipe.
 - **Composition** (`pipeline/composition.ts`) walks the selected suffix against
   the thread's freshly inspected artifact state, checking each stage's
   prerequisite at its position, applying its promise for the stages after it, and
@@ -237,7 +235,7 @@ bearing.
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
   something new to draw and you add or extend one in the same change — see
-  "Keep the scenario catalog current" below.
+  "Scenarios are the executable UI contract" below.
 
 ### Scripted test harness (developer-only)
 
@@ -270,27 +268,12 @@ scenario-supplied operations outside the fixed catalog in
 `harness/scripted/scenario.ts`. Help, version, grammar errors, and `list` never
 interpret the toggle or touch scenario/state/Git/harness modules.
 
-Scripted output imitates an ordinary attempt rather than announcing itself. Each
-case reports a transcript of progress lines plus how it ended; the invoker
-streams every line through `onEvent` (so the terminal renders them like real
-agent output), appends its explicit `Scripted session: <id>` metadata line to the
-attempt log as soon as the synthetic identity exists, and appends the transcript
-under a `Scripted Harness Run` frame naming the agent, case, and attempt. A
-progress line is either prose or a tool call, and describes only filesystem work
-the case genuinely performs; the metadata and frame fabricate no provider JSON,
-sandbox, branch, or timing.
-
-Every scripted invoker entry passes its exact `request.prompt` to the terminal's
-developer renderer before request validation. The resulting `[DEV] Resolved
-prompt` block sits after the attempt header and before any simulated transcript,
-with every physical prompt line marked `[DEV]`; it is terminal-only and never
-travels through `onEvent` or the attempt-log transcript. The observer is
-best-effort: a synchronous rendering exception is discarded so it cannot
-replace or reclassify the scripted case's authoritative outcome. Pre-transcript
-validation failures therefore still expose their submitted prompt, while an
-attempt interrupted before the invoker call has no prompt block. Scripted mode
-also announces itself in one dim developer block printed ahead of the run
-details.
+Scripted output imitates an ordinary attempt rather than announcing itself:
+progress lines stream through the invoker's event seam so the terminal renders
+them like real agent output, and each describes only filesystem work the case
+genuinely performs. Nothing written to the terminal or the attempt log fabricates
+provider JSON, a sandbox, a branch, or a timing. The one announcement is a single
+dim line ahead of the run details block.
 
 A case ends in one of three ways. Most report a `finalText` carrying the terminal
 outcome line. A case may instead report a `CaseEnding`: `failed` returns a
@@ -300,56 +283,29 @@ only when the attempt is aborted — the seam that lets a signal land mid-attemp
 listener alone keeps nothing alive and the process would otherwise drain its
 event loop and exit before any signal arrived.
 
-Every valid launched scripted attempt also reports a deterministic synthetic
-session ID `scripted-session-<stage-id>-<attempt>` once through
-`onSessionCaptured` and again on the settled outcome (ordinary, provider-error,
-idle-timeout, and abort paths), with the same ID written to the attempt log
-before case execution. The shape is deliberately non-provider-like so demo
-coverage of the pause `Continue` line (`12-waiting-for-user`) and the list
-latest-session column (`28-list`) needs no real harness and no scenario-specific
-session setup beyond the shared list seed.
+Every launched scripted attempt reports a deterministic synthetic session ID on
+every path a real capture would take. Its shape is deliberately
+non-provider-like, which is what lets the demo cover the pause `Continue` line
+and the list latest-session column with no real harness and no per-scenario
+session setup.
 
-The `npm run demo` helper is intentionally outside the CLI grammar and check/CI
-gate. It exists to exhibit the terminal interface: each scenario drives the run
-to one distinct visual state — a closing block, a reason banner, a stage
-disposition — and stops there, so the state under inspection is the last thing on
-screen and needs no scrolling to find. Scenarios are therefore organized by what
-the renderer draws, not by what the executor can do; two behaviors that render
-identically do not need two scenarios, and one behavior that renders four ways
-needs four.
+The demo driver is generic and holds no scenario-specific knowledge: it builds
+the CLI, stands up the fixture, executes the scenario's ordered steps, and
+compares exit codes. Anything a single scenario needs — a rejecting Git hook, an
+unreadable queue, a revoked permission, a hook that changes the world while a
+child is live — belongs in that scenario's own file, never in the driver. A
+scenario needing different executor configuration declares its own pipeline,
+profile, or per-stage binding overrides rather than reaching for a demo-only
+hook, so the demo exercises the same path a user would.
 
-The driver is generic and holds no scenario-specific knowledge. It builds the
-CLI, stands up the fixture, executes an ordered step list, and compares exit
-codes. The step vocabulary lives in `scripts/demo/steps.mjs`: `run`, `resume` and
-`list` are invocations checked against an expected exit code, and `action` runs
-scenario-owned code against the fixture between invocations. A `run` or `resume`
-step may carry a `during` hook fired once the child has been alive for `afterMs`,
-which is how a scenario signals a live run or changes the world underneath one.
-Anything a single scenario needs — a rejecting Git hook, an unreadable queue, a
-revoked permission — belongs in that scenario's own file, never in the driver.
-`scripts/demo/fixture.mjs` holds the helpers those actions share, and
-`scripts/demo/pipeline.mjs` supplies the documents the isolated config root is
-built from — the Standard pipeline document, the canonical settings document,
-the demo execution profile, and the all-correct scripted document a scenario
-overrides one stage of — so each file reads as "the standard run, except this".
-
-Besides `label`, `scenario` and `steps`, a scenario may declare `note` — printed
-before the run, for a scenario whose shape is not self-evident, so a reader
-learns why it takes two invocations without opening the file — plus `pipeline`
-(a pipeline document of its own, written under `pipelines/` and referenced by
-its declared name), `profile` (an execution profile written under `profiles/`,
-which the scenario's own `run` step selects with `--profile`), and
-`settingsStages` (per-stage binding overrides merged into the settings
-document). A scenario that needs different executor configuration uses those
-fields rather than a demo-only hook, so the demo exercises the same path a user
-would. `scenario` itself is optional where no invocation interprets the scripted
-toggle: a `list`-only scenario declares no scripted document and is given no
-scripted-harness file. A scenario that invokes `run` or `resume` declares one
-even when it stops before any attempt launches, because the scripted document is
-loaded and validated in preflight, ahead of the checks such a scenario ends on.
-The scripted document is keyed by exactly the stage IDs the run selects, which is
-what the executor validates it against, so a `--from` suffix scenario names only
-its suffix.
+Two rules about a scenario's scripted document are not apparent from a scenario
+that happens to work. A scenario that invokes `run` or `resume` declares one even
+when it stops before any attempt launches, because the document is loaded and
+validated in preflight, ahead of the checks such a scenario ends on; a
+`list`-only scenario declares none and is given no scripted-harness file. And the
+document is keyed by exactly the stage IDs the run selects, which is what the
+executor validates it against, so a `--from` suffix scenario names only its
+suffix.
 
 Most scenarios reach their rendering by running the executor. A rendering that
 draws an aggregate over many runs cannot be reached that way — one invocation
@@ -361,36 +317,19 @@ returns when every checkpoint is valid: the executor validates each one it reads
 and fails on an invalid document, which is what stops a seeded fixture from
 quietly drifting away from the schema it imitates.
 
-Scenarios are checked in under `scripts/scenarios/`, one file per scenario; the
-id is the filename stem and discovery is automatic, so a new scenario is a new
-file and nothing else. Each id carries a zero-padded ordering prefix
-(`11-refused`), which is what puts the catalog in reading order everywhere it
-appears — on disk, in `--list`, and in the prompt — rather than in the
-alphabetical order the names alone would give. A new scenario is numbered where
-it belongs in that order; renumbering neighbours to make room is expected and
-costs nothing. `01-all-done` leads, and is what the selection prompt takes when
-answered with Enter. A scenario is selectable by number, by name without the
-prefix, or by full id, so nobody has to memorize a number. That prompt reads a
-whole line confirmed with Enter, so the catalog has no size limit. Each demo run
-allocates a unique `/tmp` directory holding an isolated
-config root, an isolated state root, and the disposable repository, and injects
+Discovery is automatic: a scenario's id is its filename stem under
+`scripts/scenarios/`, so a new scenario is a new file and nothing else. The
+zero-padded prefix each id carries (`11-refused`) is what puts the catalog in
+reading order everywhere it appears — on disk, in `--list`, and in the prompt —
+rather than in the alphabetical order the names alone would give.
+
+Each demo run allocates a unique `/tmp` directory holding an isolated config
+root, an isolated state root, and the disposable repository, and injects
 `ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the scripted toggle only into the
 child CLI processes. That config root is built from scratch out of the same
 production-schema documents a user writes, so the demo depends on no
 configuration of the developer's: nothing under their real config or state root
 is read or written. Everything temporary is preserved for inspection.
-
-The demo verifies exactly one thing per invocation — the exit code — as a single
-`[PASS]`/`[FAIL]` line, and stops at the first `[FAIL]`. Broader behavioral
-assertions belong in the `*.test.ts` suite, which already covers the scripted
-seams end to end. `ANTMAY DEMO STARTED` / `ANTMAY DEMO FINISHED` separator
-lines bracket each child CLI's terminal stream, and an `[SETUP]` line names each
-action step so the transcript says what changed between two invocations.
-`--show-demo-summary` adds a closing summary printing the commit list, the
-working-tree state, and the paths and environment needed to keep driving the
-result by hand; without the flag the demo ends at the last `[PASS]`/`[FAIL]`
-line. `--no-color` strips color from the child's output, which is the way to
-check that the rendering still reads correctly when color carries nothing.
 
 ### Scenarios are the executable UI contract
 
@@ -405,8 +344,7 @@ exercised by a scenario that reaches that output. This applies to every command
 and execution phase, including startup, success, pauses, failures, warnings,
 preflight refusals, and listings. Output length, rarity, and whether an agent was
 invoked do not affect the requirement. When an existing scenario already
-exercises the changed rendering, run it; the scenario source and its README row
-need no edit.
+exercises the changed rendering, run it; nothing needs editing.
 
 A supported rendering without a scenario is a UI coverage gap: developers
 cannot readily discover, run, or review an interface the CLI claims to support.
@@ -418,8 +356,8 @@ differ only in interpolated values may share a scenario; outputs with different
 sections, ordering, causal explanations, corrections, wrapping-sensitive
 content, or interaction paths require separate scenarios. Then:
 
-- **If an existing scenario already covers it, run that scenario without
-  changing its source or documentation.**
+- **If an existing scenario already covers it, run that scenario and change
+  nothing.**
 - **If an existing scenario nearly covers it, extend that one.** Two scenarios
   that end on renderings a reader cannot tell apart are one scenario too many.
 - **Otherwise add a file**, and give it a number that places it where it belongs
@@ -431,10 +369,15 @@ content, or interaction paths require separate scenarios. Then:
   what it exists to show, so that thing is the last output on screen and needs no
   scrolling to find. Add a `note` if its shape needs explaining, such as needing
   a second invocation.
-- **Update the table in `README.md`** only when the scenario catalog or the
-  terminal state a row describes changes, and run the affected scenario to
+- **Keep the scenario's own `label` accurate**, naming the state it exists to
+  show. That label is the catalog: `--list` and the selection prompt render every
+  row from it, so no document repeats them. Then run the affected scenario to
   confirm the exit code it declares.
 
+Run the scenario with `--no-color` as well whenever the rendering leans on color,
+to confirm it still reads when color carries nothing.
+
+`npm run demo` sits deliberately outside the CLI grammar and the check/CI gate.
 Unit tests remain responsible for exact behavior, edge cases, and output
 assertions. They complement scenarios but never substitute for running the built
 CLI and inspecting its interface. Conversely, behavior with no visible output

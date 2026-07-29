@@ -507,10 +507,8 @@ provider CLI for you. You paste it in your own terminal when you want the same
 conversation back (for example after a `DONE` that left `.pending-decisions/`
 work for a human).
 
-The session identity is also discoverable in the attempt log: a real run retains
-the provider's raw session event in its verbose stream, while the scripted demo
-writes an explicit `Scripted session: scripted-session-<stage-id>-<attempt>`
-metadata line. The scripted line stays out of the terminal's agent transcript.
+The session identity is also discoverable in the attempt log, whose verbose
+stream retains the provider's raw session event.
 
 Typical journey after an attempt-backed `WAITING FOR USER` pause:
 
@@ -528,111 +526,30 @@ captured a session, the column is omitted.
 
 ## Scripted demo
 
-`npm run demo` drives the built CLI through a pipeline document it writes into a
-throwaway config root, without contacting Codex or Claude Code, so you end up
-with a real disposable repository and run directory to inspect. It runs
-`npm run build` without tests, then executes the scenario you pick.
+`npm run demo` drives the built CLI through a real run against a disposable
+repository, with a scripted stand-in for the harness, so every terminal state the
+executor can produce is visible without contacting Codex or Claude Code. It
+builds the CLI first, then runs the scenario you pick. Each scenario stops at one
+distinct state — a closing block, a pause, a refusal — so that state is the last
+thing on screen.
 
-Every launched scripted attempt prints a `[DEV] Resolved prompt` block directly
-from its invocation request after the attempt header and before simulated agent
-output. Multiline prompts remain readable, with every physical line marked
-`[DEV]`; real-harness runs do not print this developer block.
-
-From `cli/` run:
+From `cli/`, or from the repository root by replacing `npm` with
+`npm --prefix cli`:
 
 ```sh
-npm run demo -- --scenario 01-all-done
-```
-
-From the repository root, the equivalent command is:
-
-```sh
-npm --prefix cli run demo -- --scenario 01-all-done
-```
-
-Each scenario drives the run to one distinct visual state and stops there, so
-whatever it exists to show is the last thing on screen. Ids carry an ordering
-prefix and are listed in reading order — a normal run, pipeline and repository
-preflight refusals, the pauses you meet routinely, the ways a stage fails, then
-the rare and the cosmetic. Attempt-backed pauses and the run listing already
-show native-session surfaces through existing scenarios (`12-waiting-for-user`
-for `Continue`, `28-list` for the latest-session column); neither needs a
-separate scenario. `--list` prints them all:
-
-| Scenario | Ends on |
-| --- | --- |
-| `01-all-done` | `SUCCESS` after six clean stages on a selected execution profile, with all six resolved prompts shown as `[DEV]` input |
-| `02-preflight-invalid-entry-point` | pipeline identity, requested `--from` entry point, and the available stage list |
-| `03-preflight-missing-first-prerequisite` | a `--from` suffix whose first selected stage needs an artifact already in the thread |
-| `04-preflight-missing-later-prerequisite` | a later stage's missing dependency, unchanged by the stages before it |
-| `05-preflight-incompatible-output` | one earlier projected output incompatible with the next stage's prerequisite |
-| `06-preflight-overwritten-output` | ordered earlier transitions where a later stage overwrites a compatible value |
-| `07-preflight-multiple-prerequisites` | two failed dependency projections with independent causes |
-| `08-preflight-malformed-plan` | an existing malformed plan projected into strict-plan implementation |
-| `09-temporary-workspace-refusal` | the preflight refusal for unsafe temporary workspaces, listing the unignored directories and the tracked content with a copyable correction for each |
-| `10-blocked` | the `BLOCKED` banner |
-| `11-refused` | the `REFUSED` banner |
-| `12-waiting-for-user` | `WAITING FOR USER`, its pending list, and native `Continue` with `scripted-session-reconcile-spec-1` |
-| `13-multiple-reasons` | two stacked reason banners under a `2 reasons` header |
-| `14-retry` | a `--from` suffix run's resumed `· attempt 2` header, then `SUCCESS` |
-| `15-runtime-prerequisite` | `FAILED — stage prerequisite unmet` and its `Artifacts:` list |
-| `16-stage-contract-violation` | `FAILED — promised artifact state unmet` and its `Artifacts:` list |
-| `17-failed-no-outcome` | `FAILED — no terminal outcome`, quoting the offending line |
-| `18-failed-harness-error` | `FAILED — harness error` |
-| `19-failed-idle-timeout` | `FAILED — idle timeout` |
-| `20-failed-git-policy` | `FAILED — git policy violation` |
-| `21-failed-commit` | `FAILED — commit failed` |
-| `22-failed-queue-scan` | `FAILED — queue scan error` |
-| `23-interrupted` | `INTERRUPTED`, after a signal lands mid-stage |
-| `24-checkpoint-write-failure` | `FAILED — checkpoint write` |
-| `25-permissions-warning` | a clean run opening on the boxed unrestricted warning |
-| `26-heartbeat` | the repeating `· still working` line |
-| `27-long-content` | oversized reasons, paths and tool arguments |
-| `28-list` | `afk list`, one row per condition, sorted newest first, with latest-session values `claude-code/scripted-session-review-spec-1`, `codex/scripted-session-reconcile-spec-1`, `claude-code/scripted-session-plan-strict-1`, and `claude-code/scripted-session-implement-plan-with-subagents-1` |
-
-`--scenario` takes any of three forms, so you need not remember a number to ask
-for a scenario by name:
-
-```sh
-npm run demo -- --scenario 3            # by number
-npm run demo -- --scenario refused      # by name
+npm run demo -- --list                  # every scenario, and the state it ends on
 npm run demo -- --scenario 11-refused   # by full id
+npm run demo -- --scenario refused      # by name
+npm run demo -- --scenario 11           # by number
 ```
 
-Adding a scenario means adding one `scripts/scenarios/<NN>-<name>.mjs` file
-exporting `{ label, scenario, steps }`, numbered where it belongs in the reading
-order. Without `--scenario`, the demo prompts on a terminal — type a number, a
-name, or an id and press Enter, or press Enter alone for `01-all-done` — and
-otherwise exits non-zero listing the ids.
+Without `--scenario` the demo prompts when it has a terminal, taking the first
+scenario when answered with Enter alone.
 
-A scenario's steps are `run`, `resume` and `list` invocations, each checked
-against an expected exit code, interleaved with `action` steps holding whatever
-setup that one scenario needs. Only `14-retry`, `22-failed-queue-scan` and
-`24-checkpoint-write-failure` invoke `resume` at all; everything else is a single
-invocation. A scenario whose shape is not self-evident carries a `note` the demo
-prints before running, so the reason for a second invocation is on screen rather
-than in the source. A scenario may also declare `pipeline` (a pipeline document
-of its own, in place of the six-stage Standard one), `profile` (an execution
-profile written under `profiles/`, which its `run` step then selects with
-`--profile`), and `settingsStages` (per-stage binding overrides merged into the
-settings document — how `26-heartbeat` shortens its interval, through the same
-field a real user would set).
-
-Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding
-an isolated config root, an isolated state root, and the disposable Git
-repository. The config root is built from scratch out of the same documents you
-would write — a `settings.json` binding every stage, the scenario's pipeline
-under `pipelines/`, and its profile under `profiles/` — so the demo needs no
-configuration of yours: nothing under your real config or state root is read or
-written, and no run record or workspace lock of yours is touched.
-
-The only thing the demo verifies is each invocation's exit code, reported as one
-`[PASS]` or `[FAIL]` line; a `[FAIL]` skips the remaining invocations and exits
-non-zero. Behavior beyond the exit code is covered by the automated suite. Every
-built-CLI stream is enclosed by `ANTMAY DEMO STARTED` and `ANTMAY DEMO FINISHED`
-separator lines, and an `[SETUP]` line names each action step. Pass
-`--show-demo-summary` for a closing summary printing the commit list, the
-working-tree state, and the paths (plus a copy-pasteable environment) you need
-to keep poking at the result by hand. Pass `--no-color` to strip color from the
-CLI's output and check that the rendering still reads without it.
-The demo is developer-run and is not part of `npm run check` or CI.
+Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding an
+isolated config root, an isolated state root, and the disposable Git repository,
+so the demo needs no configuration of yours: nothing under your real config or
+state root is read or written, and no run record or workspace lock of yours is
+touched. Everything it writes is left in place for you to inspect, and
+`--show-demo-summary` closes with the commit list, the working-tree state, and
+the paths you need to keep poking at the result by hand.

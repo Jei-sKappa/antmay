@@ -124,11 +124,10 @@ Skill bodies and every document in this repository also follow "Describe the cur
 
 ## Shared references
 
-Some skills ship copies of the same canonical reference (for example the recipe templates under `recipes/` that `whats-next` uses, or the discussion formats). These are NOT hand-maintained per skill:
+Some skills ship copies of the same canonical reference (for example the recipe templates under `recipes/` that `whats-next` uses, or the discussion formats). Those copies are generated, not hand-maintained per skill. The contract — the canonical sources, the flat manifest, what the sync owns and what it leaves alone — is defined in the repo-root `docs/skill-authoring.md`. Working here:
 
-- Canonical shared files live in `shared/references/` and are declared in `shared/manifest.yaml` (a strictly flat map: each key is a skill path, each value is a list of sources relative to `shared/references/`).
-- Edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`. The script mirrors each declared source to the same relative path under the skill's `references/` folder, owning exactly the files the manifest names: it deletes and rewrites precisely those, leaving hand-authored skill-local references untouched. Removing a manifest entry does not delete its previously generated copy — delete that orphan by hand.
-- NEVER hand-edit a generated copy under a skill's `references/` (any file the manifest declares for that skill). Those copies are generated, committed, and flow into distribution unchanged. Change the canonical source and re-run the script instead.
+- The workflow is to edit the canonical source under `shared/references/`, then run `node scripts/sync-shared-references.mjs`.
+- NEVER hand-edit a generated copy under a skill's `references/` — any file `shared/manifest.yaml` declares for that skill. Change the canonical source and re-run the script instead.
 
 ## When adding a new skill
 

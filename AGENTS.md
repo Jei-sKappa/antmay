@@ -132,6 +132,17 @@ does not belong under one example, scenario, or component, and the same fact
 does not need to be repeated across documents. If existing documentation remains
 accurate and useful after a change, leave it unchanged.
 
+A catalog the software itself prints — a `--list` output, a help screen — is not
+documentation to maintain in any file. Point at the command rather than copying
+its rows into prose, and keep the runtime source of that listing accurate
+instead.
+
+A thread's own identifiers do not travel with what they explain. Every thread
+numbers its decisions from `DR1`, so a bare `DR<N>` in code or in living
+documentation names nothing a future reader can resolve. Keep the constraint or
+rationale the record settled, stated in full where it applies, and leave the tag
+in the thread.
+
 README files are user-facing. Include only information an end user needs to
 understand, choose, configure, or operate the software; do not expose internal
 implementation or maintenance details that have no practical value to that

@@ -147,7 +147,7 @@ describe("classifyAttempt", () => {
     expect(reasonOf(result, "pending-queues").pendingFiles).toEqual(pending);
   });
 
-  it("DONE + violation + failed scan retains the boundary kind and reports both queue problems (DR57/AC-11.6)", () => {
+  it("DONE + violation + failed scan retains the boundary kind and reports both queue problems (AC-11.6)", () => {
     const result = classifyAttempt(
       input({
         boundary: violationBoundary,

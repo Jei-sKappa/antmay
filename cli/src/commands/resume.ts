@@ -255,7 +255,7 @@ export async function resumeCommand(
     const stage = checkpoint.stages[stageIndex]!;
     const currentHarness = stage.binding.agent.harness;
 
-    // Probe only the current stage's snapshotted harness (DR48).
+    // Probe only the current stage's snapshotted harness.
     const probeResult = await probe([currentHarness], repoRoot);
     if (!probeResult.ok) {
       const lines = probeResult.failures.map(
@@ -625,7 +625,7 @@ export async function resumeCommand(
       }
 
       // Startup summary; re-print the unrestricted warning when the persisted
-      // permission choice is unrestricted (DR56).
+      // permission choice is unrestricted.
       if (scenarioPath !== undefined) {
         printScriptedModeStartup(displayOptions, scenarioPath);
       }
@@ -663,9 +663,9 @@ export async function resumeCommand(
       const lastAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
 
       if (!scan.ok) {
-        // DR57: a scan failure while a pause awaiting no-harness finalization —
-        // a Git boundary or an unmet promised artifact — is held keeps that
-        // pause's own kind, folding the scan diagnostic in. Downgrading it to a
+        // A scan failure while a pause awaiting no-harness finalization — a Git
+        // boundary or an unmet promised artifact — is held keeps that pause's
+        // own kind, folding the scan diagnostic in. Downgrading it to a
         // gate-error would discard the saved DONE's recovery path.
         if ((boundaryPause || contractPause) && originalWaiting !== null) {
           const [governing, ...rest] = originalWaiting.reasons;
@@ -752,7 +752,7 @@ export async function resumeCommand(
       // Postcondition-contract resume: recheck the promised artifact state
       // first, because what that check finds is what chooses between the three
       // recoveries — finalize the saved DONE, run the stage again, or stay
-      // paused (DR15).
+      // paused.
       if (contractPause && originalWaiting !== null) {
         const [governing, ...rest] = originalWaiting.reasons;
         const inspection = await inspectArtifactState(repoRoot, threadRelPath);
@@ -780,7 +780,7 @@ export async function resumeCommand(
           // decided. Staying paused is the only move that keeps the saved DONE
           // finalizable once the thread can be read again: running the stage on
           // "cannot verify" would move the governing kind off this pause and
-          // discard that recovery for good (DR15). The reason's recorded
+          // discard that recovery for good. The reason's recorded
           // dimensions describe the earlier inspection, not this one, so they
           // go. What can make an inspection fail, and why pausing on it is the
           // fail-closed direction, is recorded beside the runner's post-DONE

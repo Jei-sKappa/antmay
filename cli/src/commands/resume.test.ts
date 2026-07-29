@@ -634,7 +634,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     expect(cp.waiting?.reasons[0].kind).toBe("gate-error");
   });
 
-  it("keeps a git-policy-violation kind on a scan failure, folding the diagnostic in (DR57)", async () => {
+  it("keeps a git-policy-violation kind on a scan failure, folding the diagnostic in", async () => {
     const h = await setup();
     await seed(h, [
       {
@@ -668,7 +668,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
   });
 });
 
-describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3, DR53)", () => {
+describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3)", () => {
   it("re-attempts the same stage for a non-DONE pending-queues pause", async () => {
     const h = await setup();
     await seed(h, [{ before: () => dropPendingSync(h.fixture, "q.md"), outcome: BLOCKED }]);
@@ -732,7 +732,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3, DR53)
   });
 });
 
-describe.concurrent("resumeCommand — harness-free Git-boundary finalization (AC-15.3, DR50)", () => {
+describe.concurrent("resumeCommand — harness-free Git-boundary finalization (AC-15.3)", () => {
   it("commits the preserved diff without any harness call, then advances", async () => {
     const h = await setup();
     await seed(h, [
@@ -1139,7 +1139,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
   });
 });
 
-describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1, DR48)", () => {
+describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1)", () => {
   it("probes only the current stage's harness and keeps retained versions for later stages", async () => {
     const h = await setup(
       settingsFor({
@@ -1251,7 +1251,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     ).toBe(true);
   });
 
-  it("renders the same resolved-execution block after every source document is gone (AC-11, DR11)", async () => {
+  it("renders the same resolved-execution block after every source document is gone (AC-11)", async () => {
     const h = await setup();
     await fs.mkdir(path.join(h.configRoot, "profiles"), { recursive: true });
     await fs.writeFile(
@@ -1290,7 +1290,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     expect(startupBlock(resumed.out)).toBe(atAllocation);
   });
 
-  it("re-prints the unrestricted-permissions warning on resume (DR56)", async () => {
+  it("re-prints the unrestricted-permissions warning on resume", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }], { dangerouslySkipPermissions: true });
     const runId = await soleRunId(h);

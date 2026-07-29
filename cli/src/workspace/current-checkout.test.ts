@@ -21,7 +21,7 @@ async function tempDir(): Promise<string> {
   return fs.realpath(raw);
 }
 
-describe("resolveCurrentCheckoutWorkspace (AC-8.4, DR10, DR24)", () => {
+describe("resolveCurrentCheckoutWorkspace (AC-8.4)", () => {
   it("resolves a symlinked repo path to its canonical root", async () => {
     const realRoot = path.join(await tempDir(), "repo");
     await fs.mkdir(realRoot);

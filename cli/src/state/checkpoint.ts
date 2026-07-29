@@ -53,7 +53,7 @@ export type WaitingDiagnostics = {
 /**
  * The instruction every non-DONE and boundary pause carries: the attempt's file
  * changes never passed the terminal-outcome gate, so a human must dispose of
- * them deliberately before the stage runs again (DR54).
+ * them deliberately before the stage runs again.
  */
 export const UNVALIDATED_CHANGES_NOTE =
   "The attempt's file changes are unvalidated: revert them or deliberately " +
@@ -62,7 +62,7 @@ export const UNVALIDATED_CHANGES_NOTE =
 /**
  * The instruction a `stage-contract-violation` pause carries. The attempt
  * reported `DONE` without leaving the artifact state its stage promises, so the
- * human chooses which of the two recoveries resume takes (DR15): repairing the
+ * human chooses which of the two recoveries resume takes: repairing the
  * artifact finalizes the completed attempt, and reverting its changes runs the
  * stage again.
  */
@@ -540,7 +540,7 @@ function validateStage(
   // which snapshot target rules, prerequisites, promises, and Git policies no
   // catalog entry carries and drive the runner through contracts the catalog
   // never offers. Comparing the descriptor would reject every such checkpoint
-  // and take that coverage with it (DR6).
+  // and take that coverage with it.
   if (typeof value.id !== "string" || !isCatalogStageId(value.id)) {
     errors.push(`${label}.id must name a catalog stage.`);
   } else {

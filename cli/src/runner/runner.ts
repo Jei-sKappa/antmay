@@ -269,8 +269,8 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
 
   // Finish a reserved attempt as a signal interruption: persist a durable
   // `interrupted` waiting pause carrying the signal origin, the unvalidated-
-  // changes note (DR54),
-  // and any pending paths retained as evidence, then return `interrupted`.
+  // changes note, and any pending paths retained as evidence, then return
+  // `interrupted`.
   async function finishInterrupted(args: {
     sig: NodeJS.Signals;
     executingAttempt: AttemptRecord;
@@ -628,7 +628,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     // boundary is looked at. Nothing downstream — Git evaluation, the executor
     // commit, the stage advance, the queue resolution — runs on an unmet
     // promise; the completed attempt is preserved instead, so a human repair can
-    // finalize it later without running the stage again (DR15).
+    // finalize it later without running the stage again.
     if (isDone) {
       const postInspection = await inspectArtifactState(repoRoot, threadRelPath);
       let violation: WaitingReason | null = null;
@@ -642,7 +642,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         // does not reach. It is written anyway because pausing is the
         // fail-closed direction: a promise that could not be evaluated is never
         // credited as kept, so an unreadable thread stops the pipeline with the
-        // completed attempt preserved rather than advancing past it (DR6).
+        // completed attempt preserved rather than advancing past it.
         violation = {
           kind: "stage-contract-violation",
           message: `The stage reported DONE but its promised artifact state could not be verified: ${postInspection.message}`,

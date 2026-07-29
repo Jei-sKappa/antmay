@@ -466,7 +466,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
   ];
 
   for (const testCase of cases) {
-    it(`pauses ${testCase.name} as waiting with the DR54 warning`, async () => {
+    it(`pauses ${testCase.name} as waiting with the unvalidated-changes warning`, async () => {
       const fixture = await newFixture();
       const runDir = await makeRunDir();
       const headBefore = await readHead(fixture.root);

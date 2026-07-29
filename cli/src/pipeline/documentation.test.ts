@@ -289,8 +289,7 @@ describe("the Antmay skill support matrix in cli/README.md", () => {
       // structural on purpose — a length and a closing period, nothing about
       // meaning: no assertion expressible in a test can decide whether prose is
       // genuinely user-facing, so a long reason worded for maintainers passes
-      // here too, and only a human reading the published table catches that
-      // (DR6).
+      // here too, and only a human reading the published table catches that.
       expect(
         row.note.length,
         `${row.skill} needs a user-visible reason, not "${row.note}"`,

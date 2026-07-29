@@ -124,7 +124,7 @@ describe("loadPipelineDocument — the canonical schema (AC-2.1)", () => {
     ]);
   });
 
-  it("rejects every declared name that fails the shared raw grammar (AC-2.1, DR16)", () => {
+  it("rejects every declared name that fails the shared raw grammar (AC-2.1)", () => {
     for (const name of [
       "",
       "Standard",
@@ -184,7 +184,7 @@ describe("loadPipelineDocument — the canonical schema (AC-2.1)", () => {
     }
   });
 
-  it("rejects a duplicate stage ID (DR3)", () => {
+  it("rejects a duplicate stage ID", () => {
     expect(
       reject(
         pipeline({

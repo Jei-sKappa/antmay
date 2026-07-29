@@ -262,7 +262,7 @@ describe("STAGE_CATALOG — queue resolution (AC-2.3)", () => {
   });
 });
 
-describe("STAGE_CATALOG — serializability (AC-3.4, DR5)", () => {
+describe("STAGE_CATALOG — serializability (AC-3.4)", () => {
   it("round-trips unchanged through JSON", () => {
     const clone = JSON.parse(JSON.stringify(STAGE_CATALOG));
     expect(clone).toEqual(STAGE_CATALOG);

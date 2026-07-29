@@ -653,7 +653,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
   });
 });
 
-describe.concurrent("runCommand — resolved-execution startup display (AC-11, DR11)", () => {
+describe.concurrent("runCommand — resolved-execution startup display (AC-11)", () => {
   it("shows the pipeline source, `settings only`, and every stage's binding and target", async () => {
     const h = await setup();
     const result = await run(h, standardSteps(h.fixture));
@@ -926,7 +926,7 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     expect(result.err).toContain(".pending-decisions");
   });
 
-  it("refuses when an unfinished run already exists for the same thread (AC-7.1, DR55)", async () => {
+  it("refuses when an unfinished run already exists for the same thread (AC-7.1)", async () => {
     const h = await setup();
     // First run pauses (BLOCKED) leaving a waiting checkpoint and no changes.
     const first = await run(h, [

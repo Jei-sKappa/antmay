@@ -176,7 +176,7 @@ function stageReason(
 /**
  * The pure precedence function that turns an attempt's outcome, harness result,
  * queue state, and finalized boundary into the single next action, in strict
- * precedence order (DR41/DR44/DR52/DR57). Pure — no I/O.
+ * precedence order. Pure — no I/O.
  *
  * Precedence decides which reason governs the resume path and therefore leads
  * the list; it never discards the others. A stage-level reason and a
@@ -188,7 +188,7 @@ export function classifyAttempt(input: ClassificationInput): Classification {
   const queues = queueReasons(pendingFiles, queueScanError);
 
   // 1. A parsed DONE with a failed boundary is governed by its boundary kind
-  //    rather than downgrading to gate-error (DR57).
+  //    rather than downgrading to gate-error.
   if (isDone && boundary.evaluated && !boundary.ok) {
     const governing: WaitingReason = { kind: boundary.kind, message: boundary.message };
     return { action: "pause", reasons: [governing, ...queues] };

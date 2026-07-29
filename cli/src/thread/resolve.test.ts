@@ -69,7 +69,7 @@ describe("AC-5.1: all three forms resolve to the identical canonical result", ()
   });
 });
 
-describe("AC-5.2: DR47 rejections, each with a distinct message and no writes", () => {
+describe("AC-5.2: thread-resolution rejections, each with a distinct message and no writes", () => {
   it("rejects a nested docs/threads suffix (lexical)", async () => {
     const f = await fixture({ thread: {} });
     const nested = path.join(
