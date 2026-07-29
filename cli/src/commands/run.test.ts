@@ -1184,13 +1184,10 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
 
   it("marks the initial checkpoint, prints startup output, and uses scripted seams", async () => {
     const h = await setup({
-      afk: {
-        defaults: {
-          harness: "codex",
-          model: "test-model",
-          prompt: "Prefer small changes.\nCheck tests.",
-        },
-      },
+      pipeline: pipelineDocument([
+        { stage: "spec", instructions: "Prefer small changes.\nCheck tests." },
+        ...STANDARD_STAGE_IDS.slice(1),
+      ]),
     });
     const scenarioPath = await writeScriptedScenario(h.configRoot);
     const result = await run(h, [], {

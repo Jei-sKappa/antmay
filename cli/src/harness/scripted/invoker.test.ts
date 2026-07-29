@@ -310,11 +310,11 @@ describe("createScriptedInvoker", () => {
     );
     const stage = stageById("spec");
     const first = buildRequest(fixture, stage, {
-      profilePrompt: "First profile instruction.",
+      instructions: "First stage instruction.",
     });
     const second = buildRequest(fixture, stage, {
       attemptNumber: 2,
-      profilePrompt: "Second profile instruction.",
+      instructions: "Second stage instruction.",
       logFilePath: path.join(
         fixture.root,
         ".antmay-runs",
