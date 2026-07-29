@@ -59,17 +59,17 @@ function sortPending(pendingFiles: string[]): string[] {
 }
 
 /**
- * The reason text a pending-queue pause carries, over the paths in the order
- * they are listed. Every caller that names pending bundle files — a pre-attempt
- * gate, a post-attempt gate, a resume that rescanned — words it through here, so
- * one sentence covers them all.
+ * The concise reason text a pending-queue pause carries. Every caller that names
+ * pending bundle files — a pre-attempt gate, a post-attempt gate, a resume that
+ * rescanned — words it through here, while the reason's structured
+ * `pendingFiles` field carries the paths for display.
  */
-export function pendingQueuesMessage(sorted: string[]): string {
+export function pendingQueuesMessage(pendingFiles: string[]): string {
   const subject =
-    sorted.length === 1
-      ? "a pending bundle file awaits"
+    pendingFiles.length === 1
+      ? "pending bundle file awaits"
       : "pending bundle files await";
-  return `The stage cannot advance while ${subject} human resolution: ${sorted.join(", ")}.`;
+  return `${pendingFiles.length} ${subject} human resolution.`;
 }
 
 /**

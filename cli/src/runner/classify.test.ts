@@ -112,17 +112,28 @@ describe("classifyAttempt", () => {
 
   it("DONE + ok boundary + pending files pauses as pause-done", () => {
     const pending = ["docs/threads/t/.pending-reviews/b/report.md"];
-    const result = pauseOf(classifyAttempt(input({ pendingFiles: pending })));
+    const classification = classifyAttempt(input({ pendingFiles: pending }));
+    const result = pauseOf(classification);
     expect(result.action).toBe("pause-done");
     expect(result.kind).toBe("pending-queues");
-    expect(result.message).toContain(pending[0]);
+    expect(result.message).toBe("1 pending bundle file awaits human resolution.");
+    expect(reasonOf(classification, "pending-queues").pendingFiles).toEqual(
+      pending,
+    );
   });
 
   it("pause-done lists sorted pending paths", () => {
     const pending = ["docs/threads/t/z.md", "docs/threads/t/a.md"];
-    const result = pauseOf(classifyAttempt(input({ pendingFiles: pending })));
+    const classification = classifyAttempt(input({ pendingFiles: pending }));
+    const result = pauseOf(classification);
     expect(result.action).toBe("pause-done");
-    expect(result.message).toContain("docs/threads/t/a.md, docs/threads/t/z.md");
+    expect(result.message).toBe(
+      "2 pending bundle files await human resolution.",
+    );
+    expect(reasonOf(classification, "pending-queues").pendingFiles).toEqual([
+      "docs/threads/t/a.md",
+      "docs/threads/t/z.md",
+    ]);
   });
 
   it("DONE + git-policy-violation keeps the boundary kind (no pending files)", () => {
@@ -164,9 +175,10 @@ describe("classifyAttempt", () => {
     expect(reasonOf(result, "gate-error").message).toContain(
       "EACCES reading .pending-reviews",
     );
-    expect(reasonOf(result, "pending-queues").message).toContain(
-      "docs/threads/t/p.md",
-    );
+    expect(reasonOf(result, "pending-queues")).toMatchObject({
+      message: "1 pending bundle file awaits human resolution.",
+      pendingFiles: ["docs/threads/t/p.md"],
+    });
   });
 
   it("DONE + commit-error + failed scan retains commit-error, never gate-error", () => {

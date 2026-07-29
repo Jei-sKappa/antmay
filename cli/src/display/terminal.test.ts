@@ -375,7 +375,7 @@ describe("stageStopped", () => {
 describe("runPaused", () => {
   const waiting = governedBy({
     kind: "pending-queues",
-    message: "Two pending decisions must be settled before continuing.",
+    message: "1 pending bundle file awaits human resolution.",
     pendingFiles: ["docs/threads/t/.pending-decisions/a.md"],
   });
 
@@ -401,7 +401,9 @@ describe("runPaused", () => {
     const { out, err } = paused();
     expect(out.text).toContain("WAITING FOR USER ⏸️");
     expect(out.text).toContain(waiting.reasons[0].message);
-    expect(out.text).toContain("docs/threads/t/.pending-decisions/a.md");
+    const pendingPath = "docs/threads/t/.pending-decisions/a.md";
+    expect(out.text).toContain(pendingPath);
+    expect(out.text.split(pendingPath)).toHaveLength(2);
     expect(out.text).toContain("/runs/r1/logs/1-x-1.log");
     expect(out.text).toContain("260723T00Z-run");
     expect(out.text).toContain("antmay afk resume 260723T00Z-run");
@@ -431,7 +433,7 @@ describe("runPaused", () => {
         reasons: [
           {
             kind: "pending-queues",
-            message: "A pending bundle file awaits human resolution.",
+            message: "1 pending bundle file awaits human resolution.",
             pendingFiles: ["docs/threads/t/.pending-decisions/a.md"],
           },
           {
