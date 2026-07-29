@@ -175,7 +175,10 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   (`composition.ts`), and target-rule resolution (`targets.ts`).
 - `runner/` — the generic stage runner, attempt classification, outcome
   recognition, and signal handling.
-- `gitops/` — Git wrapper, working-tree status, and the boundary engine.
+- `gitops/` — the Git wrapper and its NUL-output splitter (`git.ts`),
+  working-tree status (`status.ts`), the temporary-workspace ignore and
+  tracked-content preflight (`temporary-workspaces.ts`), and the boundary engine
+  (`boundary.ts`).
 - `harness/` — the Sandcastle invoker, executable probing, and prompt assembly.
 - `state/` — durable run state: checkpoints, logs, run records, and the
   exclusive workspace lock.

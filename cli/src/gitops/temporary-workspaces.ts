@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { GitCommandError, type GitResult, runGit } from "./git.js";
+import { GitCommandError, type GitResult, runGit, splitNul } from "./git.js";
 
 /**
  * The three directories Antmay skills create on demand inside a thread. They
@@ -99,7 +99,7 @@ export async function checkTemporaryWorkspaces(
     if (result.code !== 0) {
       return gitFailure(repoRoot, args, result);
     }
-    trackedPaths = result.stdout.split("\0").filter((field) => field.length > 0);
+    trackedPaths = splitNul(result.stdout);
   } catch (error) {
     // `git` could not be run at all. Fail closed with the underlying reason.
     const reason = error instanceof Error ? error.message : String(error);

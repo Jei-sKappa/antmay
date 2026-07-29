@@ -813,8 +813,10 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     const result = await run(h, []);
     await expectClean(h, result);
     expect(result.err).toContain('Stage "implement-plan" (selected position 2)');
-    expect(result.err).toContain('plan state "strict"');
-    expect(result.err).toContain('"plan-brief" (position 1) promises plan state "brief"');
+    // Short substrings: the phrases are long enough that the rendered stream
+    // may wrap them.
+    expect(result.err).toContain("a plan-tasks/ folder holding at least one");
+    expect(result.err).toContain('"plan-brief" (position 1) promises');
   });
 
   it("refuses an unknown --from stage before allocation, naming it", async () => {

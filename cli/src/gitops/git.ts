@@ -94,3 +94,13 @@ export async function gitOrThrow(
   }
   return result;
 }
+
+/**
+ * Split a NUL-delimited `git` output stream into its individual fields,
+ * dropping the trailing empty field the terminator leaves behind. Using `-z`
+ * output throughout keeps spaces, quotes, and newlines inside filenames from
+ * corrupting the parse the way the default line/quoted form would.
+ */
+export function splitNul(stdout: string): string[] {
+  return stdout.split("\0").filter((field) => field.length > 0);
+}

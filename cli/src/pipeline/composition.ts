@@ -1,5 +1,7 @@
 import {
   applyArtifactTransition,
+  describeArtifact,
+  describeContractSide,
   evaluateArtifactPrerequisite,
   type ArtifactMismatch,
 } from "../thread/artifacts.js";
@@ -38,40 +40,6 @@ export type CompositionResult =
   | { ok: false; errors: string[] };
 
 /**
- * Render one artifact-state dimension and value as the phrase a diagnostic
- * reads with.
- */
-function describeDimension(
-  dimension: keyof ArtifactState,
-  value: boolean | PlanState,
-): string {
-  switch (dimension) {
-    case "validThread":
-      return value === true ? "a valid thread" : "no valid thread";
-    case "proposal":
-      return value === true ? "a proposal" : "no proposal";
-    case "spec":
-      return value === true ? "a spec" : "no spec";
-    case "implementationReport":
-      return value === true ? "an implementation report" : "no implementation report";
-    case "plan":
-      return `plan state "${value as PlanState}"`;
-  }
-}
-
-function describeExpected(unmet: readonly ArtifactMismatch[]): string {
-  return unmet
-    .map((mismatch) => describeDimension(mismatch.dimension, mismatch.expected))
-    .join(" and ");
-}
-
-function describeObserved(unmet: readonly ArtifactMismatch[]): string {
-  return unmet
-    .map((mismatch) => describeDimension(mismatch.dimension, mismatch.observed))
-    .join(" and ");
-}
-
-/**
  * Explain why the stage at `index` of the selection cannot run: what it
  * required, what the state at that point actually holds, and which earlier
  * selected stages bear on the dimensions that failed.
@@ -91,7 +59,8 @@ function describeImpossibleStage(
     index === 0 ? "the thread's current state" : "the simulated state at that point";
   const lines = [
     `Stage "${stage.id}" (selected position ${position}) cannot run: it requires ` +
-      `${describeExpected(unmet)}, but ${origin} has ${describeObserved(unmet)}.`,
+      `${describeContractSide(unmet, "expected")}, but ${origin} has ` +
+      `${describeContractSide(unmet, "observed")}.`,
   ];
 
   if (index === 0) {
@@ -112,8 +81,11 @@ function describeImpossibleStage(
         ([dimension, value]) =>
           value !== undefined && failedDimensions.has(dimension),
       )
+      // The pairing is sound because both halves come from one statically typed
+      // catalog entry: a dimension carrying a value it cannot hold is a type
+      // error at the catalog, not a missing phrase here.
       .map(([dimension, value]) =>
-        describeDimension(dimension, value as boolean | PlanState),
+        describeArtifact(dimension, value as boolean | PlanState),
       );
     if (promised.length === 0) {
       return [];

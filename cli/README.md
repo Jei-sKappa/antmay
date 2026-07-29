@@ -383,6 +383,32 @@ value, and its model can never be paired with a settings harness. A stage the
 profile does not bind keeps its settings binding untouched. Only the intrinsic
 defaults ever fill a timing field the winning entry omitted.
 
+## What a run requires of your repository
+
+Antmay skills write three directories inside a thread while a run is in progress:
+`.pending-decisions/`, `.pending-reviews/`, and `.implementation-runs/`. They hold
+work in progress rather than thread artifacts, so Git has to ignore all three and
+track nothing under them — otherwise the files a skill writes there make a later
+stage fail its Git boundary.
+
+Commit these repository-wide rules once and every thread is covered:
+
+```text
+docs/threads/**/.pending-decisions/
+docs/threads/**/.pending-reviews/
+docs/threads/**/.implementation-runs/
+```
+
+Each rule has to cover the directory itself. A rule restricted to filenames inside
+one — `docs/threads/**/.implementation-runs/*.md`, say — leaves that directory
+uncovered, and the check refuses.
+
+Both `run` and `resume` check this in preflight, ahead of the clean-worktree gate
+and before any state exists — no run directory, no checkpoint, no workspace lock.
+A repository that does not satisfy it exits `1` and prints exactly which
+directories are uncovered or tracked, the rules to add, and the
+`git rm -r --cached` command to untrack what is already committed.
+
 ## What a run prints before it starts
 
 Once preflight passes, the run opens on the fully resolved execution — both

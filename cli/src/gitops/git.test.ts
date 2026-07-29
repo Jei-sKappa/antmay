@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { GitCommandError, gitOrThrow, runGit } from "./git.js";
+import { GitCommandError, gitOrThrow, runGit, splitNul } from "./git.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -63,5 +63,26 @@ describe("gitOrThrow", () => {
       expect(gitError.code).not.toBe(0);
       expect(gitError.stderr.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("splitNul", () => {
+  it("drops the trailing empty field the terminator leaves behind", () => {
+    expect(splitNul("one\0two\0")).toEqual(["one", "two"]);
+  });
+
+  it("drops an interior empty field", () => {
+    expect(splitNul("one\0\0two\0")).toEqual(["one", "two"]);
+  });
+
+  it("returns no fields for empty output", () => {
+    expect(splitNul("")).toEqual([]);
+  });
+
+  it("keeps whitespace, quotes, and newlines inside a field intact", () => {
+    expect(splitNul('a dir/we"ird\nname.md\0plain.md\0')).toEqual([
+      'a dir/we"ird\nname.md',
+      "plain.md",
+    ]);
   });
 });

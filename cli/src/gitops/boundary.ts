@@ -1,6 +1,6 @@
 import { resolveSelector } from "../pipeline/targets.js";
 import type { GitPolicy } from "../pipeline/types.js";
-import { runGit } from "./git.js";
+import { runGit, splitNul } from "./git.js";
 
 /**
  * The literal placeholder a commit-subject template carries for the thread
@@ -161,7 +161,7 @@ async function stagedPaths(repoRoot: string): Promise<string[]> {
       `git diff --cached failed (code ${result.code}): ${result.stderr.trim()}`,
     );
   }
-  return result.stdout.split("\0").filter((field) => field.length > 0);
+  return splitNul(result.stdout);
 }
 
 /**

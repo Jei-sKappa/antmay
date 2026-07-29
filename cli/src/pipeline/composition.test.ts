@@ -139,8 +139,8 @@ describe("composePipeline — simulated artifact state (AC-4.4)", () => {
         "plan-strict",
       ),
     ).toEqual([
-      'Stage "plan-strict" (selected position 1) cannot run: it requires a spec, but ' +
-        "the thread's current state has no spec.",
+      'Stage "plan-strict" (selected position 1) cannot run: it requires a ' +
+        "non-empty spec.md, but the thread's current state has no spec.md.",
       "No earlier stage is selected, so that state must already exist in the thread.",
     ]);
   });
@@ -184,8 +184,10 @@ describe("composePipeline — simulated artifact state (AC-4.4)", () => {
 
   it("refuses a stage whose plan prerequisite is malformed", () => {
     expect(refuse([{ stage: "implement-plan" }], state({ plan: "malformed" }))).toEqual([
-      'Stage "implement-plan" (selected position 1) cannot run: it requires plan ' +
-        'state "strict", but the thread\'s current state has plan state "malformed".',
+      'Stage "implement-plan" (selected position 1) cannot run: it requires a ' +
+        "non-empty plan.md and a plan-tasks/ folder holding at least one " +
+        "non-empty .md task file, but the thread's current state has a plan.md " +
+        "and plan-tasks/ folder pair in a combination that is no usable plan.",
       "No earlier stage is selected, so that state must already exist in the thread.",
     ]);
   });
@@ -200,34 +202,40 @@ describe("composePipeline — the first impossible stage (AC-4.5, AC-4.7)", () =
       expect(
         refuse([{ stage: "plan-brief" }, { stage: implementation }], state()),
       ).toEqual([
-        `Stage "${implementation}" (selected position 2) cannot run: it requires plan ` +
-          'state "strict", but the simulated state at that point has plan state "brief".',
-        'Earlier selected stages leaving that state: "plan-brief" (position 1) promises plan state "brief".',
+        `Stage "${implementation}" (selected position 2) cannot run: it requires a ` +
+          "non-empty plan.md and a plan-tasks/ folder holding at least one " +
+          "non-empty .md task file, but the simulated state at that point has a " +
+          "non-empty plan.md and no plan-tasks/ folder.",
+        'Earlier selected stages leaving that state: "plan-brief" (position 1) ' +
+          "promises a non-empty plan.md and no plan-tasks/ folder.",
       ]);
     }
   });
 
   it("names the thread's own state when nothing precedes the failing stage", () => {
     expect(refuse([{ stage: "implement" }], state())).toEqual([
-      'Stage "implement" (selected position 1) cannot run: it requires plan state ' +
-        '"brief", but the thread\'s current state has plan state "absent".',
+      'Stage "implement" (selected position 1) cannot run: it requires a ' +
+        "non-empty plan.md and no plan-tasks/ folder, but the thread's current " +
+        "state has no plan.md and no plan-tasks/ folder.",
       "No earlier stage is selected, so that state must already exist in the thread.",
     ]);
   });
 
   it("says so when no preceding selected stage bears on the failing dimension", () => {
     expect(refuse([{ stage: "spec" }, { stage: "implement" }], state())).toEqual([
-      'Stage "implement" (selected position 2) cannot run: it requires plan state ' +
-        '"brief", but the simulated state at that point has plan state "absent".',
+      'Stage "implement" (selected position 2) cannot run: it requires a ' +
+        "non-empty plan.md and no plan-tasks/ folder, but the simulated state at " +
+        "that point has no plan.md and no plan-tasks/ folder.",
       "No earlier selected stage produces that state, so it must already exist in the thread.",
     ]);
   });
 
   it("reports every unmet dimension of the failing stage together", () => {
     expect(refuse([{ stage: "reconcile-plan" }], state())).toEqual([
-      'Stage "reconcile-plan" (selected position 1) cannot run: it requires a spec ' +
-        'and plan state "strict", but the thread\'s current state has no spec and ' +
-        'plan state "absent".',
+      'Stage "reconcile-plan" (selected position 1) cannot run: it requires a ' +
+        "non-empty spec.md, a non-empty plan.md and a plan-tasks/ folder holding " +
+        "at least one non-empty .md task file, but the thread's current state has " +
+        "no spec.md, no plan.md and no plan-tasks/ folder.",
       "No earlier stage is selected, so that state must already exist in the thread.",
     ]);
   });

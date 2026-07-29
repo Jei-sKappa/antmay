@@ -446,9 +446,13 @@ async function main() {
       scenario.profile,
     );
   }
-  // A scenario that drives no attempt declares no scripted document, and gets
-  // no scripted-harness file: writing one would state a harness plan nothing
-  // ever reads.
+  // The driver writes a scripted-harness file exactly when the scenario supplies
+  // a scripted document, and asks nothing about whether one was needed — which
+  // invocations load it is knowledge the scenario holds. That silence has a cost
+  // worth knowing: a scenario that omits the document where an invocation would
+  // load it fails preflight instead of reaching its own subject, and can still
+  // match the exit code it declared, so the demo reports `[PASS]` for the wrong
+  // reason.
   if (scenario.scenario !== undefined) {
     writeDocument(
       path.join(configRoot, "scripted-harness.json"),
