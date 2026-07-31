@@ -107,8 +107,11 @@ compatibility machinery.
 - Suite skills, method documentation, the trusted stage catalog, or the
   published CLI stage-support reference. Their invocation and artifact-state
   contracts do not change.
-- Arbitrary adjacent cleanup, new dependencies, package-version changes,
-  publishing, staging, committing, or pushing.
+- Arbitrary adjacent cleanup, new dependencies, or package-version changes, and
+  staging implementation files, committing them, pushing, publishing, or
+  changing package-release state as delivery actions for this implementation.
+  The CLI's runtime staging and boundary commits specified below remain in
+  scope.
 - The future strict plan's task boundaries. Planning must derive them from this
   specification rather than embedding them here (per DR9).
 
@@ -169,6 +172,13 @@ An executing attempt has not yet acquired the settled observation. A recovery
 state that needs to compare human movement across a pause carries its own latest
 pause-time `HEAD` observation. The stage-global `gitCursor` is removed from the
 checkpoint model (per DR11).
+
+The pause-time observation is required on `recheck-stage-contract` and
+`retry-git-finalization`, the two variants that may perform Git finalization
+after human activity across a pause. It is forbidden on `retry-stage` and
+`resume-finalized-done`, which do not perform recovered Git finalization. The
+serialized union and its validator enforce both halves of this matrix (per
+DR11).
 
 Every `waiting-for-user` checkpoint carries both:
 
@@ -439,9 +449,11 @@ mode. It receives its own executable UI scenario (per DR5, DR8, and DR12).
   missing recovery, unknown recovery kind, absent attempt reference, wrong stage
   index, wrong attempt number, referenced non-`DONE` token, incompatible attempt
   result, mismatched queue resolution, missing attempt start `HEAD`, missing
-  settled post-attempt `HEAD`, missing recovery pause-time `HEAD`, waiting
-  recovery on another checkpoint condition, and a waiting checkpoint with no
-  diagnostic reason (DR2, DR11).
+  settled post-attempt `HEAD`, missing pause-time `HEAD` on
+  `recheck-stage-contract` or `retry-git-finalization`, pause-time `HEAD` present
+  on `retry-stage` or `resume-finalized-done`, waiting recovery on another
+  checkpoint condition, and a waiting checkpoint with no diagnostic reason
+  (DR2, DR11).
 - **AC-2.3** Regression tests reproduce the audit's accepted `BLOCKED`-attempt
   fixture and a no-attempt fixture and prove both are rejected before resume can
   acquire a lock or write state; no path can rewrite either as `done` or advance
