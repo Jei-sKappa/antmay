@@ -562,7 +562,7 @@ From `cli/`, or from the repository root by replacing `npm` with
 
 ```sh
 npm run demo -- --list                  # every scenario, and the state it ends on
-npm run demo -- --scenario 12-refused   # by full id
+npm run demo -- --scenario 13-refused   # by full id
 npm run demo -- --scenario refused      # by name
 npm run demo -- --scenario 11           # by number
 ```
