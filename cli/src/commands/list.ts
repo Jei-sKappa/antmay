@@ -6,7 +6,7 @@ import { resolveStateRoot } from "../config/roots.js";
 import {
   printRunList,
   type RunListSummary,
-} from "../display/terminal.js";
+} from "../display/list.js";
 import type {
   AttemptRecord,
   RunCheckpoint,

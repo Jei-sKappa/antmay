@@ -13,15 +13,17 @@ import {
 import type { HarnessId, StageBindingMap } from "../config/execution.js";
 import { resolveDocumentReference } from "../config/references.js";
 import { resolveRoots } from "../config/roots.js";
+import { createTerminalExecutionDisplay } from "../display/execution.js";
+import type { DisplayOptions } from "../display/format.js";
 import {
-  createTerminalDisplay,
   printCompositionRefusal,
+  printTemporaryWorkspaceRefusal,
+} from "../display/preflight.js";
+import {
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
-  printTemporaryWorkspaceRefusal,
-} from "../display/terminal.js";
-import type { DisplayOptions } from "../display/terminal.js";
+} from "../display/startup.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import type { probeHarnessExecutables } from "../harness/probe.js";
@@ -564,7 +566,7 @@ export async function runCommand(
       })),
     });
 
-    const display = createTerminalDisplay(displayOptions);
+    const display = createTerminalExecutionDisplay(displayOptions);
     try {
       const result = await executeRun({
         checkpoint,

@@ -16,12 +16,14 @@ export type CurrentStageInfo = {
 };
 
 /**
- * The sink the stage runner emits every operational event to. Every method is
- * synchronous and fire-and-forget: the runner never awaits a display call, and
- * a display implementation must not throw back into the runner. The concrete
- * terminal renderer implements this; tests pass `nullDisplay`.
+ * The sink the stage runner emits every operational event to. Scoped to the
+ * execution lifecycle alone: listing, preflight, and startup rendering are
+ * separate entry points no runner or engine holds. Every method is synchronous
+ * and fire-and-forget: the runner never awaits a display call, and a display
+ * implementation must not throw back into the runner. The concrete terminal
+ * renderer implements this; tests pass `nullDisplay`.
  */
-export interface Display {
+export interface ExecutionDisplay {
   /** A fresh attempt is about to launch its harness. */
   attemptStarted(info: {
     stagePosition: string;
@@ -93,10 +95,10 @@ export interface Display {
 }
 
 /**
- * A `Display` that discards every event. Used by tests that drive the runner
- * without asserting on rendered output.
+ * An `ExecutionDisplay` that discards every event. Used by tests that drive the
+ * runner without asserting on rendered output.
  */
-export const nullDisplay: Display = {
+export const nullDisplay: ExecutionDisplay = {
   attemptStarted: () => undefined,
   harnessEvent: () => undefined,
   heartbeat: () => undefined,

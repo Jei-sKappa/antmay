@@ -1,3 +1,4 @@
+import { promises as fs } from "node:fs";
 import { Writable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
@@ -9,9 +10,10 @@ import type {
 } from "../pipeline/types.js";
 import type { ArtifactState } from "../thread/artifacts.js";
 import { governedBy } from "../test-helpers/waiting.js";
-import type { Display, StageDisposition } from "./types.js";
+import type { ExecutionDisplay, StageDisposition } from "./types.js";
+import { nullDisplay } from "./types.js";
 import {
-  createTerminalDisplay,
+  createTerminalExecutionDisplay,
   printCompositionRefusal,
   printRunList,
   printRunSummary,
@@ -281,7 +283,7 @@ describe("attemptStarted", () => {
 
   it("prints stage position/ID, harness, model, and log path to stdout", () => {
     const { options, out, err } = makeOptions();
-    createTerminalDisplay(options).attemptStarted(attempt);
+    createTerminalExecutionDisplay(options).attemptStarted(attempt);
     expect(out.text).toContain("2/5");
     expect(out.text).toContain("plan");
     expect(out.text).toContain("Harness: codex");
@@ -292,19 +294,19 @@ describe("attemptStarted", () => {
 
   it("says nothing about the attempt on a first attempt", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).attemptStarted(attempt);
+    createTerminalExecutionDisplay(options).attemptStarted(attempt);
     expect(out.text).not.toContain("attempt");
   });
 
   it("names the attempt number on a retry", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).attemptStarted({ ...attempt, attempt: 3 });
+    createTerminalExecutionDisplay(options).attemptStarted({ ...attempt, attempt: 3 });
     expect(out.text).toContain("attempt 3");
   });
 
   it("indents every line under the stage header, leaving the header flush", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).attemptStarted(attempt);
+    createTerminalExecutionDisplay(options).attemptStarted(attempt);
     const lines = out.lines.filter((line) => line.length > 0);
     expect(lines[0]).toBe("Stage 2/5 · plan");
     for (const line of lines.slice(1)) {
@@ -318,7 +320,7 @@ describe("stage-body indentation", () => {
    * gutter's width; quoted harness output leans on the gutter instead. */
   it("indents the executor's own stage lines and leaves harness output flush", () => {
     const { options, out } = makeOptions();
-    const display = createTerminalDisplay(options);
+    const display = createTerminalExecutionDisplay(options);
     display.heartbeat(5 * 60 * 1000);
     display.stageSucceeded({ stagePosition: "1/5", durationMs: 1000 });
     display.stageStopped({
@@ -341,7 +343,7 @@ describe("stage-body indentation", () => {
 describe("harnessEvent", () => {
   it("renders assistant text as-is to stdout", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).harnessEvent({
+    createTerminalExecutionDisplay(options).harnessEvent({
       type: "text",
       text: "hello from the model",
     });
@@ -351,7 +353,7 @@ describe("harnessEvent", () => {
   it("renders a tool call as one concise line with truncated arguments", () => {
     const { options, out } = makeOptions();
     const longArgs = "x".repeat(500);
-    createTerminalDisplay(options).harnessEvent({
+    createTerminalExecutionDisplay(options).harnessEvent({
       type: "tool-call",
       name: "Bash",
       args: longArgs,
@@ -371,7 +373,7 @@ describe("harnessEvent", () => {
 describe("heartbeat", () => {
   it("prints elapsed time to stdout", () => {
     const { options, out, err } = makeOptions();
-    createTerminalDisplay(options).heartbeat(5 * 60 * 1000);
+    createTerminalExecutionDisplay(options).heartbeat(5 * 60 * 1000);
     expect(out.text).toContain("5m");
     expect(err.text).toBe("");
   });
@@ -380,7 +382,7 @@ describe("heartbeat", () => {
 describe("stageSucceeded", () => {
   it("prints position and duration, with the success mark trailing", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).stageSucceeded({
+    createTerminalExecutionDisplay(options).stageSucceeded({
       stagePosition: "1/5",
       durationMs: 90_000,
     });
@@ -391,7 +393,7 @@ describe("stageSucceeded", () => {
 describe("stageStopped", () => {
   const stopped = (disposition: StageDisposition): string => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).stageStopped({
+    createTerminalExecutionDisplay(options).stageStopped({
       stagePosition: "2/6",
       durationMs: 41_000,
       disposition,
@@ -420,10 +422,10 @@ describe("runPaused", () => {
   });
 
   const paused = (
-    info: Partial<Parameters<Display["runPaused"]>[0]> = {},
+    info: Partial<Parameters<ExecutionDisplay["runPaused"]>[0]> = {},
   ): { out: Capture; err: Capture } => {
     const { options, out, err } = makeOptions();
-    createTerminalDisplay(options).runPaused({
+    createTerminalExecutionDisplay(options).runPaused({
       waiting,
       currentStage: { id: "implement", position: 2, count: 6 },
       runId: "260723T00Z-run",
@@ -733,7 +735,7 @@ describe("runPaused", () => {
 describe("runCompleted", () => {
   it("prints the identity block and closes on the success banner", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).runCompleted({
+    createTerminalExecutionDisplay(options).runCompleted({
       runId: "run-1",
       pipelineName: "standard",
       totalElapsedMs: 3_723_000,
@@ -751,7 +753,7 @@ describe("runCompleted", () => {
 
   it("paints the success banner green on a color-enabled TTY", () => {
     const { options, out } = makeOptions({ isTTY: true, noColor: false });
-    createTerminalDisplay(options).runCompleted({
+    createTerminalExecutionDisplay(options).runCompleted({
       runId: "run-1",
       pipelineName: "standard",
       totalElapsedMs: 1000,
@@ -765,7 +767,7 @@ describe("runCompleted", () => {
 describe("runInterrupted", () => {
   it("reports the signal, says the checkpoint is unchanged, and ends on resume", () => {
     const { options, out } = makeOptions();
-    createTerminalDisplay(options).runInterrupted({
+    createTerminalExecutionDisplay(options).runInterrupted({
       runId: "run-2",
       pipelineName: "standard",
       totalElapsedMs: 5000,
@@ -785,7 +787,7 @@ describe("runInterrupted", () => {
 describe("runFailed", () => {
   it("names the checkpoint-write failure and offers no resume command", () => {
     const { options, out, err } = makeOptions();
-    createTerminalDisplay(options).runFailed({
+    createTerminalExecutionDisplay(options).runFailed({
       runId: "run-3",
       pipelineName: "standard",
       totalElapsedMs: 5000,
@@ -803,7 +805,7 @@ describe("runFailed", () => {
 describe("warn", () => {
   it("routes warnings to stderr, not stdout", () => {
     const { options, out, err } = makeOptions();
-    createTerminalDisplay(options).warn("disk is nearly full");
+    createTerminalExecutionDisplay(options).warn("disk is nearly full");
     expect(err.text).toContain("disk is nearly full");
     expect(out.text).toBe("");
   });
@@ -812,7 +814,7 @@ describe("warn", () => {
 describe("color discipline", () => {
   it("emits no ANSI codes when not a TTY", () => {
     const { options, out } = makeOptions({ isTTY: false, noColor: false });
-    createTerminalDisplay(options).stageSucceeded({
+    createTerminalExecutionDisplay(options).stageSucceeded({
       stagePosition: "1/1",
       durationMs: 1000,
     });
@@ -821,7 +823,7 @@ describe("color discipline", () => {
 
   it("emits no ANSI codes when noColor is set even on a TTY", () => {
     const { options, out } = makeOptions({ isTTY: true, noColor: true });
-    createTerminalDisplay(options).stageSucceeded({
+    createTerminalExecutionDisplay(options).stageSucceeded({
       stagePosition: "1/1",
       durationMs: 1000,
     });
@@ -830,7 +832,7 @@ describe("color discipline", () => {
 
   it("emits ANSI codes on a TTY with color enabled", () => {
     const { options, out } = makeOptions({ isTTY: true, noColor: false });
-    createTerminalDisplay(options).stageSucceeded({
+    createTerminalExecutionDisplay(options).stageSucceeded({
       stagePosition: "1/1",
       durationMs: 1000,
     });
@@ -1027,5 +1029,41 @@ describe("printScriptedResolvedPrompt", () => {
     ]);
     expect(out.text).not.toContain("\\n");
     expect(err.text).toBe("");
+  });
+});
+
+describe("display module boundaries", () => {
+  /** Every method the execution lifecycle sink carries. An execution test double
+   * implements exactly this list and no listing, preflight, or startup entry
+   * point. */
+  const LIFECYCLE_METHODS = [
+    "attemptStarted",
+    "harnessEvent",
+    "heartbeat",
+    "stageSucceeded",
+    "stageStopped",
+    "runPaused",
+    "runCompleted",
+    "runInterrupted",
+    "runFailed",
+    "warn",
+  ];
+
+  /** A `./execution.js` or `./types.js` import, from inside `display/` or from a
+   * command reaching into it. */
+  const EXECUTION_LIFECYCLE_IMPORT =
+    /from "(?:\.|\.\.\/display)\/(?:execution|types)\.js"/;
+
+  it("limits the lifecycle sink to lifecycle events", () => {
+    expect(Object.keys(nullDisplay).sort()).toEqual(
+      [...LIFECYCLE_METHODS].sort(),
+    );
+  });
+
+  it("keeps listing and preflight consumers off the execution lifecycle", async () => {
+    for (const file of ["./list.ts", "./preflight.ts", "../commands/list.ts"]) {
+      const source = await fs.readFile(new URL(file, import.meta.url), "utf8");
+      expect(source).not.toMatch(EXECUTION_LIFECYCLE_IMPORT);
+    }
   });
 });

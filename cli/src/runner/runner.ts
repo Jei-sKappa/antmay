@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { Display, StageDisposition } from "../display/types.js";
+import type { ExecutionDisplay, StageDisposition } from "../display/types.js";
 import { nativeContinuationCommand } from "../harness/native-session.js";
 import { renderStagePrompt } from "../harness/prompt.js";
 import type { AttemptOutcome, HarnessInvoker } from "../harness/types.js";
@@ -69,7 +69,7 @@ export type RunnerContext = {
   stateRoot: string;
   lock: LockHandle;
   invoker: HarnessInvoker;
-  display: Display;
+  display: ExecutionDisplay;
   harnessVersions: Record<string, string>;
   signal: AbortSignal;
   clock?: () => Date;

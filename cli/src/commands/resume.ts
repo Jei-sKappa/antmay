@@ -4,14 +4,14 @@ import path from "node:path";
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
 import { resolveRoots, resolveStateRoot } from "../config/roots.js";
 import type { HarnessId } from "../config/execution.js";
+import { createTerminalExecutionDisplay } from "../display/execution.js";
+import type { DisplayOptions } from "../display/format.js";
+import { printTemporaryWorkspaceRefusal } from "../display/preflight.js";
 import {
-  createTerminalDisplay,
   printRunSummary,
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
-  printTemporaryWorkspaceRefusal,
-} from "../display/terminal.js";
-import type { DisplayOptions } from "../display/terminal.js";
+} from "../display/startup.js";
 import { decideRecovery } from "../execution/recovery-policy.js";
 import type {
   ContractEvidence,
@@ -177,7 +177,7 @@ export async function resumeCommand(
     isTTY: deps.isTTY,
     noColor,
   };
-  const display = createTerminalDisplay(displayOptions);
+  const display = createTerminalExecutionDisplay(displayOptions);
 
   const fail = (message: string): number => {
     deps.stderr.write(`${message}\n`);

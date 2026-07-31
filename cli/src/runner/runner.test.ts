@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import type { Display, StageDisposition } from "../display/types.js";
+import type { ExecutionDisplay, StageDisposition } from "../display/types.js";
 import { nullDisplay } from "../display/types.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import { readHead } from "../gitops/status.js";
@@ -204,7 +204,7 @@ function makeContext(
   checkpoint: RunCheckpoint,
   runDir: string,
   invoker: HarnessInvoker,
-  display: Display = nullDisplay,
+  display: ExecutionDisplay = nullDisplay,
   signal: AbortSignal = new AbortController().signal,
   persistCheckpoint?: RunnerContext["persistCheckpoint"],
 ): RunnerContext {
@@ -222,25 +222,25 @@ function makeContext(
 }
 
 function recorder(): {
-  display: Display;
-  attemptStarted: Array<Parameters<Display["attemptStarted"]>[0]>;
-  stageSucceeded: Array<Parameters<Display["stageSucceeded"]>[0]>;
-  stageStopped: Array<Parameters<Display["stageStopped"]>[0]>;
-  runPaused: Array<Parameters<Display["runPaused"]>[0]>;
-  runCompleted: Array<Parameters<Display["runCompleted"]>[0]>;
-  runInterrupted: Array<Parameters<Display["runInterrupted"]>[0]>;
-  runFailed: Array<Parameters<Display["runFailed"]>[0]>;
+  display: ExecutionDisplay;
+  attemptStarted: Array<Parameters<ExecutionDisplay["attemptStarted"]>[0]>;
+  stageSucceeded: Array<Parameters<ExecutionDisplay["stageSucceeded"]>[0]>;
+  stageStopped: Array<Parameters<ExecutionDisplay["stageStopped"]>[0]>;
+  runPaused: Array<Parameters<ExecutionDisplay["runPaused"]>[0]>;
+  runCompleted: Array<Parameters<ExecutionDisplay["runCompleted"]>[0]>;
+  runInterrupted: Array<Parameters<ExecutionDisplay["runInterrupted"]>[0]>;
+  runFailed: Array<Parameters<ExecutionDisplay["runFailed"]>[0]>;
   warns: string[];
 } {
-  const attemptStarted: Array<Parameters<Display["attemptStarted"]>[0]> = [];
-  const stageSucceeded: Array<Parameters<Display["stageSucceeded"]>[0]> = [];
-  const stageStopped: Array<Parameters<Display["stageStopped"]>[0]> = [];
-  const runPaused: Array<Parameters<Display["runPaused"]>[0]> = [];
-  const runCompleted: Array<Parameters<Display["runCompleted"]>[0]> = [];
-  const runInterrupted: Array<Parameters<Display["runInterrupted"]>[0]> = [];
-  const runFailed: Array<Parameters<Display["runFailed"]>[0]> = [];
+  const attemptStarted: Array<Parameters<ExecutionDisplay["attemptStarted"]>[0]> = [];
+  const stageSucceeded: Array<Parameters<ExecutionDisplay["stageSucceeded"]>[0]> = [];
+  const stageStopped: Array<Parameters<ExecutionDisplay["stageStopped"]>[0]> = [];
+  const runPaused: Array<Parameters<ExecutionDisplay["runPaused"]>[0]> = [];
+  const runCompleted: Array<Parameters<ExecutionDisplay["runCompleted"]>[0]> = [];
+  const runInterrupted: Array<Parameters<ExecutionDisplay["runInterrupted"]>[0]> = [];
+  const runFailed: Array<Parameters<ExecutionDisplay["runFailed"]>[0]> = [];
   const warns: string[] = [];
-  const display: Display = {
+  const display: ExecutionDisplay = {
     attemptStarted: (info) => attemptStarted.push(info),
     harnessEvent: () => undefined,
     heartbeat: () => undefined,
@@ -901,7 +901,7 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
     const controller = new AbortController();
     // Abort during attemptStarted: after the executing checkpoint and its log,
     // but before the harness is invoked.
-    const display: Display = {
+    const display: ExecutionDisplay = {
       ...nullDisplay,
       attemptStarted: () => controller.abort(new SignalInterruption("SIGINT")),
     };
@@ -1324,7 +1324,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const controller = new AbortController();
-    const display: Display = {
+    const display: ExecutionDisplay = {
       ...nullDisplay,
       attemptStarted: () => controller.abort(new SignalInterruption("SIGINT")),
     };
