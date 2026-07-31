@@ -6,7 +6,8 @@ import {
   resolveStageTarget,
   resolveStageTargetRule,
 } from "./targets.js";
-import type { ArtifactState, PathSelector, StageTarget } from "./types.js";
+import type { ArtifactState } from "../thread/artifacts.js";
+import type { PathSelector, StageTarget } from "./types.js";
 
 const THREAD = "docs/threads/260723121015Z-afk-workflow-executor";
 

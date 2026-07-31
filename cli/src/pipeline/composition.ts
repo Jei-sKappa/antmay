@@ -2,16 +2,16 @@ import {
   applyArtifactTransition,
   evaluateArtifactPrerequisite,
   type ArtifactMismatch,
+  type ArtifactState,
+  type PlanState,
 } from "../thread/artifacts.js";
 import { STAGE_CATALOG } from "./catalog.js";
 import type { CatalogStage } from "./catalog.js";
 import { resolveStageTargetRule } from "./targets.js";
 import type {
-  ArtifactState,
   CatalogStageId,
   PipelineDocument,
   PipelineStageEntry,
-  PlanState,
 } from "./types.js";
 
 /**

@@ -9,7 +9,8 @@ import { loadExecutionProfile, loadStageSettings } from "../config/execution.js"
 import { resolveDocumentReference } from "../config/references.js";
 import { CATALOG_STAGE_IDS, STAGE_CATALOG } from "./catalog.js";
 import { loadPipelineDocument } from "./documents.js";
-import type { ArtifactPrerequisite, CatalogStageId } from "./types.js";
+import type { ArtifactPrerequisite } from "../thread/artifacts.js";
+import type { CatalogStageId } from "./types.js";
 
 /**
  * The published documentation is a contract surface of its own: `cli/README.md`

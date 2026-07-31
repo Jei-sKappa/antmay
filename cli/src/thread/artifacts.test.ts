@@ -4,16 +4,24 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { ArtifactState, PlanState } from "../pipeline/types.js";
-import type { ArtifactMismatch } from "./artifacts.js";
+import type {
+  ArtifactMismatch,
+  ArtifactPrerequisite,
+  ArtifactState,
+  ArtifactTransition,
+  PlanState,
+} from "./artifacts.js";
 import {
   applyArtifactTransition,
   describeArtifact,
+  describeArtifactDimension,
   describeContractSide,
   evaluateArtifactPrerequisite,
   evaluatePromisedState,
   formatArtifactMismatch,
   inspectArtifactState,
+  validateSerializedArtifactMismatches,
+  validateSerializedArtifactPattern,
 } from "./artifacts.js";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -499,7 +507,172 @@ describe("formatArtifactMismatch and describeContractSide (AC-9.3, AC-9.5)", () 
   });
 });
 
-describe("artifact contracts survive a checkpoint round-trip (AC-3.4)", () => {
+describe("describeArtifactDimension (AC-9.1)", () => {
+  const DIMENSIONS = [...new Set(DESCRIBED_PAIRS.map(({ dimension }) => dimension))];
+
+  it("gives every dimension its own heading, and none of them a key", () => {
+    const headings = DIMENSIONS.map((dimension) =>
+      describeArtifactDimension(dimension),
+    );
+    for (const heading of headings) {
+      expect(heading.length).toBeGreaterThan(0);
+    }
+    expect(new Set(headings).size).toBe(DIMENSIONS.length);
+    expect(headings.join(" ")).not.toMatch(/validThread|implementationReport/);
+  });
+});
+
+describe("validateSerializedArtifactPattern (AC-6.1, AC-6.2)", () => {
+  it("accepts a pattern that constrains nothing", () => {
+    expect(validateSerializedArtifactPattern({}, "prerequisite")).toEqual([]);
+  });
+
+  it("accepts every dimension carrying a value of its own kind", () => {
+    for (const { dimension, value } of DESCRIBED_PAIRS) {
+      expect(
+        validateSerializedArtifactPattern({ [dimension]: value }, "prerequisite"),
+        `${dimension} = ${String(value)}`,
+      ).toEqual([]);
+    }
+  });
+
+  it("accepts a pattern naming every dimension at once", () => {
+    expect(validateSerializedArtifactPattern(BASE_STATE, "promises")).toEqual([]);
+  });
+
+  it("rejects anything that is not an object", () => {
+    for (const value of [null, undefined, "spec", 7, [{ spec: true }]]) {
+      expect(validateSerializedArtifactPattern(value, "promises")).toEqual([
+        "promises must be an object.",
+      ]);
+    }
+  });
+
+  it("rejects a key that is not an artifact-state dimension", () => {
+    expect(validateSerializedArtifactPattern({ roadmap: true }, "prerequisite")).toEqual(
+      ["prerequisite.roadmap is not an artifact-state dimension."],
+    );
+  });
+
+  it("rejects a value of the wrong kind for its dimension", () => {
+    expect(validateSerializedArtifactPattern({ spec: "yes" }, "prerequisite")).toEqual([
+      "prerequisite.spec must be a boolean.",
+    ]);
+    expect(validateSerializedArtifactPattern({ spec: undefined }, "promises")).toEqual([
+      "promises.spec must be a boolean.",
+    ]);
+    expect(validateSerializedArtifactPattern({ plan: true }, "promises")).toEqual([
+      "promises.plan must be a known plan state.",
+    ]);
+    expect(validateSerializedArtifactPattern({ plan: "partial" }, "promises")).toEqual([
+      "promises.plan must be a known plan state.",
+    ]);
+  });
+
+  it("reports every problem at once, each qualified by its own field", () => {
+    expect(
+      validateSerializedArtifactPattern(
+        { roadmap: true, spec: 1, plan: "partial" },
+        "stages[0].prerequisite",
+      ),
+    ).toEqual([
+      "stages[0].prerequisite.roadmap is not an artifact-state dimension.",
+      "stages[0].prerequisite.spec must be a boolean.",
+      "stages[0].prerequisite.plan must be a known plan state.",
+    ]);
+  });
+});
+
+describe("validateSerializedArtifactMismatches (AC-6.1, AC-6.2)", () => {
+  it("accepts every dimension-and-value pair on both sides", () => {
+    for (const { dimension, value } of DESCRIBED_PAIRS) {
+      expect(
+        validateSerializedArtifactMismatches(
+          [{ dimension, expected: value, observed: value }],
+          "contract",
+        ),
+        `${dimension} = ${String(value)}`,
+      ).toEqual([]);
+    }
+  });
+
+  it("accepts several unmet dimensions in one record", () => {
+    expect(
+      validateSerializedArtifactMismatches(
+        [
+          { dimension: "spec", expected: true, observed: false },
+          { dimension: "plan", expected: "strict", observed: "malformed" },
+        ],
+        "contract",
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects an empty list or anything that is not an array", () => {
+    for (const value of [[], null, undefined, "spec", { dimension: "spec" }]) {
+      expect(validateSerializedArtifactMismatches(value, "contract")).toEqual([
+        "contract must be a non-empty array.",
+      ]);
+    }
+  });
+
+  it("rejects an entry that is not an object", () => {
+    expect(validateSerializedArtifactMismatches(["spec"], "contract")).toEqual([
+      "contract[0] must be an object.",
+    ]);
+  });
+
+  it("rejects an entry naming something that is not a dimension", () => {
+    expect(
+      validateSerializedArtifactMismatches(
+        [{ dimension: "roadmap", expected: true, observed: false }],
+        "contract",
+      ),
+    ).toEqual(["contract[0].dimension is not an artifact-state dimension."]);
+    expect(
+      validateSerializedArtifactMismatches(
+        [{ expected: true, observed: false }],
+        "contract",
+      ),
+    ).toEqual(["contract[0].dimension is not an artifact-state dimension."]);
+  });
+
+  it("rejects a side carrying a value of the wrong kind, naming the dimension", () => {
+    expect(
+      validateSerializedArtifactMismatches(
+        [{ dimension: "plan", expected: true, observed: "brief" }],
+        "contract",
+      ),
+    ).toEqual([
+      'contract[0].expected must be a valid value for the "plan" dimension.',
+    ]);
+    expect(
+      validateSerializedArtifactMismatches(
+        [{ dimension: "spec", expected: "true", observed: "false" }],
+        "waiting.reasons[1].contract",
+      ),
+    ).toEqual([
+      'waiting.reasons[1].contract[0].expected must be a valid value for the "spec" dimension.',
+      'waiting.reasons[1].contract[0].observed must be a valid value for the "spec" dimension.',
+    ]);
+  });
+
+  it("qualifies each rejected entry by its own position", () => {
+    expect(
+      validateSerializedArtifactMismatches(
+        [
+          { dimension: "spec", expected: true, observed: false },
+          { dimension: "plan", expected: "partial", observed: "brief" },
+        ],
+        "contract",
+      ),
+    ).toEqual([
+      'contract[1].expected must be a valid value for the "plan" dimension.',
+    ]);
+  });
+});
+
+describe("artifact contracts survive a checkpoint round-trip (AC-3.4, AC-6.4)", () => {
   it("evaluates identically after JSON serialization", () => {
     const prerequisite = { validThread: true, plan: "strict" as const };
     const transition = { implementationReport: true };
@@ -511,5 +684,48 @@ describe("artifact contracts survive a checkpoint round-trip (AC-3.4)", () => {
     expect(
       applyArtifactTransition(revived.BASE_STATE, revived.transition),
     ).toEqual(applyArtifactTransition(BASE_STATE, transition));
+  });
+
+  it("still validates after serialization, patterns and mismatches alike", () => {
+    const prerequisite: ArtifactPrerequisite = { validThread: true, plan: "strict" };
+    const promises: ArtifactTransition = { implementationReport: true };
+    const contract: ArtifactMismatch[] = [
+      { dimension: "spec", expected: true, observed: false },
+      { dimension: "plan", expected: "strict", observed: "malformed" },
+    ];
+    const revived = JSON.parse(
+      JSON.stringify({ prerequisite, promises, contract }),
+    );
+
+    expect(revived).toEqual({ prerequisite, promises, contract });
+    expect(
+      validateSerializedArtifactPattern(revived.prerequisite, "prerequisite"),
+    ).toEqual([]);
+    expect(validateSerializedArtifactPattern(revived.promises, "promises")).toEqual(
+      [],
+    );
+    expect(
+      validateSerializedArtifactMismatches(revived.contract, "contract"),
+    ).toEqual([]);
+  });
+});
+
+describe("thread-artifact domain dependencies (AC-6.5)", () => {
+  it("defines its vocabulary without importing another domain", async () => {
+    const source = await fs.readFile(
+      new URL("./artifacts.ts", import.meta.url),
+      "utf8",
+    );
+    const specifiers = [...source.matchAll(/ from "([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect(specifiers.length).toBeGreaterThan(0);
+    for (const specifier of specifiers) {
+      if (specifier.startsWith("node:")) continue;
+      // The domain reaches its own folder and the domain-free shared primitives
+      // and nothing else, so no consumer of its vocabulary can become its
+      // supplier.
+      expect(specifier, `imports ${specifier}`).toMatch(/^(\.\/|\.\.\/shared\/)/);
+    }
   });
 });

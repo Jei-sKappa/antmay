@@ -244,15 +244,23 @@ describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
   it("rejects an artifact contract naming an unknown dimension or value", () => {
     const doc = validCheckpoint();
     (doc.stages[0].prerequisite as Record<string, unknown>).roadmap = true;
+    (doc.stages[0].promises as Record<string, unknown>).spec = "present";
     doc.stages[1].promises.plan = "partial" as never;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(
-        result.errors.some((e) => /stages\[0\]\.prerequisite\.roadmap/.test(e)),
+        result.errors.some((e) =>
+          /stages\[0\]\.prerequisite\.roadmap is not an artifact-state dimension/.test(e),
+        ),
       ).toBe(true);
       expect(
-        result.errors.some((e) => /stages\[1\]\.promises\.plan/.test(e)),
+        result.errors.some((e) => /stages\[0\]\.promises\.spec must be a boolean/.test(e)),
+      ).toBe(true);
+      expect(
+        result.errors.some((e) =>
+          /stages\[1\]\.promises\.plan must be a known plan state/.test(e),
+        ),
       ).toBe(true);
     }
   });
@@ -724,6 +732,11 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
       message: "unmet",
       contract: [
         { dimension: "plan", expected: true as unknown as "strict", observed: "brief" },
+        {
+          dimension: "spec",
+          expected: true,
+          observed: "absent" as unknown as boolean,
+        },
       ],
     });
     const result = validateCheckpoint(doc);
@@ -732,6 +745,11 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
       expect(
         result.errors.some((e) =>
           /contract\[0\]\.expected must be a valid value for the "plan" dimension/.test(e),
+        ),
+      ).toBe(true);
+      expect(
+        result.errors.some((e) =>
+          /contract\[1\]\.observed must be a valid value for the "spec" dimension/.test(e),
         ),
       ).toBe(true);
     }

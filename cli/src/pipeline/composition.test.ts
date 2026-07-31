@@ -10,11 +10,8 @@ import type {
   PreparedStage,
 } from "./composition.js";
 import { loadPipelineDocument } from "./documents.js";
-import type {
-  ArtifactState,
-  PipelineDocument,
-  PipelineStageEntry,
-} from "./types.js";
+import type { ArtifactState } from "../thread/artifacts.js";
+import type { PipelineDocument, PipelineStageEntry } from "./types.js";
 
 const THREAD = "docs/threads/260101000000Z-example";
 

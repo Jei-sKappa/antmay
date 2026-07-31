@@ -13,10 +13,10 @@ import { resolveStageTarget } from "../pipeline/targets.js";
 import type {
   CatalogStageId,
   GitPolicy,
-  PartialArtifactState,
   QueueResolution,
   StageTarget,
 } from "../pipeline/types.js";
+import type { PartialArtifactState } from "../thread/artifacts.js";
 import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint.js";
 import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
 import {

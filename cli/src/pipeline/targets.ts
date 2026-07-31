@@ -1,11 +1,7 @@
 import path from "node:path";
 
-import type {
-  ArtifactState,
-  PathSelector,
-  StageTarget,
-  StageTargetRule,
-} from "./types.js";
+import type { ArtifactState } from "../thread/artifacts.js";
+import type { PathSelector, StageTarget, StageTargetRule } from "./types.js";
 
 /**
  * The result of resolving a stage target to a repository-relative path. A

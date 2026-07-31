@@ -4,8 +4,12 @@ import { HARNESS_IDS } from "../config/execution.js";
 import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStage } from "../pipeline/catalog.js";
-import type { CatalogStageId, PlanState } from "../pipeline/types.js";
+import type { CatalogStageId } from "../pipeline/types.js";
 import { isPlainObject } from "../shared/validation.js";
+import {
+  validateSerializedArtifactMismatches,
+  validateSerializedArtifactPattern,
+} from "../thread/artifacts.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import type { WorkspaceConfig } from "../workspace/types.js";
 
@@ -418,105 +422,6 @@ function validateTargetRule(value: unknown, label: string, errors: string[]): vo
   errors.push(`${label}.kind must be "fixed" or "when-spec-present".`);
 }
 
-const PLAN_STATES: ReadonlySet<string> = new Set<PlanState>([
-  "absent",
-  "brief",
-  "strict",
-  "malformed",
-]);
-
-const BOOLEAN_ARTIFACT_DIMENSIONS = [
-  "validThread",
-  "proposal",
-  "spec",
-  "implementationReport",
-] as const;
-
-/**
- * Validate one artifact-state pattern — a stage's prerequisite or its promised
- * transition. Every named dimension must carry its own value type, and no other
- * key may appear.
- */
-function validateArtifactPattern(
-  value: unknown,
-  label: string,
-  errors: string[],
-): void {
-  if (!isPlainObject(value)) {
-    errors.push(`${label} must be an object.`);
-    return;
-  }
-  for (const key of Object.keys(value)) {
-    if (
-      key !== "plan" &&
-      !(BOOLEAN_ARTIFACT_DIMENSIONS as readonly string[]).includes(key)
-    ) {
-      errors.push(`${label}.${key} is not an artifact-state dimension.`);
-    }
-  }
-  for (const dimension of BOOLEAN_ARTIFACT_DIMENSIONS) {
-    if (dimension in value && typeof value[dimension] !== "boolean") {
-      errors.push(`${label}.${dimension} must be a boolean.`);
-    }
-  }
-  if (
-    "plan" in value &&
-    (typeof value.plan !== "string" || !PLAN_STATES.has(value.plan))
-  ) {
-    errors.push(`${label}.plan must be a known plan state.`);
-  }
-}
-
-/**
- * Whether `value` is a legal value for the named artifact-state dimension: a
- * plan state for `plan`, and a boolean for every other dimension.
- */
-function isArtifactDimensionValue(dimension: string, value: unknown): boolean {
-  if (dimension === "plan") {
-    return typeof value === "string" && PLAN_STATES.has(value);
-  }
-  return typeof value === "boolean";
-}
-
-/**
- * Validate a recorded contract failure: a non-empty list of unmet dimensions,
- * each naming one artifact-state dimension and carrying an expected and an
- * observed value of that dimension's own type.
- */
-function validateContractMismatches(
-  value: unknown,
-  label: string,
-  errors: string[],
-): void {
-  if (!Array.isArray(value) || value.length === 0) {
-    errors.push(`${label} must be a non-empty array.`);
-    return;
-  }
-  value.forEach((entry, index) => {
-    const entryLabel = `${label}[${index}]`;
-    if (!isPlainObject(entry)) {
-      errors.push(`${entryLabel} must be an object.`);
-      return;
-    }
-    const dimension = entry.dimension;
-    if (
-      typeof dimension !== "string" ||
-      (dimension !== "plan" &&
-        !(BOOLEAN_ARTIFACT_DIMENSIONS as readonly string[]).includes(dimension))
-    ) {
-      errors.push(`${entryLabel}.dimension is not an artifact-state dimension.`);
-      return;
-    }
-    for (const side of ["expected", "observed"] as const) {
-      if (!isArtifactDimensionValue(dimension, entry[side])) {
-        errors.push(
-          `${entryLabel}.${side} must be a valid value for the "${dimension}" dimension.`,
-        );
-      }
-    }
-  });
-}
-
 /**
  * Validate one snapshotted stage: its catalog descriptor and artifact contract,
  * the concrete resolved target, the optional portable instructions, and the
@@ -550,8 +455,13 @@ function validateStage(
     errors.push(`${label}.skill must be a non-empty string.`);
   }
   validateTargetRule(value.targetRule, `${label}.targetRule`, errors);
-  validateArtifactPattern(value.prerequisite, `${label}.prerequisite`, errors);
-  validateArtifactPattern(value.promises, `${label}.promises`, errors);
+  errors.push(
+    ...validateSerializedArtifactPattern(
+      value.prerequisite,
+      `${label}.prerequisite`,
+    ),
+    ...validateSerializedArtifactPattern(value.promises, `${label}.promises`),
+  );
   validateGitPolicy(value.gitPolicy, `${label}.gitPolicy`, errors);
   if (value.queueResolution !== "advance" && value.queueResolution !== "rerun") {
     errors.push(`${label}.queueResolution must be "advance" or "rerun".`);
@@ -718,7 +628,12 @@ function validateWaitingReasons(value: unknown, errors: string[]): void {
       errors.push(`${label}.candidateLine must be a string.`);
     }
     if (entry.contract !== undefined) {
-      validateContractMismatches(entry.contract, `${label}.contract`, errors);
+      errors.push(
+        ...validateSerializedArtifactMismatches(
+          entry.contract,
+          `${label}.contract`,
+        ),
+      );
     }
     if (
       entry.headAtAttemptStart !== undefined &&

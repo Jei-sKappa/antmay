@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 
 import { composePipeline } from "../pipeline/composition.js";
 import type {
-  ArtifactState,
   PipelineDocument,
   PipelineStageEntry,
 } from "../pipeline/types.js";
+import type { ArtifactState } from "../thread/artifacts.js";
 import { governedBy } from "../test-helpers/waiting.js";
 import type { Display, StageDisposition } from "./types.js";
 import {

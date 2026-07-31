@@ -23,60 +23,6 @@ export type CatalogStageId =
   | "implement-plan-with-subagents";
 
 /**
- * The bounded structural shape of a thread's plan artifact:
- *
- * - `absent` — neither `plan.md` nor `plan-tasks/` exists;
- * - `brief` — `plan.md` is a non-empty regular file and `plan-tasks/` is absent;
- * - `strict` — `plan.md` is a non-empty regular file and `plan-tasks/` is a
- *   directory holding at least one non-empty regular Markdown task file;
- * - `malformed` — every other observable combination, including an inspection
- *   failure.
- */
-export type PlanState = "absent" | "brief" | "strict" | "malformed";
-
-/**
- * The canonical artifact state of one thread. Every dimension is a bounded
- * structural fact: presence means a non-empty regular file, and plan state is
- * the topology above. No dimension expresses whether an artifact's content is
- * semantically adequate — that judgment belongs to the invoked skill.
- */
-export type ArtifactState = {
-  validThread: boolean;
-  proposal: boolean;
-  spec: boolean;
-  plan: PlanState;
-  implementationReport: boolean;
-};
-
-/**
- * A declarative, serializable pattern over the artifact state: each named
- * dimension must equal the given value, and every omitted dimension is
- * unconstrained.
- */
-export type PartialArtifactState = {
-  validThread?: boolean;
-  proposal?: boolean;
-  spec?: boolean;
-  plan?: PlanState;
-  implementationReport?: boolean;
-};
-
-/**
- * The artifact state a catalog stage requires before it may be invoked. Checked
- * against the simulated state during composition and against fresh concrete
- * state immediately before every attempt.
- */
-export type ArtifactPrerequisite = PartialArtifactState;
-
-/**
- * The artifact state a catalog stage promises after a recognized `DONE`. Applied
- * to the simulated state during composition — leaving every dimension it does
- * not name untouched — and verified against fresh concrete state before the
- * stage boundary is applied.
- */
-export type ArtifactTransition = PartialArtifactState;
-
-/**
  * A declarative rule producing a stage's target from the artifact state.
  * `fixed` always yields the same target; `when-spec-present` yields
  * `whenPresent` when the state has a spec and `otherwise` when it does not.

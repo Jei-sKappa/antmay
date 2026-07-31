@@ -1,6 +1,8 @@
 import type {
   ArtifactPrerequisite,
   ArtifactTransition,
+} from "../thread/artifacts.js";
+import type {
   CatalogStageId,
   GitPolicy,
   PathSelector,

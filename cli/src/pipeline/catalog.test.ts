@@ -6,6 +6,8 @@ import type { CatalogStage } from "./catalog.js";
 import type {
   ArtifactPrerequisite,
   ArtifactTransition,
+} from "../thread/artifacts.js";
+import type {
   GitPolicy,
   PathSelector,
   QueueResolution,
