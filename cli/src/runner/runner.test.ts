@@ -624,7 +624,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const before = await commitCount(fixture);
-    // A failing pre-commit hook makes finalizeBoundary's commit exit non-zero.
+    // A failing pre-commit hook makes the boundary's commit exit non-zero.
     const hookPath = path.join(fixture.root, ".git", "hooks", "pre-commit");
     await fs.mkdir(path.dirname(hookPath), { recursive: true });
     await fs.writeFile(hookPath, "#!/bin/sh\nexit 1\n", { mode: 0o755 });

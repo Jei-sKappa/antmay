@@ -276,6 +276,11 @@ async function commitSubjects(fixture: RepoFixture): Promise<string[]> {
   return result.stdout.trim().split("\n");
 }
 
+async function headOf(fixture: RepoFixture): Promise<string> {
+  const result = await fixture.git(["rev-parse", "HEAD"]);
+  return result.stdout.trim();
+}
+
 function writeThreadFileSync(fixture: RepoFixture, rel: string, content: string): void {
   writeFileSync(path.join(fixture.threadPath as string, rel), content, "utf8");
 }
@@ -960,6 +965,10 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     expect(cp.condition).toBe("completed");
     // Stage 5 was finalized, never rerun by a harness invocation.
     expect(attemptCountAt(cp, 5)).toBe(1);
+    // The boundary commit this resume made is the tip the finalized attempt
+    // records, exactly as a boundary committed during the run leaves it.
+    const finalized = cp.attempts.find((a) => a.stageIndex === 5);
+    expect(finalized?.headAfterAttempt).toBe(await headOf(h.fixture));
   });
 });
 

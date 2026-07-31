@@ -185,11 +185,11 @@ export type TerminalResult = {
  *
  * The two `HEAD` observations bind Git evidence to the attempt that produced it:
  * `headAtStart` is the tip the attempt was launched from, and
- * `headAfterAttempt` the tip once it settled. A stage's `headMayChange` rule is
- * judged across exactly that pair, which isolates the movement this attempt
- * caused from every earlier attempt of the stage and from anything a human did
- * across a pause. An attempt still executing has not reached its second
- * observation yet and carries none.
+ * `headAfterAttempt` the tip its settlement left behind — the tip observed once
+ * the attempt ended when no boundary was finalized for it, and otherwise the
+ * tip the finalization settled its boundary at, that boundary's commit
+ * included, whether the run or a later recovery finalized it. An attempt still
+ * executing has not reached its second observation yet and carries none.
  */
 export type AttemptRecord = {
   attempt: number;

@@ -9,7 +9,8 @@ import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
-import { evaluateBoundary, finalizeBoundary } from "./boundary.js";
+import { finalizeGitBoundary } from "./boundary.js";
+import type { GitBoundaryContext, GitBoundaryResult } from "./boundary.js";
 import { collectBoundaryStatus, readHead } from "./status.js";
 
 const fixtures: RepoFixture[] = [];
@@ -41,412 +42,512 @@ async function commitCount(fixture: RepoFixture): Promise<number> {
   return Number(result.stdout.trim());
 }
 
-describe("evaluateBoundary + finalizeBoundary — standard `spec`", () => {
+/** Write a thread file, creating any parent directory it names. */
+async function writeThreadFile(
+  fixture: RepoFixture,
+  relPath: string,
+  content: string,
+): Promise<void> {
+  const absPath = path.join(fixture.threadPath as string, relPath);
+  await fs.mkdir(path.dirname(absPath), { recursive: true });
+  await fs.writeFile(absPath, content, "utf8");
+}
+
+/** Move the tip with a commit of its own, returning the new tip. */
+async function moveHead(fixture: RepoFixture, subject: string): Promise<string> {
+  await fixture.git(["commit", "--allow-empty", "-m", subject]);
+  return readHead(fixture.root);
+}
+
+/** Finalize the fixture's boundary under one policy and context. */
+async function finalize(
+  fixture: RepoFixture,
+  policy: GitPolicy,
+  context: GitBoundaryContext,
+): Promise<GitBoundaryResult> {
+  return finalizeGitBoundary({
+    repoRoot: fixture.root,
+    threadRelPath: fixture.threadRelPath as string,
+    threadFolder: fixture.threadFolder as string,
+    policy,
+    context,
+  });
+}
+
+/** The context of an attempt that left the tip exactly where it found it. */
+async function steadyAttempt(
+  fixture: RepoFixture,
+): Promise<GitBoundaryContext> {
+  const head = await readHead(fixture.root);
+  return {
+    kind: "attempt",
+    attempt: { headAtStart: head, headAfterAttempt: head },
+  };
+}
+
+describe("finalizeGitBoundary — a normal attempt", () => {
   it("commits a required spec.md change with the exact subject", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "spec.md"),
-      "# Spec\n",
-      "utf8",
-    );
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
     const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("spec"),
-      rel,
-      observed,
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation).toEqual({ ok: true, changedPaths: [`${rel}/spec.md`] });
-    if (!evaluation.ok) return;
 
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("spec"),
-      fixture.threadFolder as string,
-      evaluation,
-    );
+    const subject = `docs(${fixture.threadFolder}): spec`;
+    const afterHead = await readHead(fixture.root);
     expect(result).toEqual({
-      kind: "committed",
-      subject: `docs(${fixture.threadFolder}): spec`,
+      kind: "finalized",
+      commit: { kind: "committed", subject },
+      observedPaths: [`${rel}/spec.md`],
+      headAfterFinalization: afterHead,
     });
-    expect(await lastSubject(fixture)).toBe(
-      `docs(${fixture.threadFolder}): spec`,
-    );
+    expect(afterHead).not.toBe(head);
+    expect(await lastSubject(fixture)).toBe(subject);
     expect(await collectBoundaryStatus(fixture.root)).toEqual([]);
   });
-});
 
-describe("standard `reconcile-spec`", () => {
-  it("advances without a commit when the worktree is unchanged", async () => {
+  it("commits paths whose names carry spaces and quotes", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
+    const awkward = `a task "01" - draft.md`;
+    await writeThreadFile(fixture, "plan.md", "# Plan\n");
+    await writeThreadFile(fixture, `plan-tasks/${awkward}`, "# Task\n");
+
+    const result = await finalize(
+      fixture,
+      policyOf("plan-strict"),
+      await steadyAttempt(fixture),
+    );
+
+    expect(result.kind).toBe("finalized");
+    expect(result.observedPaths).toEqual([
+      `${rel}/plan-tasks/${awkward}`,
+      `${rel}/plan.md`,
+    ]);
+    expect(await collectBoundaryStatus(fixture.root)).toEqual([]);
+  });
+
+  it("advances without a commit when the worktree is unchanged", async () => {
+    const fixture = await newFixture();
     const head = await readHead(fixture.root);
     const before = await commitCount(fixture);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("reconcile-spec"),
-      rel,
-      [],
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation).toEqual({ ok: true, changedPaths: [] });
-    if (!evaluation.ok) return;
 
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("reconcile-spec"),
-      fixture.threadFolder as string,
-      evaluation,
-    );
-    expect(result).toEqual({ kind: "advanced-without-commit" });
+    expect(result).toEqual({
+      kind: "finalized",
+      commit: { kind: "none" },
+      observedPaths: [],
+      headAfterFinalization: head,
+    });
     expect(await commitCount(fixture)).toBe(before);
   });
-});
 
-describe("standard `review-spec`", () => {
-  it("treats any change as a git-policy-violation", async () => {
+  it("treats any change as a git-policy-violation for a clean-boundary stage", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "spec.md"),
-      "# Spec\n",
-      "utf8",
-    );
-    const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    const before = await commitCount(fixture);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("review-spec"),
-      rel,
-      observed,
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation.ok).toBe(false);
-    if (evaluation.ok) return;
-    expect(evaluation.kind).toBe("git-policy-violation");
-  });
-});
 
-describe("standard `plan-strict`", () => {
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain(`${rel}/spec.md`);
+    expect(result.observedPaths).toEqual([`${rel}/spec.md`]);
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
   it("commits plan.md and plan-tasks descendants", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
-    const threadPath = fixture.threadPath as string;
-    await fs.writeFile(path.join(threadPath, "plan.md"), "# Plan\n", "utf8");
-    await fs.mkdir(path.join(threadPath, "plan-tasks"));
-    await fs.writeFile(
-      path.join(threadPath, "plan-tasks", "01.md"),
-      "# Task\n",
-      "utf8",
-    );
-    const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
+    await writeThreadFile(fixture, "plan.md", "# Plan\n");
+    await writeThreadFile(fixture, "plan-tasks/01.md", "# Task\n");
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("plan-strict"),
-      rel,
-      observed,
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation.ok).toBe(true);
-    if (!evaluation.ok) return;
 
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("plan-strict"),
-      fixture.threadFolder as string,
-      evaluation,
-    );
     expect(result).toEqual({
-      kind: "committed",
-      subject: `docs(${fixture.threadFolder}): plan`,
+      kind: "finalized",
+      commit: {
+        kind: "committed",
+        subject: `docs(${fixture.threadFolder}): plan`,
+      },
+      observedPaths: [`${rel}/plan-tasks/01.md`, `${rel}/plan.md`],
+      headAfterFinalization: await readHead(fixture.root),
     });
     expect(await collectBoundaryStatus(fixture.root)).toEqual([]);
   });
 
-  it("violates when a stray file is present", async () => {
+  it("violates when a stray file sits outside the allowed selectors", async () => {
     const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "plan.md"),
-      "# Plan\n",
-      "utf8",
-    );
+    await writeThreadFile(fixture, "plan.md", "# Plan\n");
     await fs.writeFile(path.join(fixture.root, "stray.txt"), "s", "utf8");
-    const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("plan-strict"),
-      rel,
-      observed,
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation.ok).toBe(false);
-    if (evaluation.ok) return;
-    expect(evaluation.message).toContain("stray.txt");
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("stray.txt");
   });
 
-  it("violates when the required change is missing on a normal attempt", async () => {
+  it("violates when the required change is missing", async () => {
     const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    const head = await readHead(fixture.root);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("plan-strict"),
-      rel,
-      [],
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation.ok).toBe(false);
-  });
-});
 
-describe("standard `implement-plan-with-subagents`", () => {
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("at least one allowed change");
+    expect(result.observedPaths).toEqual([]);
+  });
+
+  it("violates when a HEAD-permitting stage left no report to commit", async () => {
+    const fixture = await newFixture();
+    // The attempt made its own per-task commit, which this stage permits, but
+    // left the required allowed change unmade.
+    const headAtStart = await readHead(fixture.root);
+    const headAfterAttempt = await moveHead(fixture, "chore: task commit");
+    const before = await commitCount(fixture);
+
+    const result = await finalize(
+      fixture,
+      policyOf("implement-plan-with-subagents"),
+      { kind: "attempt", attempt: { headAtStart, headAfterAttempt } },
+    );
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("at least one allowed change");
+    expect(result.observedPaths).toEqual([]);
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
   it("commits the implementation report with the exact subject", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "implementation-report.md"),
+    await writeThreadFile(
+      fixture,
+      "implementation-report.md",
       "# Implementation Report\n",
-      "utf8",
     );
-    const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("implement-plan-with-subagents"),
-      rel,
-      observed,
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation).toEqual({
-      ok: true,
-      changedPaths: [`${rel}/implementation-report.md`],
-    });
-    if (!evaluation.ok) return;
 
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("implement-plan-with-subagents"),
-      fixture.threadFolder as string,
-      evaluation,
-    );
+    const subject = `docs(${fixture.threadFolder}): implementation report`;
     expect(result).toEqual({
-      kind: "committed",
-      subject: `docs(${fixture.threadFolder}): implementation report`,
+      kind: "finalized",
+      commit: { kind: "committed", subject },
+      observedPaths: [`${rel}/implementation-report.md`],
+      headAfterFinalization: await readHead(fixture.root),
     });
-    expect(await lastSubject(fixture)).toBe(
-      `docs(${fixture.threadFolder}): implementation report`,
-    );
+    expect(await lastSubject(fixture)).toBe(subject);
     expect(await collectBoundaryStatus(fixture.root)).toEqual([]);
-  });
-
-  it("violates when a DONE attempt left no report", async () => {
-    const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    const head = await readHead(fixture.root);
-
-    const evaluation = evaluateBoundary(
-      policyOf("implement-plan-with-subagents"),
-      rel,
-      [],
-      head,
-      head,
-    );
-    expect(evaluation.ok).toBe(false);
-    if (evaluation.ok) return;
-    expect(evaluation.kind).toBe("git-policy-violation");
-    expect(evaluation.message).toContain("at least one allowed change");
   });
 
   it("violates when uncommitted code sits beside the report", async () => {
     const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "implementation-report.md"),
+    await writeThreadFile(
+      fixture,
+      "implementation-report.md",
       "# Implementation Report\n",
-      "utf8",
     );
     await fs.writeFile(path.join(fixture.root, "src-leftover.ts"), "x", "utf8");
-    const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
 
-    const evaluation = evaluateBoundary(
+    const result = await finalize(
+      fixture,
       policyOf("implement-plan-with-subagents"),
-      rel,
-      observed,
-      head,
-      head,
+      await steadyAttempt(fixture),
     );
-    expect(evaluation.ok).toBe(false);
-    if (evaluation.ok) return;
-    expect(evaluation.message).toContain("src-leftover.ts");
-    expect(evaluation.message).not.toContain("implementation-report.md");
-  });
-});
 
-describe("resume-finalization mode", () => {
-  it("accepts an already-committed required diff and does not enforce HEAD", async () => {
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("src-leftover.ts");
+    expect(result.message).not.toContain("implementation-report.md");
+  });
+
+  it("violates when the attempt moved HEAD under a forbidding policy", async () => {
+    const fixture = await newFixture();
+    const headAtStart = await readHead(fixture.root);
+    const headAfterAttempt = await moveHead(fixture, "chore: move head");
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    const before = await commitCount(fixture);
+
+    const result = await finalize(fixture, policyOf("spec"), {
+      kind: "attempt",
+      attempt: { headAtStart, headAfterAttempt },
+    });
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("forbids HEAD movement");
+    expect(result.headAfterFinalization).toBe(headAfterAttempt);
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
+  it("permits the implementation stages' own per-task commits", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
     const headAtStart = await readHead(fixture.root);
-
-    // The user deliberately committed the intended diff themselves.
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "spec.md"),
-      "# Spec\n",
-      "utf8",
+    const headAfterAttempt = await moveHead(fixture, "chore: task commit");
+    await writeThreadFile(
+      fixture,
+      "implementation-report.md",
+      "# Implementation Report\n",
     );
+
+    const result = await finalize(
+      fixture,
+      policyOf("implement-plan-with-subagents"),
+      { kind: "attempt", attempt: { headAtStart, headAfterAttempt } },
+    );
+
+    expect(result.kind).toBe("finalized");
+    expect(result.observedPaths).toEqual([`${rel}/implementation-report.md`]);
+    expect(result.headAfterFinalization).not.toBe(headAfterAttempt);
+  });
+
+  it("still bounds the boundary when HEAD movement is permitted", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    const headAtStart = await readHead(fixture.root);
+    const headAfterAttempt = await moveHead(fixture, "chore: task commit");
+    await writeThreadFile(
+      fixture,
+      "implementation-report.md",
+      "# Implementation Report\n",
+    );
+    await writeThreadFile(fixture, "leftover.txt", "x");
+
+    const result = await finalize(
+      fixture,
+      policyOf("implement-plan-with-subagents"),
+      { kind: "attempt", attempt: { headAtStart, headAfterAttempt } },
+    );
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain(`${rel}/leftover.txt`);
+  });
+});
+
+describe("finalizeGitBoundary — first finalization after a contract repair", () => {
+  it("judges the preserved attempt's own interval, not the movement across the pause", async () => {
+    const fixture = await newFixture();
+    // The attempt itself committed, which the `spec` stage forbids; the human
+    // then repaired the promise and committed something else of their own.
+    const headAtStart = await readHead(fixture.root);
+    const headAfterAttempt = await moveHead(fixture, "chore: attempt commit");
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    const pausedAtHead = headAfterAttempt;
+    const observedHead = await moveHead(fixture, "chore: human commit");
+    const before = await commitCount(fixture);
+
+    const result = await finalize(fixture, policyOf("spec"), {
+      kind: "after-contract-repair",
+      attempt: { headAtStart, headAfterAttempt },
+      pausedAtHead,
+    });
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("forbids HEAD movement");
+    expect(result.message).toContain(headAtStart);
+    expect(result.message).toContain(headAfterAttempt);
+    // The human's movement is evidence the transition owner reports, not a rule.
+    expect(result.headMovedWhilePaused).toEqual({ pausedAtHead, observedHead });
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
+  it("commits the repaired diff while reporting cross-pause movement", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    const headAtStart = await readHead(fixture.root);
+    const pausedAtHead = headAtStart;
+    const observedHead = await moveHead(fixture, "chore: human commit");
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+
+    const result = await finalize(fixture, policyOf("spec"), {
+      kind: "after-contract-repair",
+      attempt: { headAtStart, headAfterAttempt: headAtStart },
+      pausedAtHead,
+    });
+
+    expect(result).toEqual({
+      kind: "finalized",
+      commit: {
+        kind: "committed",
+        subject: `docs(${fixture.threadFolder}): spec`,
+      },
+      observedPaths: [`${rel}/spec.md`],
+      headAfterFinalization: await readHead(fixture.root),
+      headMovedWhilePaused: { pausedAtHead, observedHead },
+    });
+  });
+});
+
+describe("finalizeGitBoundary — retry after a refused boundary", () => {
+  it("commits the corrected diff without judging the attempt interval again", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    // A retry carries no attempt interval: the run already judged that boundary
+    // under the stage's HEAD rule, so only the human's movement is left to see.
+    const pausedAtHead = await readHead(fixture.root);
+    const observedHead = await moveHead(fixture, "chore: human commit");
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+
+    const result = await finalize(fixture, policyOf("spec"), {
+      kind: "boundary-retry",
+      pausedAtHead,
+    });
+
+    expect(result.kind).toBe("finalized");
+    expect(result.observedPaths).toEqual([`${rel}/spec.md`]);
+    expect(result.headMovedWhilePaused).toEqual({ pausedAtHead, observedHead });
+    expect(await lastSubject(fixture)).toBe(
+      `docs(${fixture.threadFolder}): spec`,
+    );
+  });
+
+  it("accepts a deliberately precommitted required change on a clean worktree", async () => {
+    const fixture = await newFixture();
+    const pausedAtHead = await readHead(fixture.root);
+    // The human committed the intended diff themselves.
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
     await fixture.git(["add", "-A"]);
     await fixture.git(["commit", "-m", "docs: user-committed spec"]);
-    const headAtBoundary = await readHead(fixture.root);
-
-    const evaluation = evaluateBoundary(
-      policyOf("spec"),
-      rel,
-      [],
-      headAtStart,
-      headAtBoundary,
-      { enforceHead: false, allowRequiredChangeToBeAlreadyCommitted: true },
-    );
-    expect(evaluation).toEqual({ ok: true, changedPaths: [] });
-    if (!evaluation.ok) return;
-
+    const observedHead = await readHead(fixture.root);
     const before = await commitCount(fixture);
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("spec"),
-      fixture.threadFolder as string,
-      evaluation,
+
+    const result = await finalize(fixture, policyOf("spec"), {
+      kind: "boundary-retry",
+      pausedAtHead,
+    });
+
+    expect(result).toEqual({
+      kind: "finalized",
+      commit: { kind: "none" },
+      observedPaths: [],
+      headAfterFinalization: observedHead,
+      headMovedWhilePaused: { pausedAtHead, observedHead },
+    });
+    expect(await commitCount(fixture)).toBe(before);
+  });
+
+  it("keeps the selectors strict on a retry", async () => {
+    const fixture = await newFixture();
+    const pausedAtHead = await readHead(fixture.root);
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    await fs.writeFile(path.join(fixture.root, "stray.txt"), "s", "utf8");
+
+    const result = await finalize(fixture, policyOf("spec"), {
+      kind: "boundary-retry",
+      pausedAtHead,
+    });
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.message).toContain("stray.txt");
+    expect(result.headMovedWhilePaused).toBeUndefined();
+  });
+});
+
+describe("finalizeGitBoundary — commit failures", () => {
+  it("returns commit-error when a pre-commit hook rejects the boundary", async () => {
+    const fixture = await newFixture();
+    const hookDir = path.join(fixture.root, ".git", "hooks");
+    await fs.mkdir(hookDir, { recursive: true });
+    await fs.writeFile(
+      path.join(hookDir, "pre-commit"),
+      "#!/bin/sh\necho 'hook rejected' 1>&2\nexit 1\n",
+      { mode: 0o755 },
     );
-    expect(result).toEqual({ kind: "advanced-without-commit" });
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    const head = await readHead(fixture.root);
+
+    const result = await finalize(
+      fixture,
+      policyOf("spec"),
+      await steadyAttempt(fixture),
+    );
+
+    expect(result.kind).toBe("commit-error");
+    if (result.kind !== "commit-error") return;
+    expect(result.headAfterFinalization).toBe(head);
+  });
+
+  it("returns commit-error when the staged set does not equal the validated set", async () => {
+    const fixture = await newFixture();
+    const rel = fixture.threadRelPath as string;
+    // A committed clean filter replays the seed's committed bytes whatever the
+    // worktree holds: `git status` reports the file modified, and `git add` then
+    // stages content identical to `HEAD`, so nothing is left staged.
+    await fs.writeFile(
+      path.join(fixture.root, ".gitattributes"),
+      `${rel}/seed.md filter=freeze\n`,
+      "utf8",
+    );
+    await fixture.git(["add", "--", ".gitattributes"]);
+    await fixture.git(["commit", "-m", "chore: freeze the seed"]);
+    await fixture.git([
+      "config",
+      "filter.freeze.clean",
+      `cat >/dev/null; git cat-file blob HEAD:${rel}/seed.md`,
+    ]);
+    await writeThreadFile(fixture, "seed.md", "# Rewritten\n");
+
+    const seedOnly: GitPolicy = {
+      headMayChange: false,
+      allowedChanges: [{ kind: "exact-file", threadRelativePath: "seed.md" }],
+      changeRequired: false,
+      commitSubjectTemplate: "docs(<thread-folder>): seed",
+    };
+    const before = await commitCount(fixture);
+
+    const result = await finalize(
+      fixture,
+      seedOnly,
+      await steadyAttempt(fixture),
+    );
+
+    expect(result.kind).toBe("commit-error");
+    if (result.kind !== "commit-error") return;
+    expect(result.message).toContain("staged set does not equal");
+    expect(result.message).toContain(`${rel}/seed.md`);
     expect(await commitCount(fixture)).toBe(before);
   });
 });
 
-describe("HEAD rule", () => {
-  it("violates when HEAD moves mid-attempt under a forbidding policy", async () => {
-    const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    const headAtStart = await readHead(fixture.root);
-    await fixture.git(["commit", "--allow-empty", "-m", "chore: move head"]);
-    const headAtBoundary = await readHead(fixture.root);
-
-    const evaluation = evaluateBoundary(
-      policyOf("spec"),
-      rel,
-      [],
-      headAtStart,
-      headAtBoundary,
-    );
-    expect(evaluation.ok).toBe(false);
-    if (evaluation.ok) return;
-    expect(evaluation.message).toContain("HEAD");
-  });
-
-  it("permits HEAD movement for implement-plan-with-subagents but still bounds the end to the report", async () => {
-    const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    const headAtStart = await readHead(fixture.root);
-    await fixture.git(["commit", "--allow-empty", "-m", "chore: task commit"]);
-    const headAtBoundary = await readHead(fixture.root);
-    const implementPolicy = policyOf("implement-plan-with-subagents");
-
-    // The report is the one permitted residual change; HEAD having moved for the
-    // skill's own per-task commits does not disturb it.
-    const withReport = evaluateBoundary(
-      implementPolicy,
-      rel,
-      [`${rel}/implementation-report.md`],
-      headAtStart,
-      headAtBoundary,
-    );
-    expect(withReport).toEqual({
-      ok: true,
-      changedPaths: [`${rel}/implementation-report.md`],
-    });
-
-    // Residual worktree change → violation despite the permitted HEAD move.
-    const dirty = evaluateBoundary(
-      implementPolicy,
-      rel,
-      [`${rel}/leftover.txt`],
-      headAtStart,
-      headAtBoundary,
-    );
-    expect(dirty.ok).toBe(false);
-  });
-});
-
-describe("finalizeBoundary error surfaces", () => {
-  it("returns commit-error on a staged-set discrepancy", async () => {
-    const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    // The tracked seed.md is unchanged, so `git add` stages no diff and the
-    // staged set will not equal the validated set.
-    const evaluation = {
-      ok: true as const,
-      changedPaths: [`${rel}/seed.md`],
-    };
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("spec"),
-      fixture.threadFolder as string,
-      evaluation,
-    );
-    expect(result.kind).toBe("commit-error");
-  });
-
-  it("returns commit-error when a pre-commit hook fails", async () => {
-    const fixture = await newFixture();
-    const rel = fixture.threadRelPath as string;
-    const hookDir = path.join(fixture.root, ".git", "hooks");
-    await fs.mkdir(hookDir, { recursive: true });
-    const hook = path.join(hookDir, "pre-commit");
-    await fs.writeFile(hook, "#!/bin/sh\necho 'hook rejected' 1>&2\nexit 1\n", {
-      mode: 0o755,
-    });
-
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "spec.md"),
-      "# Spec\n",
-      "utf8",
-    );
-    const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
-    const evaluation = evaluateBoundary(
-      policyOf("spec"),
-      rel,
-      observed,
-      head,
-      head,
-    );
-    expect(evaluation.ok).toBe(true);
-    if (!evaluation.ok) return;
-
-    const result = await finalizeBoundary(
-      fixture.root,
-      policyOf("spec"),
-      fixture.threadFolder as string,
-      evaluation,
-    );
-    expect(result.kind).toBe("commit-error");
-  });
-});
-
-describe("policy-data-only (no stage-name branching)", () => {
-  it("performs no executor commit for a synthetic policy with a null template", async () => {
+describe("finalizeGitBoundary — policy data only (no stage-name branching)", () => {
+  it("performs no executor commit for a policy with a null subject template", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
     const synthetic: GitPolicy = {
@@ -455,28 +556,22 @@ describe("policy-data-only (no stage-name branching)", () => {
       changeRequired: false,
       commitSubjectTemplate: null,
     };
-    await fs.mkdir(path.join(fixture.threadPath as string, "notes"));
-    await fs.writeFile(
-      path.join(fixture.threadPath as string, "notes", "a.md"),
-      "n",
-      "utf8",
-    );
+    await writeThreadFile(fixture, "notes/a.md", "n");
     const head = await readHead(fixture.root);
-    const observed = await collectBoundaryStatus(fixture.root);
-
-    const evaluation = evaluateBoundary(synthetic, rel, observed, head, head);
-    expect(evaluation.ok).toBe(true);
-    if (!evaluation.ok) return;
-    expect(evaluation.changedPaths).toEqual([`${rel}/notes/a.md`]);
-
     const before = await commitCount(fixture);
-    const result = await finalizeBoundary(
-      fixture.root,
+
+    const result = await finalize(
+      fixture,
       synthetic,
-      fixture.threadFolder as string,
-      evaluation,
+      await steadyAttempt(fixture),
     );
-    expect(result).toEqual({ kind: "advanced-without-commit" });
+
+    expect(result).toEqual({
+      kind: "finalized",
+      commit: { kind: "none" },
+      observedPaths: [`${rel}/notes/a.md`],
+      headAfterFinalization: head,
+    });
     expect(await commitCount(fixture)).toBe(before);
   });
 });

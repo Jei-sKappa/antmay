@@ -18,12 +18,12 @@ import type {
   QueueEvidence,
   RecoveryDirective,
 } from "../execution/recovery-policy.js";
-import { evaluateBoundary, finalizeBoundary } from "../gitops/boundary.js";
-import {
-  collectBoundaryStatus,
-  isWorktreeClean,
-  readHead,
-} from "../gitops/status.js";
+import { finalizeGitBoundary } from "../gitops/boundary.js";
+import type {
+  AttemptInterval,
+  GitBoundaryContext,
+} from "../gitops/boundary.js";
+import { isWorktreeClean, readHead } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import {
   interpretScriptedHarnessToggle,
@@ -91,6 +91,21 @@ function referencedAttempt(
     );
   }
   return found;
+}
+
+/**
+ * The interval a preserved attempt's `HEAD` rule is judged across. Checkpoint
+ * validation requires the post-attempt observation on every settled attempt, so
+ * a record without one was never settled and no boundary of it can be judged.
+ */
+function attemptInterval(attempt: AttemptRecord): AttemptInterval {
+  const headAfterAttempt = attempt.headAfterAttempt;
+  if (headAfterAttempt === undefined) {
+    throw new Error(
+      `attempt ${attempt.attempt} of stage ${attempt.stageIndex} records no post-attempt HEAD observation`,
+    );
+  }
+  return { headAtStart: attempt.headAtStart, headAfterAttempt };
 }
 
 function replaceAttempt(
@@ -803,92 +818,73 @@ export async function resumeCommand(
 
       /**
        * Finalize the exact saved `DONE` attempt a `finalize-boundary` directive
-       * names, without invoking the agent again: evaluate the boundary as a
-       * resume (HEAD movement across the pause is diagnostic, and a deliberately
-       * committed diff satisfies a required change), commit it, then apply the
-       * stage's declared queue resolution. Both no-harness recoveries — a
-       * refused boundary that was corrected and a repaired promised artifact —
-       * land here, so neither grows a finalization path of its own.
+       * names, without invoking the agent again, then apply the stage's declared
+       * queue resolution. Both no-harness recoveries — a refused boundary that
+       * was corrected and a repaired promised artifact — land here, so neither
+       * grows a finalization path of its own.
        *
-       * The `headMayChange` rule follows the directive's context, because the two
-       * contexts stand in different places with respect to it. A boundary retry
-       * was already judged under that rule during the run, so waiving it here
-       * forgives only movement across the pause. A contract repair was never
-       * judged at all — the runner stopped before the boundary — so this is the
-       * stage's one chance to apply it, and it is applied against the `HEAD` the
-       * preserved attempt itself started from: the rule judges that attempt's own
-       * movement, and nothing an earlier attempt or a human across a pause did to
-       * the tip.
+       * The directive's context is what the Git boundary judges the finalization
+       * as, because the two stand in different places with respect to the
+       * `headMayChange` rule. A boundary retry was already judged under that rule
+       * during the run. A contract repair was never judged at all — the runner
+       * stopped before the boundary — so this is the stage's one chance to apply
+       * it, across the preserved attempt's own interval.
        */
       const finalizeSavedDone = async (
         directive: Extract<RecoveryDirective, { kind: "finalize-boundary" }>,
       ): Promise<number> => {
         const preserved = referencedAttempt(checkpoint, directive.attempt);
-        const currentHead = await readHead(repoRoot);
-        if (directive.pausedAtHead !== currentHead) {
+        const context: GitBoundaryContext =
+          directive.context === "after-contract-repair"
+            ? {
+                kind: "after-contract-repair",
+                attempt: attemptInterval(preserved),
+                pausedAtHead: directive.pausedAtHead,
+              }
+            : { kind: "boundary-retry", pausedAtHead: directive.pausedAtHead };
+        const finalization = await finalizeGitBoundary({
+          repoRoot,
+          threadRelPath,
+          threadFolder,
+          policy: stage.gitPolicy,
+          context,
+        });
+
+        // What a human did to the tip across the pause is evidence the reader is
+        // owed and no policy forbids.
+        const moved = finalization.headMovedWhilePaused;
+        if (moved !== undefined) {
           display.warn(
-            `HEAD moved while the run was paused (${directive.pausedAtHead} → ${currentHead}); this is diagnostic only and is not a policy violation.`,
+            `HEAD moved while the run was paused (${moved.pausedAtHead} → ${moved.observedHead}); this is diagnostic only and is not a policy violation.`,
           );
         }
-        const observedPaths = await collectBoundaryStatus(repoRoot);
-        // The pause's own observation is the boundary side of the HEAD rule; what
-        // the human did across the pause is reported by the warning above and
-        // forbidden by no policy. Unenforced, the two sides are the same value, so
-        // the rule cannot fire on anything.
-        const headAtBoundary = directive.pausedAtHead;
-        const enforceHead = directive.context === "after-contract-repair";
-        const evaluation = evaluateBoundary(
-          stage.gitPolicy,
-          threadRelPath,
-          observedPaths,
-          enforceHead ? preserved.headAtStart : headAtBoundary,
-          headAtBoundary,
-          {
-            enforceHead,
-            allowRequiredChangeToBeAlreadyCommitted: true,
-          },
-        );
 
         // A boundary this resume could not finalize is fresh Git evidence like
         // any other: the policy decides what the run does about it, and keeps the
         // preserved attempt finalizable from wherever this attempt left the tip.
-        const finalizationFailed = async (
-          failure: "git-policy-violation" | "commit-error",
-          message: string,
-        ): Promise<number> =>
-          applyDirective(
+        if (finalization.kind !== "finalized") {
+          return applyDirective(
             decideRecovery(pausedRecovery, {
               queues: { kind: "clear" },
               git: {
                 kind: "finalization-failed",
-                failure,
-                message,
-                observedHead: await readHead(repoRoot),
+                failure: finalization.kind,
+                message: finalization.message,
+                observedHead: finalization.headAfterFinalization,
               },
             }),
             preserved,
           );
-
-        if (!evaluation.ok) {
-          return finalizationFailed("git-policy-violation", evaluation.message);
         }
 
-        const finalized = await finalizeBoundary(
-          repoRoot,
-          stage.gitPolicy,
-          threadFolder,
-          evaluation,
-        );
-        if (finalized.kind === "commit-error") {
-          return finalizationFailed("commit-error", finalized.message);
-        }
-
-        // Success: flip the preserved DONE attempt from waiting to done, clear
-        // waiting, then apply the declared resolution when the attempt listed
-        // pending files, else the normal successful-stage advance.
+        // Success: flip the preserved DONE attempt from waiting to done over the
+        // tip this finalization left it at, clear waiting, then apply the
+        // declared resolution when the attempt listed pending files, else the
+        // normal successful-stage advance.
         const doneAttempts = replaceAttempt(checkpoint.attempts, {
           ...preserved,
           result: "done",
+          headAfterAttempt: finalization.headAfterFinalization,
         });
         const hadPending = (preserved.pendingFiles?.length ?? 0) > 0;
         if (hadPending && stage.queueResolution === "rerun") {

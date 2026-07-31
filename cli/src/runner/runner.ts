@@ -4,11 +4,8 @@ import type { Display, StageDisposition } from "../display/types.js";
 import { nativeContinuationCommand } from "../harness/native-session.js";
 import { renderStagePrompt } from "../harness/prompt.js";
 import type { AttemptOutcome, HarnessInvoker } from "../harness/types.js";
-import {
-  collectBoundaryStatus,
-  readHead,
-} from "../gitops/status.js";
-import { evaluateBoundary, finalizeBoundary } from "../gitops/boundary.js";
+import { readHead } from "../gitops/status.js";
+import { finalizeGitBoundary } from "../gitops/boundary.js";
 import type { LockHandle } from "../state/lock.js";
 import type {
   AttemptRecord,
@@ -710,38 +707,34 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
 
     let boundary: BoundaryDisposition = { evaluated: false };
     if (isDone) {
-      const observedPaths = await collectBoundaryStatus(repoRoot);
-      const evaluation = evaluateBoundary(
-        stage.gitPolicy,
+      const finalization = await finalizeGitBoundary({
+        repoRoot,
         threadRelPath,
-        observedPaths,
-        attemptStartHead,
-        observedHead,
-      );
-      if (!evaluation.ok) {
-        boundary = { evaluated: true, ok: false, kind: evaluation.kind, message: evaluation.message };
-      } else {
-        const finalized = await finalizeBoundary(
-          repoRoot,
-          stage.gitPolicy,
-          threadFolder,
-          evaluation,
-        );
-        if (finalized.kind === "commit-error") {
-          boundary = { evaluated: true, ok: false, kind: "commit-error", message: finalized.message };
-        } else {
-          boundary = { evaluated: true, ok: true };
-          if (finalized.kind === "committed") {
-            // The executor's boundary commit moved the tip, so re-read HEAD to
-            // make that commit the pause-time observation. Every other path
-            // leaves the tip where the post-attempt read already observed it: a
-            // failed evaluation runs no Git command at all, an
-            // `advanced-without-commit` finalization stages and commits nothing,
-            // and a `commit-error` never produced a commit object.
-            observedHead = await readHead(repoRoot);
-          }
-        }
-      }
+        threadFolder,
+        policy: stage.gitPolicy,
+        // The stage's HEAD rule judges this attempt's own movement, which is
+        // exactly the interval between its two observations.
+        context: {
+          kind: "attempt",
+          attempt: {
+            headAtStart: attemptStartHead,
+            headAfterAttempt: observedHead,
+          },
+        },
+      });
+      // The finalization owns every Git observation this boundary makes, so the
+      // tip it left behind — the boundary commit's, when it made one — is what
+      // the settled attempt records.
+      observedHead = finalization.headAfterFinalization;
+      boundary =
+        finalization.kind === "finalized"
+          ? { evaluated: true, ok: true }
+          : {
+              evaluated: true,
+              ok: false,
+              kind: finalization.kind,
+              message: finalization.message,
+            };
     }
 
     const classification = classifyAttempt({
