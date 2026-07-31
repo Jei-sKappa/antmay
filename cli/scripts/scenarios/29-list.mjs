@@ -209,6 +209,7 @@ const ROWS = [
 const HEAD = "4f1c0a9e6d2b8571c3ae04fd9b7e15286aa3c0d4";
 
 const WAITING = {
+  recovery: { kind: "retry-stage" },
   reasons: [
     {
       kind: "outcome-blocked",
@@ -247,6 +248,8 @@ function attemptsFor(condition, stageIndex) {
       // `Latest session` field; multiple sessions on one run exercise newest
       // selection (only the final session-carrying attempt is rendered).
       agentSession: { id: `scripted-session-${id}-1` },
+      headAtStart: HEAD,
+      headAfterAttempt: HEAD,
       logPath: `logs/${String(i + 1).padStart(2, "0")}-${id}-attempt-01.log`,
     });
   }
@@ -267,8 +270,10 @@ function attemptsFor(condition, stageIndex) {
               candidateLine: "Outcome: BLOCKED — the spec contradicts the roadmap.",
               detail: "— the spec contradicts the roadmap.",
             },
+            headAfterAttempt: HEAD,
           }),
       agentSession: { id: `scripted-session-${id}-1` },
+      headAtStart: HEAD,
       logPath: `logs/${String(stageIndex + 1).padStart(2, "0")}-${id}-attempt-01.log`,
     });
   }
@@ -278,7 +283,6 @@ function attemptsFor(condition, stageIndex) {
 /** One complete checkpoint. Only the fields an entry names differ between entries. */
 function checkpointFor(ctx, row) {
   const threadRelPath = `docs/threads/260726081500Z-${row.slug}`;
-  const completed = row.condition === "completed";
   return {
     schemaVersion: 0,
     runId: row.runId,
@@ -300,16 +304,11 @@ function checkpointFor(ctx, row) {
     observedHarnessVersions: {
       [row.binding.agent.harness]: `${row.binding.agent.harness} 1.0.0`,
     },
+    runtime: { kind: "scripted" },
     stageIndex: row.stageIndex,
     condition: row.condition,
     attempts: attemptsFor(row.condition, row.stageIndex),
     waiting: row.condition === "waiting-for-user" ? WAITING : null,
-    // A completed run parks its cursor past the last stage and holds no HEAD;
-    // every other cursor names the stage it sits on, which the validator ties
-    // to `stageIndex` whenever the HEAD observation is populated.
-    gitCursor: completed
-      ? { stageIndex: STAGES.length, observedHead: null }
-      : { stageIndex: row.stageIndex, observedHead: HEAD },
   };
 }
 

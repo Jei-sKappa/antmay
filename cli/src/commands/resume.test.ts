@@ -1067,6 +1067,85 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
   });
 });
 
+describe.concurrent("resumeCommand — unrecoverable recovery documents (AC-2.3)", () => {
+  /**
+   * Rewrite a seeded run's raw `state.json`, which is what lets a case present a
+   * document the validator refuses. The exact bytes are returned so the case can
+   * prove nothing wrote over them.
+   */
+  async function writeRawCheckpoint(
+    h: Harness,
+    runId: string,
+    mutate: (raw: Record<string, unknown>) => void,
+  ): Promise<{ file: string; text: string }> {
+    const file = path.join(runDirectoryFor(h.stateRoot, runId), "state.json");
+    const raw = JSON.parse(await fs.readFile(file, "utf8")) as Record<string, unknown>;
+    mutate(raw);
+    const text = `${JSON.stringify(raw, null, 2)}\n`;
+    await fs.writeFile(file, text, "utf8");
+    return { file, text };
+  }
+
+  /** The two shapes the audit found a resume would accept and then finalize. */
+  const unrecoverable: {
+    name: string;
+    mutate: (raw: Record<string, unknown>) => void;
+  }[] = [
+    {
+      name: "a saved-DONE recovery whose referenced attempt reported BLOCKED",
+      mutate: (raw) => {
+        const stages = raw.stages as Array<{ queueResolution: string }>;
+        (raw.waiting as Record<string, unknown>).recovery = {
+          kind: "resume-finalized-done",
+          attempt: { stageIndex: 0, attempt: 1 },
+          queueResolution: stages[0]!.queueResolution,
+        };
+      },
+    },
+    {
+      name: "a finalization recovery that references no recorded attempt",
+      mutate: (raw) => {
+        raw.attempts = [];
+        (raw.waiting as Record<string, unknown>).recovery = {
+          kind: "retry-git-finalization",
+          attempt: { stageIndex: 0, attempt: 1 },
+          pausedAtHead: "0".repeat(40),
+        };
+      },
+    },
+  ];
+
+  for (const document of unrecoverable) {
+    it(`refuses ${document.name} before acquiring the lock or writing state`, async () => {
+      const h = await setup();
+      await seed(h, [{ outcome: BLOCKED }]);
+      const runId = await soleRunId(h);
+      const written = await writeRawCheckpoint(h, runId, document.mutate);
+
+      // Holding the workspace lock is what makes the ordering visible: a resume
+      // that reached lock acquisition would refuse for that reason instead.
+      const held = await acquireWorkspaceLock(
+        h.stateRoot,
+        h.fixture.root,
+        "holder-run",
+        new Date(),
+      );
+      if (!held.ok) throw new Error("expected to acquire the lock");
+      heldLocks.push(held.handle);
+
+      const result = await resume(h, runId, standardSteps(h.fixture));
+
+      expect(result.code).toBe(1);
+      expect(result.err).toContain("malformed or unreadable");
+      expect(result.err).not.toContain("already locked");
+      expect(result.invoker.calls.length).toBe(0);
+      // Nothing was persisted, so the stage cannot have advanced and the
+      // referenced attempt cannot have been rewritten as done.
+      expect(await fs.readFile(written.file, "utf8")).toBe(written.text);
+    });
+  }
+});
+
 describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC-15.4)", () => {
   /** Seed a durable ready checkpoint (post-allocation, pre-launch signal). */
   async function seedReady(h: Harness): Promise<string> {
@@ -1122,6 +1201,8 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
     };
     delete (executingAttempt as { endedAt?: string }).endedAt;
     delete (executingAttempt as { failure?: unknown }).failure;
+    // A live attempt has not reached its post-attempt observation yet.
+    delete (executingAttempt as { headAfterAttempt?: string }).headAfterAttempt;
     const executingCp: RunCheckpoint = {
       ...base,
       condition: "executing",
@@ -1350,7 +1431,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
     const before = await readCp(h, runId);
-    expect(before.startedScripted).toBeUndefined();
+    expect(before.runtime).toEqual({ kind: "real" });
 
     let probeCalled = false;
     const result = await resume(h, runId, [], {
@@ -1392,22 +1473,37 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     expect(after.updatedAt).toBe(before.updatedAt);
   });
 
-  it("selects scripted mode for an unmarked checkpoint when the toggle is exact 1", async () => {
+  it("refuses to switch a real-runtime checkpoint to scripted mode, before probe or lock", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
+    const before = await readCp(h, runId);
+    expect(before.runtime).toEqual({ kind: "real" });
+    // A valid live scenario is present, so only the run's own immutable runtime
+    // can be what refuses.
     await writeScriptedScenario(
       h.configRoot,
       standardScriptedScenario({
         spec: ["outcome-blocked", "spec-correct"],
       }),
     );
+
+    let probeCalled = false;
     const result = await resume(h, runId, standardSteps(h.fixture), {
       env: scriptedEnv(h),
+      probe: async (...args) => {
+        probeCalled = true;
+        return okProbe(...args);
+      },
     });
-    expect(result.code).toBe(0);
-    expect(result.out).toContain("[DEV] Scripted harness");
-    expect(result.out).toContain("[DEV] Resolved prompt");
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("real harness");
+    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(probeCalled).toBe(false);
+    expect(result.invoker.calls.length).toBe(0);
+    const after = await readCp(h, runId);
+    expect(after.updatedAt).toBe(before.updatedAt);
+    expect(after.runtime).toEqual({ kind: "real" });
   });
 
   it("pauses with harness-error when the stage case array is exhausted on resume", async () => {

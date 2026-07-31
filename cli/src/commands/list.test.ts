@@ -119,11 +119,11 @@ function makeCheckpoint(overrides: {
     profileSelection: { kind: "settings-only" },
     stages,
     observedHarnessVersions,
+    runtime: { kind: "real" },
     stageIndex: overrides.stageIndex,
     condition: overrides.condition,
     attempts: overrides.attempts ?? [],
     waiting: null,
-    gitCursor: { stageIndex: overrides.stageIndex, observedHead: null },
   };
   if (overrides.condition === "waiting-for-user") {
     checkpoint.waiting = governedBy({
@@ -287,6 +287,7 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
         startedAt: "2026-07-23T14:00:00.000Z",
         result: "executing",
         terminalResult: null,
+        headAtStart: "1a2b3c4d",
         logPath: "logs/00-spec-attempt-01.log",
       },
     ];
@@ -448,6 +449,8 @@ describe("listCommand latest session field (AC-4.1, AC-4.2)", () => {
         detail: `— ${stageId} finished.`,
       },
       ...(sessionId !== undefined ? { agentSession: { id: sessionId } } : {}),
+      headAtStart: "1a2b3c4d",
+      headAfterAttempt: "5e6f7a8b",
       logPath: `logs/0${stageIndex + 1}-${stageId}-attempt-01.log`,
     };
   }
@@ -520,6 +523,7 @@ describe("listCommand latest session field (AC-4.1, AC-4.2)", () => {
         result: "executing",
         terminalResult: null,
         agentSession: { id: "sess-exec-live" },
+        headAtStart: "1a2b3c4d",
         logPath: "logs/02-plan-attempt-01.log",
       },
     ];
@@ -547,6 +551,8 @@ describe("listCommand latest session field (AC-4.1, AC-4.2)", () => {
               detail: "— blocked.",
             },
             agentSession: { id: "sess-wait-now" },
+            headAtStart: "1a2b3c4d",
+            headAfterAttempt: "5e6f7a8b",
             logPath: "logs/02-plan-attempt-01.log",
           },
         ],

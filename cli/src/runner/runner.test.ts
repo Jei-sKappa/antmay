@@ -192,11 +192,11 @@ function buildCheckpoint(
     profileSelection: { kind: "settings-only" },
     stages: snapshotted,
     observedHarnessVersions: { codex: "codex 1.2.3" },
+    runtime: { kind: "real" },
     stageIndex: 0,
     condition: "ready",
     attempts: [],
     waiting: null,
-    gitCursor: { stageIndex: 0, observedHead: null },
   };
 }
 
@@ -325,8 +325,10 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     expect(cp.condition).toBe("completed");
     expect(cp.stageIndex).toBe(2);
     expect(cp.waiting).toBeNull();
-    expect(cp.gitCursor).toEqual({ stageIndex: 2, observedHead: null });
     expect(cp.attempts.map((a) => a.result)).toEqual(["done", "done"]);
+    // Every settled attempt carries its own start and post-attempt observation.
+    expect(cp.attempts.every((a) => a.headAtStart.length > 0)).toBe(true);
+    expect(cp.attempts.every((a) => (a.headAfterAttempt ?? "").length > 0)).toBe(true);
     expect(cp.attempts.every((a) => a.terminalResult?.token === "DONE")).toBe(true);
 
     // Stage alpha committed its required change; beta committed nothing.
@@ -362,7 +364,6 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("completed");
     expect(cp.stageIndex).toBe(6);
-    expect(cp.gitCursor).toEqual({ stageIndex: 6, observedHead: null });
     expect(await commitCount(fixture)).toBe(before + 3);
   });
 });
@@ -400,8 +401,14 @@ describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC
     expect(cp.waiting?.reasons[0].pendingFiles).toEqual([pendingRel]);
     expect(cp.attempts[0].result).toBe("done");
     expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
-    // The executor commit's HEAD is the stored pause-time observation.
-    expect(cp.gitCursor.observedHead).toBe(commitHead);
+    // The executor commit's HEAD is the attempt's post-attempt observation, and
+    // the finalized DONE is what releasing the queue resolves against.
+    expect(cp.attempts[0].headAfterAttempt).toBe(commitHead);
+    expect(cp.waiting?.recovery).toEqual({
+      kind: "resume-finalized-done",
+      attempt: { stageIndex: 0, attempt: 1 },
+      queueResolution: "advance",
+    });
     expect(await lastSubject(fixture)).toBe(`chore(${fixture.threadFolder}): alpha`);
   });
 });
@@ -493,7 +500,10 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
       expect(cp.waiting?.reasons[0].kind).toBe(testCase.kind);
       expect(cp.waiting?.nextAction).toContain("unvalidated");
       expect(cp.attempts[0].result).toBe("waiting");
-      expect(cp.gitCursor.observedHead).toBe(headBefore);
+      expect(cp.attempts[0].headAfterAttempt).toBe(headBefore);
+      // No boundary was reached, so there is nothing to finalize: the stage runs
+      // again once the human has dealt with the attempt's changes.
+      expect(cp.waiting?.recovery).toEqual({ kind: "retry-stage" });
       if (testCase.candidateLine === null) {
         expect(cp.attempts[0].terminalResult).toBeNull();
       } else {
@@ -788,9 +798,12 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     // what a later repaired resume finalizes from.
     expect(cp.attempts[0].result).toBe("waiting");
     expect(cp.attempts[0].terminalResult?.token).toBe("DONE");
-    expect(cp.gitCursor).toEqual({
-      stageIndex: 0,
-      observedHead: headBefore,
+    expect(cp.attempts[0].headAtStart).toBe(headBefore);
+    expect(cp.attempts[0].headAfterAttempt).toBe(headBefore);
+    expect(cp.waiting?.recovery).toEqual({
+      kind: "recheck-stage-contract",
+      attempt: { stageIndex: 0, attempt: 1 },
+      pausedAtHead: headBefore,
     });
     expect(await commitCount(fixture)).toBe(before);
   });
@@ -1125,8 +1138,10 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       agentSession: { id: "live-1" },
     });
     expect(provisional.attempts[0].endedAt).toBeUndefined();
-    expect(provisional.gitCursor.stageIndex).toBe(0);
-    expect(provisional.gitCursor.observedHead).not.toBeNull();
+    // The live attempt records the tip it launched from and has not yet reached
+    // its post-attempt observation.
+    expect(provisional.attempts[0].headAtStart.length).toBeGreaterThan(0);
+    expect(provisional.attempts[0].headAfterAttempt).toBeUndefined();
 
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("completed");
@@ -1646,6 +1661,7 @@ describe.concurrent("executeRun — harness stage context", () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const checkpoint = buildCheckpoint(fixture, [cleanStage]);
+    const head = await readHead(fixture.root);
     checkpoint.stageIndex = 0;
     checkpoint.condition = "waiting-for-user";
     checkpoint.attempts = [
@@ -1657,14 +1673,12 @@ describe.concurrent("executeRun — harness stage context", () => {
         endedAt: "2026-07-24T00:01:00.000Z",
         result: "waiting",
         terminalResult: { token: "BLOCKED", candidateLine: "Outcome: BLOCKED", detail: "" },
+        headAtStart: head,
+        headAfterAttempt: head,
         logPath: "logs/01-reconcile-spec-attempt-1.log",
       },
     ];
     checkpoint.waiting = governedBy({ kind: "outcome-blocked", message: "blocked" });
-    checkpoint.gitCursor = {
-      stageIndex: 0,
-      observedHead: await readHead(fixture.root),
-    };
     const harness = createFakeHarness([{}]);
 
     await executeRun(makeContext(checkpoint, runDir, harness));

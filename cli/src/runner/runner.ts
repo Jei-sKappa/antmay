@@ -283,10 +283,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
   async function finishInterrupted(args: {
     sig: NodeJS.Signals;
     executingAttempt: AttemptRecord;
-    finalCursor: {
-      stageIndex: number;
-      observedHead: string | null;
-    };
+    headAfterAttempt: string;
     pendingFiles: string[];
     failure?: { errorClass: string; errorMessage: string };
     agentSession?: { id: string };
@@ -316,6 +313,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     }
     const waiting: WaitingInfo = {
       reasons,
+      recovery: { kind: "retry-stage" },
       nextAction: UNVALIDATED_CHANGES_NOTE,
     };
     const settled: AttemptRecord = withAgentSession(
@@ -326,6 +324,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         terminalResult: null,
         pendingFiles: pending,
         failure: { kind: "interrupted", message: baseMessage },
+        headAfterAttempt: args.headAfterAttempt,
       },
       args.agentSession,
     );
@@ -334,7 +333,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       attempts: replaceLast(checkpoint.attempts, settled),
       condition: "waiting-for-user",
       waiting,
-      gitCursor: args.finalCursor,
     });
     if (!persisted.ok) return fatal(persisted.message);
     display.stageStopped({
@@ -383,6 +381,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
             diagnostics: { errorMessage: preScan.message },
           },
         ],
+        recovery: { kind: "retry-stage" },
       };
       const persisted = await persist({
         ...checkpoint,
@@ -398,6 +397,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       const message = pendingQueuesMessage(pendingFiles);
       const waiting: WaitingInfo = {
         reasons: [{ kind: "pending-queues", message, pendingFiles }],
+        recovery: { kind: "retry-stage" },
       };
       const persisted = await persist({
         ...checkpoint,
@@ -440,6 +440,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     if (prerequisiteReason !== null) {
       const waiting: WaitingInfo = {
         reasons: [prerequisiteReason],
+        recovery: { kind: "retry-stage" },
         nextAction: RESTORE_PREREQUISITE_NOTE,
       };
       const persisted = await persist({
@@ -466,6 +467,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       startedAt,
       result: "executing",
       terminalResult: null,
+      headAtStart: attemptStartHead,
       logPath: logPaths.runRelPath,
     };
 
@@ -474,10 +476,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       condition: "executing",
       waiting: null,
       attempts: [...checkpoint.attempts, executingAttempt],
-      gitCursor: {
-        stageIndex,
-        observedHead: attemptStartHead,
-      },
     });
     // A persistence failure creates no log and prevents launch.
     if (!executingPersist.ok) return fatal(executingPersist.message);
@@ -531,10 +529,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       return finishInterrupted({
         sig: preLaunchSig,
         executingAttempt,
-        finalCursor: {
-          stageIndex,
-          observedHead: attemptStartHead,
-        },
+        headAfterAttempt: attemptStartHead,
         pendingFiles: [],
       });
     }
@@ -624,7 +619,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       return finishInterrupted({
         sig: abortSig,
         executingAttempt,
-        finalCursor: { stageIndex, observedHead },
+        headAfterAttempt: observedHead,
         pendingFiles,
         failure: {
           errorClass: outcome.errorClass,
@@ -672,15 +667,16 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       if (violation !== null) {
         const endedAt = clock().toISOString();
         const waiting: WaitingInfo = {
-          reasons: [
-            // The attempt's own start HEAD travels with the pause. This stage's
-            // boundary is never reached, so the finalization that a repair
-            // unlocks has nothing else to judge the HEAD rule against, and that
-            // rule judges this attempt's own movement — never a commit an
-            // earlier attempt or an earlier pause left behind.
-            { ...violation, headAtAttemptStart: attemptStartHead },
-            ...queueReasons(pendingFiles, queueScanError),
-          ],
+          reasons: [violation, ...queueReasons(pendingFiles, queueScanError)],
+          // This stage's boundary is never reached, so the finalization a repair
+          // unlocks is the one and only judgement of the stage's HEAD rule. What
+          // that rule judges is the preserved attempt's own movement, which is
+          // exactly what the attempt's two observations record.
+          recovery: {
+            kind: "recheck-stage-contract",
+            attempt: { stageIndex, attempt: attemptNumber },
+            pausedAtHead: observedHead,
+          },
           nextAction: CONTRACT_REPAIR_NOTE,
         };
         const settled: AttemptRecord = withAgentSession(
@@ -691,6 +687,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
             terminalResult: terminalResultFrom(parse),
             pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
             failure: { kind: violation.kind, message: violation.message },
+            headAfterAttempt: observedHead,
           },
           agentSession,
         );
@@ -699,9 +696,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           attempts: replaceLast(checkpoint.attempts, settled),
           condition: "waiting-for-user",
           waiting,
-          // The cursor keeps the attempt's own HEAD observation, which is what
-          // a later finalization compares against.
-          gitCursor: { stageIndex, observedHead },
         });
         if (!persisted.ok) return fatal(persisted.message);
         display.stageStopped({
@@ -758,14 +752,12 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       boundary,
     });
 
-    // 6. Transition. Persist the final HEAD observation on the git cursor so a
-    //    later resume compares against the actual pause-time boundary.
+    // 6. Transition. Every settled attempt records the HEAD observed once it
+    //    settled, so the evidence a later recovery reads belongs to the attempt
+    //    that produced it.
     const endedAt = clock().toISOString();
     const durationMs = Date.parse(endedAt) - Date.parse(startedAt);
-    const finalCursor = {
-      stageIndex,
-      observedHead,
-    };
+    const attemptReference = { stageIndex, attempt: attemptNumber };
     const terminalResult = terminalResultFrom(parse);
 
     if (classification.action === "advance") {
@@ -775,6 +767,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           result: "done",
           endedAt,
           terminalResult,
+          headAfterAttempt: observedHead,
         },
         agentSession,
       );
@@ -786,7 +779,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         stageIndex: nextIndex,
         condition: completed ? "completed" : "ready",
         waiting: null,
-        gitCursor: { stageIndex: nextIndex, observedHead: null },
       });
       if (!persisted.ok) return fatal(persisted.message);
       display.stageSucceeded({ stagePosition, durationMs });
@@ -811,16 +803,26 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           endedAt,
           terminalResult,
           pendingFiles,
+          headAfterAttempt: observedHead,
         },
         agentSession,
       );
-      const waiting: WaitingInfo = { reasons: classification.reasons };
+      // The stage is finished and its boundary is committed; only the queue is
+      // holding the run, so releasing it applies the resolution the stage
+      // declared and never finalizes this attempt a second time.
+      const waiting: WaitingInfo = {
+        reasons: classification.reasons,
+        recovery: {
+          kind: "resume-finalized-done",
+          attempt: attemptReference,
+          queueResolution: stage.queueResolution,
+        },
+      };
       const persisted = await persist({
         ...checkpoint,
         attempts: replaceLast(checkpoint.attempts, done),
         condition: "waiting-for-user",
         waiting,
-        gitCursor: finalCursor,
       });
       if (!persisted.ok) return fatal(persisted.message);
       // The stage itself succeeded — it reported DONE and its boundary was
@@ -869,8 +871,19 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
               : reason,
           ) as WaitingReasons);
 
+    // A boundary that was reached and refused preserves a finalizable DONE, so
+    // its recovery retries that boundary rather than the stage. Every other
+    // non-DONE pause has no attempt to finalize and runs the stage again.
+    const boundaryRefused = boundary.evaluated && !boundary.ok;
     const waiting: WaitingInfo = {
       reasons,
+      recovery: boundaryRefused
+        ? {
+            kind: "retry-git-finalization",
+            attempt: attemptReference,
+            pausedAtHead: observedHead,
+          }
+        : { kind: "retry-stage" },
       nextAction: UNVALIDATED_CHANGES_NOTE,
     };
     const settled: AttemptRecord = withAgentSession(
@@ -881,6 +894,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         terminalResult,
         pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
         failure: { kind, message: baseMessage },
+        headAfterAttempt: observedHead,
       },
       agentSession,
     );
@@ -889,7 +903,6 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       attempts: replaceLast(checkpoint.attempts, settled),
       condition: "waiting-for-user",
       waiting,
-      gitCursor: finalCursor,
     });
     if (!persisted.ok) return fatal(persisted.message);
     display.stageStopped({

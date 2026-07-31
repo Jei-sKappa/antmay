@@ -482,6 +482,7 @@ describe("runPaused", () => {
             detail: "Spec section 3 contradicts the seed",
           },
         ],
+        recovery: { kind: "retry-stage" },
       },
     });
     expect(out.text).toContain("Run stopped for 2 reasons:");

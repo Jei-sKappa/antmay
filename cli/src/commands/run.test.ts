@@ -1182,7 +1182,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     expect(await runDirNames(h.stateRoot)).toEqual([]);
   });
 
-  it("marks the initial checkpoint, prints startup output, and uses scripted seams", async () => {
+  it("records the scripted runtime, prints startup output, and uses scripted seams", async () => {
     const h = await setup({
       pipeline: pipelineDocument([
         { stage: "spec", instructions: "Prefer small changes.\nCheck tests." },
@@ -1216,7 +1216,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
     if (cp.ok) {
-      expect(cp.checkpoint.startedScripted).toBe(true);
+      expect(cp.checkpoint.runtime).toEqual({ kind: "scripted" });
       expect(cp.checkpoint.condition).toBe("completed");
       expect(cp.checkpoint.observedHarnessVersions.codex).toContain("scripted-harness");
     }
@@ -1287,7 +1287,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
     if (cp.ok) {
-      expect(cp.checkpoint.startedScripted).toBeUndefined();
+      expect(cp.checkpoint.runtime).toEqual({ kind: "real" });
     }
     expect(result.out).not.toContain("[DEV] Resolved prompt");
   });

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { governedBy } from "../test-helpers/waiting.js";
-import type { RunCheckpoint } from "./checkpoint.js";
+import type {
+  AttemptRecord,
+  RunCheckpoint,
+  WaitingRecovery,
+} from "./checkpoint.js";
 import { validateCheckpoint } from "./checkpoint.js";
 
 function validCheckpoint(): RunCheckpoint {
@@ -73,6 +77,7 @@ function validCheckpoint(): RunCheckpoint {
       },
     ],
     observedHarnessVersions: { codex: "codex 1.0.0", "claude-code": "claude 2.0.0" },
+    runtime: { kind: "real" },
     stageIndex: 0,
     condition: "waiting-for-user",
     attempts: [
@@ -84,6 +89,8 @@ function validCheckpoint(): RunCheckpoint {
         endedAt: "2026-07-23T12:15:30.000Z",
         result: "waiting",
         terminalResult: { token: "BLOCKED", candidateLine: "Outcome: BLOCKED — x", detail: "blocked" },
+        headAtStart: "abc123",
+        headAfterAttempt: "abc123",
         logPath: "logs/00-spec-attempt-01.log",
       },
     ],
@@ -92,9 +99,71 @@ function validCheckpoint(): RunCheckpoint {
       message: "The spec stage reported BLOCKED.",
       candidateLine: "Outcome: BLOCKED — x",
     }),
-    gitCursor: { stageIndex: 0, observedHead: "abc123" },
   };
 }
+
+/** A settled current-stage attempt that reported DONE, which the three
+ * attempt-referencing recoveries are all about. */
+function doneAttempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
+  return {
+    attempt: 1,
+    stageIndex: 0,
+    stageId: "spec",
+    startedAt: "2026-07-23T12:15:01.000Z",
+    endedAt: "2026-07-23T12:15:30.000Z",
+    result: "waiting",
+    terminalResult: { token: "DONE", candidateLine: "Outcome: DONE", detail: "done" },
+    headAtStart: "aaa111",
+    headAfterAttempt: "bbb222",
+    logPath: "logs/00-spec-attempt-01.log",
+    ...overrides,
+  };
+}
+
+/**
+ * A waiting checkpoint carrying two diagnostic reasons and one recovery, so a
+ * case can state the recovery it is about and nothing else. The reasons are
+ * deliberately unrelated to the recovery: nothing may be inferred from them.
+ */
+function withRecovery(
+  recovery: WaitingRecovery,
+  attempts: AttemptRecord[] = [doneAttempt()],
+): RunCheckpoint {
+  return {
+    ...validCheckpoint(),
+    attempts,
+    waiting: {
+      reasons: [
+        { kind: "git-policy-violation", message: "The boundary was refused." },
+        {
+          kind: "pending-queues",
+          message: "1 pending bundle file awaits human resolution.",
+          pendingFiles: ["docs/threads/260723121015Z-demo/.pending-decisions/d.md"],
+        },
+      ],
+      recovery: { ...recovery },
+    },
+  };
+}
+
+const RECHECK_CONTRACT: WaitingRecovery = {
+  kind: "recheck-stage-contract",
+  attempt: { stageIndex: 0, attempt: 1 },
+  pausedAtHead: "ccc333",
+};
+
+const RETRY_GIT: WaitingRecovery = {
+  kind: "retry-git-finalization",
+  attempt: { stageIndex: 0, attempt: 1 },
+  pausedAtHead: "ccc333",
+};
+
+/** Stage 0 of the fixture declares `rerun`, which the recovery must agree with. */
+const RESUME_FINALIZED: WaitingRecovery = {
+  kind: "resume-finalized-done",
+  attempt: { stageIndex: 0, attempt: 1 },
+  queueResolution: "rerun",
+};
 
 describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
   it("accepts a full round-tripped checkpoint", () => {
@@ -107,14 +176,12 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
     }
   });
 
-  it("round-trips the HEAD cursor and observed harness-version map", () => {
+  it("round-trips the attempt HEAD observations and observed harness-version map", () => {
     const result = validateCheckpoint(validCheckpoint());
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.gitCursor).toEqual({
-        stageIndex: 0,
-        observedHead: "abc123",
-      });
+      expect(result.checkpoint.attempts[0].headAtStart).toBe("abc123");
+      expect(result.checkpoint.attempts[0].headAfterAttempt).toBe("abc123");
       expect(result.checkpoint.observedHarnessVersions).toEqual({
         codex: "codex 1.0.0",
         "claude-code": "claude 2.0.0",
@@ -466,7 +533,6 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
       candidateLine: "Outcome: DONE",
       detail: "ok",
     };
-    doc.gitCursor = { stageIndex: 2, observedHead: null };
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
   });
@@ -509,6 +575,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     doc.waiting = null;
     doc.attempts[0].result = "executing";
     doc.attempts[0].terminalResult = null;
+    delete doc.attempts[0].headAfterAttempt;
     const ok = validateCheckpoint(doc);
     expect(ok.ok).toBe(true);
 
@@ -518,6 +585,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     bad.stageIndex = 1;
     bad.attempts[0].result = "executing";
     bad.attempts[0].terminalResult = null;
+    delete bad.attempts[0].headAfterAttempt;
     const result = validateCheckpoint(bad);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /no attempt with result "executing"/.test(e))).toBe(true);
@@ -539,13 +607,6 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     if (!result.ok) expect(result.errors.some((e) => /equal workspace.execution.cwd/.test(e))).toBe(true);
   });
 
-  it("requires gitCursor.stageIndex to name the current stage when HEAD set", () => {
-    const doc = validCheckpoint();
-    doc.gitCursor = { stageIndex: 1, observedHead: "abc" };
-    const result = validateCheckpoint(doc);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.errors.some((e) => /name the current stage/.test(e))).toBe(true);
-  });
 });
 
 describe("validateCheckpoint — attempt agentSession (AC-2.1)", () => {
@@ -653,55 +714,23 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
   });
 
   it("accepts a stage-contract-violation carrying a plan-state mismatch", () => {
-    const doc = validCheckpoint();
-    doc.waiting = governedBy({
-      kind: "stage-contract-violation",
-      message: "The stage reported DONE without leaving its promised plan.",
-      contract: [{ dimension: "plan", expected: "strict", observed: "brief" }],
-      headAtAttemptStart: "abc123",
-    });
+    const doc = withRecovery(RECHECK_CONTRACT);
+    doc.waiting = {
+      reasons: [
+        {
+          kind: "stage-contract-violation",
+          message: "The stage reported DONE without leaving its promised plan.",
+          contract: [{ dimension: "plan", expected: "strict", observed: "brief" }],
+        },
+      ],
+      recovery: RECHECK_CONTRACT,
+    };
     const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.waiting?.reasons[0].headAtAttemptStart).toBe("abc123");
-    }
-  });
-
-  it("rejects a stage-contract-violation that records no attempt-start HEAD", () => {
-    // Without it the finalization a repair unlocks has nothing to judge the
-    // stage's HEAD rule against, so the pause is unrecoverable.
-    const doc = validCheckpoint();
-    doc.waiting = governedBy({
-      kind: "stage-contract-violation",
-      message: "The stage reported DONE without leaving its promised spec.",
-      contract: [{ dimension: "spec", expected: true, observed: false }],
-    });
-    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(
-        result.errors.some((e) =>
-          /headAtAttemptStart is required on a stage-contract-violation reason/.test(e),
-        ),
-      ).toBe(true);
-    }
-  });
-
-  it("rejects a non-string attempt-start HEAD on any reason", () => {
-    const doc = validCheckpoint();
-    doc.waiting = governedBy({
-      kind: "outcome-blocked",
-      message: "blocked",
-      headAtAttemptStart: 7 as unknown as string,
-    });
-    const result = validateCheckpoint(doc);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(
-        result.errors.some((e) =>
-          /headAtAttemptStart must be a commit string/.test(e),
-        ),
-      ).toBe(true);
+      expect(result.checkpoint.waiting?.reasons[0].contract).toEqual([
+        { dimension: "plan", expected: "strict", observed: "brief" },
+      ]);
     }
   });
 
@@ -774,57 +803,55 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
   });
 });
 
-describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => {
-  it("accepts marker-less checkpoints", () => {
-    const result = validateCheckpoint(validCheckpoint());
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.checkpoint.startedScripted).toBeUndefined();
+describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () => {
+  it("round-trips each legal runtime identity", () => {
+    for (const kind of ["real", "scripted"] as const) {
+      const doc = { ...validCheckpoint(), runtime: { kind } };
+      const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.checkpoint.runtime).toEqual({ kind });
     }
   });
 
-  it("accepts startedScripted: true and round-trips it", () => {
-    const doc = validCheckpoint();
-    doc.startedScripted = true;
-    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.checkpoint.startedScripted).toBe(true);
-    }
-  });
-
-  it("rejects any present value other than true", () => {
-    const doc = { ...validCheckpoint(), startedScripted: false as unknown };
+  it("rejects an absent runtime identity", () => {
+    const doc = validCheckpoint() as Record<string, unknown>;
+    delete doc.runtime;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors.some((e) => /startedScripted must be true/.test(e))).toBe(true);
+      expect(result.errors.some((e) => /runtime is required/.test(e))).toBe(true);
     }
   });
 
-  it("preserves the marker across representative condition transitions", () => {
+  it("rejects an unknown runtime identity", () => {
+    const doc = { ...validCheckpoint(), runtime: { kind: "sandbox" } as never };
+    const result = validateCheckpoint(doc);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /runtime\.kind must be/.test(e))).toBe(true);
+    }
+  });
+
+  it("preserves the identity across representative condition transitions", () => {
     const transitions: RunCheckpoint[] = [
-      { ...validCheckpoint(), startedScripted: true, condition: "ready", waiting: null },
+      { ...validCheckpoint(), runtime: { kind: "scripted" }, condition: "ready", waiting: null },
       {
         ...validCheckpoint(),
-        startedScripted: true,
+        runtime: { kind: "scripted" },
         condition: "executing",
         waiting: null,
         attempts: [
-          {
-            attempt: 1,
-            stageIndex: 0,
-            stageId: "spec",
-            startedAt: "2026-07-23T12:15:01.000Z",
+          doneAttempt({
             result: "executing",
             terminalResult: null,
-            logPath: "logs/00-spec-attempt-01.log",
-          },
+            endedAt: undefined,
+            headAfterAttempt: undefined,
+          }),
         ],
       },
       {
         ...validCheckpoint(),
-        startedScripted: true,
+        runtime: { kind: "scripted" },
         condition: "waiting-for-user",
         waiting: governedBy({
           kind: "outcome-blocked",
@@ -833,74 +860,354 @@ describe("validateCheckpoint — scripted start marker (AC-5.1, AC-5.2)", () => 
           candidateLine: "Outcome: BLOCKED — x",
         }),
         attempts: [
-          {
-            attempt: 1,
-            stageIndex: 0,
-            stageId: "spec",
-            startedAt: "2026-07-23T12:15:01.000Z",
-            endedAt: "2026-07-23T12:15:30.000Z",
-            result: "waiting",
+          doneAttempt({
             terminalResult: {
               token: "BLOCKED",
               candidateLine: "Outcome: BLOCKED — x",
               detail: "blocked",
             },
-            logPath: "logs/00-spec-attempt-01.log",
-          },
+          }),
         ],
       },
       {
         ...validCheckpoint(),
-        startedScripted: true,
+        runtime: { kind: "scripted" },
         condition: "waiting-for-user",
         waiting: governedBy({
           kind: "interrupted",
           message: "The harness attempt was interrupted by a signal.",
         }),
-        attempts: [
-          {
-            attempt: 1,
-            stageIndex: 0,
-            stageId: "spec",
-            startedAt: "2026-07-23T12:15:01.000Z",
-            endedAt: "2026-07-23T12:15:30.000Z",
-            result: "interrupted",
-            terminalResult: null,
-            logPath: "logs/00-spec-attempt-01.log",
-          },
-        ],
+        attempts: [doneAttempt({ result: "interrupted", terminalResult: null })],
       },
       {
         ...validCheckpoint(),
-        startedScripted: true,
+        runtime: { kind: "scripted" },
         condition: "completed",
         stageIndex: 2,
         waiting: null,
-        gitCursor: { stageIndex: 2, observedHead: null },
-        attempts: [
-          {
-            attempt: 1,
-            stageIndex: 0,
-            stageId: "spec",
-            startedAt: "2026-07-23T12:15:01.000Z",
-            endedAt: "2026-07-23T12:15:30.000Z",
-            result: "done",
-            terminalResult: {
-              token: "DONE",
-              candidateLine: "Outcome: DONE",
-              detail: "done",
-            },
-            logPath: "logs/00-spec-attempt-01.log",
-          },
-        ],
+        attempts: [doneAttempt({ result: "done" })],
       },
     ];
     for (const doc of transitions) {
       const result = validateCheckpoint(doc);
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.checkpoint.startedScripted).toBe(true);
+        expect(result.checkpoint.runtime).toEqual({ kind: "scripted" });
       }
+    }
+  });
+});
+
+describe("validateCheckpoint — waiting recovery round trips (AC-2.1)", () => {
+  const variants: Array<{ name: string; checkpoint: () => RunCheckpoint }> = [
+    {
+      name: "retry-stage",
+      checkpoint: () =>
+        withRecovery({ kind: "retry-stage" }, [
+          doneAttempt({
+            terminalResult: {
+              token: "BLOCKED",
+              candidateLine: "Outcome: BLOCKED",
+              detail: "",
+            },
+          }),
+        ]),
+    },
+    {
+      name: "resume-finalized-done",
+      checkpoint: () =>
+        withRecovery(RESUME_FINALIZED, [doneAttempt({ result: "done" })]),
+    },
+    { name: "recheck-stage-contract", checkpoint: () => withRecovery(RECHECK_CONTRACT) },
+    { name: "retry-git-finalization", checkpoint: () => withRecovery(RETRY_GIT) },
+  ];
+
+  for (const variant of variants) {
+    it(`accepts a ${variant.name} recovery and preserves its reasons and data`, () => {
+      const original = variant.checkpoint();
+      const result = validateCheckpoint(JSON.parse(JSON.stringify(original)));
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.checkpoint).toEqual(original);
+      expect(result.checkpoint.waiting?.recovery).toEqual(original.waiting?.recovery);
+      expect(result.checkpoint.waiting?.reasons.map((r) => r.kind)).toEqual([
+        "git-policy-violation",
+        "pending-queues",
+      ]);
+      expect(result.checkpoint.schemaVersion).toBe(0);
+    });
+  }
+
+  it("accepts the same recovery whatever order the diagnostic reasons are in", () => {
+    const doc = withRecovery(RETRY_GIT);
+    const reversed = {
+      ...doc,
+      waiting: {
+        ...doc.waiting!,
+        reasons: [doc.waiting!.reasons[1]!, doc.waiting!.reasons[0]!] as never,
+      },
+    };
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(reversed)));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.checkpoint.waiting?.recovery).toEqual(RETRY_GIT);
+  });
+});
+
+describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", () => {
+  const cases: Array<{ name: string; document: () => unknown; error: RegExp }> = [
+    {
+      name: "a waiting checkpoint with no recovery",
+      document: () => {
+        const doc = withRecovery(RETRY_GIT);
+        delete (doc.waiting as Record<string, unknown>).recovery;
+        return doc;
+      },
+      error: /waiting\.recovery is required/,
+    },
+    {
+      name: "an unknown recovery kind",
+      document: () => withRecovery({ kind: "give-up" } as never),
+      error: /waiting\.recovery\.kind must be a known waiting recovery kind/,
+    },
+    {
+      name: "an absent attempt reference",
+      document: () => {
+        const doc = withRecovery(RETRY_GIT);
+        delete (doc.waiting!.recovery as Record<string, unknown>).attempt;
+        return doc;
+      },
+      error: /waiting\.recovery\.attempt is required/,
+    },
+    {
+      name: "a reference to another stage",
+      document: () =>
+        withRecovery({ ...RETRY_GIT, attempt: { stageIndex: 1, attempt: 1 } }),
+      error: /must name the current stage/,
+    },
+    {
+      name: "a reference to an attempt number that was never recorded",
+      document: () =>
+        withRecovery({ ...RETRY_GIT, attempt: { stageIndex: 0, attempt: 2 } }),
+      error: /names no recorded attempt/,
+    },
+    {
+      name: "a referenced attempt whose terminal token is not DONE",
+      document: () =>
+        withRecovery(RETRY_GIT, [
+          doneAttempt({
+            terminalResult: {
+              token: "BLOCKED",
+              candidateLine: "Outcome: BLOCKED",
+              detail: "",
+            },
+          }),
+        ]),
+      error: /terminal token is DONE/,
+    },
+    {
+      name: "a referenced attempt whose result the recovery cannot start from",
+      document: () => withRecovery(RESUME_FINALIZED, [doneAttempt()]),
+      error: /must name an attempt with result "done"/,
+    },
+    {
+      name: "a queue resolution the current stage does not declare",
+      document: () =>
+        withRecovery({ ...RESUME_FINALIZED, queueResolution: "advance" }, [
+          doneAttempt({ result: "done" }),
+        ]),
+      error: /does not match the current stage's snapshotted resolution/,
+    },
+    {
+      name: "an attempt with no start HEAD",
+      document: () => {
+        const doc = withRecovery(RETRY_GIT);
+        delete (doc.attempts[0] as Record<string, unknown>).headAtStart;
+        return doc;
+      },
+      error: /attempts\[0\]\.headAtStart must be a commit string/,
+    },
+    {
+      name: "a settled attempt with no post-attempt HEAD",
+      document: () => {
+        const doc = withRecovery(RETRY_GIT);
+        delete (doc.attempts[0] as Record<string, unknown>).headAfterAttempt;
+        return doc;
+      },
+      error: /attempts\[0\]\.headAfterAttempt must be a commit string on a settled attempt/,
+    },
+    {
+      name: "a recheck-stage-contract recovery with no pause-time HEAD",
+      document: () => {
+        const doc = withRecovery(RECHECK_CONTRACT);
+        delete (doc.waiting!.recovery as Record<string, unknown>).pausedAtHead;
+        return doc;
+      },
+      error: /pausedAtHead must be a commit string on a "recheck-stage-contract" recovery/,
+    },
+    {
+      name: "a retry-git-finalization recovery with no pause-time HEAD",
+      document: () => {
+        const doc = withRecovery(RETRY_GIT);
+        delete (doc.waiting!.recovery as Record<string, unknown>).pausedAtHead;
+        return doc;
+      },
+      error: /pausedAtHead must be a commit string on a "retry-git-finalization" recovery/,
+    },
+    {
+      name: "a pause-time HEAD on a retry-stage recovery",
+      document: () =>
+        withRecovery({ kind: "retry-stage", pausedAtHead: "ccc333" } as never),
+      error: /pausedAtHead is not permitted on a "retry-stage" recovery/,
+    },
+    {
+      name: "a pause-time HEAD on a resume-finalized-done recovery",
+      document: () =>
+        withRecovery({ ...RESUME_FINALIZED, pausedAtHead: "ccc333" } as never, [
+          doneAttempt({ result: "done" }),
+        ]),
+      error: /pausedAtHead is not permitted on a "resume-finalized-done" recovery/,
+    },
+    {
+      name: "an attempt reference on a retry-stage recovery",
+      document: () =>
+        withRecovery({
+          kind: "retry-stage",
+          attempt: { stageIndex: 0, attempt: 1 },
+        } as never),
+      error: /attempt is not permitted on a "retry-stage" recovery/,
+    },
+    {
+      name: "a recovery on a checkpoint that is not waiting",
+      document: () => ({ ...withRecovery(RETRY_GIT), condition: "ready", stageIndex: 1 }),
+      error: /requires waiting to be null/,
+    },
+    {
+      name: "a waiting checkpoint with no diagnostic reason",
+      document: () => {
+        const doc = withRecovery(RETRY_GIT);
+        (doc.waiting as Record<string, unknown>).reasons = [];
+        return doc;
+      },
+      error: /reasons must be a non-empty array/,
+    },
+  ];
+
+  for (const testCase of cases) {
+    it(`rejects ${testCase.name}`, () => {
+      const result = validateCheckpoint(
+        JSON.parse(JSON.stringify(testCase.document())),
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.errors.some((e) => testCase.error.test(e))).toBe(true);
+      }
+    });
+  }
+
+  it("permits a missing post-attempt HEAD only while the attempt is executing", () => {
+    const executing: RunCheckpoint = {
+      ...validCheckpoint(),
+      condition: "executing",
+      waiting: null,
+      attempts: [
+        doneAttempt({
+          result: "executing",
+          terminalResult: null,
+          endedAt: undefined,
+          headAfterAttempt: undefined,
+        }),
+      ],
+    };
+    expect(validateCheckpoint(JSON.parse(JSON.stringify(executing))).ok).toBe(true);
+
+    const settledLive = validateCheckpoint(
+      JSON.parse(
+        JSON.stringify({
+          ...executing,
+          attempts: [
+            doneAttempt({
+              result: "executing",
+              terminalResult: null,
+              endedAt: undefined,
+            }),
+          ],
+        }),
+      ),
+    );
+    expect(settledLive.ok).toBe(false);
+    if (!settledLive.ok) {
+      expect(
+        settledLive.errors.some((e) =>
+          /headAfterAttempt is not permitted while the attempt is executing/.test(e),
+        ),
+      ).toBe(true);
+    }
+  });
+});
+
+describe("validateCheckpoint — recovery regressions the audit found accepted (AC-2.3, AC-2.6)", () => {
+  it("rejects a saved-DONE recovery whose referenced attempt reported BLOCKED", () => {
+    const doc = withRecovery(RESUME_FINALIZED, [
+      doneAttempt({
+        result: "waiting",
+        terminalResult: {
+          token: "BLOCKED",
+          candidateLine: "Outcome: BLOCKED — needs a human",
+          detail: "needs a human",
+        },
+      }),
+    ]);
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /terminal token is DONE/.test(e))).toBe(true);
+      expect(
+        result.errors.some((e) => /must name an attempt with result "done"/.test(e)),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects a finalization recovery on a checkpoint with no attempt at all", () => {
+    const doc = withRecovery(RETRY_GIT, []);
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /names no recorded attempt/.test(e))).toBe(true);
+    }
+  });
+
+  it("rejects a document written against the previous version-zero shape", () => {
+    // What makes such a document old is what it does not carry: the runtime
+    // identity, the pause's recovery, and the attempt's own HEAD evidence.
+    const old = { ...validCheckpoint() } as Record<string, unknown>;
+    delete old.runtime;
+    delete (old.waiting as Record<string, unknown>).recovery;
+    delete (
+      (old.attempts as Record<string, unknown>[])[0] as Record<string, unknown>
+    ).headAtStart;
+
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(old)));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => /runtime is required/.test(e))).toBe(true);
+      expect(result.errors.some((e) => /waiting\.recovery is required/.test(e))).toBe(
+        true,
+      );
+      expect(
+        result.errors.some((e) => /attempts\[0\]\.headAtStart/.test(e)),
+      ).toBe(true);
+      expect(result.errors.some((e) => /migration/i.test(e))).toBe(false);
+    }
+  });
+
+  it("carries no stage-global Git cursor in the current shape", () => {
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(validCheckpoint())));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(Object.keys(result.checkpoint).filter((k) => /cursor/i.test(k))).toEqual(
+        [],
+      );
+      expect(result.checkpoint.schemaVersion).toBe(0);
     }
   });
 });

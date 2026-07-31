@@ -502,12 +502,11 @@ export async function runCommand(
           ...(fromStage !== null ? { fromStage } : {}),
           stages,
           observedHarnessVersions,
+          runtime: { kind: useScripted ? "scripted" : "real" },
           stageIndex: 0,
           condition: "ready",
           attempts: [],
           waiting: null,
-          gitCursor: { stageIndex: 0, observedHead: null },
-          ...(useScripted ? { startedScripted: true as const } : {}),
         };
         try {
           await writeCheckpoint(created.runDir, checkpoint);

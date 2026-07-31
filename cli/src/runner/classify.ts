@@ -43,8 +43,8 @@ export type ClassificationInput = {
  * DONE-finalized queue pause whose attempt records `done`.
  *
  * A pause lists every reason that held, in precedence order, so `reasons[0]` is
- * the governing reason the resume path dispatches on. A stage that stopped for
- * its own result while a queue reason also held reports both.
+ * the one that leads the rendered pause. A stage that stopped for its own result
+ * while a queue reason also held reports both.
  */
 export type Classification =
   | { action: "advance" }

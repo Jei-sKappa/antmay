@@ -65,11 +65,11 @@ function checkpoint(): RunCheckpoint {
       },
     ],
     observedHarnessVersions: { codex: "codex 1.0.0" },
+    runtime: { kind: "real" },
     stageIndex: 0,
     condition: "ready",
     attempts: [],
     waiting: null,
-    gitCursor: { stageIndex: 0, observedHead: null },
   };
 }
 

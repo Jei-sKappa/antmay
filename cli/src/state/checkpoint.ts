@@ -94,41 +94,79 @@ export type WaitingReason = {
    * describe the failure without consulting a live pipeline document.
    */
   contract?: ArtifactMismatch[];
-  /**
-   * The `HEAD` the attempt this pause preserves started from. A
-   * `stage-contract-violation` stops the run before the stage's Git boundary is
-   * ever judged, so it is the later finalization that applies the stage's
-   * `HEAD` rule, and this is the only value that rule may be measured against:
-   * it isolates the movement the preserved attempt itself caused from every
-   * earlier attempt of the stage and every commit a human made across an
-   * earlier pause.
-   */
-  headAtAttemptStart?: string;
 };
 
 /**
- * Every reason one pause stopped for, in precedence order and never empty: a
- * pause always has at least the reason that governs it, which is `[0]`.
+ * Every reason one pause stopped for, never empty and ordered by precedence so
+ * the most explanatory one reads first. The order is presentation only: what a
+ * resume does is decided by the pause's `recovery` alone.
  */
 export type WaitingReasons = [WaitingReason, ...WaitingReason[]];
 
 /**
- * The single waiting object a `waiting-for-user` checkpoint carries. Everything
- * about why the run stopped lives in `reasons`; `nextAction` is the one thing
- * that belongs to the run as a whole rather than to any single reason.
+ * Which harness implementation a run contacts. Fixed when the run is allocated
+ * and immutable for its whole life, so a later invocation cannot move an
+ * existing run between the real provider and the developer's scripted harness.
+ */
+export type HarnessRuntimeIdentity = { kind: "real" } | { kind: "scripted" };
+
+/**
+ * One exact attempt in the history: the stage it belongs to and its one-based
+ * number within that stage. Both halves are required, so a recovery can never
+ * be satisfied by "whichever attempt happens to be last".
+ */
+export type AttemptReference = { stageIndex: number; attempt: number };
+
+/**
+ * What resume does with a paused run. Exactly one variant is recorded on every
+ * pause, and it is the only thing a recovery is selected from.
+ *
+ * - `retry-stage` launches a new attempt at the current stage once the
+ *   applicable gates pass. It claims nothing about any earlier attempt.
+ * - `resume-finalized-done` names an attempt that is already finalized `done`
+ *   and carries the queue resolution its stage declared, so releasing the queue
+ *   applies that resolution without touching the attempt again.
+ * - `recheck-stage-contract` names a `DONE` attempt whose promised artifact
+ *   state was not accepted. Reinspecting the promise is what chooses between
+ *   finalizing it, retrying the stage, and staying paused.
+ * - `retry-git-finalization` names a `DONE` attempt whose promise already holds
+ *   and whose Git boundary still has to succeed; it retries that boundary
+ *   without invoking the harness.
+ *
+ * `pausedAtHead` is the pause's own latest `HEAD` observation. The two variants
+ * that may finalize a boundary after a human worked across the pause carry it,
+ * because they alone need to tell that movement apart from the attempt's own;
+ * the other two must not, having nothing to measure it against.
+ */
+export type WaitingRecovery =
+  | { kind: "retry-stage" }
+  | {
+      kind: "resume-finalized-done";
+      attempt: AttemptReference;
+      queueResolution: "advance" | "rerun";
+    }
+  | {
+      kind: "recheck-stage-contract";
+      attempt: AttemptReference;
+      pausedAtHead: string;
+    }
+  | {
+      kind: "retry-git-finalization";
+      attempt: AttemptReference;
+      pausedAtHead: string;
+    };
+
+/**
+ * The single waiting object a `waiting-for-user` checkpoint carries. `reasons`
+ * explains everything observed at the pause, `recovery` states what resume may
+ * do about it, and `nextAction` is the one instruction that belongs to the run
+ * as a whole rather than to any single reason.
  */
 export type WaitingInfo = {
   reasons: WaitingReasons;
+  recovery: WaitingRecovery;
   nextAction?: string;
 };
-
-/**
- * The reason that decides how `resume` behaves: always the first one recorded,
- * because `reasons` is written in precedence order.
- */
-export function governingReason(waiting: WaitingInfo): WaitingReason {
-  return waiting.reasons[0];
-}
 
 /**
  * The parsed terminal text result of an attempt. `token` is the recognized
@@ -144,6 +182,14 @@ export type TerminalResult = {
 
 /**
  * One entry in the ordered attempt history.
+ *
+ * The two `HEAD` observations bind Git evidence to the attempt that produced it:
+ * `headAtStart` is the tip the attempt was launched from, and
+ * `headAfterAttempt` the tip once it settled. A stage's `headMayChange` rule is
+ * judged across exactly that pair, which isolates the movement this attempt
+ * caused from every earlier attempt of the stage and from anything a human did
+ * across a pause. An attempt still executing has not reached its second
+ * observation yet and carries none.
  */
 export type AttemptRecord = {
   attempt: number;
@@ -157,6 +203,8 @@ export type AttemptRecord = {
   failure?: { kind: string; message: string };
   /** Opaque provider session ID when one was captured for this attempt. */
   agentSession?: { id: string };
+  headAtStart: string;
+  headAfterAttempt?: string;
   logPath: string;
 };
 
@@ -209,16 +257,11 @@ export type RunCheckpoint = {
   fromStage?: CatalogStageId;
   stages: SnapshottedStage[];
   observedHarnessVersions: Partial<Record<HarnessId, string>>;
+  runtime: HarnessRuntimeIdentity;
   stageIndex: number;
   condition: RunCondition;
   attempts: AttemptRecord[];
   waiting: WaitingInfo | null;
-  gitCursor: {
-    stageIndex: number;
-    observedHead: string | null;
-  };
-  /** Present only when the run started in scripted test harness mode. */
-  startedScripted?: true;
 };
 
 /**
@@ -591,15 +634,109 @@ function validateAttempt(value: unknown, label: string, errors: string[]): void 
       errors.push(`${label}.agentSession.id must be a non-empty string.`);
     }
   }
+  if (!isNonEmptyString(value.headAtStart)) {
+    errors.push(`${label}.headAtStart must be a commit string.`);
+  }
+  if (value.result === "executing") {
+    if (value.headAfterAttempt !== undefined) {
+      errors.push(
+        `${label}.headAfterAttempt is not permitted while the attempt is executing.`,
+      );
+    }
+  } else if (!isNonEmptyString(value.headAfterAttempt)) {
+    errors.push(
+      `${label}.headAfterAttempt must be a commit string on a settled attempt.`,
+    );
+  }
   if (!isNormalizedRelPosix(value.logPath)) {
     errors.push(`${label}.logPath must be a normalized run-relative POSIX path.`);
   }
 }
 
+function validateAttemptReference(
+  value: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (!isPlainObject(value)) {
+    errors.push(`${label} must be an object naming a stage index and attempt.`);
+    return;
+  }
+  if (
+    typeof value.stageIndex !== "number" ||
+    !Number.isInteger(value.stageIndex) ||
+    value.stageIndex < 0
+  ) {
+    errors.push(`${label}.stageIndex must be a non-negative integer.`);
+  }
+  if (
+    typeof value.attempt !== "number" ||
+    !Number.isInteger(value.attempt) ||
+    value.attempt <= 0
+  ) {
+    errors.push(`${label}.attempt must be a positive integer.`);
+  }
+}
+
 /**
- * Validate the recorded reason list. It must be non-empty — the first entry is
- * the reason that governs the resume path — and each entry must name a known
- * kind and carry a complete message.
+ * Validate the pause's recovery value for shape alone: its kind, and for each
+ * kind exactly the evidence that kind acts on — no more and no less. Which
+ * attempt the reference resolves to is a cross-field question, checked once the
+ * attempt history itself is known to be sound.
+ */
+function validateWaitingRecovery(value: unknown, errors: string[]): void {
+  const label = "waiting.recovery";
+  if (!isPlainObject(value)) {
+    errors.push(`${label} is required and must be an object.`);
+    return;
+  }
+  const kind = value.kind;
+  const requireReference = (): void => {
+    if (value.attempt === undefined) {
+      errors.push(`${label}.attempt is required on a "${String(kind)}" recovery.`);
+      return;
+    }
+    validateAttemptReference(value.attempt, `${label}.attempt`, errors);
+  };
+  const forbidPausedHead = (): void => {
+    if (value.pausedAtHead !== undefined) {
+      errors.push(
+        `${label}.pausedAtHead is not permitted on a "${String(kind)}" recovery.`,
+      );
+    }
+  };
+
+  if (kind === "retry-stage") {
+    if (value.attempt !== undefined) {
+      errors.push(`${label}.attempt is not permitted on a "retry-stage" recovery.`);
+    }
+    forbidPausedHead();
+    return;
+  }
+  if (kind === "resume-finalized-done") {
+    requireReference();
+    if (value.queueResolution !== "advance" && value.queueResolution !== "rerun") {
+      errors.push(`${label}.queueResolution must be "advance" or "rerun".`);
+    }
+    forbidPausedHead();
+    return;
+  }
+  if (kind === "recheck-stage-contract" || kind === "retry-git-finalization") {
+    requireReference();
+    if (!isNonEmptyString(value.pausedAtHead)) {
+      errors.push(
+        `${label}.pausedAtHead must be a commit string on a "${kind}" recovery.`,
+      );
+    }
+    return;
+  }
+  errors.push(`${label}.kind must be a known waiting recovery kind.`);
+}
+
+/**
+ * Validate the recorded reason list. It must be non-empty — a pause always has
+ * something to explain — and each entry must name a known kind and carry a
+ * complete message.
  */
 function validateWaitingReasons(value: unknown, errors: string[]): void {
   if (!Array.isArray(value) || value.length === 0) {
@@ -635,22 +772,6 @@ function validateWaitingReasons(value: unknown, errors: string[]): void {
         ),
       );
     }
-    if (
-      entry.headAtAttemptStart !== undefined &&
-      !isNonEmptyString(entry.headAtAttemptStart)
-    ) {
-      errors.push(`${label}.headAtAttemptStart must be a commit string.`);
-    } else if (
-      entry.kind === "stage-contract-violation" &&
-      entry.headAtAttemptStart === undefined
-    ) {
-      // The finalization this pause exists to enable judges the stage's HEAD
-      // rule against the attempt's own start, so a contract pause that does not
-      // carry one is not recoverable.
-      errors.push(
-        `${label}.headAtAttemptStart is required on a stage-contract-violation reason.`,
-      );
-    }
     if (entry.diagnostics !== undefined) {
       const d = entry.diagnostics;
       if (!isPlainObject(d)) {
@@ -675,6 +796,22 @@ function validateWaiting(value: unknown, errors: string[]): void {
     errors.push(`waiting.nextAction must be a non-empty string.`);
   }
   validateWaitingReasons(value.reasons, errors);
+  validateWaitingRecovery(value.recovery, errors);
+}
+
+/**
+ * Validate the run's harness runtime identity. It is required on every
+ * checkpoint and has exactly two legal meanings, so an unrecognized or absent
+ * one is rejected rather than defaulted.
+ */
+function validateRuntime(value: unknown, errors: string[]): void {
+  if (!isPlainObject(value)) {
+    errors.push(`runtime is required and must be an object.`);
+    return;
+  }
+  if (value.kind !== "real" && value.kind !== "scripted") {
+    errors.push(`runtime.kind must be "real" or "scripted".`);
+  }
 }
 
 /**
@@ -829,6 +966,8 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     }
   }
 
+  validateRuntime(doc.runtime, errors);
+
   let stageIndexValid = false;
   if (
     typeof doc.stageIndex !== "number" ||
@@ -868,36 +1007,6 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     errors.push(`condition "${condition}" requires waiting to be null.`);
   }
 
-  if ("startedScripted" in doc) {
-    if (doc.startedScripted !== true) {
-      errors.push(`startedScripted must be true when present.`);
-    }
-  }
-
-  // gitCursor.
-  let cursorIndex: number | undefined;
-  let cursorHeadObserved = false;
-  if (!isPlainObject(doc.gitCursor)) {
-    errors.push(`gitCursor must be an object.`);
-  } else {
-    const gc = doc.gitCursor;
-    if (
-      typeof gc.stageIndex !== "number" ||
-      !Number.isInteger(gc.stageIndex) ||
-      gc.stageIndex < 0
-    ) {
-      errors.push(`gitCursor.stageIndex must be a non-negative integer.`);
-    } else {
-      cursorIndex = gc.stageIndex;
-    }
-    const observed = gc.observedHead;
-    if (observed !== null && !isNonEmptyString(observed)) {
-      errors.push(`gitCursor.observedHead must be a commit string or null.`);
-    } else if (isNonEmptyString(observed)) {
-      cursorHeadObserved = true;
-    }
-  }
-
   // Bail before cross-field invariants if anything structural failed, so the
   // invariants can trust the shapes they inspect.
   if (errors.length > 0) {
@@ -935,13 +1044,6 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
   if (checkpoint.workspace.path !== checkpoint.workspace.execution.cwd) {
     errors.push(
       `workspace.path must equal workspace.execution.cwd for a current-checkout workspace.`,
-    );
-  }
-
-  // gitCursor names the current stage when its HEAD observation is populated.
-  if (cursorHeadObserved && cursorIndex !== checkpoint.stageIndex) {
-    errors.push(
-      `gitCursor.stageIndex (${cursorIndex}) must name the current stage (${checkpoint.stageIndex}) when gitCursor.observedHead is set.`,
     );
   }
 
@@ -997,6 +1099,56 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     errors.push(
       `a "${condition}" run must have no attempt with result "executing".`,
     );
+  }
+
+  // The pause's recovery must resolve to the exact attempt it acts on, in the
+  // exact state that action requires. Nothing here falls back to the last
+  // attempt: a reference that names no recorded attempt, an attempt of another
+  // stage, a non-DONE verdict, or a result the action cannot start from all make
+  // the document unrecoverable rather than approximately recoverable.
+  const recovery = checkpoint.waiting?.recovery;
+  if (recovery !== undefined && recovery.kind !== "retry-stage") {
+    const reference = recovery.attempt;
+    if (reference.stageIndex !== checkpoint.stageIndex) {
+      errors.push(
+        `waiting.recovery.attempt.stageIndex (${reference.stageIndex}) must name the current stage (${checkpoint.stageIndex}).`,
+      );
+    } else {
+      const referenced = checkpoint.attempts.find(
+        (attempt) =>
+          attempt.stageIndex === reference.stageIndex &&
+          attempt.attempt === reference.attempt,
+      );
+      if (referenced === undefined) {
+        errors.push(
+          `waiting.recovery.attempt names no recorded attempt (stage ${reference.stageIndex}, attempt ${reference.attempt}).`,
+        );
+      } else {
+        if (referenced.terminalResult?.token !== "DONE") {
+          errors.push(
+            `waiting.recovery.attempt must name an attempt whose terminal token is DONE.`,
+          );
+        }
+        const requiredResult =
+          recovery.kind === "resume-finalized-done" ? "done" : "waiting";
+        if (referenced.result !== requiredResult) {
+          errors.push(
+            `waiting.recovery.attempt must name an attempt with result "${requiredResult}" on a "${recovery.kind}" recovery, not "${referenced.result}".`,
+          );
+        }
+      }
+    }
+    if (recovery.kind === "resume-finalized-done") {
+      const current = checkpoint.stages[checkpoint.stageIndex];
+      if (
+        current !== undefined &&
+        recovery.queueResolution !== current.queueResolution
+      ) {
+        errors.push(
+          `waiting.recovery.queueResolution "${recovery.queueResolution}" does not match the current stage's snapshotted resolution "${current.queueResolution}".`,
+        );
+      }
+    }
   }
 
   if (errors.length > 0) {
