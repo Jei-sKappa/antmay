@@ -17,19 +17,25 @@ import type {
   StageTarget,
 } from "../pipeline/types.js";
 import type { PartialArtifactState } from "../thread/artifacts.js";
-import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint.js";
-import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
+import type {
+  AttemptRecord,
+  RunCheckpoint,
+  SnapshottedStage,
+} from "../state/checkpoint.js";
+import { readCheckpoint } from "../state/checkpoint.js";
+import { writeCheckpoint } from "../state/persist.js";
 import {
   createFakeHarness,
+  type FakeHarness,
   type FakeHarnessStep,
 } from "../test-helpers/fake-harness.js";
-import { governedBy } from "../test-helpers/waiting.js";
+import { governedBy, reordered } from "../test-helpers/waiting.js";
 import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
 import { SignalInterruption } from "../runner/signals.js";
-import type { ExecutionContext } from "./engine.js";
+import type { ExecutionContext, ExecutionResult } from "./engine.js";
 import { executeEngine } from "./engine.js";
 
 /**
@@ -309,6 +315,586 @@ async function lastSubject(fixture: RepoFixture): Promise<string> {
   const result = await fixture.git(["log", "-1", "--pretty=%s"]);
   return result.stdout.trim();
 }
+
+/**
+ * A stage that promises a spec and commits exactly that file. A `DONE` attempt
+ * leaving no `spec.md` therefore pauses on the stage contract with the completed
+ * attempt preserved, which is the only way into a `recheck-stage-contract`
+ * recovery.
+ */
+const promisingStage: SyntheticStage = {
+  id: "spec",
+  skill: "promise-skill",
+  target: { kind: "thread-file", path: "spec.md" },
+  promises: { spec: true },
+  gitPolicy: {
+    headMayChange: false,
+    allowedChanges: [{ kind: "exact-file", threadRelativePath: "spec.md" }],
+    changeRequired: true,
+    commitSubjectTemplate: "chore(<thread-folder>): promise",
+  },
+  queueResolution: "advance",
+};
+
+const BLOCKED_OUTCOME: FakeHarnessStep = {
+  outcome: { kind: "completed", finalText: "Outcome: BLOCKED — needs a human" },
+};
+
+/** Every attempt this stage recorded, so a case can prove none was added. */
+function attemptsAt(cp: RunCheckpoint, stageIndex: number): AttemptRecord[] {
+  return cp.attempts.filter((attempt) => attempt.stageIndex === stageIndex);
+}
+
+/**
+ * Drive one run from a freshly allocated cursor, the way `run` does, so the state
+ * a later resume reads is one the engine itself wrote and the validator accepts.
+ */
+async function allocatedRun(
+  fixture: RepoFixture,
+  runDir: string,
+  stages: SyntheticStage[],
+  steps: FakeHarnessStep[],
+): Promise<ExecutionResult> {
+  return executeEngine(
+    makeContext(buildCheckpoint(fixture, stages), runDir, createFakeHarness(steps)),
+  );
+}
+
+/**
+ * Hand the run directory's own durable checkpoint back to the engine the way
+ * `resume` does: nothing of the first invocation survives except what it wrote.
+ * `checkpoint` substitutes a variant of that document for a case that is about the
+ * document rather than about the run.
+ */
+async function resumeFromDisk(
+  runDir: string,
+  steps: FakeHarnessStep[],
+  overrides: {
+    checkpoint?: RunCheckpoint;
+    display?: ExecutionDisplay;
+    signal?: AbortSignal;
+    persistCheckpoint?: ExecutionContext["persistCheckpoint"];
+  } = {},
+): Promise<{ result: ExecutionResult; harness: FakeHarness; cursor: RunCheckpoint }> {
+  const cursor = overrides.checkpoint ?? (await loadCheckpoint(runDir));
+  const harness = createFakeHarness(steps);
+  const result = await executeEngine(
+    resumedFrom(
+      makeContext(
+        cursor,
+        runDir,
+        harness,
+        overrides.display,
+        overrides.signal,
+        overrides.persistCheckpoint,
+      ),
+    ),
+  );
+  return { result, harness, cursor };
+}
+
+describe.concurrent("executeEngine — abandoned executing recovery (AC-1.4, AC-15.4)", () => {
+  it("settles the exact abandoned attempt, then retries its stage", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [cleanStage], [BLOCKED_OUTCOME]);
+
+    // Rewrite the pause into the state an executor that vanished mid-attempt
+    // leaves: the attempt is live, so it carries no ending and no post-attempt
+    // observation yet.
+    const paused = await loadCheckpoint(runDir);
+    const live = { ...paused.attempts[0]! } as Record<string, unknown>;
+    live.result = "executing";
+    live.terminalResult = null;
+    delete live.endedAt;
+    delete live.failure;
+    delete live.headAfterAttempt;
+    await writeCheckpoint(runDir, {
+      ...paused,
+      condition: "executing",
+      waiting: null,
+      attempts: [live as unknown as AttemptRecord],
+    });
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    const cp = await loadCheckpoint(runDir);
+    const attempts = attemptsAt(cp, 0);
+    expect(attempts.map((a) => a.result)).toEqual(["interrupted", "done"]);
+    // The abandoned attempt settles here, so this is where it acquires the
+    // post-attempt observation every settled attempt carries.
+    expect(attempts[0]?.headAfterAttempt).toBe(await readHead(fixture.root));
+    expect(attempts[0]?.failure?.message).toContain("manual-recovery");
+    expect(harness.calls.length).toBe(1);
+  });
+
+  it("reports a fatal checkpoint error and launches nothing when that recovery cannot persist", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [cleanStage], [BLOCKED_OUTCOME]);
+    const paused = await loadCheckpoint(runDir);
+    const live = { ...paused.attempts[0]! } as Record<string, unknown>;
+    live.result = "executing";
+    live.terminalResult = null;
+    delete live.endedAt;
+    delete live.failure;
+    delete live.headAfterAttempt;
+    const executing: RunCheckpoint = {
+      ...paused,
+      condition: "executing",
+      waiting: null,
+      attempts: [live as unknown as AttemptRecord],
+    };
+    await writeCheckpoint(runDir, executing);
+
+    const rec = recorder();
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      display: rec.display,
+      persistCheckpoint: async () => {
+        throw new Error("state root is read-only");
+      },
+    });
+
+    expect(result).toEqual({
+      kind: "fatal-checkpoint",
+      message: "state root is read-only",
+    });
+    expect(rec.runFailed.length).toBe(1);
+    expect(harness.calls.length).toBe(0);
+    expect((await loadCheckpoint(runDir)).condition).toBe("executing");
+  });
+});
+
+describe.concurrent("executeEngine — recovery-sensitive worktree rule (AC-1.4)", () => {
+  it("refuses a dirty worktree for a retry-stage pause without touching the cursor", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [cleanStage], [BLOCKED_OUTCOME]);
+    const before = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+    await fs.writeFile(path.join(fixture.root, "stray.txt"), "dirty\n", "utf8");
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result.kind).toBe("refused");
+    expect(result.kind === "refused" && result.message).toContain("is not clean");
+    expect(harness.calls.length).toBe(0);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(before);
+  });
+});
+
+describe.concurrent("executeEngine — queue gates on a resumed pause (AC-1.4, AC-3.1)", () => {
+  it("leaves a held pause byte-for-byte unchanged while a bundle is still there", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    let pendingRel = "";
+    await allocatedRun(fixture, runDir, [cleanStage], [
+      {
+        before: async () => {
+          pendingRel = await dropPendingDecision(fixture, "d1.md");
+        },
+        outcome: BLOCKED_OUTCOME.outcome,
+      },
+    ]);
+    const before = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+
+    const rec = recorder();
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      display: rec.display,
+    });
+
+    expect(result.kind).toBe("paused");
+    expect(harness.calls.length).toBe(0);
+    // The printed list comes from a fresh scan; the durable pause is untouched.
+    expect(rec.runPaused.length).toBe(1);
+    expect(
+      rec.runPaused[0]?.waiting.reasons.find((r) => r.kind === "pending-queues")
+        ?.pendingFiles,
+    ).toEqual([pendingRel]);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(before);
+  });
+
+  it("releases the same stage for a fresh attempt once the bundle is gone", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const pendingRel = path.join(
+      fixture.threadPath as string,
+      ".pending-decisions",
+      "d1.md",
+    );
+    await allocatedRun(fixture, runDir, [cleanStage], [
+      {
+        before: async () => {
+          await dropPendingDecision(fixture, "d1.md");
+        },
+        outcome: BLOCKED_OUTCOME.outcome,
+      },
+    ]);
+    await fs.rm(pendingRel);
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.length).toBe(1);
+    expect(attemptsAt(await loadCheckpoint(runDir), 0).length).toBe(2);
+  });
+
+  it("replaces a retry-stage pause's reasons with a gate-error, keeping its recovery", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [cleanStage], [BLOCKED_OUTCOME]);
+    // A regular file where a queue directory belongs makes the scan fail with
+    // ENOTDIR. It is ignored so the worktree stays clean.
+    await fs.appendFile(
+      path.join(fixture.root, ".gitignore"),
+      ".pending-reviews\n",
+      "utf8",
+    );
+    await fixture.git(["add", "--", ".gitignore"]);
+    await fixture.git(["commit", "-m", "chore: ignore the queue path"]);
+    await fs.writeFile(
+      path.join(fixture.threadPath as string, ".pending-reviews"),
+      "not a directory",
+      "utf8",
+    );
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result.kind).toBe("paused");
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons.map((r) => r.kind)).toEqual(["gate-error"]);
+    // What the pause explains has moved on; what a later resume may do has not.
+    expect(cp.waiting?.recovery).toEqual({ kind: "retry-stage" });
+  });
+
+  it("keeps a preserved DONE's own kind and recovery when the scan fails again", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [alphaStage], [
+      {
+        before: async () => {
+          await writeThreadFile(fixture, "notes.md", "notes\n");
+          await fs.writeFile(path.join(fixture.root, "stray.txt"), "x", "utf8");
+        },
+      },
+    ]);
+    const paused = await loadCheckpoint(runDir);
+    expect(paused.waiting?.recovery.kind).toBe("retry-git-finalization");
+    const recovery = paused.waiting?.recovery;
+    await fs.writeFile(
+      path.join(fixture.threadPath as string, ".pending-reviews"),
+      "not a directory",
+      "utf8",
+    );
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result.kind).toBe("paused");
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
+    expect(cp.waiting?.recovery).toEqual(recovery);
+  });
+});
+
+describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.2)", () => {
+  /** Pause stage 0 on its promise: the attempt reports DONE and writes nothing. */
+  async function pauseOnContract(
+    fixture: RepoFixture,
+    runDir: string,
+  ): Promise<void> {
+    await allocatedRun(fixture, runDir, [promisingStage], [{}]);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.recovery.kind).toBe("recheck-stage-contract");
+  }
+
+  it("finalizes the preserved DONE from an uncommitted repair, exempt from the clean rule", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnContract(fixture, runDir);
+    // The repair arrives uncommitted, which is exactly what this pause waits for.
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.length).toBe(0);
+    expect(await lastSubject(fixture)).toBe(
+      `chore(${fixture.threadFolder}): promise`,
+    );
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("completed");
+    const attempts = attemptsAt(cp, 0);
+    expect(attempts.length).toBe(1);
+    expect(attempts[0]?.result).toBe("done");
+    // The boundary commit this resume made is the tip the finalized attempt records.
+    expect(attempts[0]?.headAfterAttempt).toBe(await readHead(fixture.root));
+  });
+
+  it("runs the stage again when the promise is still unmet over a clean worktree", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnContract(fixture, runDir);
+
+    const { result, harness } = await resumeFromDisk(runDir, [
+      { before: () => writeThreadFile(fixture, "spec.md", "# Spec\n") },
+    ]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.length).toBe(1);
+    expect(attemptsAt(await loadCheckpoint(runDir), 0).length).toBe(2);
+  });
+
+  it("stays paused on a dirty worktree, restating the unmet promise", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnContract(fixture, runDir);
+    // Uncommitted work that is not the repair: only a human can say what it is.
+    await fs.writeFile(path.join(fixture.root, "stray.txt"), "x", "utf8");
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result.kind).toBe("paused");
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.stageIndex).toBe(0);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].detail).toContain("dirty");
+    expect(cp.waiting?.reasons[0].contract).toEqual([
+      { dimension: "spec", expected: true, observed: false },
+    ]);
+    expect(cp.waiting?.recovery.kind).toBe("recheck-stage-contract");
+    expect(attemptsAt(cp, 0).length).toBe(1);
+  });
+
+  it("stays paused, keeping the saved DONE finalizable, when the thread cannot be read", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnContract(fixture, runDir);
+    const paused = await loadCheckpoint(runDir);
+    const threadAbs = fixture.threadPath as string;
+
+    // A thread nobody can read is also a thread whose queues nobody can scan, and
+    // the queue gate comes first — so the pause is held on the gate and the promise
+    // is never reconsidered. Either way nothing is decided about the promise and
+    // the saved DONE stays exactly as finalizable as it was. The mode is restored
+    // immediately so the fixture's own teardown still works.
+    await fs.chmod(threadAbs, 0o000);
+    let outcome: Awaited<ReturnType<typeof resumeFromDisk>>;
+    try {
+      outcome = await resumeFromDisk(runDir, [{}]);
+    } finally {
+      await fs.chmod(threadAbs, 0o755);
+    }
+
+    expect(outcome.result.kind).toBe("paused");
+    expect(outcome.harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
+    expect(cp.waiting?.recovery).toEqual(paused.waiting?.recovery);
+    expect(attemptsAt(cp, 0).map((a) => a.result)).toEqual(["waiting"]);
+  });
+});
+
+describe.concurrent("executeEngine — finalized DONE resolutions on resume (AC-3.3)", () => {
+  it("advances exactly once, never rerunning the finalized attempt", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [alphaStage], [
+      {
+        before: async () => {
+          await writeThreadFile(fixture, "notes.md", "notes\n");
+          await dropPendingDecision(fixture, "d1.md");
+        },
+      },
+    ]);
+    const paused = await loadCheckpoint(runDir);
+    expect(paused.waiting?.recovery).toMatchObject({
+      kind: "resume-finalized-done",
+      queueResolution: "advance",
+    });
+    await fs.rm(
+      path.join(fixture.threadPath as string, ".pending-decisions", "d1.md"),
+    );
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("completed");
+    expect(attemptsAt(cp, 0).length).toBe(1);
+  });
+
+  it("starts a fresh attempt at the same stage for a declared rerun", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [betaStage], [
+      {
+        before: async () => {
+          await dropPendingDecision(fixture, "d1.md");
+        },
+      },
+    ]);
+    const paused = await loadCheckpoint(runDir);
+    expect(paused.waiting?.recovery).toMatchObject({
+      kind: "resume-finalized-done",
+      queueResolution: "rerun",
+    });
+    await fs.rm(
+      path.join(fixture.threadPath as string, ".pending-decisions", "d1.md"),
+    );
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.length).toBe(1);
+    expect(attemptsAt(await loadCheckpoint(runDir), 0).map((a) => a.result)).toEqual([
+      "done",
+      "done",
+    ]);
+  });
+});
+
+describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4, AC-4.3)", () => {
+  /** Pause stage 0 on its boundary: the attempt also changed a file outside it. */
+  async function pauseOnBoundary(
+    fixture: RepoFixture,
+    runDir: string,
+  ): Promise<void> {
+    await allocatedRun(fixture, runDir, [alphaStage], [
+      {
+        before: async () => {
+          await writeThreadFile(fixture, "notes.md", "notes\n");
+          await fs.writeFile(path.join(fixture.root, "stray.txt"), "x", "utf8");
+        },
+      },
+    ]);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(cp.waiting?.recovery.kind).toBe("retry-git-finalization");
+  }
+
+  it("commits the preserved diff with no harness invocation, then advances", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnBoundary(fixture, runDir);
+    await fs.rm(path.join(fixture.root, "stray.txt"));
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.length).toBe(0);
+    expect(await lastSubject(fixture)).toBe(`chore(${fixture.threadFolder}): alpha`);
+    const cp = await loadCheckpoint(runDir);
+    const attempts = attemptsAt(cp, 0);
+    expect(attempts.length).toBe(1);
+    expect(attempts[0]?.result).toBe("done");
+    expect(attempts[0]?.headAfterAttempt).toBe(await readHead(fixture.root));
+  });
+
+  it("keeps the same attempt finalizable, re-aimed at the fresh tip, when it fails again", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnBoundary(fixture, runDir);
+
+    // The out-of-bounds file is still there, so this boundary refuses exactly as
+    // the run's did.
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result.kind).toBe("paused");
+    expect(harness.calls.length).toBe(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(cp.waiting?.recovery).toEqual({
+      kind: "retry-git-finalization",
+      attempt: { stageIndex: 0, attempt: 1 },
+      pausedAtHead: await readHead(fixture.root),
+    });
+    expect(attemptsAt(cp, 0).length).toBe(1);
+  });
+
+  it("warns that HEAD moved across the pause without calling it a violation", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnBoundary(fixture, runDir);
+    await fs.rm(path.join(fixture.root, "stray.txt"));
+    await fs.writeFile(path.join(fixture.root, "other.txt"), "y\n", "utf8");
+    await fixture.git(["add", "--", "other.txt"]);
+    await fixture.git(["commit", "-m", "chore: unrelated"]);
+
+    const rec = recorder();
+    const { result } = await resumeFromDisk(runDir, [{}], { display: rec.display });
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(rec.warns.join("\n")).toContain("HEAD moved while the run was paused");
+  });
+
+  it("decides identically whichever order the pause's reasons are in (AC-2.4)", async () => {
+    for (const order of ["as-recorded", "reversed"] as const) {
+      const fixture = await newFixture();
+      const runDir = await makeRunDir();
+      // A boundary refusal that also observed a pending bundle, so the pause has
+      // two reasons whose precedence can be swapped.
+      await allocatedRun(fixture, runDir, [alphaStage], [
+        {
+          before: async () => {
+            await writeThreadFile(fixture, "notes.md", "notes\n");
+            await fs.writeFile(path.join(fixture.root, "stray.txt"), "x", "utf8");
+            await dropPendingDecision(fixture, "d1.md");
+          },
+        },
+      ]);
+      const paused = await loadCheckpoint(runDir);
+      expect(paused.waiting?.reasons.length).toBe(2);
+      await fs.rm(path.join(fixture.root, "stray.txt"));
+      await fs.rm(
+        path.join(fixture.threadPath as string, ".pending-decisions", "d1.md"),
+      );
+
+      const cursor: RunCheckpoint =
+        order === "as-recorded"
+          ? paused
+          : { ...paused, waiting: reordered(paused.waiting!) };
+      const { result, harness } = await resumeFromDisk(runDir, [{}], {
+        checkpoint: cursor,
+      });
+
+      expect(result).toEqual({ kind: "completed" });
+      expect(harness.calls.length).toBe(0);
+      expect(await lastSubject(fixture)).toBe(
+        `chore(${fixture.threadFolder}): alpha`,
+      );
+    }
+  });
+});
+
+describe.concurrent("executeEngine — signals at the resumed cursor (AC-17.1)", () => {
+  it("stops at the durable cursor without recovering, mutating, or rendering a pause", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [cleanStage], [BLOCKED_OUTCOME]);
+    const before = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+
+    const controller = new AbortController();
+    controller.abort(new SignalInterruption("SIGINT"));
+    const rec = recorder();
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      display: rec.display,
+      signal: controller.signal,
+    });
+
+    expect(result).toEqual({ kind: "interrupted", signal: "SIGINT" });
+    expect(harness.calls.length).toBe(0);
+    expect(rec.runInterrupted.length).toBe(1);
+    expect(rec.runPaused.length).toBe(0);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(before);
+  });
+});
 
 describe.concurrent("executeEngine — full completion (AC-6.3, AC-13.3)", () => {
   it("runs a synthetic two-stage pipeline to completion with per-stage transitions", async () => {

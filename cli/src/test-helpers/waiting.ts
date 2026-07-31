@@ -1,4 +1,8 @@
-import type { WaitingInfo, WaitingReason } from "../state/checkpoint.js";
+import type {
+  WaitingInfo,
+  WaitingReason,
+  WaitingReasons,
+} from "../state/checkpoint.js";
 
 /**
  * A pause that stopped for one reason alone and expects nothing of an earlier
@@ -11,4 +15,14 @@ export function governedBy(
   extra: Omit<Partial<WaitingInfo>, "reasons"> = {},
 ): WaitingInfo {
   return { recovery: { kind: "retry-stage" }, ...extra, reasons: [reason] };
+}
+
+/**
+ * The same pause with several reasons in the given order, for a case whose whole
+ * point is that the order is presentation: what the run does about the pause comes
+ * from its recovery alone.
+ */
+export function reordered(waiting: WaitingInfo): WaitingInfo {
+  const reversed = [...waiting.reasons].reverse() as WaitingReasons;
+  return { ...waiting, reasons: reversed };
 }

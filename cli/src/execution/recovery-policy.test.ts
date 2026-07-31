@@ -10,7 +10,7 @@ import type {
 } from "../state/checkpoint.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 
-import { decideRecovery } from "./recovery-policy.js";
+import { decideRecovery, holdsPreservedDone } from "./recovery-policy.js";
 import type {
   ContractEvidence,
   GitReadiness,
@@ -139,8 +139,7 @@ describe("decideRecovery — contract recheck table (AC-3.2)", () => {
       decideRecovery(RECHECK, { queues: CLEAR, contract: { kind: "satisfied" } }),
     ).toEqual({
       kind: "finalize-boundary",
-      attempt: REFERENCE,
-      pausedAtHead: "a".repeat(40),
+      recovery: RECHECK,
       context: "after-contract-repair",
     });
   });
@@ -214,8 +213,7 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
   it("requests a boundary retry for the exact referenced attempt", () => {
     expect(decideRecovery(GIT_RETRY, { queues: CLEAR })).toEqual({
       kind: "finalize-boundary",
-      attempt: REFERENCE,
-      pausedAtHead: "b".repeat(40),
+      recovery: GIT_RETRY,
       context: "boundary-retry",
     });
   });
@@ -225,7 +223,7 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
       { kind: "retry-git-finalization", attempt: OTHER_REFERENCE, pausedAtHead: "d".repeat(40) },
       { queues: CLEAR },
     );
-    expect(directive).toMatchObject({ attempt: OTHER_REFERENCE });
+    expect(directive).toMatchObject({ recovery: { attempt: OTHER_REFERENCE } });
   });
 
   it("keeps the same recovery, re-aimed at the fresh tip, when the boundary still fails", () => {
@@ -308,6 +306,40 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
       }
     });
   }
+});
+
+describe("holdsPreservedDone — which pauses hold a saved DONE (AC-3.4)", () => {
+  it("names exactly the two recoveries a finalization can be requested for", () => {
+    expect(EVERY_RECOVERY.filter(holdsPreservedDone).map((r) => r.kind)).toEqual([
+      "recheck-stage-contract",
+      "retry-git-finalization",
+    ]);
+  });
+
+  it("requests a finalization carrying a recovery a failure can be re-decided from", () => {
+    for (const recovery of [RECHECK, GIT_RETRY]) {
+      const requested = decideRecovery(recovery, {
+        queues: CLEAR,
+        contract: SATISFIED,
+      });
+      if (requested.kind !== "finalize-boundary") {
+        throw new Error(`expected ${recovery.kind} to request a finalization`);
+      }
+      // The re-consult is what makes a repeated failure keep the same attempt
+      // finalizable, so the requested recovery has to be one the policy accepts
+      // fresh Git evidence for.
+      expect(holdsPreservedDone(requested.recovery)).toBe(true);
+      expect(
+        decideRecovery(requested.recovery, {
+          queues: CLEAR,
+          git: FINALIZATION_FAILED,
+        }),
+      ).toMatchObject({
+        kind: "remain-paused",
+        recovery: { kind: "retry-git-finalization", attempt: REFERENCE },
+      });
+    }
+  });
 });
 
 describe("recovery-policy module — purity (AC-3.5)", () => {

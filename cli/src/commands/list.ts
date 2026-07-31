@@ -11,7 +11,7 @@ import type {
   AttemptRecord,
   RunCheckpoint,
 } from "../state/checkpoint.js";
-import { readCheckpoint } from "../state/persist.js";
+import { readCheckpoint } from "../state/checkpoint.js";
 import { runsDirectory } from "../state/runs.js";
 
 /**

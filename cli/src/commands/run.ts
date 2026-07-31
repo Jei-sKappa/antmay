@@ -38,9 +38,10 @@ import type {
   RunCheckpoint,
   SnapshottedStage,
 } from "../state/checkpoint.js";
+import { readCheckpoint } from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
-import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
+import { writeCheckpoint } from "../state/persist.js";
 import {
   createRunDirectory,
   generateRunId,
@@ -544,21 +545,23 @@ export async function runCommand(
         signal: controller.signal,
         clock: deps.clock,
       });
-      if (result.kind === "completed") {
-        return EXIT_OK;
+      switch (result.kind) {
+        case "completed":
+          return EXIT_OK;
+        case "paused":
+          return EXIT_WAITING;
+        // A signal interruption maps to the conventional signal exit code, never
+        // to the ordinary durable-pause code, even though a waiting checkpoint
+        // persists.
+        case "interrupted":
+          return signals.exitCodeFor(result.signal);
+        case "refused":
+          return fail(result.message);
+        case "fatal-checkpoint":
+          return fail(
+            `A fatal checkpoint error ended the run before it could pause safely: ${result.message}`,
+          );
       }
-      // A signal interruption maps to the conventional signal exit code, never to
-      // the ordinary durable-pause code, even though a waiting checkpoint persists.
-      if (result.kind === "interrupted") {
-        return signals.exitCodeFor(result.signal);
-      }
-      if (result.kind === "paused") {
-        return EXIT_WAITING;
-      }
-      deps.stderr.write(
-        `A fatal checkpoint error ended the run before it could pause safely: ${result.message}\n`,
-      );
-      return EXIT_FAILURE;
     } finally {
       await lock.release();
     }

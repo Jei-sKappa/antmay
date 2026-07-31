@@ -4,11 +4,22 @@ import type { ExecutionDisplay, StageDisposition } from "../display/types.js";
 import { nativeContinuationCommand } from "../harness/native-session.js";
 import { renderStagePrompt } from "../harness/prompt.js";
 import type { AttemptOutcome, HarnessInvoker } from "../harness/types.js";
-import { readHead } from "../gitops/status.js";
+import { isWorktreeClean, readHead } from "../gitops/status.js";
 import { finalizeGitBoundary } from "../gitops/boundary.js";
+import type {
+  AttemptInterval,
+  GitBoundaryContext,
+} from "../gitops/boundary.js";
+import { decideRecovery, holdsPreservedDone } from "./recovery-policy.js";
+import type {
+  ContractEvidence,
+  QueueEvidence,
+  RecoveryDirective,
+} from "./recovery-policy.js";
 import type { LockHandle } from "../state/lock.js";
 import type {
   AttemptRecord,
+  AttemptReference,
   RunCheckpoint,
   SnapshottedStage,
   TerminalResult,
@@ -31,6 +42,7 @@ import {
   evaluatePromisedState,
   inspectArtifactState,
 } from "../thread/artifacts.js";
+import type { QueueScan } from "../thread/queues.js";
 import { scanPendingQueues } from "../thread/queues.js";
 import type { BoundaryDisposition } from "../runner/classify.js";
 import {
@@ -58,12 +70,21 @@ const RESTORE_PREREQUISITE_NOTE =
   "Fix the thread files shown above and leave the worktree clean, then resume.";
 
 /**
+ * How an attempt that was live when its executor disappeared is settled. The
+ * origin is recorded in the message because nothing else observed the stop.
+ */
+const ABANDONED_ATTEMPT_NOTE =
+  "The attempt was abandoned; the run was recovered on resume after manual " +
+  "stale-lock removal (origin: manual-recovery).";
+
+/**
  * How a command hands one run to the engine. `allocated` carries the initial
- * checkpoint `run` just wrote; `resume` carries the cursor `resume` validated out
- * of an existing run directory. Both name the same thing to the engine — the
- * starting cursor, whose `stageIndex` is where the loop begins — and the variant
- * is what tells the engine which command's ownership the cursor came out of, so
- * entry-specific work has one place to attach to.
+ * checkpoint `run` just wrote, which is durably `ready` with no history behind
+ * it; `resume` carries the checkpoint `resume` validated out of an existing run
+ * directory, verbatim and in whatever condition it was found. Both name the same
+ * thing to the engine — the starting cursor, whose `stageIndex` is where the loop
+ * begins — and the variant is what tells the engine whether the cursor has a
+ * durable past to recover from before that loop may start.
  */
 export type ExecutionEntry =
   | { kind: "allocated"; checkpoint: RunCheckpoint }
@@ -94,14 +115,18 @@ export type ExecutionContext = {
 
 /**
  * The outcome the engine returns to its command caller, which maps it to a
- * process exit code. These four kinds are the whole vocabulary of how execution
+ * process exit code. These five kinds are the whole vocabulary of how execution
  * ends; the durable run state a pause or interruption left behind is read from
  * the checkpoint, never re-described here.
+ *
+ * `refused` is a gate the run cannot pass until a human acts: the engine changed
+ * nothing and the message is the whole of what the caller reports.
  */
 export type ExecutionResult =
   | { kind: "completed" }
   | { kind: "paused"; waiting: WaitingInfo }
   | { kind: "interrupted"; signal: NodeJS.Signals }
+  | { kind: "refused"; message: string }
   | { kind: "fatal-checkpoint"; message: string };
 
 type PersistOutcome = { ok: true } | { ok: false; message: string };
@@ -115,6 +140,92 @@ function replaceLast(
   record: AttemptRecord,
 ): AttemptRecord[] {
   return [...attempts.slice(0, -1), record];
+}
+
+function replaceAttempt(
+  attempts: AttemptRecord[],
+  record: AttemptRecord,
+): AttemptRecord[] {
+  return attempts.map((attempt) =>
+    attempt.stageIndex === record.stageIndex && attempt.attempt === record.attempt
+      ? record
+      : attempt,
+  );
+}
+
+/**
+ * The one attempt a recovery reference names. Checkpoint validation already
+ * proved it exists in the state resuming from it requires, so a caller holding a
+ * validated recovery reads the record itself and never the history's tail.
+ */
+function referencedAttempt(
+  checkpoint: RunCheckpoint,
+  reference: AttemptReference,
+): AttemptRecord {
+  const found = checkpoint.attempts.find(
+    (attempt) =>
+      attempt.stageIndex === reference.stageIndex &&
+      attempt.attempt === reference.attempt,
+  );
+  if (found === undefined) {
+    throw new Error(
+      `the validated checkpoint records no attempt ${reference.attempt} for stage ${reference.stageIndex}`,
+    );
+  }
+  return found;
+}
+
+/**
+ * The interval a preserved attempt's `HEAD` rule is judged across. Checkpoint
+ * validation requires the post-attempt observation on every settled attempt, so
+ * a record without one was never settled and no boundary of it can be judged.
+ */
+function attemptInterval(attempt: AttemptRecord): AttemptInterval {
+  const headAfterAttempt = attempt.headAfterAttempt;
+  if (headAfterAttempt === undefined) {
+    throw new Error(
+      `attempt ${attempt.attempt} of stage ${attempt.stageIndex} records no post-attempt HEAD observation`,
+    );
+  }
+  return { headAtStart: attempt.headAtStart, headAfterAttempt };
+}
+
+function stillUnmetContractMessage(unmet: readonly ArtifactMismatch[]): string {
+  return (
+    "The stage reported DONE and the artifact state it promises is still " +
+    `missing: it promises ${describeContractSide(unmet, "expected")}, but the ` +
+    `thread has ${describeContractSide(unmet, "observed")}.`
+  );
+}
+
+/**
+ * The pause's reasons with the queue reason restated over the files a fresh scan
+ * just found. A pause that recorded no queue reason gains one, because files
+ * present now are the reason this resume cannot proceed and the reader is owed
+ * that list either way.
+ */
+function refreshPendingReason(
+  reasons: WaitingReasons,
+  pendingFiles: string[],
+): WaitingReasons {
+  const message = pendingQueuesMessage(pendingFiles);
+  let replaced = false;
+  const next = reasons.map((reason) => {
+    if (reason.kind !== "pending-queues") return reason;
+    replaced = true;
+    return { ...reason, message, pendingFiles };
+  }) as WaitingReasons;
+  if (replaced) return next;
+  return [...next, { kind: "pending-queues", message, pendingFiles }];
+}
+
+/** A fresh queue scan in the shape the recovery policy reads it. */
+function queueEvidence(scan: QueueScan): QueueEvidence {
+  if (!scan.ok) return { kind: "scan-failed", message: scan.message };
+  if (scan.pendingFiles.length > 0) {
+    return { kind: "pending", pendingFiles: scan.pendingFiles };
+  }
+  return { kind: "clear" };
 }
 
 /** The next one-based attempt number for a stage, from its prior records. */
@@ -206,14 +317,23 @@ function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
 }
 
 /**
- * Drive one run from the entry cursor through the generic stage loop until a
- * durable pause, a fatal checkpoint error, or pipeline completion. Consumes only
- * snapshotted stage data and typed inputs — never a pipeline, stage, or skill
- * identity — and coordinates the queue, artifact, harness, log, Git, and display
- * collaborators rather than reproducing their rules. Every checkpoint rewrite a
- * running pipeline makes goes through `persist` below, which is the engine's own
- * persistence boundary and is handed to no collaborator. The caller releases the
- * lock.
+ * Drive one run from the entry cursor to a durable pause, a refused gate, a fatal
+ * checkpoint error, or pipeline completion.
+ *
+ * A `resume` entry first turns the durable past the cursor carries into a
+ * runnable present: it applies the recovery-sensitive worktree rule, settles an
+ * abandoned executing attempt, and — for a pause — gathers the fresh evidence its
+ * recorded recovery acts on, asks `decideRecovery` for one directive, and carries
+ * that directive out as one complete checkpoint transition. Only then does the
+ * generic stage loop start. An `allocated` entry has no past, so it starts there
+ * directly.
+ *
+ * The engine consumes only snapshotted stage data and typed inputs — never a
+ * pipeline, stage, or skill identity — and coordinates the queue, artifact,
+ * harness, log, Git, policy, and display collaborators rather than reproducing
+ * their rules. Every rewrite of an existing checkpoint goes through `persist`
+ * below, which is the engine's own persistence boundary and is handed to no
+ * collaborator. The caller releases the lock.
  */
 export async function executeEngine(
   ctx: ExecutionContext,
@@ -245,6 +365,22 @@ export async function executeEngine(
 
   function elapsedMs(): number {
     return clock().getTime() - Date.parse(checkpoint.createdAt);
+  }
+
+  // A signal that arrives while the checkpoint is durably at rest — between
+  // stages, or at the cursor a resume was handed — stops before allocating
+  // anything: the cursor stays byte-for-byte unchanged, no fictional pause is
+  // rendered, and the run reports the interruption.
+  function interruptedAtRest(sig: NodeJS.Signals): ExecutionResult {
+    display.runInterrupted({
+      runId,
+      pipelineName,
+      totalElapsedMs: elapsedMs(),
+      checkpointPath,
+      resumeCommand,
+      signal: sig,
+    });
+    return { kind: "interrupted", signal: sig };
   }
 
   function fatal(message: string): ExecutionResult {
@@ -360,22 +496,401 @@ export async function executeEngine(
     return { kind: "interrupted", signal: args.sig };
   }
 
-  while (checkpoint.stageIndex < stageCount) {
-    // A first signal while the checkpoint is durably ready between stages stops
-    // before allocating anything: the cursor stays byte-for-byte unchanged, no
-    // fictional pause is rendered, and the run reports the interruption.
-    const readySig = signalReason(signal);
-    if (readySig !== null) {
-      display.runInterrupted({
-        runId,
-        pipelineName,
-        totalElapsedMs: elapsedMs(),
-        checkpointPath,
-        resumeCommand,
-        signal: readySig,
-      });
-      return { kind: "interrupted", signal: readySig };
+  // Advance past the stage the cursor sits on and persist the resulting cursor:
+  // `ready`, or `completed` once the snapshot is exhausted. Returning `null`
+  // leaves the loop (or its completion tail) to take it from there.
+  async function advanceCursor(): Promise<ExecutionResult | null> {
+    const nextIndex = checkpoint.stageIndex + 1;
+    const persisted = await persist({
+      ...checkpoint,
+      stageIndex: nextIndex,
+      condition: nextIndex === stageCount ? "completed" : "ready",
+      waiting: null,
+    });
+    if (!persisted.ok) return fatal(persisted.message);
+    return null;
+  }
+
+  /**
+   * Turn the durable cursor a resume was handed into a runnable one, or into the
+   * result that ends this invocation. Returns `null` once the cursor is runnable.
+   *
+   * Everything here happens under the held lock, which is why the abandoned
+   * attempt, the fresh evidence, and the transition the evidence justifies can be
+   * treated as one atomic step.
+   */
+  async function enterFromDurableCursor(): Promise<ExecutionResult | null> {
+    const enteredWaiting = checkpoint.waiting;
+    const enteredRecovery = enteredWaiting?.recovery ?? null;
+
+    // Clean-worktree rule: required for a ready or executing cursor and for every
+    // recovery except the two holding a saved DONE for finalization. Those are
+    // exempt because the repair they wait for arrives uncommitted — a contract
+    // recheck has to inspect a dirty tree to decide anything, and a boundary retry
+    // commits exactly the diff it is waiting for.
+    if (enteredRecovery === null || !holdsPreservedDone(enteredRecovery)) {
+      let clean: boolean;
+      try {
+        clean = await isWorktreeClean(repoRoot);
+      } catch (error) {
+        return {
+          kind: "refused",
+          message: `Cannot inspect the Git worktree at ${repoRoot}: ${errorMessage(error)}`,
+        };
+      }
+      if (!clean) {
+        return {
+          kind: "refused",
+          message: `The Git worktree at ${repoRoot} is not clean. Commit what you want to keep or revert the rest before resuming.`,
+        };
+      }
     }
+
+    // An attempt that was live when its executor disappeared is settled before
+    // any other transition: it records the tip observed now as its post-attempt
+    // observation, and the cursor becomes a durable retry at the same stage.
+    if (checkpoint.condition === "executing") {
+      const sig = signalReason(signal);
+      if (sig !== null) return interruptedAtRest(sig);
+      const abandoned = checkpoint.attempts[checkpoint.attempts.length - 1]!;
+      const settled: AttemptRecord = {
+        ...abandoned,
+        result: "interrupted",
+        endedAt: clock().toISOString(),
+        terminalResult: null,
+        headAfterAttempt: await readHead(repoRoot),
+        failure: { kind: "interrupted", message: ABANDONED_ATTEMPT_NOTE },
+      };
+      const persisted = await persist({
+        ...checkpoint,
+        attempts: replaceLast(checkpoint.attempts, settled),
+        condition: "ready",
+        waiting: null,
+      });
+      if (!persisted.ok) return fatal(persisted.message);
+    }
+
+    // A ready cursor — allocated, or just recovered above — records no recovery,
+    // so there is nothing to decide: the loop's own pre-attempt gate is what
+    // pauses it on queued work or an unreadable queue.
+    if (enteredWaiting === null) {
+      checkpoint = { ...checkpoint, condition: "ready", waiting: null };
+      return null;
+    }
+    const pausedWaiting = enteredWaiting;
+    const pausedRecovery = pausedWaiting.recovery;
+    const stage = checkpoint.stages[checkpoint.stageIndex]!;
+
+    /**
+     * Persist and render the refreshed pause a `remain-paused` directive
+     * describes, leaving the run exactly as recoverable as this resume found it.
+     * Still-present bundles are the one case that writes nothing: the durable
+     * checkpoint stays byte-for-byte unchanged and only what is printed reflects
+     * the files that are still there.
+     */
+    async function remainPaused(
+      directive: Extract<RecoveryDirective, { kind: "remain-paused" }>,
+      attempt: AttemptRecord | undefined,
+    ): Promise<ExecutionResult> {
+      const facts = directive.facts;
+      const [governing, ...rest] = pausedWaiting.reasons;
+      const pauseWith = async (
+        waiting: WaitingInfo,
+        rendered: AttemptRecord | undefined,
+      ): Promise<ExecutionResult> => {
+        const persisted = await persist({
+          ...checkpoint,
+          condition: "waiting-for-user",
+          waiting,
+        });
+        if (!persisted.ok) return fatal(persisted.message);
+        renderPause(waiting, rendered);
+        return { kind: "paused", waiting };
+      };
+
+      switch (facts.kind) {
+        case "pending-bundles": {
+          const waiting: WaitingInfo = {
+            ...pausedWaiting,
+            reasons: refreshPendingReason(
+              pausedWaiting.reasons,
+              facts.pendingFiles,
+            ),
+          };
+          renderPause(waiting, attempt);
+          return { kind: "paused", waiting };
+        }
+
+        case "queue-scan-failed":
+          // A pause awaiting no-harness finalization — a Git boundary or an unmet
+          // promised artifact — keeps its own kind, folding the scan diagnostic
+          // in. Downgrading it to a gate-error would describe away the saved DONE
+          // the pause is holding.
+          if (holdsPreservedDone(directive.recovery)) {
+            return pauseWith(
+              {
+                ...pausedWaiting,
+                reasons: [
+                  {
+                    ...governing,
+                    message: `${governing.message} The pending-queue scan failed again and must be repeated before finalizing: ${facts.message}`,
+                    diagnostics: {
+                      ...governing.diagnostics,
+                      errorMessage: facts.message,
+                    },
+                  },
+                  ...rest,
+                ],
+                recovery: directive.recovery,
+              },
+              attempt,
+            );
+          }
+          return pauseWith(
+            {
+              // The scan failure replaces what the pause explains, never what a
+              // later resume may safely do about it.
+              reasons: [
+                {
+                  kind: "gate-error",
+                  message: gateErrorMessage(facts.message),
+                  diagnostics: { errorMessage: facts.message },
+                },
+              ],
+              recovery: directive.recovery,
+            },
+            undefined,
+          );
+
+        case "promise-uninspectable": {
+          // The reason's recorded dimensions describe the earlier inspection, not
+          // this one, so they go. What can make an inspection fail, and why
+          // pausing on it is the fail-closed direction, is recorded beside the
+          // post-DONE verification below.
+          const { contract: _staleContract, ...withoutContract } = governing;
+          return pauseWith(
+            {
+              reasons: [
+                {
+                  ...withoutContract,
+                  message: `${governing.message} It could not be re-verified on resume either.`,
+                },
+                ...rest,
+              ],
+              recovery: directive.recovery,
+              nextAction: CONTRACT_REPAIR_NOTE,
+            },
+            attempt,
+          );
+        }
+
+        case "promise-unmet":
+          return pauseWith(
+            {
+              reasons: [
+                {
+                  ...governing,
+                  message: stillUnmetContractMessage(facts.unmet),
+                  contract: facts.unmet,
+                  detail:
+                    "The worktree is dirty, so the stage was not run again: those " +
+                    "changes are the attempt's own and no executor may discard them.",
+                },
+                ...rest,
+              ],
+              recovery: directive.recovery,
+              nextAction: CONTRACT_REPAIR_NOTE,
+            },
+            attempt,
+          );
+
+        case "git-finalization-failed":
+          return pauseWith(
+            {
+              reasons: [
+                {
+                  kind: facts.failure,
+                  message: `${facts.message}.`,
+                  candidateLine:
+                    attempt?.terminalResult?.candidateLine ?? undefined,
+                },
+              ],
+              recovery: directive.recovery,
+              nextAction: UNVALIDATED_CHANGES_NOTE,
+            },
+            attempt,
+          );
+      }
+    }
+
+    /**
+     * Finalize the exact saved `DONE` attempt a `finalize-boundary` directive
+     * names, without invoking the agent again, then apply the stage's declared
+     * queue resolution. Both no-harness recoveries — a refused boundary that was
+     * corrected and a repaired promised artifact — land here, so neither grows a
+     * finalization path of its own.
+     *
+     * The directive's context is what the Git boundary judges the finalization as,
+     * because the two stand in different places with respect to the
+     * `headMayChange` rule. A boundary retry was already judged under that rule
+     * during the run. A contract repair was never judged at all — the stage loop
+     * stopped before the boundary — so this is the stage's one chance to apply it,
+     * across the preserved attempt's own interval.
+     */
+    async function finalizeSavedDone(
+      directive: Extract<RecoveryDirective, { kind: "finalize-boundary" }>,
+    ): Promise<ExecutionResult | null> {
+      const preserved = referencedAttempt(checkpoint, directive.recovery.attempt);
+      const context: GitBoundaryContext =
+        directive.context === "after-contract-repair"
+          ? {
+              kind: "after-contract-repair",
+              attempt: attemptInterval(preserved),
+              pausedAtHead: directive.recovery.pausedAtHead,
+            }
+          : {
+              kind: "boundary-retry",
+              pausedAtHead: directive.recovery.pausedAtHead,
+            };
+      const finalization = await finalizeGitBoundary({
+        repoRoot,
+        threadRelPath,
+        threadFolder,
+        policy: stage.gitPolicy,
+        context,
+      });
+
+      // What a human did to the tip across the pause is evidence the reader is
+      // owed and no policy forbids.
+      const moved = finalization.headMovedWhilePaused;
+      if (moved !== undefined) {
+        display.warn(
+          `HEAD moved while the run was paused (${moved.pausedAtHead} → ${moved.observedHead}); this is diagnostic only and is not a policy violation.`,
+        );
+      }
+
+      // A boundary this resume could not finalize is fresh Git evidence like any
+      // other: the policy decides what the run does about it, and keeps the
+      // preserved attempt finalizable from wherever this attempt left the tip.
+      if (finalization.kind !== "finalized") {
+        return applyDirective(
+          decideRecovery(directive.recovery, {
+            queues: { kind: "clear" },
+            git: {
+              kind: "finalization-failed",
+              failure: finalization.kind,
+              message: finalization.message,
+              observedHead: finalization.headAfterFinalization,
+            },
+          }),
+          preserved,
+        );
+      }
+
+      // Success: flip the preserved DONE attempt from waiting to done over the tip
+      // this finalization left it at, clear waiting, then apply the declared
+      // resolution when the attempt listed pending files, else the normal
+      // successful-stage advance.
+      const doneAttempts = replaceAttempt(checkpoint.attempts, {
+        ...preserved,
+        result: "done",
+        headAfterAttempt: finalization.headAfterFinalization,
+      });
+      const hadPending = (preserved.pendingFiles?.length ?? 0) > 0;
+      if (hadPending && stage.queueResolution === "rerun") {
+        const persisted = await persist({
+          ...checkpoint,
+          attempts: doneAttempts,
+          condition: "ready",
+          waiting: null,
+        });
+        if (!persisted.ok) return fatal(persisted.message);
+        return null;
+      }
+      checkpoint = { ...checkpoint, attempts: doneAttempts };
+      return advanceCursor();
+    }
+
+    /** Carry out one recovery directive as a durable transition. */
+    async function applyDirective(
+      directive: RecoveryDirective,
+      attempt: AttemptRecord | undefined,
+    ): Promise<ExecutionResult | null> {
+      switch (directive.kind) {
+        case "retry-stage":
+          checkpoint = { ...checkpoint, condition: "ready", waiting: null };
+          return null;
+        case "advance-stage":
+          return advanceCursor();
+        case "finalize-boundary":
+          return finalizeSavedDone(directive);
+        case "remain-paused":
+          return remainPaused(directive, attempt);
+      }
+    }
+
+    // Fresh queue evidence gates every recovery alike, before any harness action.
+    const queues = queueEvidence(
+      await scanPendingQueues(repoRoot, threadRelPath),
+    );
+    const sig = signalReason(signal);
+    if (sig !== null) return interruptedAtRest(sig);
+
+    // The rest of the evidence is observed only where the recorded recovery calls
+    // for it. Held queues decide the pause on their own, so nothing further is
+    // read while a human still owes the thread work.
+    let contract: ContractEvidence | undefined;
+    if (
+      queues.kind === "clear" &&
+      pausedRecovery.kind === "recheck-stage-contract"
+    ) {
+      const inspection = await inspectArtifactState(repoRoot, threadRelPath);
+      if (!inspection.ok) {
+        // A thread the artifacts cannot be read in is also a thread whose queues
+        // cannot be scanned, and the queue gate above already holds the pause in
+        // that case — so no end-to-end path reaches this branch. It is written
+        // anyway because pausing is the fail-closed direction: a promise that
+        // could not be evaluated is never credited as kept.
+        contract = { kind: "uninspectable" };
+      } else {
+        const unmet = evaluatePromisedState(inspection.state, stage.promises);
+        if (unmet.length === 0) {
+          contract = { kind: "satisfied" };
+        } else {
+          let clean: boolean;
+          try {
+            clean = await isWorktreeClean(repoRoot);
+          } catch (error) {
+            return {
+              kind: "refused",
+              message: `Cannot inspect the Git worktree at ${repoRoot}: ${errorMessage(error)}`,
+            };
+          }
+          contract = { kind: "unmet", unmet, worktree: clean ? "clean" : "dirty" };
+        }
+      }
+    }
+
+    return applyDirective(
+      decideRecovery(pausedRecovery, {
+        queues,
+        ...(contract !== undefined ? { contract } : {}),
+      }),
+      checkpoint.attempts[checkpoint.attempts.length - 1],
+    );
+  }
+
+  // The durable past a resumed cursor carries is settled before the loop, so the
+  // loop below only ever sees a runnable stage. A returned result ends the run
+  // here; `null` means the transition left a runnable cursor to continue from.
+  if (ctx.entry.kind === "resume") {
+    const entered = await enterFromDurableCursor();
+    if (entered !== null) return entered;
+  }
+
+  while (checkpoint.stageIndex < stageCount) {
+    const readySig = signalReason(signal);
+    if (readySig !== null) return interruptedAtRest(readySig);
 
     const stageIndex = checkpoint.stageIndex;
     const stage: SnapshottedStage = checkpoint.stages[stageIndex];
@@ -926,7 +1441,10 @@ export async function executeEngine(
     return { kind: "paused", waiting };
   }
 
-  // The cursor already sat at (or past) the final stage on entry.
+  // The cursor sits past the final stage without a stage of this invocation
+  // having finalized: it either entered there, or an entry transition advanced it
+  // there — a saved DONE finalized on resume, or a finalized DONE's queue
+  // releasing — so the pipeline is complete and no stage-level event is due.
   display.runCompleted({
     runId,
     pipelineName,

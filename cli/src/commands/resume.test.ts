@@ -1,4 +1,4 @@
-import { mkdirSync, promises as fs, writeFileSync } from "node:fs";
+import { mkdirSync, promises as fs, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
@@ -20,6 +20,23 @@ vi.mock("../execution/engine.js", async (importOriginal) => {
     executeEngine: (ctx: ExecutionContext): Promise<ExecutionResult> =>
       engineStub === null ? actual.executeEngine(ctx) : engineStub(ctx),
   };
+});
+
+/**
+ * Every run directory a checkpoint was written to. Production has exactly one
+ * checkpoint writer, so a case that expects to persist nothing proves it by the
+ * count for its own run directory not moving. The cases here run concurrently,
+ * which is why the key is the run directory and never the array's length.
+ */
+const checkpointWrites: string[] = [];
+
+vi.mock("../state/persist.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state/persist.js")>();
+  const spy: typeof actual.writeCheckpoint = (runDir, checkpoint, fsOps) => {
+    checkpointWrites.push(runDir);
+    return actual.writeCheckpoint(runDir, checkpoint, fsOps);
+  };
+  return { ...actual, writeCheckpoint: spy };
 });
 
 import {
@@ -51,7 +68,8 @@ import { SignalInterruption } from "../runner/signals.js";
 import type { RunCheckpoint } from "../state/checkpoint.js";
 import { acquireWorkspaceLock, locksDirectory } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
-import { readCheckpoint, writeCheckpoint } from "../state/persist.js";
+import { readCheckpoint } from "../state/checkpoint.js";
+import { writeCheckpoint } from "../state/persist.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
 import {
   createFakeHarness,
@@ -520,6 +538,159 @@ describe.concurrent("resumeCommand — preflight rejections (AC-15.2)", () => {
       },
     });
     expect(result.code).toBe(0);
+  });
+});
+
+/** Harness probe fake that fails for every requested harness. */
+const failingProbe: HarnessExecutableProbe = async (harnesses) => ({
+  ok: false,
+  failures: harnesses.map((h) => ({
+    harness: h,
+    binary: h === "codex" ? "codex" : "claude",
+    reason: "executable not found on PATH",
+  })),
+});
+
+/**
+ * The refusals the preflight can reach, each arranged over a run paused on its
+ * first stage. `arrange` returns whatever the resume invocation itself needs.
+ */
+const PREFLIGHT_REFUSALS: {
+  name: string;
+  arrange: (
+    h: Harness,
+    runId: string,
+  ) => Promise<Parameters<typeof resume>[3]>;
+}[] = [
+  {
+    name: "a malformed checkpoint",
+    arrange: async (h, runId) => {
+      await fs.writeFile(
+        path.join(runDirectoryFor(h.stateRoot, runId), "state.json"),
+        "{ not json",
+        "utf8",
+      );
+      return {};
+    },
+  },
+  {
+    name: "a completed run",
+    arrange: async (h, runId) => {
+      const finished = await resume(h, runId, standardSteps(h.fixture));
+      expect(finished.code).toBe(0);
+      return {};
+    },
+  },
+  {
+    name: "a recorded thread that no longer resolves",
+    arrange: async (h) => {
+      await fs.rm(h.fixture.threadPath as string, { recursive: true, force: true });
+      return {};
+    },
+  },
+  {
+    name: "a recorded workspace that resolves to another path",
+    arrange: async (h, runId) => {
+      const file = path.join(runDirectoryFor(h.stateRoot, runId), "state.json");
+      const raw = JSON.parse(await fs.readFile(file, "utf8")) as {
+        workspace: { path: string; execution: { cwd: string } };
+      };
+      // A recorded workspace identity the current checkout cannot resolve to. Both
+      // halves move together, because the checkpoint requires them to agree.
+      raw.workspace.path = h.configRoot;
+      raw.workspace.execution.cwd = h.configRoot;
+      await fs.writeFile(file, `${JSON.stringify(raw, null, 2)}\n`, "utf8");
+      return {};
+    },
+  },
+  {
+    name: "a scripted toggle over a real-runtime checkpoint",
+    arrange: async (h) => {
+      // A valid live scenario is present, so only the run's own immutable runtime
+      // can be what refuses.
+      await writeScriptedScenario(h.configRoot);
+      return { env: scriptedEnv(h) };
+    },
+  },
+  {
+    name: "a harness executable probe failure",
+    arrange: async () => ({ probe: failingProbe }),
+  },
+  {
+    name: "unsafe temporary workspaces",
+    arrange: async (h) => {
+      await makeWorkspacesUnsafe(h.fixture);
+      return {};
+    },
+  },
+  {
+    name: "a workspace already locked by another run",
+    arrange: async (h) => {
+      const held = await acquireWorkspaceLock(
+        h.stateRoot,
+        h.fixture.root,
+        "holder-run",
+        new Date(),
+      );
+      if (!held.ok) throw new Error("expected to acquire the lock");
+      heldLocks.push(held.handle);
+      return {};
+    },
+  },
+];
+
+describe.concurrent("resumeCommand — read-only preflight (AC-1.2)", () => {
+  for (const refusal of PREFLIGHT_REFUSALS) {
+    it(`leaves the checkpoint byte-for-byte unchanged on ${refusal.name}`, async () => {
+      const h = await setup();
+      await seed(h, [{ outcome: BLOCKED }]);
+      const runId = await soleRunId(h);
+      const overrides = await refusal.arrange(h, runId);
+
+      const file = path.join(runDirectoryFor(h.stateRoot, runId), "state.json");
+      const before = await fs.readFile(file, "utf8");
+      const writesBefore = checkpointWrites.filter(
+        (dir) => dir === runDirectoryFor(h.stateRoot, runId),
+      ).length;
+
+      const result = await resume(h, runId, standardSteps(h.fixture), overrides);
+
+      expect(result.code).toBe(1);
+      expect(result.invoker.calls.length).toBe(0);
+      expect(await fs.readFile(file, "utf8")).toBe(before);
+      expect(
+        checkpointWrites.filter(
+          (dir) => dir === runDirectoryFor(h.stateRoot, runId),
+        ).length,
+      ).toBe(writesBefore);
+    });
+  }
+});
+
+describe("resumeCommand — preflight owns no transition (AC-1.3)", () => {
+  const source = readFileSync(new URL("./resume.ts", import.meta.url), "utf8");
+
+  it("names no checkpoint writer, recovery dispatcher, or transition collaborator", () => {
+    // A static source assertion rather than a fixture: the property under test is
+    // what the command may reach at all, which no single run can demonstrate.
+    for (const forbidden of [
+      "state/persist",
+      "writeCheckpoint",
+      "recovery-policy",
+      "decideRecovery",
+      "WaitingRecovery",
+      "gitops/boundary",
+      "finalizeGitBoundary",
+      "isWorktreeClean",
+      "thread/queues",
+      "scanPendingQueues",
+      "evaluatePromisedState",
+      "runner/classify",
+      "stageIndex:",
+      "attempts:",
+    ]) {
+      expect(source).not.toContain(forbidden);
+    }
   });
 });
 
@@ -1896,6 +2067,12 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       code: EXIT_SIGINT,
     },
     {
+      name: "a refused gate",
+      result: { kind: "refused", message: "the worktree is not clean" },
+      code: EXIT_FAILURE,
+      stderr: "the worktree is not clean",
+    },
+    {
       name: "a fatal checkpoint error",
       result: { kind: "fatal-checkpoint", message: "disk full" },
       code: EXIT_FAILURE,
@@ -1910,15 +2087,19 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       // which is the path that carries a cursor into the engine.
       await seed(h, [{ outcome: BLOCKED }]);
       const runId = await soleRunId(h);
-      const entries: ExecutionEntry["kind"][] = [];
+      const durable = await readCp(h, runId);
+      const entries: ExecutionEntry[] = [];
       engineStub = async (ctx) => {
-        entries.push(ctx.entry.kind);
+        entries.push(ctx.entry);
         return testCase.result;
       };
 
       const result = await resume(h, runId, []);
 
-      expect(entries).toEqual(["resume"]);
+      expect(entries.map((entry) => entry.kind)).toEqual(["resume"]);
+      // The cursor is the validated checkpoint exactly as it was found: recovering
+      // the pause belongs to the engine, so nothing is adjusted on the way in.
+      expect(entries[0]?.checkpoint).toEqual(durable);
       expect(result.code).toBe(testCase.code);
       if (testCase.stderr !== undefined) {
         expect(result.err).toContain(testCase.stderr);

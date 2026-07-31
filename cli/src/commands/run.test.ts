@@ -52,7 +52,7 @@ import type { installSignalHandlers } from "../runner/signals.js";
 import { SignalInterruption } from "../runner/signals.js";
 import { acquireWorkspaceLock, locksDirectory } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
-import { readCheckpoint } from "../state/persist.js";
+import { readCheckpoint } from "../state/checkpoint.js";
 import { createRunDirectory, runsDirectory } from "../state/runs.js";
 import {
   createFakeHarness,
@@ -1403,6 +1403,12 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
       code: EXIT_SIGTERM,
     },
     {
+      name: "a refused gate",
+      result: { kind: "refused", message: "the worktree is not clean" },
+      code: EXIT_FAILURE,
+      stderr: "the worktree is not clean",
+    },
+    {
       name: "a fatal checkpoint error",
       result: { kind: "fatal-checkpoint", message: "disk full" },
       code: EXIT_FAILURE,
@@ -1413,19 +1419,21 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
   for (const testCase of cases) {
     it(`enters the engine with the allocated cursor and maps ${testCase.name}`, async () => {
       const h = await setup();
-      const entries: ExecutionEntry["kind"][] = [];
+      const entries: ExecutionEntry[] = [];
       engineStub = async (ctx) => {
-        entries.push(ctx.entry.kind);
+        entries.push(ctx.entry);
         return testCase.result;
       };
 
       const result = await run(h, []);
 
       // The command hands over exactly the run it allocated, once.
-      expect(entries).toEqual(["allocated"]);
+      expect(entries.map((entry) => entry.kind)).toEqual(["allocated"]);
       const runId = (await runDirNames(h.stateRoot))[0]!;
       const cp = await readCheckpoint(path.join(runsDirectory(h.stateRoot), runId));
       expect(cp.ok && cp.checkpoint.runId).toBe(runId);
+      // The cursor handed over is the initial checkpoint that was just written.
+      expect(entries[0]?.checkpoint).toEqual(cp.ok ? cp.checkpoint : null);
       expect(result.code).toBe(testCase.code);
       if (testCase.stderr !== undefined) {
         expect(result.err).toContain(testCase.stderr);

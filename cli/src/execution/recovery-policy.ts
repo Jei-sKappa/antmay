@@ -72,6 +72,32 @@ export type RecoveryEvidence = {
 export type BoundaryFinalizationContext = "after-contract-repair" | "boundary-retry";
 
 /**
+ * The two recovery variants that hold a saved `DONE` attempt whose Git boundary
+ * has still to succeed. They are the only ones a finalization can be requested
+ * for, and the only ones a failed finalization can be re-decided from, so naming
+ * them as a type keeps that invariant checked rather than assumed.
+ */
+export type FinalizingRecovery = Extract<
+  WaitingRecovery,
+  { kind: "recheck-stage-contract" } | { kind: "retry-git-finalization" }
+>;
+
+/**
+ * Whether `recovery` is holding a saved `DONE` for later Git finalization. Such
+ * a pause is waiting for uncommitted repair work, so it is what exempts a resume
+ * from the clean-worktree rule and what keeps its own diagnostic kind when fresh
+ * evidence arrives.
+ */
+export function holdsPreservedDone(
+  recovery: WaitingRecovery,
+): recovery is FinalizingRecovery {
+  return (
+    recovery.kind === "recheck-stage-contract" ||
+    recovery.kind === "retry-git-finalization"
+  );
+}
+
+/**
  * What a still-paused run has newly learned. These are diagnostic facts alone:
  * the directive's recovery, not any of these, says what a later resume may do.
  */
@@ -91,8 +117,10 @@ export type RefreshedPauseFacts =
  *
  * - `retry-stage` launches a fresh attempt at the current stage.
  * - `advance-stage` moves to the next stage of the snapshot.
- * - `finalize-boundary` asks for the Git boundary of the exact named attempt,
- *   measured against the tip observed at the pause, in the named context.
+ * - `finalize-boundary` asks for the Git boundary of the saved `DONE` its
+ *   `recovery` names, measured against the tip that recovery observed at the
+ *   pause, in the named context. Carrying the whole recovery is what lets a
+ *   failed finalization be re-decided from the same value.
  * - `remain-paused` leaves the run paused, carrying the recovery a later resume
  *   acts on and the facts that pause now has to explain.
  *
@@ -104,8 +132,7 @@ export type RecoveryDirective =
   | { kind: "advance-stage" }
   | {
       kind: "finalize-boundary";
-      attempt: AttemptReference;
-      pausedAtHead: string;
+      recovery: FinalizingRecovery;
       context: BoundaryFinalizationContext;
     }
   | { kind: "remain-paused"; recovery: WaitingRecovery; facts: RefreshedPauseFacts };
@@ -203,8 +230,7 @@ export function decideRecovery(
           // time and its own HEAD rule applies here.
           return {
             kind: "finalize-boundary",
-            attempt: recovery.attempt,
-            pausedAtHead: recovery.pausedAtHead,
+            recovery,
             context: "after-contract-repair",
           };
         case "unmet":
@@ -235,11 +261,6 @@ export function decideRecovery(
       if (git.kind === "finalization-failed") {
         return stillFinalizable(recovery.attempt, git);
       }
-      return {
-        kind: "finalize-boundary",
-        attempt: recovery.attempt,
-        pausedAtHead: recovery.pausedAtHead,
-        context: "boundary-retry",
-      };
+      return { kind: "finalize-boundary", recovery, context: "boundary-retry" };
   }
 }
