@@ -645,6 +645,50 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
     expect(cp.waiting?.reasons[0].kind).toBe("gate-error");
+    // What the pause explains has moved on; what a later resume may do about it
+    // has not.
+    expect(cp.waiting?.recovery).toEqual({ kind: "retry-stage" });
+  });
+
+  it("keeps a finalized DONE's declared resolution across a scan failure, then advances", async () => {
+    const h = await setup();
+    await seed(h, [
+      {
+        before: () => {
+          writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+          dropPendingSync(h.fixture, "q.md");
+        },
+        outcome: DONE,
+      },
+    ]);
+    const runId = await soleRunId(h);
+    const finalizedRecovery = {
+      kind: "resume-finalized-done",
+      attempt: { stageIndex: 0, attempt: 1 },
+      queueResolution: "advance",
+    };
+    expect((await readCp(h, runId)).waiting?.recovery).toEqual(finalizedRecovery);
+
+    // An unreadable queue is not an empty one, so this resume may explain that
+    // and nothing else — and must leave the finalized attempt exactly as
+    // advanceable as it found it.
+    await removePending(h.fixture, "q.md");
+    await blockQueueScan(h.fixture, ".pending-reviews");
+    const held = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(held.code).toBe(2);
+    expect(held.invoker.calls.length).toBe(0);
+    const heldCp = await readCp(h, runId);
+    expect(heldCp.waiting?.reasons[0].kind).toBe("gate-error");
+    expect(heldCp.waiting?.recovery).toEqual(finalizedRecovery);
+
+    // Readable again: the resolution the pause recorded still applies, and the
+    // finalized attempt is never rerun.
+    await fs.rm(path.join(h.fixture.threadPath as string, ".pending-reviews"), {
+      force: true,
+    });
+    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(result.code).toBe(0);
+    expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
   });
 
   it("keeps a git-policy-violation kind on a scan failure, folding the diagnostic in", async () => {
@@ -768,6 +812,44 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     const cp = await readCp(h, runId);
     // Stage 0 was finalized, never rerun by a harness invocation.
     expect(attemptCountAt(cp, 0)).toBe(1);
+  });
+
+  it("keeps the same attempt finalizable when the boundary refuses again, then commits it", async () => {
+    const h = await setup();
+    await seed(h, [
+      {
+        before: () => {
+          writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+          writeRootFileSync(h.fixture, "stray.txt", "x");
+        },
+        outcome: DONE,
+      },
+    ]);
+    const runId = await soleRunId(h);
+    const paused = await readCp(h, runId);
+    const savedDone = {
+      kind: "retry-git-finalization",
+      attempt: { stageIndex: 0, attempt: 1 },
+      pausedAtHead: paused.attempts[0]?.headAfterAttempt,
+    };
+    expect(paused.waiting?.recovery).toEqual(savedDone);
+
+    // The out-of-bounds file is still there, so this resume's boundary refuses
+    // exactly as the run's did — and the preserved attempt stays finalizable.
+    const refused = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(refused.code).toBe(2);
+    expect(refused.invoker.calls.length).toBe(0);
+    const stillPaused = await readCp(h, runId);
+    expect(stillPaused.waiting?.reasons[0].kind).toBe("git-policy-violation");
+    expect(stillPaused.waiting?.recovery).toEqual(savedDone);
+    expect(attemptCountAt(stillPaused, 0)).toBe(1);
+
+    await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
+    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    expect(result.code).toBe(0);
+    const folder = h.fixture.threadFolder as string;
+    expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
+    expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
   });
 
   it("advances when the intended diff was manually committed to an empty worktree", async () => {

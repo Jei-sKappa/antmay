@@ -12,6 +12,12 @@ import {
   printTemporaryWorkspaceRefusal,
 } from "../display/terminal.js";
 import type { DisplayOptions } from "../display/terminal.js";
+import { decideRecovery } from "../execution/recovery-policy.js";
+import type {
+  ContractEvidence,
+  QueueEvidence,
+  RecoveryDirective,
+} from "../execution/recovery-policy.js";
 import { evaluateBoundary, finalizeBoundary } from "../gitops/boundary.js";
 import {
   collectBoundaryStatus,
@@ -33,7 +39,6 @@ import type {
   AttemptReference,
   RunCheckpoint,
   WaitingInfo,
-  WaitingReason,
   WaitingReasons,
   WaitingRecovery,
 } from "../state/checkpoint.js";
@@ -132,12 +137,15 @@ function refreshPendingReason(
  * Resume an existing `antmay afk run` from its durable checkpoint. Resolves only
  * the state root — never a config root, settings, or pipeline definitions — then
  * runs the ordered, checkpoint-preserving preflight (AC-15.1/AC-15.2), acquires
- * the recorded workspace lock, recovers an abandoned `executing` attempt, and
- * dispatches on the pause's recorded recovery (AC-15.3): a finalized `DONE`
- * follows the resolution it recorded, a refused boundary and a repaired promise
- * are finalized without another harness invocation, and every other resumable
- * cursor starts a fresh attempt at its stored stage before continuing through the
- * snapshotted stages via `executeRun`. Returns the process exit code, mapping
+ * the recorded workspace lock, and recovers an abandoned `executing` attempt.
+ * For a paused run it then observes the fresh queue, promised-artifact, and
+ * worktree evidence its recorded recovery acts on, asks `decideRecovery` what to
+ * do, and carries the returned directive out as a durable transition (AC-15.3):
+ * a finalized `DONE` follows the resolution it recorded, a refused boundary and
+ * a repaired promise are finalized without another harness invocation, and every
+ * other resumable cursor starts a fresh attempt at its stored stage before
+ * continuing through the snapshotted stages via `executeRun`. Returns the
+ * process exit code, mapping
  * runner outcomes exactly as `run` does; every preflight failure returns `1` and
  * leaves the checkpoint unchanged. Signal handlers are installed at entry and
  * uninstalled on every ordinary return.
@@ -519,127 +527,6 @@ export async function resumeCommand(
       return continueRun(persisted.checkpoint);
     };
 
-    /**
-     * Finalize the exact saved `DONE` attempt a recovery names, without invoking
-     * the agent again: evaluate the boundary as a resume (HEAD movement across
-     * the pause is diagnostic, and a deliberately committed diff satisfies a
-     * required change), commit it, then apply the stage's declared queue
-     * resolution. Both no-harness recoveries — a refused boundary that was
-     * corrected and a repaired promised artifact — land here, so neither grows a
-     * finalization path of its own.
-     *
-     * The `headMayChange` rule is the caller's, because the two recoveries stand
-     * in different places with respect to it. A refused boundary was already
-     * judged under that rule during the run, so waiving it here forgives only
-     * movement across the pause. A contract pause was never judged at all — the
-     * runner stopped before the boundary — so this is the stage's one chance to
-     * apply it. Enforcing it therefore comes with the `HEAD` the preserved
-     * attempt started from: the rule judges that attempt's own movement, and
-     * nothing an earlier attempt or a human across a pause did to the tip.
-     */
-    const finalizeSavedDone = async (
-      saved:
-        | Extract<WaitingRecovery, { kind: "recheck-stage-contract" }>
-        | Extract<WaitingRecovery, { kind: "retry-git-finalization" }>,
-      headRule:
-        | { enforce: false }
-        | { enforce: true; attemptStartHead: string },
-    ): Promise<number> => {
-      const preserved = referencedAttempt(checkpoint, saved.attempt);
-      const currentHead = await readHead(repoRoot);
-      if (saved.pausedAtHead !== currentHead) {
-        display.warn(
-          `HEAD moved while the run was paused (${saved.pausedAtHead} → ${currentHead}); this is diagnostic only and is not a policy violation.`,
-        );
-      }
-      const observedPaths = await collectBoundaryStatus(repoRoot);
-      // The pause's own observation is the boundary side of the HEAD rule; what
-      // the human did across the pause is reported by the warning above and
-      // forbidden by no policy. Unenforced, the two sides are the same value, so
-      // the rule cannot fire on anything.
-      const headAtBoundary = saved.pausedAtHead;
-      const evaluation = evaluateBoundary(
-        stage.gitPolicy,
-        threadRelPath,
-        observedPaths,
-        headRule.enforce ? headRule.attemptStartHead : headAtBoundary,
-        headAtBoundary,
-        {
-          enforceHead: headRule.enforce,
-          allowRequiredChangeToBeAlreadyCommitted: true,
-        },
-      );
-      const candidateLine = preserved.terminalResult?.candidateLine ?? undefined;
-
-      // A boundary this resume could not finalize keeps the preserved attempt
-      // finalizable: the next resume retries the same boundary, measured from
-      // where this one left the tip.
-      const stillFinalizable = async (
-        reason: WaitingReason,
-      ): Promise<number> => {
-        const newHead = await readHead(repoRoot);
-        const waiting: WaitingInfo = {
-          reasons: [reason],
-          recovery: {
-            kind: "retry-git-finalization",
-            attempt: saved.attempt,
-            pausedAtHead: newHead,
-          },
-          nextAction: UNVALIDATED_CHANGES_NOTE,
-        };
-        const persisted = await persist({
-          ...checkpoint,
-          condition: "waiting-for-user",
-          waiting,
-        });
-        if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        renderPause(waiting, preserved);
-        return EXIT_WAITING;
-      };
-
-      if (!evaluation.ok) {
-        return stillFinalizable({
-          kind: "git-policy-violation",
-          message: `${evaluation.message}.`,
-          candidateLine,
-        });
-      }
-
-      const finalized = await finalizeBoundary(
-        repoRoot,
-        stage.gitPolicy,
-        threadFolder,
-        evaluation,
-      );
-      if (finalized.kind === "commit-error") {
-        return stillFinalizable({
-          kind: "commit-error",
-          message: `${finalized.message}.`,
-          candidateLine,
-        });
-      }
-
-      // Success: flip the preserved DONE attempt from waiting to done, clear
-      // waiting, then apply the declared resolution when the attempt listed
-      // pending files, else the normal successful-stage advance.
-      const doneAttempts = replaceAttempt(checkpoint.attempts, {
-        ...preserved,
-        result: "done",
-      });
-      const hadPending = (preserved.pendingFiles?.length ?? 0) > 0;
-      if (hadPending && stage.queueResolution === "rerun") {
-        const persisted = await persist({
-          ...checkpoint,
-          attempts: doneAttempts,
-          condition: "ready",
-          waiting: null,
-        });
-        if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        return continueRun(persisted.checkpoint);
-      }
-      return advanceThenContinue({ ...checkpoint, attempts: doneAttempts });
-    };
-
     try {
       // A signal that arrived before any mutation releases the lock (in finally)
       // and returns its conventional code with the durable cursor unchanged.
@@ -705,201 +592,379 @@ export async function resumeCommand(
       sig = signalCode();
       if (sig !== null) return sig;
 
-      // Re-scan both queues under the lock, then handle the result before any
-      // harness action.
+      // Re-scan both queues under the lock. The fresh result gates every
+      // recovery and every runnable cursor alike, before any harness action.
       const scan = await scanPendingQueues(repoRoot, threadRelPath);
       sig = signalCode();
       if (sig !== null) return sig;
 
+      const queues: QueueEvidence = !scan.ok
+        ? { kind: "scan-failed", message: scan.message }
+        : scan.pendingFiles.length > 0
+          ? { kind: "pending", pendingFiles: scan.pendingFiles }
+          : { kind: "clear" };
+
       const lastAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
 
-      if (!scan.ok) {
-        // A scan failure while a pause awaiting no-harness finalization — a Git
-        // boundary or an unmet promised artifact — is held keeps that pause's
-        // own kind, folding the scan diagnostic in. Downgrading it to a
-        // gate-error would discard the saved DONE's recovery path.
-        if (finalizesPreservedDone && originalWaiting !== null) {
-          const [governing, ...rest] = originalWaiting.reasons;
-          const message = `${governing.message} The pending-queue scan failed again and must be repeated before finalizing: ${scan.message}`;
-          const waiting: WaitingInfo = {
-            ...originalWaiting,
-            reasons: [
-              {
-                ...governing,
-                message,
-                diagnostics: { ...governing.diagnostics, errorMessage: scan.message },
-              },
-              ...rest,
-            ],
-          };
+      if (recovery === null || originalWaiting === null) {
+        // A ready or recovered-executing cursor carries no recorded recovery, so
+        // queued work and an unreadable queue each persist a fresh tokenless
+        // pre-attempt pause without allocating an attempt.
+        const preAttemptPause = async (
+          waiting: WaitingInfo,
+        ): Promise<number> => {
           const persisted = await persist({
             ...checkpoint,
             condition: "waiting-for-user",
             waiting,
           });
           if (!persisted.ok) return fatalCheckpoint(persisted.message);
-          renderPause(waiting, lastAttempt);
+          renderPause(waiting);
           return EXIT_WAITING;
-        }
-        const message = gateErrorMessage(scan.message);
-        const waiting: WaitingInfo = {
-          reasons: [
-            {
-              kind: "gate-error",
-              message,
-              diagnostics: { errorMessage: scan.message },
-            },
-          ],
-          // The scan failure replaces what the pause explains, never what a
-          // later resume may safely do about it.
-          recovery: recovery ?? { kind: "retry-stage" },
         };
-        const persisted = await persist({
-          ...checkpoint,
-          condition: "waiting-for-user",
-          waiting,
-        });
-        if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        renderPause(waiting);
-        return EXIT_WAITING;
-      }
-
-      if (scan.pendingFiles.length > 0) {
-        if (originalCondition === "waiting-for-user" && originalWaiting !== null) {
-          // A waiting run with non-empty queues keeps its durable checkpoint
-          // byte-for-byte unchanged; only what is printed reflects the files
-          // that are still there.
-          const waiting: WaitingInfo = {
-            ...originalWaiting,
-            reasons: refreshPendingReason(originalWaiting.reasons, scan.pendingFiles),
-          };
-          renderPause(waiting, lastAttempt);
-          return EXIT_WAITING;
-        }
-        // A ready or recovered-executing cursor persists a tokenless pre-attempt
-        // pending-queues pause without allocating an attempt.
-        const message = pendingQueuesMessage(scan.pendingFiles);
-        const waiting: WaitingInfo = {
-          reasons: [
-            {
-              kind: "pending-queues",
-              message,
-              pendingFiles: scan.pendingFiles,
-            },
-          ],
-          recovery: { kind: "retry-stage" },
-        };
-        const persisted = await persist({
-          ...checkpoint,
-          condition: "waiting-for-user",
-          waiting,
-        });
-        if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        renderPause(waiting);
-        return EXIT_WAITING;
-      }
-
-      // Queues are empty. A signal before any queue-empty transition leaves the
-      // durable cursor unchanged.
-      sig = signalCode();
-      if (sig !== null) return sig;
-
-      // Postcondition-contract resume: recheck the promised artifact state
-      // first, because what that check finds is what chooses between the three
-      // recoveries — finalize the saved DONE, run the stage again, or stay
-      // paused.
-      if (recovery?.kind === "recheck-stage-contract" && originalWaiting !== null) {
-        const [governing, ...rest] = originalWaiting.reasons;
-        const inspection = await inspectArtifactState(repoRoot, threadRelPath);
-        const unmet = inspection.ok
-          ? evaluatePromisedState(inspection.state, stage.promises)
-          : null;
-        if (unmet !== null && unmet.length === 0) {
-          // The stage's HEAD rule is applied here for the first time, against
-          // the HEAD the preserved attempt itself started from.
-          return finalizeSavedDone(recovery, {
-            enforce: true,
-            attemptStartHead: referencedAttempt(checkpoint, recovery.attempt)
-              .headAtStart,
+        if (queues.kind === "scan-failed") {
+          return preAttemptPause({
+            reasons: [
+              {
+                kind: "gate-error",
+                message: gateErrorMessage(queues.message),
+                diagnostics: { errorMessage: queues.message },
+              },
+            ],
+            recovery: { kind: "retry-stage" },
           });
         }
-
-        let refreshed: WaitingReason;
-        if (unmet === null) {
-          // The inspection failed outright, so nothing about the promise was
-          // decided. Staying paused is the only move that keeps the saved DONE
-          // finalizable once the thread can be read again: running the stage on
-          // "cannot verify" would move the governing kind off this pause and
-          // discard that recovery for good. The reason's recorded
-          // dimensions describe the earlier inspection, not this one, so they
-          // go. What can make an inspection fail, and why pausing on it is the
-          // fail-closed direction, is recorded beside the runner's post-DONE
-          // verification in `runner/runner.ts`.
-          const { contract: _staleContract, ...withoutContract } = governing;
-          refreshed = {
-            ...withoutContract,
-            message: `${governing.message} It could not be re-verified on resume either.`,
-          };
-        } else {
-          // The promise is genuinely still unmet. A clean worktree holds nothing
-          // a human is in the middle of, so the stage runs again; a dirty one
-          // holds the failed attempt's own changes, and only a human can say
-          // whether they are a repair or something to revert.
-          let clean: boolean;
-          try {
-            clean = await isWorktreeClean(repoRoot);
-          } catch (error) {
-            return fail(
-              `Cannot inspect the Git worktree at ${repoRoot}: ${errorMessage(error)}`,
-            );
-          }
-          if (clean) {
-            return continueRun({ ...checkpoint, condition: "ready", waiting: null });
-          }
-          refreshed = {
-            ...governing,
-            message: stillUnmetContractMessage(unmet),
-            contract: unmet,
-            detail:
-              "The worktree is dirty, so the stage was not run again: those " +
-              "changes are the attempt's own and no executor may discard them.",
-          };
+        if (queues.kind === "pending") {
+          return preAttemptPause({
+            reasons: [
+              {
+                kind: "pending-queues",
+                message: pendingQueuesMessage(queues.pendingFiles),
+                pendingFiles: queues.pendingFiles,
+              },
+            ],
+            recovery: { kind: "retry-stage" },
+          });
         }
-        const waiting: WaitingInfo = {
-          reasons: [refreshed, ...rest],
-          // The saved DONE stays exactly as finalizable as it was; only what the
-          // pause explains has moved on.
-          recovery,
-          nextAction: CONTRACT_REPAIR_NOTE,
-        };
-        const persisted = await persist({
-          ...checkpoint,
-          condition: "waiting-for-user",
-          waiting,
-        });
-        if (!persisted.ok) return fatalCheckpoint(persisted.message);
-        renderPause(waiting, lastAttempt);
-        return EXIT_WAITING;
-      }
-
-      // Boundary-retry resume: finalize without a harness invocation.
-      if (recovery?.kind === "retry-git-finalization") {
-        return finalizeSavedDone(recovery, { enforce: false });
-      }
-
-      // An already finalized DONE: the queue has cleared, so apply the
-      // resolution the pause recorded for its stage. No boundary is evaluated
-      // again and the attempt is not touched.
-      if (recovery?.kind === "resume-finalized-done") {
-        if (recovery.queueResolution === "advance") {
-          return advanceThenContinue(checkpoint);
-        }
+        // Queues are empty. A signal before the transition leaves the durable
+        // cursor unchanged.
+        sig = signalCode();
+        if (sig !== null) return sig;
         return continueRun({ ...checkpoint, condition: "ready", waiting: null });
       }
 
-      // A retry-stage recovery, and ready/recovered-executing: start a new
-      // attempt at the stored stage.
-      return continueRun({ ...checkpoint, condition: "ready", waiting: null });
+      // Everything from here is decided by the pause's own recorded recovery.
+      // The reason list explains the pause and never steers it.
+      const pausedRecovery: WaitingRecovery = recovery;
+      const pausedWaiting: WaitingInfo = originalWaiting;
+
+      /**
+       * Persist and render the refreshed pause a `remain-paused` directive
+       * describes, leaving the run exactly as recoverable as this resume found
+       * it. Still-present bundles are the one case that writes nothing: the
+       * durable checkpoint stays byte-for-byte unchanged and only what is
+       * printed reflects the files that are still there.
+       */
+      const remainPaused = async (
+        directive: Extract<RecoveryDirective, { kind: "remain-paused" }>,
+        attempt: AttemptRecord | undefined,
+      ): Promise<number> => {
+        const facts = directive.facts;
+        const [governing, ...rest] = pausedWaiting.reasons;
+        const pauseWith = async (
+          waiting: WaitingInfo,
+          rendered: AttemptRecord | undefined,
+        ): Promise<number> => {
+          const persisted = await persist({
+            ...checkpoint,
+            condition: "waiting-for-user",
+            waiting,
+          });
+          if (!persisted.ok) return fatalCheckpoint(persisted.message);
+          renderPause(waiting, rendered);
+          return EXIT_WAITING;
+        };
+
+        switch (facts.kind) {
+          case "pending-bundles":
+            renderPause(
+              {
+                ...pausedWaiting,
+                reasons: refreshPendingReason(
+                  pausedWaiting.reasons,
+                  facts.pendingFiles,
+                ),
+              },
+              attempt,
+            );
+            return EXIT_WAITING;
+
+          case "queue-scan-failed":
+            // A pause awaiting no-harness finalization — a Git boundary or an
+            // unmet promised artifact — keeps its own kind, folding the scan
+            // diagnostic in. Downgrading it to a gate-error would describe away
+            // the saved DONE the pause is holding.
+            if (finalizesPreservedDone) {
+              return pauseWith(
+                {
+                  ...pausedWaiting,
+                  reasons: [
+                    {
+                      ...governing,
+                      message: `${governing.message} The pending-queue scan failed again and must be repeated before finalizing: ${facts.message}`,
+                      diagnostics: {
+                        ...governing.diagnostics,
+                        errorMessage: facts.message,
+                      },
+                    },
+                    ...rest,
+                  ],
+                  recovery: directive.recovery,
+                },
+                attempt,
+              );
+            }
+            return pauseWith(
+              {
+                // The scan failure replaces what the pause explains, never what
+                // a later resume may safely do about it.
+                reasons: [
+                  {
+                    kind: "gate-error",
+                    message: gateErrorMessage(facts.message),
+                    diagnostics: { errorMessage: facts.message },
+                  },
+                ],
+                recovery: directive.recovery,
+              },
+              undefined,
+            );
+
+          case "promise-uninspectable": {
+            // The reason's recorded dimensions describe the earlier inspection,
+            // not this one, so they go. What can make an inspection fail, and
+            // why pausing on it is the fail-closed direction, is recorded beside
+            // the runner's post-DONE verification in `runner/runner.ts`.
+            const { contract: _staleContract, ...withoutContract } = governing;
+            return pauseWith(
+              {
+                reasons: [
+                  {
+                    ...withoutContract,
+                    message: `${governing.message} It could not be re-verified on resume either.`,
+                  },
+                  ...rest,
+                ],
+                recovery: directive.recovery,
+                nextAction: CONTRACT_REPAIR_NOTE,
+              },
+              attempt,
+            );
+          }
+
+          case "promise-unmet":
+            return pauseWith(
+              {
+                reasons: [
+                  {
+                    ...governing,
+                    message: stillUnmetContractMessage(facts.unmet),
+                    contract: facts.unmet,
+                    detail:
+                      "The worktree is dirty, so the stage was not run again: those " +
+                      "changes are the attempt's own and no executor may discard them.",
+                  },
+                  ...rest,
+                ],
+                recovery: directive.recovery,
+                nextAction: CONTRACT_REPAIR_NOTE,
+              },
+              attempt,
+            );
+
+          case "git-finalization-failed":
+            return pauseWith(
+              {
+                reasons: [
+                  {
+                    kind: facts.failure,
+                    message: `${facts.message}.`,
+                    candidateLine:
+                      attempt?.terminalResult?.candidateLine ?? undefined,
+                  },
+                ],
+                recovery: directive.recovery,
+                nextAction: UNVALIDATED_CHANGES_NOTE,
+              },
+              attempt,
+            );
+        }
+      };
+
+      /**
+       * Finalize the exact saved `DONE` attempt a `finalize-boundary` directive
+       * names, without invoking the agent again: evaluate the boundary as a
+       * resume (HEAD movement across the pause is diagnostic, and a deliberately
+       * committed diff satisfies a required change), commit it, then apply the
+       * stage's declared queue resolution. Both no-harness recoveries — a
+       * refused boundary that was corrected and a repaired promised artifact —
+       * land here, so neither grows a finalization path of its own.
+       *
+       * The `headMayChange` rule follows the directive's context, because the two
+       * contexts stand in different places with respect to it. A boundary retry
+       * was already judged under that rule during the run, so waiving it here
+       * forgives only movement across the pause. A contract repair was never
+       * judged at all — the runner stopped before the boundary — so this is the
+       * stage's one chance to apply it, and it is applied against the `HEAD` the
+       * preserved attempt itself started from: the rule judges that attempt's own
+       * movement, and nothing an earlier attempt or a human across a pause did to
+       * the tip.
+       */
+      const finalizeSavedDone = async (
+        directive: Extract<RecoveryDirective, { kind: "finalize-boundary" }>,
+      ): Promise<number> => {
+        const preserved = referencedAttempt(checkpoint, directive.attempt);
+        const currentHead = await readHead(repoRoot);
+        if (directive.pausedAtHead !== currentHead) {
+          display.warn(
+            `HEAD moved while the run was paused (${directive.pausedAtHead} → ${currentHead}); this is diagnostic only and is not a policy violation.`,
+          );
+        }
+        const observedPaths = await collectBoundaryStatus(repoRoot);
+        // The pause's own observation is the boundary side of the HEAD rule; what
+        // the human did across the pause is reported by the warning above and
+        // forbidden by no policy. Unenforced, the two sides are the same value, so
+        // the rule cannot fire on anything.
+        const headAtBoundary = directive.pausedAtHead;
+        const enforceHead = directive.context === "after-contract-repair";
+        const evaluation = evaluateBoundary(
+          stage.gitPolicy,
+          threadRelPath,
+          observedPaths,
+          enforceHead ? preserved.headAtStart : headAtBoundary,
+          headAtBoundary,
+          {
+            enforceHead,
+            allowRequiredChangeToBeAlreadyCommitted: true,
+          },
+        );
+
+        // A boundary this resume could not finalize is fresh Git evidence like
+        // any other: the policy decides what the run does about it, and keeps the
+        // preserved attempt finalizable from wherever this attempt left the tip.
+        const finalizationFailed = async (
+          failure: "git-policy-violation" | "commit-error",
+          message: string,
+        ): Promise<number> =>
+          applyDirective(
+            decideRecovery(pausedRecovery, {
+              queues: { kind: "clear" },
+              git: {
+                kind: "finalization-failed",
+                failure,
+                message,
+                observedHead: await readHead(repoRoot),
+              },
+            }),
+            preserved,
+          );
+
+        if (!evaluation.ok) {
+          return finalizationFailed("git-policy-violation", evaluation.message);
+        }
+
+        const finalized = await finalizeBoundary(
+          repoRoot,
+          stage.gitPolicy,
+          threadFolder,
+          evaluation,
+        );
+        if (finalized.kind === "commit-error") {
+          return finalizationFailed("commit-error", finalized.message);
+        }
+
+        // Success: flip the preserved DONE attempt from waiting to done, clear
+        // waiting, then apply the declared resolution when the attempt listed
+        // pending files, else the normal successful-stage advance.
+        const doneAttempts = replaceAttempt(checkpoint.attempts, {
+          ...preserved,
+          result: "done",
+        });
+        const hadPending = (preserved.pendingFiles?.length ?? 0) > 0;
+        if (hadPending && stage.queueResolution === "rerun") {
+          const persisted = await persist({
+            ...checkpoint,
+            attempts: doneAttempts,
+            condition: "ready",
+            waiting: null,
+          });
+          if (!persisted.ok) return fatalCheckpoint(persisted.message);
+          return continueRun(persisted.checkpoint);
+        }
+        return advanceThenContinue({ ...checkpoint, attempts: doneAttempts });
+      };
+
+      /** Carry out one recovery directive as a durable transition. */
+      const applyDirective = async (
+        directive: RecoveryDirective,
+        attempt: AttemptRecord | undefined,
+      ): Promise<number> => {
+        switch (directive.kind) {
+          case "retry-stage":
+            return continueRun({ ...checkpoint, condition: "ready", waiting: null });
+          case "advance-stage":
+            return advanceThenContinue(checkpoint);
+          case "finalize-boundary":
+            return finalizeSavedDone(directive);
+          case "remain-paused":
+            return remainPaused(directive, attempt);
+        }
+      };
+
+      // The evidence the recorded recovery acts on, observed only where that
+      // recovery calls for it. Held queues decide the pause on their own, so
+      // nothing further is read while a human still owes the thread work.
+      let contract: ContractEvidence | undefined;
+      if (queues.kind === "clear") {
+        // Queues are empty. A signal before any queue-empty transition leaves
+        // the durable cursor unchanged.
+        sig = signalCode();
+        if (sig !== null) return sig;
+
+        if (pausedRecovery.kind === "recheck-stage-contract") {
+          const inspection = await inspectArtifactState(repoRoot, threadRelPath);
+          if (!inspection.ok) {
+            contract = { kind: "uninspectable" };
+          } else {
+            const unmet = evaluatePromisedState(inspection.state, stage.promises);
+            if (unmet.length === 0) {
+              contract = { kind: "satisfied" };
+            } else {
+              let clean: boolean;
+              try {
+                clean = await isWorktreeClean(repoRoot);
+              } catch (error) {
+                return fail(
+                  `Cannot inspect the Git worktree at ${repoRoot}: ${errorMessage(error)}`,
+                );
+              }
+              contract = {
+                kind: "unmet",
+                unmet,
+                worktree: clean ? "clean" : "dirty",
+              };
+            }
+          }
+        }
+      }
+
+      return applyDirective(
+        decideRecovery(pausedRecovery, {
+          queues,
+          ...(contract !== undefined ? { contract } : {}),
+        }),
+        lastAttempt,
+      );
     } finally {
       await lock.release();
     }
