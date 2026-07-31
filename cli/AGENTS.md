@@ -128,33 +128,67 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   selected execution profile when it binds that stage and from `settings.json`
   otherwise. The whole binding comes from one document — fields never merge
   across the two — and only the intrinsic defaults fill an omitted timing.
-- The generic **runner** (`src/runner/`) drives a stage through the harness,
-  classifies the attempt, and recognizes the skill's terminal `Outcome:` line.
-  It rechecks the stage's prerequisite against fresh concrete state immediately
-  before every attempt, and verifies the promised artifact state after a
-  recognized `DONE`. That verification runs **before** the Git boundary, so a
-  `DONE` implement attempt that left no `implementation-report.md` reports
+- **One engine owns every durable transition.** A command's own work ends at
+  allocation (`run`) or validated read-only preflight (`resume`); both then hand
+  their starting cursor to `executeEngine` (`src/execution/engine.ts`) through a
+  typed entry. Under the held lock the engine alone recovers an abandoned
+  attempt, gates on queues and prerequisites, launches and settles attempts,
+  checks promised artifact state, finalizes Git, builds and refreshes waiting
+  state, advances stages, completes the run, and writes every checkpoint after
+  the allocation write. Commands keep startup and preflight presentation, the
+  signal-handler lifecycle, lock release, and the mapping of the engine's
+  structured result to an exit code. The engine coordinates collaborators and
+  reimplements none of them: Git sequencing, artifact contracts, runtime
+  selection, terminal prose, and the pause decision table each stay with their
+  owner.
+- The engine rechecks the stage's prerequisite against fresh concrete state
+  immediately before every attempt, and verifies the promised artifact state
+  after a recognized `DONE`. That verification runs **before** the Git boundary,
+  so a `DONE` implement attempt that left no `implementation-report.md` reports
   `stage-contract-violation` and never reaches boundary evaluation.
-- Once the promise holds, the **boundary engine** (`src/gitops/`) validates that
-  post-DONE changes fall within the stage's allowed selectors and produces the
-  declared boundary commit — the `git-policy-violation` path, which fires when
-  changes fall outside the selectors, `HEAD` moved where the stage forbids it, or
-  a `changeRequired` stage left nothing. This includes the implementation
-  stages: the skill makes its own per-task code commits and leaves the thread's
-  `implementation-report.md` uncommitted, and the stage boundary is what commits
-  that report.
+- Once the promise holds, the **Git boundary** (`src/gitops/boundary.ts`)
+  validates that post-DONE changes fall within the stage's allowed selectors and
+  produces the declared boundary commit — the `git-policy-violation` path, which
+  fires when changes fall outside the selectors, `HEAD` moved where the stage
+  forbids it, or a `changeRequired` stage left nothing. This includes the
+  implementation stages: the skill makes its own per-task code commits and leaves
+  the thread's `implementation-report.md` uncommitted, and the stage boundary is
+  what commits that report. One call finalizes a boundary in every context — a
+  fresh attempt, first-time finalization after a repaired contract, or a retry
+  after an earlier boundary or commit failure — so no caller sequences status
+  collection, evaluation, staging, commit, and the final `HEAD` read itself.
 - **Pauses** surface as exit code `2` (waiting): when a queue gate finds pending
   work (e.g. a file under the thread's `.pending-decisions/`), the run
   checkpoints and prints the exact `antmay afk resume <run-id>` command.
+- **A pause records what resume may do, separately from what it explains.** The
+  ordered diagnostic reasons exist to explain everything observed at the pause;
+  exactly one required recovery value decides the resume, and it is one of four —
+  retry the stage, apply a finalized `DONE`'s recorded queue resolution, recheck a
+  stage contract, or retry a Git boundary. Reading a recovery out of reason order
+  or reason kind is what the split exists to prevent, so reordering or adding
+  reasons never changes the action taken. Each recovery names its exact
+  `(stageIndex, attempt)` where it claims an attempt at all, and
+  checkpoint validation rejects a reference the history does not bear out — an
+  absent attempt, another stage, a non-`DONE` token, an incompatible result, or a
+  queue resolution that is not the current stage's. The decision table
+  (`src/execution/recovery-policy.ts`) turns a validated recovery plus fresh
+  evidence into a directive and touches nothing: no filesystem, Git, clock,
+  harness, or checkpoint.
+- **Git evidence belongs to the attempt that produced it.** Every attempt
+  records the `HEAD` it was launched from and, once settled, the `HEAD` its
+  settlement left behind, so a boundary is judged across its own attempt's
+  interval. A recovery that may finalize a boundary after a human worked across
+  the pause carries the pause's own latest `HEAD` as well, which is what tells
+  that movement apart from the attempt's.
 - **Resume reads only the checkpoint.** Every resolved value a run needs — both
   document identities and their source paths, the selected stages with their
   catalog definitions, resolved targets, instructions, and bindings — is
   snapshotted at allocation, so `resume` rereads no pipeline, profile, or
-  settings document. A `stage-contract-violation` pause is the one pause exempt
-  from the clean-worktree rule, because the repair it waits for arrives
-  uncommitted; its four recoveries (finalize the saved `DONE`, rerun the stage,
-  stay paused dirty, stay paused uninspectable) are decided by rechecking the
-  promise first.
+  settings document. Its preflight is read-only with respect to that checkpoint:
+  it never branches on a recovery variant or reason kind, applies no worktree
+  exemption of its own, and persists nothing. A `stage-contract-violation` pause
+  is the one pause the engine exempts from the clean-worktree rule, because the
+  repair it waits for arrives uncommitted.
 
 ### Module layout (`src/`)
 
@@ -174,19 +208,36 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   catalog (`catalog.ts`), pipeline-document loading and validation
   (`documents.ts`), suffix selection and artifact-state composition
   (`composition.ts`), and target-rule resolution (`targets.ts`).
-- `runner/` — the generic stage runner, attempt classification, outcome
-  recognition, and signal handling.
+- `execution/` — the stage loop and its persistence boundary (`engine.ts`) over
+  the pure pause-recovery decision table (`recovery-policy.ts`).
+- `runner/` — attempt classification, terminal-outcome recognition, and signal
+  handling.
 - `gitops/` — the Git wrapper and its NUL-output splitter (`git.ts`),
   working-tree status (`status.ts`), the temporary-workspace ignore and
-  tracked-content preflight (`temporary-workspaces.ts`), and the boundary engine
-  (`boundary.ts`).
-- `harness/` — the Sandcastle invoker, executable probing, and prompt assembly.
-- `state/` — durable run state: checkpoints, logs, run records, and the
-  exclusive workspace lock.
-- `thread/`, `workspace/`, `display/` — thread resolution, queue gates and
-  bounded artifact-state inspection (`artifacts.ts`, shared by composition and
-  the runtime contract checks), current-checkout detection, and the curated
-  terminal stream, including structured pipeline-composition refusals.
+  tracked-content preflight (`temporary-workspaces.ts`), and the one
+  Git-boundary finalization operation (`boundary.ts`).
+- `harness/` — the provider-neutral request, event, and outcome boundary
+  (`types.ts`), prompt assembly, the lazy runtime resolver (`runtime.ts`), the
+  Sandcastle adapter with its own executable probe, and the developer scripted
+  family under `scripted/`.
+- `state/` — durable run state: the checkpoint schema, its exhaustive validator
+  and reader (`checkpoint.ts`), the atomic writer (`persist.ts`), logs, run
+  records, and the exclusive workspace lock.
+- `thread/` — thread resolution, queue gates, and the artifact domain
+  (`artifacts.ts`): the canonical owner of artifact-state vocabulary, the
+  validators that accept it as untrusted serialized data, filesystem inspection,
+  prerequisite and promise matching, simulated transition application, and the
+  plain-language descriptions display renders. The catalog, composition,
+  checkpoint validation, the engine, and display all depend on it, and it depends
+  on nothing but the domain-free primitives in `shared/` — the direction that
+  keeps a second dimension list from ever existing.
+- `workspace/` — current-checkout detection.
+- `display/` — the curated terminal stream, one module per phase: shared
+  painting and formatting primitives (`format.ts`), run listing (`list.ts`),
+  structured preflight refusals (`preflight.ts`), startup and developer
+  diagnostics (`startup.ts`), and execution lifecycle output (`execution.ts`)
+  behind the narrow `ExecutionDisplay` interface (`types.ts`) the engine sees.
+  `terminal.ts` re-exports all of them for a reader or test that spans phases.
 - `shared/` — low-level validation primitives with no domain knowledge, used by
   more than one module: `validation.ts` holds the plain-object guard every
   document validator narrows parsed JSON with. Only a primitive that answers a
@@ -208,15 +259,15 @@ bearing.
   repository**, built once per distinct set of fixture options. Do not
   reintroduce a per-test `init`/`config`/`add`/`commit` path — that was ~400 ms
   of subprocess time per test case.
-- `commands/resume.test.ts`, `commands/run.test.ts`, and `runner/runner.test.ts`
-  declare their suites with **`describe.concurrent`**, so their cases overlap.
-  Each case owns an independent repository, config root, and state root, and
-  every temporary resource is collected in a module-level array released by a
-  single `afterAll`. In these files, teardown must never run between cases: an
-  `afterEach` hook would delete a repository a still-running case is using, and
-  `onTestFinished` is unusable because Vitest 2 attributes it to the wrong test
-  when cases run concurrently. Any new case in these files allocates through the
-  existing helpers and registers no teardown of its own.
+- `commands/resume.test.ts`, `commands/run.test.ts`, and
+  `execution/engine.test.ts` declare their suites with **`describe.concurrent`**,
+  so their cases overlap. Each case owns an independent repository, config root,
+  and state root, and every temporary resource is collected in a module-level
+  array released by a single `afterAll`. In these files, teardown must never run
+  between cases: an `afterEach` hook would delete a repository a still-running
+  case is using, and `onTestFinished` is unusable because Vitest 2 attributes it
+  to the wrong test when cases run concurrently. Any new case in these files
+  allocates through the existing helpers and registers no teardown of its own.
 - `testTimeout`/`hookTimeout` in `vitest.config.ts` are deliberately generous.
   A Git-backed case needs seconds of wall clock under concurrent load; the
   budget exists so contention alone never fails a test.
@@ -231,6 +282,14 @@ bearing.
 - **The dynamic-import discipline is deliberate**, not incidental: keep the
   Node guard, dispatch, and per-command dependency loading lazy so help,
   version, and grammar errors stay cheap.
+- **`src/architecture.test.ts` enforces the dependency directions** the modules
+  above are built on: one checkpoint writer outside allocation, a resume
+  preflight that reaches no transition collaborator, the Git protocol behind its
+  one operation, artifact contracts declared only in the thread domain,
+  phase-specific display consumers, and adapter families loaded only through the
+  runtime resolver. It reads source text, so a static, dynamic, re-export, or
+  type-only import is judged for what it is. When it fails, the boundary moved —
+  argue the direction, do not relax the guard to match the new import.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
@@ -238,9 +297,11 @@ bearing.
   "Scenarios are the executable UI contract" below.
 - **Multiline operational diagnostics belong to `display/`.** Domain modules
   return structured facts, and commands add the run or resume context before
-  calling a terminal renderer. A short single-line diagnostic may remain a
-  message, but never assemble a paragraph/list/command wall in a checker and
-  pass it through a command's generic failure printer.
+  calling the renderer for their own phase; the engine emits lifecycle events
+  through the narrow `ExecutionDisplay` seam and assembles no prose itself. A
+  short single-line diagnostic may remain a message, but never assemble a
+  paragraph/list/command wall in a checker and pass it through a command's
+  generic failure printer.
 - **Artifact-prerequisite diagnostics form one interface across execution
   phases.** Both a composition refusal and a runtime recheck identify the
   affected stage, show the concrete thread files found and required, explain
@@ -256,29 +317,34 @@ Scripted mode is gated exclusively by the environment variable
 unset or empty preserves ordinary real-harness behavior; every other non-empty
 value is a configuration error that must not fall through to a real harness.
 
-When enabled, `run` and eligible `resume` read the live scenario from
-`<resolved-config-root>/scripted-harness.json` (fixed filename; never created by
-the CLI). The scenario is validated once per command against the selected or
-snapshotted stage IDs and reread on every resume — never copied into the
-checkpoint.
+When enabled, a new `run` and a scripted run's `resume` read the live scenario
+from `<resolved-config-root>/scripted-harness.json` (fixed filename; never
+created by the CLI). The scenario is validated once per command against the
+selected or snapshotted stage IDs and reread on every resume — never copied into
+the checkpoint.
 
-Runtime selection replaces **both** seams together: the Sandcastle invoker and
-the executable probe are swapped for `createScriptedInvoker` and
-`probeScriptedHarnessExecutables`. Logical stage profiles (Codex / Claude Code
-harness id and configured model) stay unchanged in settings, snapshots, prompts,
-and attempt headers; only the provider contact is bypassed.
+`run` and `resume` resolve their runtime through one resolver, which loads
+exactly one adapter family and keeps its invoker paired with that same family's
+executable probe — no caller can pair a provider with another provider's
+availability check, and selecting one family never evaluates the other. Logical
+stage profiles (Codex / Claude Code harness id and configured model) stay
+unchanged in settings, snapshots, prompts, and attempt headers; only the provider
+contact is bypassed.
 
-A scripted `run` writes `startedScripted: true` on the initial checkpoint; a run
-started against a real harness omits it. Resume is fail-closed: a marked
-checkpoint refuses to continue unless the toggle
-is exactly `1`, before probe, lock acquisition, or mutation. Scripted resume
-still requires a valid live scenario even on queue/boundary paths that make no
-harness call.
+The runtime a run contacts is fixed at allocation, recorded in its checkpoint,
+and immutable for the run's whole life. Resume is fail-closed in both
+directions: a scripted run continues only while the toggle is exactly `1`, a
+real run refuses to be switched to the scripted harness, and either refusal
+lands before probe, lock acquisition, or any mutation. Scripted resume still
+requires a valid live scenario even on queue/boundary paths that make no harness
+call.
 
 Built-in scripted cases only — no arbitrary code, shell commands, or
-scenario-supplied operations outside the fixed catalog in
-`harness/scripted/scenario.ts`. Help, version, grammar errors, and `list` never
-interpret the toggle or touch scenario/state/Git/harness modules.
+scenario-supplied operations outside the fixed case and effect catalog in
+`harness/scripted/cases.ts`, which the provider-facing adapter
+(`harness/scripted/invoker.ts`) is the only caller of. Help, version, grammar
+errors, and `list` never interpret the toggle or touch scenario/state/Git/harness
+modules.
 
 Scripted output imitates an ordinary attempt rather than announcing itself:
 progress lines stream through the invoker's event seam so the terminal renders
@@ -287,13 +353,13 @@ genuinely performs. Nothing written to the terminal or the attempt log fabricate
 provider JSON, a sandbox, a branch, or a timing. The one announcement is a single
 dim line ahead of the run details block.
 
-A case ends in one of three ways. Most report a `finalText` carrying the terminal
-outcome line. A case may instead report a `CaseEnding`: `failed` returns a
-normalized `idle-timeout` or `provider-error` outcome, and `await-abort` settles
-only when the attempt is aborted — the seam that lets a signal land mid-attempt.
-`await-abort` holds a referenced timer open while it waits, because an abort
-listener alone keeps nothing alive and the process would otherwise drain its
-event loop and exit before any signal arrived.
+Most cases end by reporting the final message carrying the terminal outcome line.
+A case may instead end without a result: a failure the adapter normalizes into an
+`idle-timeout` or `provider-error` outcome, or a wait that settles only when the
+attempt is aborted — the seam that lets a signal land mid-attempt. That wait
+holds a referenced timer open, because an abort listener alone keeps nothing
+alive and the process would otherwise drain its event loop and exit before any
+signal arrived.
 
 Every launched scripted attempt reports a deterministic synthetic session ID on
 every path a real capture would take. Its shape is deliberately
@@ -331,9 +397,10 @@ quietly drifting away from the schema it imitates.
 
 Discovery is automatic: a scenario's id is its filename stem under
 `scripts/scenarios/`, so a new scenario is a new file and nothing else. The
-zero-padded prefix each id carries (`12-refused`) is what puts the catalog in
+zero-padded prefix each id carries (`13-refused`) is what puts the catalog in
 reading order everywhere it appears — on disk, in `--list`, and in the prompt —
-rather than in the alphabetical order the names alone would give.
+rather than in the alphabetical order the names alone would give. Run
+`npm run demo -- --list` to read the catalog.
 
 Each demo run allocates a unique `/tmp` directory holding an isolated config
 root, an isolated state root, and the disposable repository, and injects
