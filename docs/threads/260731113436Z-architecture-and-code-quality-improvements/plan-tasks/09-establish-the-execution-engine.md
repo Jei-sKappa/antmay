@@ -37,6 +37,6 @@
 - The engine owns complete checkpoint rewrites for every runnable-stage transition and depends only on the narrow execution display.
 - No obsolete runner implementation or duplicate runner test remains.
 
-**Consumes:** `ExecutionEntry` inputs contain a validated checkpoint, held lock context, resolved runtime invoker/versions, signal, execution display, run directory, and state root; the engine calls the artifact, recovery-policy, Git-boundary, queue, log, and persistence seams established earlier.
+**Consumes:** The thread-artifact operations from Task 1, validated checkpoint state from Task 2, recovery directives from Task 3, semantic Git finalization from Task 4, `ExecutionDisplay` from Task 5, and resolved runtime data from Task 7.
 
 **Produces:** `executeEngine(context): Promise<ExecutionResult>` and its integration suite under `cli/src/execution/`.

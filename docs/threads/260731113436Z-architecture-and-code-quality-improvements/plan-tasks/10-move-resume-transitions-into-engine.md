@@ -42,6 +42,6 @@
 - FR-3 / AC-3.3 and AC-3.4 integration portion: finalized-DONE resolutions happen exactly once after queues clear, and Git retry finalizes the referenced attempt without a harness call.
 - Every engine recovery uses the required attempt-local and pause-local Git evidence and never derives control from diagnostic reason order.
 
-**Consumes:** `executeEngine`, `decideRecovery`, `finalizeGitBoundary`, `WaitingRecovery`, resolved harness runtime, thread-artifact operations, queue scans, and `ExecutionDisplay`.
+**Consumes:** `executeEngine` from Task 9, `decideRecovery` from Task 3, `finalizeGitBoundary` from Task 4, `WaitingRecovery` from Task 2, the resolved harness runtime from Task 7, thread-artifact operations from Task 1, `ExecutionDisplay` from Task 5, and the recovery scenarios from Task 8.
 
 **Produces:** A read-only resume preflight adapter and one execution engine owning all existing-checkpoint transitions.

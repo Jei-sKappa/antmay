@@ -49,6 +49,6 @@
 - Scenario IDs are contiguous and ordered by reading flow, every existing label and declared exit code remains paired with its renamed file, and the README example names the new identifier.
 - Both new visual states remain understandable without color and use no new scripted case.
 
-**Consumes:** The real-runtime mismatch refusal and resolver from Task 7, the version-zero checkpoint shape from Task 2, and existing `outcome-done` scripted behavior.
+**Consumes:** The real-runtime mismatch refusal and resolver from Task 7, the version-zero checkpoint shape from Task 2, and the fixed `outcome-done` scripted case preserved in the catalog from Task 6.
 
 **Produces:** Scenario `11-real-runtime-scripted-toggle-refusal`, scenario `19-saved-done-recovery`, and the ordered `01`–`31` scenario catalog.
