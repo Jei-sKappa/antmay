@@ -15,6 +15,7 @@ import { nullDisplay } from "./types.js";
 import {
   createTerminalExecutionDisplay,
   printCompositionRefusal,
+  printHarnessRuntimeRefusal,
   printRunList,
   printRunSummary,
   printScriptedModeStartup,
@@ -149,6 +150,125 @@ describe("printTemporaryWorkspaceRefusal", () => {
     const lines = err.text.trimEnd().split("\n");
     expect(lines.at(-1)).toContain(
       "Resume:   antmay afk resume 260101T000000000Z-run",
+    );
+  });
+});
+
+describe("printHarnessRuntimeRefusal", () => {
+  const TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
+
+  it("explains an immutable runtime, refuses the switch, and gives the real-mode correction", () => {
+    const { options, out, err } = makeOptions();
+    printHarnessRuntimeRefusal(options, {
+      kind: "real-runtime-refuses-toggle",
+      runId: "260101T000000000Z-run",
+      toggleVar: TOGGLE,
+    });
+
+    expect(out.text).toBe("");
+    expect(err.text).toMatchSnapshot();
+    expect(err.text).toContain("real harness");
+    expect(err.text).toContain(`unset ${TOGGLE}`);
+    expect(err.text).toContain("antmay afk resume 260101T000000000Z-run");
+    expect(err.text).toContain("Checkpoint unchanged.");
+  });
+
+  it("keeps the refusal readable with color codes stripped", () => {
+    const plain = makeOptions();
+    printHarnessRuntimeRefusal(plain.options, {
+      kind: "real-runtime-refuses-toggle",
+      runId: "260101T000000000Z-run",
+      toggleVar: TOGGLE,
+    });
+    const colored = makeOptions({ isTTY: true, noColor: false });
+    printHarnessRuntimeRefusal(colored.options, {
+      kind: "real-runtime-refuses-toggle",
+      runId: "260101T000000000Z-run",
+      toggleVar: TOGGLE,
+    });
+
+    expect(ANSI_PATTERN.test(colored.err.text)).toBe(true);
+    expect(
+      colored.err.text.replace(new RegExp(ANSI_PATTERN, "g"), ""),
+    ).toBe(plain.err.text);
+  });
+
+  it("names the toggle a scripted run needs to continue", () => {
+    const { options, err } = makeOptions();
+    printHarnessRuntimeRefusal(options, {
+      kind: "scripted-runtime-requires-toggle",
+      runId: "260101T000000000Z-run",
+      toggleVar: TOGGLE,
+    });
+
+    expect(err.text).toBe(
+      `Run "260101T000000000Z-run" was started in scripted test mode. ` +
+        `Re-run resume with ${TOGGLE}=1 to continue.\n`,
+    );
+  });
+
+  it("bullets every failed probe for a new run and lists the resuming stage's alone", () => {
+    const failures = [
+      { harness: "codex" as const, binary: "codex", reason: "executable not found on PATH" },
+      { harness: "claude-code" as const, binary: "claude", reason: "timed out after 10s" },
+    ];
+    const newRun = makeOptions();
+    printHarnessRuntimeRefusal(newRun.options, {
+      kind: "probe-failed",
+      scope: "selected-stages",
+      failures,
+    });
+    expect(newRun.err.text).toBe(
+      "Harness-executable preflight failed:\n" +
+        "  - codex (codex): executable not found on PATH\n" +
+        "  - claude-code (claude): timed out after 10s\n",
+    );
+
+    const resume = makeOptions();
+    printHarnessRuntimeRefusal(resume.options, {
+      kind: "probe-failed",
+      scope: "current-stage",
+      failures: [failures[0]!],
+    });
+    expect(resume.err.text).toBe(
+      "Harness-executable preflight failed for the current stage's harness:\n" +
+        "codex (codex): executable not found on PATH\n",
+    );
+  });
+
+  it("names every harness that reported no version", () => {
+    const { options, err } = makeOptions();
+    printHarnessRuntimeRefusal(options, {
+      kind: "version-missing",
+      harnesses: ["codex", "claude-code"],
+    });
+    expect(err.text).toBe(
+      "Harness-executable preflight failed: no version reported for codex, claude-code.\n",
+    );
+  });
+
+  it("passes through toggle, config-root, and scenario diagnostics", () => {
+    const toggle = makeOptions();
+    printHarnessRuntimeRefusal(toggle.options, {
+      kind: "toggle-invalid",
+      message: `${TOGGLE} must be exactly "1"`,
+    });
+    expect(toggle.err.text).toBe(`${TOGGLE} must be exactly "1"\n`);
+
+    const roots = makeOptions();
+    printHarnessRuntimeRefusal(roots.options, {
+      kind: "config-root-unresolved",
+      message: "Cannot resolve the config root",
+    });
+    expect(roots.err.text).toBe("Cannot resolve the config root\n");
+
+    const scenario = makeOptions();
+    printHarnessRuntimeRefusal(scenario.options, {
+      kind: "scenario-rejected",
+      errors: ["stages.spec must be present.", "schemaVersion must be the number 0."],
+    });
+    expect(scenario.err.text).toBe(
+      "stages.spec must be present.\nschemaVersion must be the number 0.\n",
     );
   });
 });

@@ -3,10 +3,12 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
 import { resolveRoots, resolveStateRoot } from "../config/roots.js";
-import type { HarnessId } from "../config/execution.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
-import { printTemporaryWorkspaceRefusal } from "../display/preflight.js";
+import {
+  printHarnessRuntimeRefusal,
+  printTemporaryWorkspaceRefusal,
+} from "../display/preflight.js";
 import {
   printRunSummary,
   printScriptedModeStartup,
@@ -25,11 +27,7 @@ import type {
 } from "../gitops/boundary.js";
 import { isWorktreeClean, readHead } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
-import {
-  interpretScriptedHarnessToggle,
-  loadScriptedScenario,
-  SCRIPTED_HARNESS_TOGGLE_VAR,
-} from "../harness/scripted/scenario.js";
+import { resolveHarnessRuntime } from "../harness/runtime.js";
 import { nativeContinuationCommand } from "../harness/native-session.js";
 import { gateErrorMessage, pendingQueuesMessage } from "../runner/classify.js";
 import { executeRun } from "../runner/runner.js";
@@ -271,69 +269,41 @@ export async function resumeCommand(
     sig = signalCode();
     if (sig !== null) return sig;
 
-    // The run's harness runtime is fixed at allocation, so the developer toggle
-    // may only agree with it. Both directions are fail-closed, and both refuse
-    // here — before the probe, the lock, and any mutation.
-    const toggleResult = interpretScriptedHarnessToggle(deps.env);
-    const useScripted = checkpoint.runtime.kind === "scripted";
-
-    if (useScripted) {
-      if (toggleResult.mode !== "scripted") {
-        return fail(
-          `Run "${args.runId}" was started in scripted test mode. Re-run resume with ${SCRIPTED_HARNESS_TOGGLE_VAR}=1 to continue.`,
-        );
-      }
-    } else if (toggleResult.mode === "error") {
-      return fail(toggleResult.message);
-    } else if (toggleResult.mode === "scripted") {
-      return fail(
-        `Run "${args.runId}" was started against a real harness, and a run's harness runtime cannot change. ` +
-          `Unset ${SCRIPTED_HARNESS_TOGGLE_VAR} and resume again to continue in real mode.`,
-      );
-    }
-    let invoker = deps.invoker;
-    let probe = deps.probe;
-    let scenarioPath: string | undefined;
-    if (useScripted) {
-      const roots = resolveRoots(deps.env, deps.homedir);
-      if (!roots.ok) {
-        return fail(roots.message);
-      }
-      const loaded = await loadScriptedScenario(
-        roots.configRoot,
-        checkpoint.stages.map((stage) => stage.id),
-      );
-      if (!loaded.ok) {
-        return fail(loaded.errors.join("\n"));
-      }
-      invoker = deps.createScriptedInvoker(loaded.scenario, (prompt) => {
-        printScriptedResolvedPrompt(displayOptions, prompt);
-      });
-      probe = deps.scriptedProbe;
-      scenarioPath = loaded.scenarioPath;
-    }
-    sig = signalCode();
-    if (sig !== null) return sig;
-
     const stageIndex = checkpoint.stageIndex;
     const stage = checkpoint.stages[stageIndex]!;
     const currentHarness = stage.binding.agent.harness;
 
-    // Probe only the current stage's snapshotted harness.
-    const probeResult = await probe([currentHarness], repoRoot);
-    if (!probeResult.ok) {
-      const lines = probeResult.failures.map(
-        (failure) => `${failure.harness} (${failure.binary}): ${failure.reason}`,
-      );
-      return fail(
-        `Harness-executable preflight failed for the current stage's harness:\n${lines.join("\n")}`,
-      );
-    }
-    const probedVersion = probeResult.versions[currentHarness];
-    if (probedVersion === undefined || probedVersion.length === 0) {
-      return fail(
-        `Harness-executable preflight failed: no version reported for ${currentHarness}.`,
-      );
+    // The run's harness runtime is fixed at allocation, so the developer toggle
+    // may only agree with it. Both directions are fail-closed and refuse here —
+    // before the probe, the lock, and any mutation. Only the current stage's
+    // snapshotted harness is probed, and a scripted run's live scenario is
+    // reread and revalidated against the complete snapshotted stage set.
+    const harnessRuntime = await resolveHarnessRuntime(
+      {
+        kind: "resume",
+        runId: args.runId,
+        runtime: checkpoint.runtime,
+        env: deps.env,
+        harnesses: [currentHarness],
+        repoRoot,
+        stageIds: checkpoint.stages.map((snapshotted) => snapshotted.id),
+        // Consulted in scripted mode only, so a config-root problem never blocks
+        // an otherwise state-only resume.
+        configRoot: () => {
+          const roots = resolveRoots(deps.env, deps.homedir);
+          return roots.ok
+            ? { ok: true, configRoot: roots.configRoot }
+            : { ok: false, message: roots.message };
+        },
+        onScriptedPrompt: (prompt) => {
+          printScriptedResolvedPrompt(displayOptions, prompt);
+        },
+      },
+      deps.harnessRuntime,
+    );
+    if (!harnessRuntime.ok) {
+      printHarnessRuntimeRefusal(displayOptions, harnessRuntime.failure);
+      return EXIT_FAILURE;
     }
     // The process-local version map keeps every run-creation observation and
     // overrides only the current harness with the fresh resume probe; the
@@ -346,7 +316,11 @@ export async function resumeCommand(
         harnessVersions[harness] = version;
       }
     }
-    harnessVersions[currentHarness] = probedVersion;
+    for (const [harness, version] of Object.entries(harnessRuntime.versions)) {
+      if (version !== undefined) {
+        harnessVersions[harness] = version;
+      }
+    }
     sig = signalCode();
     if (sig !== null) return sig;
 
@@ -497,7 +471,7 @@ export async function resumeCommand(
         runDir,
         stateRoot,
         lock,
-        invoker,
+        invoker: harnessRuntime.invoker,
         display,
         harnessVersions,
         signal: controller.signal,
@@ -579,8 +553,8 @@ export async function resumeCommand(
 
       // Startup summary; re-print the unrestricted warning when the persisted
       // permission choice is unrestricted.
-      if (scenarioPath !== undefined) {
-        printScriptedModeStartup(displayOptions, scenarioPath);
+      if (harnessRuntime.scenarioPath !== undefined) {
+        printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
       }
       // Every value here comes from the checkpoint, so a resume renders the
       // execution the run was allocated with whatever later happened to the

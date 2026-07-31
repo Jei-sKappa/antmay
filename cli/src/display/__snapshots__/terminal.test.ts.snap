@@ -155,6 +155,24 @@ Plan projection (assuming earlier selected stages succeed)
 "
 `;
 
+exports[`printHarnessRuntimeRefusal > explains an immutable runtime, refuses the switch, and gives the real-mode correction 1`] = `
+"Run cannot resume ❌
+  Run ID:  260101T000000000Z-run
+  Check:   Harness runtime identity
+  Problem: This run was started against a real harness, and ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS=1 selects the scripted test harness.
+
+  Why:
+    - A run's harness runtime is fixed when the run is allocated and cannot change.
+    - Continuing through another provider would execute the rest of the pipeline on a harness this run never used.
+
+  Fix:
+    Resume with scripted mode disabled:
+      unset ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS
+      antmay afk resume 260101T000000000Z-run
+  Result:  Checkpoint unchanged. No harness was probed, no lock was acquired, and no stage was run.
+"
+`;
+
 exports[`printTemporaryWorkspaceRefusal > renders a structured new-run refusal with separate problems and fixes 1`] = `
 "Pipeline cannot start ❌
   Pipeline: standard

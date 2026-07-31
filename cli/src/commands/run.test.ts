@@ -7,8 +7,13 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../config/execution.js";
 import type { ProbeResult } from "../harness/probe.js";
+import type {
+  HarnessExecutableProbe,
+  HarnessRuntimeLoader,
+} from "../harness/runtime.js";
 import { createScriptedInvoker } from "../harness/scripted/invoker.js";
 import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
+import type { HarnessInvoker } from "../harness/types.js";
 import {
   SCRIPTED_HARNESS_TOGGLE_VAR,
   SCRIPTED_SCENARIO_FILENAME,
@@ -135,14 +140,14 @@ function fakeSignals(
 }
 
 /** Harness probe fake that reports a distinctive version for every request. */
-const okProbe: RunDeps["probe"] = async (harnesses): Promise<ProbeResult> => {
+const okProbe: HarnessExecutableProbe = async (harnesses): Promise<ProbeResult> => {
   const versions: Partial<Record<HarnessId, string>> = {};
   for (const h of harnesses) versions[h] = `${h} 99.9.9`;
   return { ok: true, versions };
 };
 
 /** Harness probe fake that fails for every requested harness. */
-const failingProbe: RunDeps["probe"] = async (harnesses): Promise<ProbeResult> => ({
+const failingProbe: HarnessExecutableProbe = async (harnesses): Promise<ProbeResult> => ({
   ok: false,
   failures: harnesses.map((h) => ({
     harness: h,
@@ -150,6 +155,25 @@ const failingProbe: RunDeps["probe"] = async (harnesses): Promise<ProbeResult> =
     reason: "executable not found on PATH",
   })),
 });
+
+/**
+ * The one lazy runtime seam the command reads its adapters through. The real
+ * family hands back the case-driven fake harness under test with whichever probe
+ * the case injected; the scripted family is the genuine developer adapter, so a
+ * scripted case exercises the same invoker, catalog, and probe production loads.
+ */
+function testRuntimeLoader(
+  invoker: HarnessInvoker,
+  probe: HarnessExecutableProbe,
+): HarnessRuntimeLoader {
+  return {
+    real: async () => ({ createInvoker: () => invoker, probe }),
+    scripted: async () => ({
+      createInvoker: createScriptedInvoker,
+      probe: probeScriptedHarnessExecutables,
+    }),
+  };
+}
 
 type Harness = {
   configRoot: string;
@@ -230,7 +254,7 @@ async function run(
     profile: string;
     dangerouslySkipPermissions: boolean;
     env: NodeJS.ProcessEnv;
-    probe: RunDeps["probe"];
+    probe: HarnessExecutableProbe;
     generateId: () => string;
     createAbortController: () => AbortController;
     installSignals: RunDeps["installSignals"];
@@ -248,10 +272,7 @@ async function run(
     },
     cwd: h.fixture.root,
     homedir: os.homedir(),
-    invoker,
-    probe: overrides.probe ?? okProbe,
-    createScriptedInvoker,
-    scriptedProbe: probeScriptedHarnessExecutables,
+    harnessRuntime: testRuntimeLoader(invoker, overrides.probe ?? okProbe),
     stdout: out,
     stderr: err,
     isTTY: false,
@@ -639,7 +660,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
       },
     });
     let probed: HarnessId[] = [];
-    const trackingProbe: RunDeps["probe"] = async (harnesses, repoRoot) => {
+    const trackingProbe: HarnessExecutableProbe = async (harnesses, repoRoot) => {
       probed = [...harnesses];
       return okProbe(harnesses, repoRoot);
     };
@@ -1277,7 +1298,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
   it("leaves real mode unchanged when the toggle is unset", async () => {
     const h = await setup();
     let probeHarnesses: HarnessId[] = [];
-    const trackingProbe: RunDeps["probe"] = async (harnesses, repoRoot) => {
+    const trackingProbe: HarnessExecutableProbe = async (harnesses, repoRoot) => {
       probeHarnesses = [...harnesses];
       return okProbe(harnesses, repoRoot);
     };

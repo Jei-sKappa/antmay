@@ -8,8 +8,13 @@ import { afterAll, describe, expect, it } from "vitest";
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
 import type { HarnessId } from "../config/execution.js";
 import type { ProbeResult } from "../harness/probe.js";
+import type {
+  HarnessExecutableProbe,
+  HarnessRuntimeLoader,
+} from "../harness/runtime.js";
 import { createScriptedInvoker } from "../harness/scripted/invoker.js";
 import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
+import type { HarnessInvoker } from "../harness/types.js";
 import {
   SCRIPTED_HARNESS_TOGGLE_VAR,
   SCRIPTED_SCENARIO_FILENAME,
@@ -124,11 +129,30 @@ function fakeSignals(
   });
 }
 
-const okProbe: RunDeps["probe"] = async (harnesses): Promise<ProbeResult> => {
+const okProbe: HarnessExecutableProbe = async (harnesses): Promise<ProbeResult> => {
   const versions: Partial<Record<HarnessId, string>> = {};
   for (const h of harnesses) versions[h] = `${h} 99.9.9`;
   return { ok: true, versions };
 };
+
+/**
+ * The one lazy runtime seam the command reads its adapters through. The real
+ * family hands back the case-driven fake harness under test with whichever probe
+ * the case injected; the scripted family is the genuine developer adapter, so a
+ * scripted case exercises the same invoker, catalog, and probe production loads.
+ */
+function testRuntimeLoader(
+  invoker: HarnessInvoker,
+  probe: HarnessExecutableProbe,
+): HarnessRuntimeLoader {
+  return {
+    real: async () => ({ createInvoker: () => invoker, probe }),
+    scripted: async () => ({
+      createInvoker: createScriptedInvoker,
+      probe: probeScriptedHarnessExecutables,
+    }),
+  };
+}
 
 type Harness = { configRoot: string; stateRoot: string; fixture: RepoFixture };
 
@@ -168,7 +192,7 @@ async function seed(
     dangerouslySkipPermissions: boolean;
     profile: string;
     env: NodeJS.ProcessEnv;
-    probe: RunDeps["probe"];
+    probe: HarnessExecutableProbe;
     installSignals: RunDeps["installSignals"];
     createAbortController: () => AbortController;
   }> = {},
@@ -180,10 +204,7 @@ async function seed(
     env: overrides.env ?? baseEnv(h),
     cwd: h.fixture.root,
     homedir: os.homedir(),
-    invoker,
-    probe: overrides.probe ?? okProbe,
-    createScriptedInvoker,
-    scriptedProbe: probeScriptedHarnessExecutables,
+    harnessRuntime: testRuntimeLoader(invoker, overrides.probe ?? okProbe),
     stdout: out,
     stderr: err,
     isTTY: false,
@@ -208,7 +229,7 @@ async function resume(
   steps: FakeHarnessStep[],
   overrides: Partial<{
     env: NodeJS.ProcessEnv;
-    probe: RunDeps["probe"];
+    probe: HarnessExecutableProbe;
     installSignals: RunDeps["installSignals"];
     createAbortController: () => AbortController;
   }> = {},
@@ -220,10 +241,7 @@ async function resume(
     env: overrides.env ?? baseEnv(h),
     cwd: h.fixture.root,
     homedir: os.homedir(),
-    invoker,
-    probe: overrides.probe ?? okProbe,
-    createScriptedInvoker,
-    scriptedProbe: probeScriptedHarnessExecutables,
+    harnessRuntime: testRuntimeLoader(invoker, overrides.probe ?? okProbe),
     stdout: out,
     stderr: err,
     isTTY: false,
@@ -1337,13 +1355,13 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
         },
       }),
     );
-    const runProbe: RunDeps["probe"] = async (harnesses) => {
+    const runProbe: HarnessExecutableProbe = async (harnesses) => {
       const versions: Partial<Record<HarnessId, string>> = {};
       for (const hh of harnesses) versions[hh] = `${hh}-run`;
       return { ok: true, versions };
     };
     let resumeProbeHarnesses: HarnessId[] = [];
-    const resumeProbe: RunDeps["probe"] = async (harnesses) => {
+    const resumeProbe: HarnessExecutableProbe = async (harnesses) => {
       resumeProbeHarnesses = [...harnesses];
       const versions: Partial<Record<HarnessId, string>> = {};
       for (const hh of harnesses) versions[hh] = `${hh}-resume`;
@@ -1661,6 +1679,36 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     expect(attemptCountAt(cp, 0)).toBe(2);
     const folder = h.fixture.threadFolder as string;
     expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
+  });
+
+  it("rereads the edited live scenario and stores nothing about it (AC-5.3)", async () => {
+    const h = await setup();
+    // The seeded scenario offers the spec stage one case, so the case the resumed
+    // attempt runs exists nowhere but in the file the resume rereads.
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({ spec: ["outcome-blocked"] }),
+    );
+    const seeded = await seed(h, [], { env: scriptedEnv(h) });
+    expect(seeded.code).toBe(2);
+    const runId = await soleRunId(h);
+    const paused = JSON.stringify(await readCp(h, runId));
+    expect(paused).not.toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(paused).not.toContain("spec-correct");
+
+    await writeScriptedScenario(
+      h.configRoot,
+      standardScriptedScenario({ spec: ["outcome-blocked", "spec-correct"] }),
+    );
+    const result = await resume(h, runId, standardSteps(h.fixture), {
+      env: scriptedEnv(h),
+    });
+    expect(result.code).toBe(0);
+    const cp = await readCp(h, runId);
+    expect(cp.condition).toBe("completed");
+    expect(attemptCountAt(cp, 0)).toBe(2);
+    expect(cp.runtime).toEqual({ kind: "scripted" });
+    expect(JSON.stringify(cp)).not.toContain(SCRIPTED_SCENARIO_FILENAME);
   });
 
   it("requires a valid scenario for no-harness finalization resume paths", async () => {

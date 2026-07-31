@@ -8,6 +8,7 @@ export type { DisplayOptions } from "./format.js";
 export { printRunList, type RunListSummary } from "./list.js";
 export {
   printCompositionRefusal,
+  printHarnessRuntimeRefusal,
   printTemporaryWorkspaceRefusal,
   type CompositionRefusalInfo,
   type TemporaryWorkspaceRefusalInfo,

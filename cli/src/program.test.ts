@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { EXIT_FAILURE, EXIT_OK } from "./cli/exit-codes.js";
@@ -103,5 +105,41 @@ describe("runMain dispatch (AC-1.1, FR-8)", () => {
       process.stdout.write = original;
     }
     expect(chunks.join("")).toBe(`${VERSION_LINE}\n`);
+  });
+});
+
+describe("dispatch import boundaries (AC-5.5, FR-8)", () => {
+  const readProgramSource = (): Promise<string> =>
+    fs.readFile(new URL("./program.ts", import.meta.url), "utf8");
+
+  it("statically imports only the argument grammar, help text, and exit codes", async () => {
+    const source = await readProgramSource();
+    const specifiers = [...source.matchAll(/\bfrom\s+"([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect([...new Set(specifiers)].sort()).toEqual([
+      "./cli/exit-codes.js",
+      "./cli/help.js",
+      "./cli/parse.js",
+    ]);
+  });
+
+  it("defers every command, runtime, and platform module to a selected handler", async () => {
+    const source = await readProgramSource();
+    const deferred = [...source.matchAll(/\bimport\("([^"]+)"\)/g)].map(
+      (match) => match[1],
+    );
+    expect([...new Set(deferred)].sort()).toEqual([
+      "./commands/list.js",
+      "./commands/resume.js",
+      "./commands/run.js",
+      "./harness/runtime.js",
+      "node:os",
+    ]);
+  });
+
+  it("names no concrete harness adapter family", async () => {
+    const source = await readProgramSource();
+    expect(source).not.toMatch(/harness\/(?:sandcastle|probe|scripted)/);
   });
 });

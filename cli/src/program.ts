@@ -7,9 +7,9 @@ type ResumeCommand = Extract<CliCommand, { kind: "resume" }>;
 type ListCommand = Extract<CliCommand, { kind: "list" }>;
 
 /**
- * Injection point for the concrete command implementations. Later tasks supply
- * handlers whose command/config/state/Git/harness imports occur dynamically
- * inside the selected handler, keeping the pre-dispatch import graph light.
+ * Injection point for the concrete command implementations. Every handler's
+ * command/config/state/Git/harness imports occur dynamically inside the selected
+ * handler, keeping the pre-dispatch import graph light.
  */
 export interface CommandHandlers {
   run(command: RunCommand): Promise<number>;
@@ -48,26 +48,19 @@ export async function runMain(
 
 /**
  * The real `run` handler. It dynamically imports the command implementation and
- * the concrete harness dependencies only when `run` was selected, so the
+ * the lazy harness-runtime loader only when `run` was selected, so the
  * command/config/state/Git/harness subsystems stay out of the pre-dispatch
  * static import graph and never load for help, version, or grammar errors.
+ * Neither adapter family is imported here: the loader resolves exactly the one
+ * the run's runtime selects.
  */
 async function runHandler(command: RunCommand): Promise<number> {
-  const [
-    { runCommand },
-    { createSandcastleInvoker },
-    { probeHarnessExecutables },
-    { createScriptedInvoker },
-    { probeScriptedHarnessExecutables },
-    os,
-  ] = await Promise.all([
-    import("./commands/run.js"),
-    import("./harness/sandcastle.js"),
-    import("./harness/probe.js"),
-    import("./harness/scripted/invoker.js"),
-    import("./harness/scripted/probe.js"),
-    import("node:os"),
-  ]);
+  const [{ runCommand }, { productionHarnessRuntimeLoader }, os] =
+    await Promise.all([
+      import("./commands/run.js"),
+      import("./harness/runtime.js"),
+      import("node:os"),
+    ]);
 
   return runCommand(
     {
@@ -81,10 +74,7 @@ async function runHandler(command: RunCommand): Promise<number> {
       env: process.env,
       cwd: process.cwd(),
       homedir: os.homedir(),
-      invoker: createSandcastleInvoker(),
-      probe: probeHarnessExecutables,
-      createScriptedInvoker,
-      scriptedProbe: probeScriptedHarnessExecutables,
+      harnessRuntime: productionHarnessRuntimeLoader,
       stdout: process.stdout,
       stderr: process.stderr,
       isTTY: process.stdout.isTTY === true,
@@ -94,26 +84,17 @@ async function runHandler(command: RunCommand): Promise<number> {
 
 /**
  * The real `resume` handler. Like `run`, it dynamically imports the command
- * implementation and the concrete harness dependencies only when `resume` was
+ * implementation and the lazy harness-runtime loader only when `resume` was
  * selected. `resume` accepts no execution overrides and rereads no pipeline,
  * execution-profile, or settings document, so it imports none of their loaders.
  */
 async function resumeHandler(command: ResumeCommand): Promise<number> {
-  const [
-    { resumeCommand },
-    { createSandcastleInvoker },
-    { probeHarnessExecutables },
-    { createScriptedInvoker },
-    { probeScriptedHarnessExecutables },
-    os,
-  ] = await Promise.all([
-    import("./commands/resume.js"),
-    import("./harness/sandcastle.js"),
-    import("./harness/probe.js"),
-    import("./harness/scripted/invoker.js"),
-    import("./harness/scripted/probe.js"),
-    import("node:os"),
-  ]);
+  const [{ resumeCommand }, { productionHarnessRuntimeLoader }, os] =
+    await Promise.all([
+      import("./commands/resume.js"),
+      import("./harness/runtime.js"),
+      import("node:os"),
+    ]);
 
   return resumeCommand(
     { runId: command.runId },
@@ -121,10 +102,7 @@ async function resumeHandler(command: ResumeCommand): Promise<number> {
       env: process.env,
       cwd: process.cwd(),
       homedir: os.homedir(),
-      invoker: createSandcastleInvoker(),
-      probe: probeHarnessExecutables,
-      createScriptedInvoker,
-      scriptedProbe: probeScriptedHarnessExecutables,
+      harnessRuntime: productionHarnessRuntimeLoader,
       stdout: process.stdout,
       stderr: process.stderr,
       isTTY: process.stdout.isTTY === true,

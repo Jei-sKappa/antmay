@@ -1,4 +1,5 @@
 import type { TemporaryWorkspaceProblems } from "../gitops/temporary-workspaces.js";
+import type { HarnessRuntimeFailure } from "../harness/runtime.js";
 import type {
   CompositionFailure,
   DependencyProjection,
@@ -144,6 +145,100 @@ export function printTemporaryWorkspaceRefusal(
   }
 
   emit(options.stderr, lines.join("\n"));
+}
+
+/**
+ * The block a resume prints when the developer toggle asks for the scripted
+ * harness on a run that was allocated against the real one. It is the only
+ * runtime refusal a reader can mistake for something they may override, so it
+ * separates the immutable fact from the one correction that continues the run.
+ */
+function runtimeSwitchRefusal(
+  options: DisplayOptions,
+  failure: Extract<HarnessRuntimeFailure, { kind: "real-runtime-refuses-toggle" }>,
+): string {
+  const paint = createPainter(options);
+  const width = keyWidth("Run ID", "Check", "Problem", "Result");
+  const line = (key: string, value: string): string =>
+    infoLine(paint, "  ", key, value, width);
+
+  return [
+    paint("Run cannot resume ❌", "bold", "red"),
+    line("Run ID", failure.runId),
+    line("Check", "Harness runtime identity"),
+    line(
+      "Problem",
+      `This run was started against a real harness, and ${failure.toggleVar}=1 selects the scripted test harness.`,
+    ),
+    "",
+    `  ${paint("Why:", ...KEY_STYLE)}`,
+    "    - A run's harness runtime is fixed when the run is allocated and cannot change.",
+    "    - Continuing through another provider would execute the rest of the pipeline on a harness this run never used.",
+    "",
+    `  ${paint("Fix:", ...KEY_STYLE)}`,
+    "    Resume with scripted mode disabled:",
+    `      unset ${failure.toggleVar}`,
+    `      antmay afk resume ${failure.runId}`,
+    line(
+      "Result",
+      "Checkpoint unchanged. No harness was probed, no lock was acquired, and no stage was run.",
+    ),
+  ].join("\n");
+}
+
+/**
+ * The text of every harness-runtime refusal. Returning the block instead of
+ * writing it keeps the compiler responsible for covering each failure variant,
+ * so adding one cannot leave the command exiting with an empty stderr.
+ */
+function harnessRuntimeRefusalText(
+  options: DisplayOptions,
+  failure: HarnessRuntimeFailure,
+): string {
+  switch (failure.kind) {
+    case "toggle-invalid":
+    case "config-root-unresolved":
+      return failure.message;
+
+    case "scenario-rejected":
+      return failure.errors.join("\n");
+
+    case "scripted-runtime-requires-toggle":
+      return (
+        `Run "${failure.runId}" was started in scripted test mode. ` +
+        `Re-run resume with ${failure.toggleVar}=1 to continue.`
+      );
+
+    case "real-runtime-refuses-toggle":
+      return runtimeSwitchRefusal(options, failure);
+
+    case "probe-failed": {
+      const lines = failure.failures.map(
+        (probe) => `${probe.harness} (${probe.binary}): ${probe.reason}`,
+      );
+      return failure.scope === "selected-stages"
+        ? `Harness-executable preflight failed:\n${lines
+            .map((line) => `  - ${line}`)
+            .join("\n")}`
+        : `Harness-executable preflight failed for the current stage's harness:\n${lines.join("\n")}`;
+    }
+
+    case "version-missing":
+      return `Harness-executable preflight failed: no version reported for ${failure.harnesses.join(", ")}.`;
+  }
+}
+
+/**
+ * Report a refused harness runtime to stderr. The resolver returns structured
+ * facts and the command supplies the run context they carry, so every wording
+ * choice — which harnesses a failed probe covered, and how a reader corrects an
+ * immutable-runtime mismatch — is made here.
+ */
+export function printHarnessRuntimeRefusal(
+  options: DisplayOptions,
+  failure: HarnessRuntimeFailure,
+): void {
+  emit(options.stderr, harnessRuntimeRefusalText(options, failure));
 }
 
 /** Identity shared by every pipeline-composition refusal. */

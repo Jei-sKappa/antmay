@@ -10,13 +10,14 @@ import {
   loadStageSettings,
   resolveStageBindings,
 } from "../config/execution.js";
-import type { HarnessId, StageBindingMap } from "../config/execution.js";
+import type { StageBindingMap } from "../config/execution.js";
 import { resolveDocumentReference } from "../config/references.js";
 import { resolveRoots } from "../config/roots.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
 import {
   printCompositionRefusal,
+  printHarnessRuntimeRefusal,
   printTemporaryWorkspaceRefusal,
 } from "../display/preflight.js";
 import {
@@ -26,14 +27,8 @@ import {
 } from "../display/startup.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
-import type { probeHarnessExecutables } from "../harness/probe.js";
-import { createScriptedInvoker } from "../harness/scripted/invoker.js";
-import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
-import {
-  interpretScriptedHarnessToggle,
-  loadScriptedScenario,
-} from "../harness/scripted/scenario.js";
-import type { HarnessInvoker } from "../harness/types.js";
+import { resolveHarnessRuntime } from "../harness/runtime.js";
+import type { HarnessRuntimeLoader } from "../harness/runtime.js";
 import { composePipeline } from "../pipeline/composition.js";
 import { loadPipelineDocument } from "../pipeline/documents.js";
 import { executeRun } from "../runner/runner.js";
@@ -58,9 +53,9 @@ import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.j
 
 /**
  * The injected dependency bag `runCommand` runs against. `env`, `cwd`, and
- * `homedir` root every path and settings decision; `invoker` and `probe` are the
- * harness seams the end-to-end tests fake; the streams, `isTTY`, and derived
- * `NO_COLOR` drive the display. `createAbortController` and `installSignals` are
+ * `homedir` root every path and settings decision; `harnessRuntime` is the one
+ * lazy adapter-family seam the end-to-end tests fake; the streams, `isTTY`, and
+ * derived `NO_COLOR` drive the display. `createAbortController` and `installSignals` are
  * the signal-ownership seams: production defaults to a fresh controller and the
  * real handler installer, while tests inject controlled implementations without
  * emitting real process signals. `clock` overrides the wall clock in tests, and
@@ -71,10 +66,7 @@ export type RunDeps = {
   env: NodeJS.ProcessEnv;
   cwd: string;
   homedir: string | undefined;
-  invoker: HarnessInvoker;
-  probe: typeof probeHarnessExecutables;
-  createScriptedInvoker: typeof createScriptedInvoker;
-  scriptedProbe: typeof probeScriptedHarnessExecutables;
+  harnessRuntime: HarnessRuntimeLoader;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   isTTY: boolean;
@@ -153,12 +145,6 @@ export async function runCommand(
   });
 
   try {
-    const toggleResult = interpretScriptedHarnessToggle(deps.env);
-    if (toggleResult.mode === "error") {
-      return fail(toggleResult.message);
-    }
-    const useScripted = toggleResult.mode === "scripted";
-
     // Preflight 1: root resolution. Every reference below is resolved against
     // the config root or the invocation working directory, so nothing can be
     // read before the roots are known.
@@ -283,57 +269,36 @@ export async function runCommand(
       binding: bindings.bindings[index]!,
     }));
 
-    // Preflight 9: the scripted scenario, validated against exactly the selected
-    // stage IDs.
-    let invoker = deps.invoker;
-    let probe = deps.probe;
-    let scenarioPath: string | undefined;
-    if (useScripted) {
-      const loaded = await loadScriptedScenario(
-        roots.configRoot,
-        stages.map((stage) => stage.id),
-      );
-      if (!loaded.ok) {
-        return fail(loaded.errors.join("\n"));
-      }
-      invoker = deps.createScriptedInvoker(loaded.scenario, (prompt) => {
-        printScriptedResolvedPrompt(displayOptions, prompt);
-      });
-      probe = deps.scriptedProbe;
-      scenarioPath = loaded.scenarioPath;
+    // Preflight 9: the harness runtime. The developer toggle selects it, exactly
+    // one adapter family is loaded, its own probe covers the distinct selected
+    // harnesses, and a non-empty version is required for each.
+    const harnessRuntime = await resolveHarnessRuntime(
+      {
+        kind: "new-run",
+        env: deps.env,
+        harnesses: stages.map((stage) => stage.binding.agent.harness),
+        repoRoot: thread.repoRoot,
+        stageIds: stages.map((stage) => stage.id),
+        configRoot: () => ({ ok: true, configRoot: roots.configRoot }),
+        onScriptedPrompt: (prompt) => {
+          printScriptedResolvedPrompt(displayOptions, prompt);
+        },
+      },
+      deps.harnessRuntime,
+    );
+    if (!harnessRuntime.ok) {
+      printHarnessRuntimeRefusal(displayOptions, harnessRuntime.failure);
+      return EXIT_FAILURE;
     }
-
-    // Preflight 10: harness-executable preflight over the distinct selected
-    // harnesses; require a non-empty version for each and keep the observed lines.
-    const distinct = [
-      ...new Set(stages.map((stage) => stage.binding.agent.harness)),
-    ];
-    const probeResult = await probe(distinct, thread.repoRoot);
-    if (!probeResult.ok) {
-      const lines = probeResult.failures.map(
-        (failure) => `${failure.harness} (${failure.binary}): ${failure.reason}`,
-      );
-      return fail(`Harness-executable preflight failed:\n${bullets(lines)}`);
-    }
-    const observedHarnessVersions: Partial<Record<HarnessId, string>> = {};
+    const observedHarnessVersions = harnessRuntime.versions;
     const harnessVersions: Record<string, string> = {};
-    const missingVersions: HarnessId[] = [];
-    for (const harness of distinct) {
-      const version = probeResult.versions[harness];
-      if (version === undefined || version.length === 0) {
-        missingVersions.push(harness);
-      } else {
-        observedHarnessVersions[harness] = version;
+    for (const [harness, version] of Object.entries(observedHarnessVersions)) {
+      if (version !== undefined) {
         harnessVersions[harness] = version;
       }
     }
-    if (missingVersions.length > 0) {
-      return fail(
-        `Harness-executable preflight failed: no version reported for ${missingVersions.join(", ")}.`,
-      );
-    }
 
-    // Preflight 11: the thread's temporary workspaces must be Git-safe. It comes
+    // Preflight 10: the thread's temporary workspaces must be Git-safe. It comes
     // before the clean-worktree gate on purpose: leftover files in an unignored
     // workspace are themselves what makes the worktree dirty, and the
     // commit-or-revert advice that gate gives would commit work in progress into
@@ -356,7 +321,7 @@ export async function runCommand(
       return EXIT_FAILURE;
     }
 
-    // Preflight 12: clean-worktree requirement (boundary status set).
+    // Preflight 11: clean-worktree requirement (boundary status set).
     let clean: boolean;
     try {
       clean = await isWorktreeClean(thread.repoRoot);
@@ -371,7 +336,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 13: both pending queues must be empty; a non-empty queue or a scan
+    // Preflight 12: both pending queues must be empty; a non-empty queue or a scan
     // error both fail preflight with no run.
     const preScan = await scanPendingQueues(thread.repoRoot, thread.threadRelPath);
     if (!preScan.ok) {
@@ -383,7 +348,7 @@ export async function runCommand(
       );
     }
 
-    // Preflight 14: unfinished same-thread-run guard. An absent runs directory
+    // Preflight 13: unfinished same-thread-run guard. An absent runs directory
     // means no runs and creates nothing; a corrupt sibling checkpoint warns
     // without blocking; a non-completed run recording this workspace AND thread
     // refuses.
@@ -504,7 +469,7 @@ export async function runCommand(
           ...(fromStage !== null ? { fromStage } : {}),
           stages,
           observedHarnessVersions,
-          runtime: { kind: useScripted ? "scripted" : "real" },
+          runtime: harnessRuntime.runtime,
           stageIndex: 0,
           condition: "ready",
           attempts: [],
@@ -546,8 +511,8 @@ export async function runCommand(
     // The initial checkpoint exists. Print the startup summary (with the
     // unrestricted warning when applicable), drive the run, map the runner
     // outcome to an exit code, and release the lock unconditionally.
-    if (scenarioPath !== undefined) {
-      printScriptedModeStartup(displayOptions, scenarioPath);
+    if (harnessRuntime.scenarioPath !== undefined) {
+      printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
     }
     printRunSummary(displayOptions, {
       runId: checkpoint.runId,
@@ -573,7 +538,7 @@ export async function runCommand(
         runDir,
         stateRoot: roots.stateRoot,
         lock,
-        invoker,
+        invoker: harnessRuntime.invoker,
         display,
         harnessVersions,
         signal: controller.signal,
