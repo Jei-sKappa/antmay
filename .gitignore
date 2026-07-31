@@ -5,6 +5,7 @@ temp/
 
 .library/
 
+.agents/
 .claude/
 .codex/
 .cursor/
