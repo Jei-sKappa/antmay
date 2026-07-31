@@ -32,16 +32,16 @@ import {
   inspectArtifactState,
 } from "../thread/artifacts.js";
 import { scanPendingQueues } from "../thread/queues.js";
-import type { BoundaryDisposition } from "./classify.js";
+import type { BoundaryDisposition } from "../runner/classify.js";
 import {
   classifyAttempt,
   gateErrorMessage,
   pendingQueuesMessage,
   queueReasons,
-} from "./classify.js";
-import type { OutcomeParse } from "./outcome.js";
-import { parseTerminalOutcome } from "./outcome.js";
-import { SignalInterruption } from "./signals.js";
+} from "../runner/classify.js";
+import type { OutcomeParse } from "../runner/outcome.js";
+import { parseTerminalOutcome } from "../runner/outcome.js";
+import { SignalInterruption } from "../runner/signals.js";
 
 /** Milliseconds per second, for turning the binding's interval into a timer. */
 const MS_PER_SECOND = 1000;
@@ -58,13 +58,24 @@ const RESTORE_PREREQUISITE_NOTE =
   "Fix the thread files shown above and leave the worktree clean, then resume.";
 
 /**
- * The unstable and injected dependencies plus the durable inputs the runner
- * drives one run to a pause or completion from. `checkpoint` is the starting
- * cursor (its `stageIndex` is where the loop begins). The caller owns the lock's
- * acquire/release symmetry; the runner never releases it.
+ * How a command hands one run to the engine. `allocated` carries the initial
+ * checkpoint `run` just wrote; `resume` carries the cursor `resume` validated out
+ * of an existing run directory. Both name the same thing to the engine — the
+ * starting cursor, whose `stageIndex` is where the loop begins — and the variant
+ * is what tells the engine which command's ownership the cursor came out of, so
+ * entry-specific work has one place to attach to.
  */
-export type RunnerContext = {
-  checkpoint: RunCheckpoint;
+export type ExecutionEntry =
+  | { kind: "allocated"; checkpoint: RunCheckpoint }
+  | { kind: "resume"; checkpoint: RunCheckpoint };
+
+/**
+ * The unstable and injected dependencies plus the durable inputs the engine
+ * drives one run to a pause or completion from. The caller owns the lock's
+ * acquire/release symmetry; the engine never releases it.
+ */
+export type ExecutionContext = {
+  entry: ExecutionEntry;
   runDir: string;
   stateRoot: string;
   lock: LockHandle;
@@ -82,14 +93,16 @@ export type RunnerContext = {
 };
 
 /**
- * The outcome the runner returns to its command caller, which maps it to a
- * process exit code. Skill-local to the runner/commands seam.
+ * The outcome the engine returns to its command caller, which maps it to a
+ * process exit code. These four kinds are the whole vocabulary of how execution
+ * ends; the durable run state a pause or interruption left behind is read from
+ * the checkpoint, never re-described here.
  */
-export type RunnerResult =
-  | { status: "completed" }
-  | { status: "paused"; waiting: WaitingInfo }
-  | { status: "interrupted"; signal: NodeJS.Signals }
-  | { status: "fatal-checkpoint"; message: string };
+export type ExecutionResult =
+  | { kind: "completed" }
+  | { kind: "paused"; waiting: WaitingInfo }
+  | { kind: "interrupted"; signal: NodeJS.Signals }
+  | { kind: "fatal-checkpoint"; message: string };
 
 type PersistOutcome = { ok: true } | { ok: false; message: string };
 
@@ -193,16 +206,22 @@ function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
 }
 
 /**
- * Drive one run from its checkpoint cursor through the generic stage loop until
- * a durable pause, a fatal checkpoint error, or pipeline completion. Consumes only
+ * Drive one run from the entry cursor through the generic stage loop until a
+ * durable pause, a fatal checkpoint error, or pipeline completion. Consumes only
  * snapshotted stage data and typed inputs — never a pipeline, stage, or skill
- * identity. The caller releases the lock.
+ * identity — and coordinates the queue, artifact, harness, log, Git, and display
+ * collaborators rather than reproducing their rules. Every checkpoint rewrite a
+ * running pipeline makes goes through `persist` below, which is the engine's own
+ * persistence boundary and is handed to no collaborator. The caller releases the
+ * lock.
  */
-export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
+export async function executeEngine(
+  ctx: ExecutionContext,
+): Promise<ExecutionResult> {
   const { runDir, invoker, display, signal } = ctx;
   const clock = ctx.clock ?? (() => new Date());
   const persistCheckpoint = ctx.persistCheckpoint ?? writeCheckpoint;
-  let checkpoint = ctx.checkpoint;
+  let checkpoint = ctx.entry.checkpoint;
 
   const repoRoot = checkpoint.repoRoot;
   const threadRelPath = checkpoint.threadRelPath;
@@ -228,7 +247,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     return clock().getTime() - Date.parse(checkpoint.createdAt);
   }
 
-  function fatal(message: string): RunnerResult {
+  function fatal(message: string): ExecutionResult {
     display.runFailed({
       runId,
       pipelineName,
@@ -236,7 +255,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       checkpointPath,
       message,
     });
-    return { status: "fatal-checkpoint", message };
+    return { kind: "fatal-checkpoint", message };
   }
 
   // Render the durable pause. `createdAt` never changes across a persist, so the
@@ -284,7 +303,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     pendingFiles: string[];
     failure?: { errorClass: string; errorMessage: string };
     agentSession?: { id: string };
-  }): Promise<RunnerResult> {
+  }): Promise<ExecutionResult> {
     const endedAt = clock().toISOString();
     const baseMessage =
       "The attempt was interrupted before producing a terminal outcome.";
@@ -338,7 +357,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       disposition: "interrupted",
     });
     renderPause(waiting, settled);
-    return { status: "interrupted", signal: args.sig };
+    return { kind: "interrupted", signal: args.sig };
   }
 
   while (checkpoint.stageIndex < stageCount) {
@@ -355,7 +374,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
         resumeCommand,
         signal: readySig,
       });
-      return { status: "interrupted", signal: readySig };
+      return { kind: "interrupted", signal: readySig };
     }
 
     const stageIndex = checkpoint.stageIndex;
@@ -387,7 +406,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       });
       if (!persisted.ok) return fatal(persisted.message);
       renderPause(waiting);
-      return { status: "paused", waiting };
+      return { kind: "paused", waiting };
     }
     if (preScan.pendingFiles.length > 0) {
       const pendingFiles = preScan.pendingFiles;
@@ -403,7 +422,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       });
       if (!persisted.ok) return fatal(persisted.message);
       renderPause(waiting);
-      return { status: "paused", waiting };
+      return { kind: "paused", waiting };
     }
 
     // 2. Pre-attempt artifact contract. Composition proved the stage runnable
@@ -447,7 +466,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       });
       if (!persisted.ok) return fatal(persisted.message);
       renderPause(waiting);
-      return { status: "paused", waiting };
+      return { kind: "paused", waiting };
     }
 
     // 3. Attempt setup: read attempt-start HEAD, persist the executing attempt
@@ -701,7 +720,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           disposition: stageDisposition(false, parse),
         });
         renderPause(waiting, settled);
-        return { status: "paused", waiting };
+        return { kind: "paused", waiting };
       }
     }
 
@@ -783,7 +802,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
           checkpointPath,
           stageCount,
         });
-        return { status: "completed" };
+        return { kind: "completed" };
       }
       continue;
     }
@@ -822,7 +841,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       // finalized. Only the pending bundle keeps the run from advancing.
       display.stageSucceeded({ stagePosition, durationMs });
       renderPause(waiting, done);
-      return { status: "paused", waiting };
+      return { kind: "paused", waiting };
     }
 
     // classification.action === "pause": every non-DONE pause. When the abort
@@ -904,7 +923,7 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
       disposition: stageDisposition(aborted, parse),
     });
     renderPause(waiting, settled);
-    return { status: "paused", waiting };
+    return { kind: "paused", waiting };
   }
 
   // The cursor already sat at (or past) the final stage on entry.
@@ -915,5 +934,5 @@ export async function executeRun(ctx: RunnerContext): Promise<RunnerResult> {
     checkpointPath,
     stageCount,
   });
-  return { status: "completed" };
+  return { kind: "completed" };
 }

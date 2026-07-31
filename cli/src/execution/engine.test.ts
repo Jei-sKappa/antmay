@@ -28,9 +28,9 @@ import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
-import type { RunnerContext } from "./runner.js";
-import { executeRun } from "./runner.js";
-import { SignalInterruption } from "./signals.js";
+import { SignalInterruption } from "../runner/signals.js";
+import type { ExecutionContext } from "./engine.js";
+import { executeEngine } from "./engine.js";
 
 /**
  * Temporary resources are collected for the whole file and released once every
@@ -56,15 +56,15 @@ async function newFixture(): Promise<RepoFixture> {
 }
 
 async function makeRunDir(): Promise<string> {
-  const raw = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-runner-"));
+  const raw = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-engine-"));
   runDirs.push(raw);
   return raw;
 }
 
 /**
- * A stage the runner drives, described the way a test wants to think about it.
+ * A stage the engine drives, described the way a test wants to think about it.
  * The catalog owns the real skill, target, and policies; these fixtures pair a
- * catalog stage ID with synthetic ones so the cases below prove the runner reads
+ * catalog stage ID with synthetic ones so the cases below prove the engine reads
  * only its snapshot and never any particular pipeline's behavior.
  */
 type SyntheticStage = {
@@ -119,7 +119,7 @@ const cleanStage: SyntheticStage = {
 
 /**
  * One Standard selection taken verbatim from the catalog, which is what the
- * composer hands the runner for a full `standard` document. Every one of these
+ * composer hands the engine for a full `standard` document. Every one of these
  * stages has a `fixed` target rule, so the fixture reads the target off the rule
  * rather than simulating artifact state.
  */
@@ -200,16 +200,20 @@ function buildCheckpoint(
   };
 }
 
+/**
+ * A context entered the way `run` enters it, from a freshly allocated cursor.
+ * `resumedFrom` below re-enters the same context the way `resume` does.
+ */
 function makeContext(
   checkpoint: RunCheckpoint,
   runDir: string,
   invoker: HarnessInvoker,
   display: ExecutionDisplay = nullDisplay,
   signal: AbortSignal = new AbortController().signal,
-  persistCheckpoint?: RunnerContext["persistCheckpoint"],
-): RunnerContext {
+  persistCheckpoint?: ExecutionContext["persistCheckpoint"],
+): ExecutionContext {
   return {
-    checkpoint,
+    entry: { kind: "allocated", checkpoint },
     runDir,
     stateRoot: path.dirname(runDir),
     lock: { lockPath: "lock", ownerToken: "token", release: async () => undefined },
@@ -219,6 +223,11 @@ function makeContext(
     signal,
     persistCheckpoint,
   };
+}
+
+/** The same context handed over the way `resume` hands over a validated cursor. */
+function resumedFrom(ctx: ExecutionContext): ExecutionContext {
+  return { ...ctx, entry: { kind: "resume", checkpoint: ctx.entry.checkpoint } };
 }
 
 function recorder(): {
@@ -301,7 +310,7 @@ async function lastSubject(fixture: RepoFixture): Promise<string> {
   return result.stdout.trim();
 }
 
-describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
+describe.concurrent("executeEngine — full completion (AC-6.3, AC-13.3)", () => {
   it("runs a synthetic two-stage pipeline to completion with per-stage transitions", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -312,11 +321,11 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
       {},
     ]);
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [alphaStage, betaStage]), runDir, harness, rec.display),
     );
 
-    expect(result).toEqual({ status: "completed" });
+    expect(result).toEqual({ kind: "completed" });
     expect(harness.calls.length).toBe(2);
     expect(rec.stageSucceeded.length).toBe(2);
     expect(rec.runCompleted.length).toBe(1);
@@ -352,7 +361,7 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
           writeThreadFile(fixture, "implementation-report.md", "# Report\n"),
       },
     ];
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, STANDARD_SELECTION, "standard"),
         runDir,
@@ -360,15 +369,34 @@ describe.concurrent("executeRun — full completion (AC-6.3, AC-13.3)", () => {
       ),
     );
 
-    expect(result).toEqual({ status: "completed" });
+    expect(result).toEqual({ kind: "completed" });
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("completed");
     expect(cp.stageIndex).toBe(6);
     expect(await commitCount(fixture)).toBe(before + 3);
   });
+
+  it("drives a resume entry through the same loop from its stored cursor", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const checkpoint = buildCheckpoint(fixture, [alphaStage, betaStage]);
+    // The first stage is already behind this cursor, so only the second runs.
+    checkpoint.stageIndex = 1;
+
+    const harness = createFakeHarness([{}]);
+    const result = await executeEngine(
+      resumedFrom(makeContext(checkpoint, runDir, harness)),
+    );
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls.map((call) => call.stage.id)).toEqual(["review-spec"]);
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.condition).toBe("completed");
+    expect(cp.stageIndex).toBe(2);
+  });
 });
 
-describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC-12.1, AC-12.7)", () => {
+describe.concurrent("executeEngine — DONE with a pending-queue pause (AC-11.3, AC-12.1, AC-12.7)", () => {
   it("finalizes the boundary first, records the attempt done, then pauses pending-queues", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -383,11 +411,11 @@ describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC
       },
     ]);
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness, rec.display),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     // The stage reported DONE and its boundary committed: it succeeded, and only
     // the pending bundle keeps the run from advancing.
     expect(rec.stageSucceeded.length).toBe(1);
@@ -413,7 +441,7 @@ describe.concurrent("executeRun — DONE with a pending-queue pause (AC-11.3, AC
   });
 });
 
-describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)", () => {
+describe.concurrent("executeEngine — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)", () => {
   const cases: Array<{
     name: string;
     step: FakeHarnessStep;
@@ -479,7 +507,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
       const headBefore = await readHead(fixture.root);
 
       const rec = recorder();
-      const result = await executeRun(
+      const result = await executeEngine(
         makeContext(
           buildCheckpoint(fixture, [cleanStage]),
           runDir,
@@ -488,7 +516,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
         ),
       );
 
-      expect(result.status).toBe("paused");
+      expect(result.kind).toBe("paused");
       expect(rec.stageSucceeded.length).toBe(0);
       // The stage line reports what the stage itself did, independently of the
       // reason that governs the run's pause.
@@ -513,7 +541,7 @@ describe.concurrent("executeRun — non-DONE pauses (AC-11.3, AC-12.6, AC-12.7)"
   }
 });
 
-describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)", () => {
+describe.concurrent("executeEngine — pre-attempt queue gates (AC-11.2, AC-11.5)", () => {
   it("pauses pending-queues before allocating any attempt or log", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -521,11 +549,11 @@ describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)",
     const harness = createFakeHarness([{}]);
 
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, rec.display),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(harness.calls.length).toBe(0);
     // No attempt was announced, so no stage is closed: only the run-level pause.
     expect(rec.attemptStarted.length).toBe(0);
@@ -550,11 +578,11 @@ describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)",
     );
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0].kind).toBe("gate-error");
@@ -562,7 +590,7 @@ describe.concurrent("executeRun — pre-attempt queue gates (AC-11.2, AC-11.5)",
   });
 });
 
-describe.concurrent("executeRun — boundary failures preserve the attempt (AC-11.6, AC-12.2, AC-12.4)", () => {
+describe.concurrent("executeEngine — boundary failures preserve the attempt (AC-11.6, AC-12.2, AC-12.4)", () => {
   it("pauses git-policy-violation for an out-of-bounds change", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -571,11 +599,11 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     const harness = createFakeHarness([
       { before: () => writeThreadFile(fixture, "stray.md", "unexpected\n") },
     ]);
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
     expect(cp.waiting?.nextAction).toContain("unvalidated");
@@ -601,11 +629,11 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
         },
       },
     ]);
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     // The boundary still decides the resume path, and the scan failure it holds
     // alongside is reported rather than folded into the boundary's own message.
@@ -633,11 +661,11 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
     const harness = createFakeHarness([
       { before: () => writeThreadFile(fixture, "notes.md", "notes\n") },
     ]);
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0].kind).toBe("commit-error");
     expect(cp.attempts[0].result).toBe("waiting");
@@ -645,7 +673,7 @@ describe.concurrent("executeRun — boundary failures preserve the attempt (AC-1
   });
 });
 
-describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)", () => {
+describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.3)", () => {
   /** Requires a spec in the thread; it promises nothing of its own. */
   const needsSpecStage: SyntheticStage = {
     id: "reconcile-spec",
@@ -682,11 +710,11 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     const harness = createFakeHarness([{}]);
 
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [needsSpecStage]), runDir, harness, rec.display),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(harness.calls.length).toBe(0);
     expect(rec.attemptStarted.length).toBe(0);
     expect(rec.stageStopped.length).toBe(0);
@@ -723,11 +751,11 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     await writeThreadFile(fixture, "spec.md", "# Spec\n");
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [needsSpecStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("completed");
+    expect(result.kind).toBe("completed");
     expect(harness.calls.length).toBe(1);
   });
 
@@ -742,7 +770,7 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     ]);
     const rec = recorder();
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [betaStage, needsSpecStage]),
         runDir,
@@ -751,7 +779,7 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
       ),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(harness.calls.length).toBe(1);
     expect(rec.runPaused[0]!.currentStage).toEqual({
       id: "reconcile-spec",
@@ -772,11 +800,11 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     const harness = createFakeHarness([{}]);
 
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [promisesSpecStage]), runDir, harness, rec.display),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(rec.stageSucceeded.length).toBe(0);
     expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["failed"]);
 
@@ -818,11 +846,11 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
       { before: () => writeThreadFile(fixture, "stray.md", "unexpected\n") },
     ]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [promisesSpecStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
       "stage-contract-violation",
@@ -838,11 +866,11 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
       { before: async () => { pendingRel = await dropPendingDecision(fixture, "d1.md"); } },
     ]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [promisesSpecStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
       "stage-contract-violation",
@@ -858,18 +886,18 @@ describe.concurrent("executeRun — artifact contracts (AC-7.1, AC-7.2, AC-7.3)"
     // alphaStage promises nothing, so an empty boundary reaches the Git policy.
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [alphaStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
     expect(cp.waiting?.reasons[0].message).toContain("at least one allowed change");
   });
 });
 
-describe.concurrent("executeRun — interruption (AC-17.3)", () => {
+describe.concurrent("executeEngine — interruption (AC-17.3)", () => {
   it("records the attempt interrupted when the abort signal fires", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -879,11 +907,11 @@ describe.concurrent("executeRun — interruption (AC-17.3)", () => {
       { before: () => controller.abort("SIGINT"), hangUntilAbort: true },
     ]);
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, rec.display, controller.signal),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     // An interrupted stage is stopped, not "finished with problems".
     expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["interrupted"]);
     const cp = await loadCheckpoint(runDir);
@@ -894,7 +922,7 @@ describe.concurrent("executeRun — interruption (AC-17.3)", () => {
   });
 });
 
-describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () => {
+describe.concurrent("executeEngine — signal interruption (AC-17.1, AC-17.3)", () => {
   it("finishes the reserved attempt interrupted when a signal arrives before launch", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -907,11 +935,11 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
     };
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, display, controller.signal),
     );
 
-    expect(result).toEqual({ status: "interrupted", signal: "SIGINT" });
+    expect(result).toEqual({ kind: "interrupted", signal: "SIGINT" });
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
@@ -931,11 +959,11 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
     ]);
 
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, rec.display, controller.signal),
     );
 
-    expect(result).toEqual({ status: "interrupted", signal: "SIGTERM" });
+    expect(result).toEqual({ kind: "interrupted", signal: "SIGTERM" });
     expect(harness.calls.length).toBe(1);
     // The announced stage is closed exactly once, naming its real position.
     expect(rec.attemptStarted.length).toBe(1);
@@ -968,11 +996,11 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
       },
     ]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness, nullDisplay, controller.signal),
     );
 
-    expect(result.status).toBe("interrupted");
+    expect(result.kind).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0].kind).toBe("interrupted");
     expect(cp.waiting?.reasons[1].pendingFiles).toEqual([pendingRel]);
@@ -991,11 +1019,11 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
 
     const rec = recorder();
     const harness = createFakeHarness([{}]);
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(checkpoint, runDir, harness, rec.display, controller.signal),
     );
 
-    expect(result).toEqual({ status: "interrupted", signal: "SIGHUP" });
+    expect(result).toEqual({ kind: "interrupted", signal: "SIGHUP" });
     expect(harness.calls.length).toBe(0);
     expect(rec.runPaused.length).toBe(0);
     expect(rec.stageStopped.length).toBe(0);
@@ -1004,17 +1032,17 @@ describe.concurrent("executeRun — signal interruption (AC-17.1, AC-17.3)", () 
   });
 });
 
-describe.concurrent("executeRun — persistence and log failures (AC-13.3)", () => {
+describe.concurrent("executeEngine — persistence and log failures (AC-13.3)", () => {
   it("creates no log and launches nothing when the pre-launch checkpoint write fails", async () => {
     const fixture = await newFixture();
     const runDir = path.join(await makeRunDir(), "missing-child");
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("fatal-checkpoint");
+    expect(result.kind).toBe("fatal-checkpoint");
     expect(harness.calls.length).toBe(0);
     await expect(fs.access(runDir)).rejects.toThrow();
   });
@@ -1026,11 +1054,11 @@ describe.concurrent("executeRun — persistence and log failures (AC-13.3)", () 
     await fs.writeFile(path.join(runDir, "logs"), "blocker", "utf8");
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("fatal-checkpoint");
+    expect(result.kind).toBe("fatal-checkpoint");
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("executing");
@@ -1044,12 +1072,12 @@ describe.concurrent("executeRun — persistence and log failures (AC-13.3)", () 
     const harness = createFakeHarness([
       { before: () => fs.chmod(runDir, 0o500) },
     ]);
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
     );
     await fs.chmod(runDir, 0o700);
 
-    expect(result.status).toBe("fatal-checkpoint");
+    expect(result.kind).toBe("fatal-checkpoint");
     const cp = await loadCheckpoint(runDir);
     // The last durable checkpoint is still the executing attempt; no advance.
     expect(cp.condition).toBe("executing");
@@ -1057,30 +1085,30 @@ describe.concurrent("executeRun — persistence and log failures (AC-13.3)", () 
   });
 });
 
-describe.concurrent("executeRun — no artifact preconditions (AC-6.4)", () => {
+describe.concurrent("executeEngine — no artifact preconditions (AC-6.4)", () => {
   it("launches a stage whose target file does not exist", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     // Neither stage's target file exists; both must still launch.
     const harness = createFakeHarness([{}, {}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage, betaStage]), runDir, harness),
     );
 
-    expect(result.status).toBe("completed");
+    expect(result.kind).toBe("completed");
     expect(harness.calls.length).toBe(2);
   });
 });
 
-describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2.5)", () => {
+describe.concurrent("executeEngine — live agentSession persistence (AC-2.2–AC-2.5)", () => {
   it("starts exactly one provisional write on first live capture and ignores later callbacks", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const provisionalSnapshots: RunCheckpoint[] = [];
     let provisionalCount = 0;
 
-    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+    const persistCheckpoint: NonNullable<ExecutionContext["persistCheckpoint"]> = async (
       dir,
       cp,
     ) => {
@@ -1111,7 +1139,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       },
     ]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1122,7 +1150,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       ),
     );
 
-    expect(result.status).toBe("completed");
+    expect(result.kind).toBe("completed");
     expect(provisionalCount).toBe(1);
     const provisional = provisionalSnapshots[0];
     expect(provisional.condition).toBe("executing");
@@ -1162,7 +1190,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     let settlementStartedWhilePending = false;
     let settlementWriteCount = 0;
 
-    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+    const persistCheckpoint: NonNullable<ExecutionContext["persistCheckpoint"]> = async (
       dir,
       cp,
     ) => {
@@ -1198,7 +1226,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       },
     ]);
 
-    const runPromise = executeRun(
+    const runPromise = executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1215,7 +1243,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     releaseProvisional();
 
     const result = await runPromise;
-    expect(result.status).toBe("completed");
+    expect(result.kind).toBe("completed");
     expect(settlementStartedWhilePending).toBe(false);
     expect(settlementWriteCount).toBe(1);
 
@@ -1230,7 +1258,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       name: string;
       step: FakeHarnessStep;
       expectResult: "done" | "waiting" | "interrupted";
-      expectStatus: "completed" | "paused" | "interrupted";
+      expectKind: "completed" | "paused" | "interrupted";
     }> = [
       {
         name: "completed",
@@ -1243,7 +1271,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
           },
         },
         expectResult: "done",
-        expectStatus: "completed",
+        expectKind: "completed",
       },
       {
         name: "provider-error",
@@ -1258,7 +1286,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
           },
         },
         expectResult: "waiting",
-        expectStatus: "paused",
+        expectKind: "paused",
       },
       {
         name: "idle-timeout",
@@ -1273,21 +1301,21 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
           },
         },
         expectResult: "waiting",
-        expectStatus: "paused",
+        expectKind: "paused",
       },
     ];
 
     for (const testCase of cases) {
       const fixture = await newFixture();
       const runDir = await makeRunDir();
-      const result = await executeRun(
+      const result = await executeEngine(
         makeContext(
           buildCheckpoint(fixture, [cleanStage]),
           runDir,
           createFakeHarness([testCase.step]),
         ),
       );
-      expect(result.status).toBe(testCase.expectStatus);
+      expect(result.kind).toBe(testCase.expectKind);
       const cp = await loadCheckpoint(runDir);
       expect(cp.attempts[0].result).toBe(testCase.expectResult);
       expect(cp.attempts[0].agentSession?.id).toMatch(/^s-/);
@@ -1305,7 +1333,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
         hangUntilAbort: true,
       },
     ]);
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1314,7 +1342,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
         controller.signal,
       ),
     );
-    expect(result.status).toBe("interrupted");
+    expect(result.kind).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
     expect(cp.attempts[0].result).toBe("interrupted");
     expect(cp.attempts[0].agentSession).toEqual({ id: "s-interrupt" });
@@ -1330,7 +1358,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     };
     const harness = createFakeHarness([{}]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1340,7 +1368,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       ),
     );
 
-    expect(result).toEqual({ status: "interrupted", signal: "SIGINT" });
+    expect(result).toEqual({ kind: "interrupted", signal: "SIGINT" });
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.attempts[0].result).toBe("interrupted");
@@ -1352,7 +1380,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     const runDir = await makeRunDir();
     let provisionalCount = 0;
 
-    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+    const persistCheckpoint: NonNullable<ExecutionContext["persistCheckpoint"]> = async (
       dir,
       cp,
     ) => {
@@ -1378,7 +1406,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       },
     ]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1389,7 +1417,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       ),
     );
 
-    expect(result.status).toBe("completed");
+    expect(result.kind).toBe("completed");
     expect(provisionalCount).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.attempts[0].agentSession).toEqual({ id: "fallback-only" });
@@ -1400,7 +1428,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     const runDir = await makeRunDir();
     let harnessContinued = false;
 
-    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+    const persistCheckpoint: NonNullable<ExecutionContext["persistCheckpoint"]> = async (
       dir,
       cp,
     ) => {
@@ -1430,7 +1458,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     ]);
     const rec = recorder();
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1442,7 +1470,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     );
 
     expect(harnessContinued).toBe(true);
-    expect(result.status).toBe("completed");
+    expect(result.kind).toBe("completed");
     expect(rec.warns).toHaveLength(1);
     expect(rec.warns[0]).toContain("provisional disk full");
     const cp = await loadCheckpoint(runDir);
@@ -1454,7 +1482,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
     const fixture = await newFixture();
     const runDir = await makeRunDir();
 
-    const persistCheckpoint: NonNullable<RunnerContext["persistCheckpoint"]> = async (
+    const persistCheckpoint: NonNullable<ExecutionContext["persistCheckpoint"]> = async (
       dir,
       cp,
     ) => {
@@ -1480,7 +1508,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       },
     ]);
 
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1491,7 +1519,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       ),
     );
 
-    expect(result.status).toBe("fatal-checkpoint");
+    expect(result.kind).toBe("fatal-checkpoint");
     const cp = await loadCheckpoint(runDir);
     // Last durable checkpoint is the provisional executing record with the session.
     expect(cp.condition).toBe("executing");
@@ -1513,7 +1541,7 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
       },
     ]);
 
-    await executeRun(
+    await executeEngine(
       makeContext(buildCheckpoint(fixture, [cleanStage]), runDir, harness),
     );
 
@@ -1522,12 +1550,12 @@ describe.concurrent("executeRun — live agentSession persistence (AC-2.2–AC-2
   });
 });
 
-describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC-3.3)", () => {
+describe.concurrent("executeEngine — persisted-attempt pause Continue (AC-3.2, AC-3.3)", () => {
   it("supplies Continue from the persisted session ID and snapshotted harness", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1544,7 +1572,7 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
       ),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(rec.runPaused).toHaveLength(1);
     const paused = rec.runPaused[0]!;
     const cp = await loadCheckpoint(runDir);
@@ -1576,9 +1604,9 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
     );
     ctx.harnessVersions = { "claude-code": "claude 1.0.0" };
 
-    const result = await executeRun(ctx);
+    const result = await executeEngine(ctx);
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(rec.runPaused[0]!.continuationCommand).toBe(
       "claude --resume 'claude-sess'",
     );
@@ -1588,7 +1616,7 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1604,7 +1632,7 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
       ),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(rec.runPaused).toHaveLength(1);
     const cp = await loadCheckpoint(runDir);
     expect(rec.runPaused[0]!.logAbsPath).toBe(
@@ -1618,7 +1646,7 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
     const runDir = await makeRunDir();
     await dropPendingDecision(fixture, "d1.md");
     const rec = recorder();
-    const result = await executeRun(
+    const result = await executeEngine(
       makeContext(
         buildCheckpoint(fixture, [cleanStage]),
         runDir,
@@ -1627,14 +1655,14 @@ describe.concurrent("executeRun — persisted-attempt pause Continue (AC-3.2, AC
       ),
     );
 
-    expect(result.status).toBe("paused");
+    expect(result.kind).toBe("paused");
     expect(rec.runPaused).toHaveLength(1);
     expect(rec.runPaused[0]!.logAbsPath).toBeNull();
     expect(rec.runPaused[0]!.continuationCommand).toBeUndefined();
   });
 });
 
-describe.concurrent("executeRun — harness stage context", () => {
+describe.concurrent("executeEngine — harness stage context", () => {
   it("passes snapshotted stage metadata and attempt number on the first attempt", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -1642,7 +1670,7 @@ describe.concurrent("executeRun — harness stage context", () => {
     checkpoint.stages[0].instructions = "focus on acceptance criteria";
     const harness = createFakeHarness([{}]);
 
-    await executeRun(makeContext(checkpoint, runDir, harness));
+    await executeEngine(makeContext(checkpoint, runDir, harness));
 
     expect(harness.calls).toHaveLength(1);
     expect(harness.calls[0].stage).toEqual({
@@ -1681,7 +1709,7 @@ describe.concurrent("executeRun — harness stage context", () => {
     checkpoint.waiting = governedBy({ kind: "outcome-blocked", message: "blocked" });
     const harness = createFakeHarness([{}]);
 
-    await executeRun(makeContext(checkpoint, runDir, harness));
+    await executeEngine(resumedFrom(makeContext(checkpoint, runDir, harness)));
 
     expect(harness.calls).toHaveLength(1);
     expect(harness.calls[0].stage).toEqual({

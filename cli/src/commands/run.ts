@@ -25,13 +25,13 @@ import {
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
 } from "../display/startup.js";
+import { executeEngine } from "../execution/engine.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import { resolveHarnessRuntime } from "../harness/runtime.js";
 import type { HarnessRuntimeLoader } from "../harness/runtime.js";
 import { composePipeline } from "../pipeline/composition.js";
 import { loadPipelineDocument } from "../pipeline/documents.js";
-import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import type {
   ProfileSelection,
@@ -94,12 +94,12 @@ type Allocated = {
 /**
  * Run a full `antmay afk run`: install the signal handlers, then the ordered
  * preflight, allocation under the workspace lock, the initial `ready`
- * checkpoint, and delegation to the stage runner. Returns the process exit code.
- * Every preflight failure prints to `stderr` and returns `1`, leaving no run
- * directory, no checkpoint, and no held lock; the mapped runner outcomes are `0`
- * (completed), `2` (durable pause), `1` (fatal checkpoint), and the conventional
- * signal exit code (interruption). Handlers are uninstalled on every ordinary
- * return path.
+ * checkpoint, and handoff of that allocated cursor to the execution engine.
+ * Returns the process exit code. Every preflight failure prints to `stderr` and
+ * returns `1`, leaving no run directory, no checkpoint, and no held lock; the
+ * mapped engine results are `0` (completed), `2` (durable pause), `1` (fatal
+ * checkpoint), and the conventional signal exit code (interruption). Handlers are
+ * uninstalled on every ordinary return path.
  */
 export async function runCommand(
   args: {
@@ -509,8 +509,8 @@ export async function runCommand(
     }
 
     // The initial checkpoint exists. Print the startup summary (with the
-    // unrestricted warning when applicable), drive the run, map the runner
-    // outcome to an exit code, and release the lock unconditionally.
+    // unrestricted warning when applicable), drive the run, map the engine
+    // result to an exit code, and release the lock unconditionally.
     if (harnessRuntime.scenarioPath !== undefined) {
       printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
     }
@@ -533,8 +533,8 @@ export async function runCommand(
 
     const display = createTerminalExecutionDisplay(displayOptions);
     try {
-      const result = await executeRun({
-        checkpoint,
+      const result = await executeEngine({
+        entry: { kind: "allocated", checkpoint },
         runDir,
         stateRoot: roots.stateRoot,
         lock,
@@ -544,15 +544,15 @@ export async function runCommand(
         signal: controller.signal,
         clock: deps.clock,
       });
-      if (result.status === "completed") {
+      if (result.kind === "completed") {
         return EXIT_OK;
       }
       // A signal interruption maps to the conventional signal exit code, never to
       // the ordinary durable-pause code, even though a waiting checkpoint persists.
-      if (result.status === "interrupted") {
+      if (result.kind === "interrupted") {
         return signals.exitCodeFor(result.signal);
       }
-      if (result.status === "paused") {
+      if (result.kind === "paused") {
         return EXIT_WAITING;
       }
       deps.stderr.write(

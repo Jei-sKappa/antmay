@@ -3,10 +3,37 @@ import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
-import { EXIT_SIGINT } from "../cli/exit-codes.js";
+/**
+ * The engine call the command makes, replaceable one case at a time so each
+ * structured result can be mapped without a whole pipeline behind it. Every other
+ * case in this file drives the real engine, which is what the mock delegates to
+ * while no case has installed a stub.
+ */
+let engineStub: ((ctx: ExecutionContext) => Promise<ExecutionResult>) | null = null;
+
+vi.mock("../execution/engine.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../execution/engine.js")>();
+  return {
+    ...actual,
+    executeEngine: (ctx: ExecutionContext): Promise<ExecutionResult> =>
+      engineStub === null ? actual.executeEngine(ctx) : engineStub(ctx),
+  };
+});
+
+import {
+  EXIT_FAILURE,
+  EXIT_OK,
+  EXIT_SIGINT,
+  EXIT_WAITING,
+} from "../cli/exit-codes.js";
 import type { HarnessId } from "../config/execution.js";
+import type {
+  ExecutionContext,
+  ExecutionEntry,
+  ExecutionResult,
+} from "../execution/engine.js";
 import type { ProbeResult } from "../harness/probe.js";
 import type {
   HarnessExecutableProbe,
@@ -35,6 +62,7 @@ import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
+import { governedBy } from "../test-helpers/waiting.js";
 import { runCommand, type RunDeps } from "./run.js";
 import { resumeCommand } from "./resume.js";
 
@@ -1840,4 +1868,63 @@ describe.concurrent("resumeCommand — persisted-attempt Continue (AC-3.2, AC-3.
     expect(result.out).not.toContain("Log:");
     expect(result.out).toMatch(new RegExp(`Resume:\\s+antmay afk resume ${runId}`));
   });
+});
+
+describe("resumeCommand — engine handoff (AC-1.1)", () => {
+  afterEach(() => {
+    engineStub = null;
+  });
+
+  const cases: Array<{
+    name: string;
+    result: ExecutionResult;
+    code: number;
+    stderr?: string;
+  }> = [
+    { name: "completion", result: { kind: "completed" }, code: EXIT_OK },
+    {
+      name: "a durable pause",
+      result: {
+        kind: "paused",
+        waiting: governedBy({ kind: "outcome-blocked", message: "blocked" }),
+      },
+      code: EXIT_WAITING,
+    },
+    {
+      name: "an interruption",
+      result: { kind: "interrupted", signal: "SIGINT" },
+      code: EXIT_SIGINT,
+    },
+    {
+      name: "a fatal checkpoint error",
+      result: { kind: "fatal-checkpoint", message: "disk full" },
+      code: EXIT_FAILURE,
+      stderr: "disk full",
+    },
+  ];
+
+  for (const testCase of cases) {
+    it(`enters the same engine with the resumed cursor and maps ${testCase.name}`, async () => {
+      const h = await setup();
+      // A blocked first stage leaves a pause whose recovery runs the stage again,
+      // which is the path that carries a cursor into the engine.
+      await seed(h, [{ outcome: BLOCKED }]);
+      const runId = await soleRunId(h);
+      const entries: ExecutionEntry["kind"][] = [];
+      engineStub = async (ctx) => {
+        entries.push(ctx.entry.kind);
+        return testCase.result;
+      };
+
+      const result = await resume(h, runId, []);
+
+      expect(entries).toEqual(["resume"]);
+      expect(result.code).toBe(testCase.code);
+      if (testCase.stderr !== undefined) {
+        expect(result.err).toContain(testCase.stderr);
+      }
+      // The lock is the command's to release on every mapped result.
+      expect(await lockNames(h.stateRoot)).toEqual([]);
+    });
+  }
 });

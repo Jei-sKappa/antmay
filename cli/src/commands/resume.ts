@@ -14,6 +14,7 @@ import {
   printScriptedModeStartup,
   printScriptedResolvedPrompt,
 } from "../display/startup.js";
+import { executeEngine } from "../execution/engine.js";
 import { decideRecovery } from "../execution/recovery-policy.js";
 import type {
   ContractEvidence,
@@ -30,7 +31,6 @@ import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import { resolveHarnessRuntime } from "../harness/runtime.js";
 import { nativeContinuationCommand } from "../harness/native-session.js";
 import { gateErrorMessage, pendingQueuesMessage } from "../runner/classify.js";
-import { executeRun } from "../runner/runner.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import type {
   AttemptRecord,
@@ -157,10 +157,9 @@ function refreshPendingReason(
  * a finalized `DONE` follows the resolution it recorded, a refused boundary and
  * a repaired promise are finalized without another harness invocation, and every
  * other resumable cursor starts a fresh attempt at its stored stage before
- * continuing through the snapshotted stages via `executeRun`. Returns the
- * process exit code, mapping
- * runner outcomes exactly as `run` does; every preflight failure returns `1` and
- * leaves the checkpoint unchanged. Signal handlers are installed at entry and
+ * continuing through the snapshotted stages via `executeEngine`. Returns the
+ * process exit code, mapping engine results exactly as `run` does; every
+ * preflight failure returns `1` and leaves the checkpoint unchanged. Signal handlers are installed at entry and
  * uninstalled on every ordinary return.
  */
 export async function resumeCommand(
@@ -466,8 +465,8 @@ export async function resumeCommand(
     };
 
     const continueRun = async (cursor: RunCheckpoint): Promise<number> => {
-      const result = await executeRun({
-        checkpoint: cursor,
+      const result = await executeEngine({
+        entry: { kind: "resume", checkpoint: cursor },
         runDir,
         stateRoot,
         lock,
@@ -477,11 +476,11 @@ export async function resumeCommand(
         signal: controller.signal,
         clock: deps.clock,
       });
-      if (result.status === "completed") return EXIT_OK;
-      if (result.status === "interrupted") {
+      if (result.kind === "completed") return EXIT_OK;
+      if (result.kind === "interrupted") {
         return signals.exitCodeFor(result.signal);
       }
-      if (result.status === "paused") return EXIT_WAITING;
+      if (result.kind === "paused") return EXIT_WAITING;
       deps.stderr.write(
         `A fatal checkpoint error ended the resume before it could pause safely: ${result.message}\n`,
       );
@@ -733,7 +732,7 @@ export async function resumeCommand(
             // The reason's recorded dimensions describe the earlier inspection,
             // not this one, so they go. What can make an inspection fail, and
             // why pausing on it is the fail-closed direction, is recorded beside
-            // the runner's post-DONE verification in `runner/runner.ts`.
+            // the engine's post-DONE verification in `execution/engine.ts`.
             const { contract: _staleContract, ...withoutContract } = governing;
             return pauseWith(
               {

@@ -3,9 +3,31 @@ import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * The engine call the command makes, replaceable one case at a time so each
+ * structured result can be mapped without a whole pipeline behind it. Every other
+ * case in this file drives the real engine, which is what the mock delegates to
+ * while no case has installed a stub.
+ */
+let engineStub: ((ctx: ExecutionContext) => Promise<ExecutionResult>) | null = null;
+
+vi.mock("../execution/engine.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../execution/engine.js")>();
+  return {
+    ...actual,
+    executeEngine: (ctx: ExecutionContext): Promise<ExecutionResult> =>
+      engineStub === null ? actual.executeEngine(ctx) : engineStub(ctx),
+  };
+});
 
 import type { HarnessId } from "../config/execution.js";
+import type {
+  ExecutionContext,
+  ExecutionEntry,
+  ExecutionResult,
+} from "../execution/engine.js";
 import type { ProbeResult } from "../harness/probe.js";
 import type {
   HarnessExecutableProbe,
@@ -18,7 +40,14 @@ import {
   SCRIPTED_HARNESS_TOGGLE_VAR,
   SCRIPTED_SCENARIO_FILENAME,
 } from "../harness/scripted/scenario.js";
-import { EXIT_SIGHUP, EXIT_SIGINT, EXIT_SIGTERM } from "../cli/exit-codes.js";
+import {
+  EXIT_FAILURE,
+  EXIT_OK,
+  EXIT_SIGHUP,
+  EXIT_SIGINT,
+  EXIT_SIGTERM,
+  EXIT_WAITING,
+} from "../cli/exit-codes.js";
 import type { installSignalHandlers } from "../runner/signals.js";
 import { SignalInterruption } from "../runner/signals.js";
 import { acquireWorkspaceLock, locksDirectory } from "../state/lock.js";
@@ -34,6 +63,7 @@ import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
+import { governedBy } from "../test-helpers/waiting.js";
 import { runCommand, type RunDeps } from "./run.js";
 
 /** An in-memory writable stream that accumulates everything written to it. */
@@ -1345,4 +1375,63 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     });
     expect(suffixOnly.code).toBe(0);
   });
+});
+
+describe("runCommand — engine handoff (AC-1.1)", () => {
+  afterEach(() => {
+    engineStub = null;
+  });
+
+  const cases: Array<{
+    name: string;
+    result: ExecutionResult;
+    code: number;
+    stderr?: string;
+  }> = [
+    { name: "completion", result: { kind: "completed" }, code: EXIT_OK },
+    {
+      name: "a durable pause",
+      result: {
+        kind: "paused",
+        waiting: governedBy({ kind: "outcome-blocked", message: "blocked" }),
+      },
+      code: EXIT_WAITING,
+    },
+    {
+      name: "an interruption",
+      result: { kind: "interrupted", signal: "SIGTERM" },
+      code: EXIT_SIGTERM,
+    },
+    {
+      name: "a fatal checkpoint error",
+      result: { kind: "fatal-checkpoint", message: "disk full" },
+      code: EXIT_FAILURE,
+      stderr: "disk full",
+    },
+  ];
+
+  for (const testCase of cases) {
+    it(`enters the engine with the allocated cursor and maps ${testCase.name}`, async () => {
+      const h = await setup();
+      const entries: ExecutionEntry["kind"][] = [];
+      engineStub = async (ctx) => {
+        entries.push(ctx.entry.kind);
+        return testCase.result;
+      };
+
+      const result = await run(h, []);
+
+      // The command hands over exactly the run it allocated, once.
+      expect(entries).toEqual(["allocated"]);
+      const runId = (await runDirNames(h.stateRoot))[0]!;
+      const cp = await readCheckpoint(path.join(runsDirectory(h.stateRoot), runId));
+      expect(cp.ok && cp.checkpoint.runId).toBe(runId);
+      expect(result.code).toBe(testCase.code);
+      if (testCase.stderr !== undefined) {
+        expect(result.err).toContain(testCase.stderr);
+      }
+      // The lock is the command's to release on every mapped result.
+      expect(await lockNames(h.stateRoot)).toEqual([]);
+    });
+  }
 });
