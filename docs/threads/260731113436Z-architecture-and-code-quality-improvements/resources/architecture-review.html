@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review — Antmay CLI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "neutral",
+        securityLevel: "loose",
+        flowchart: { curve: "basis", htmlLabels: true }
+      });
+    </script>
+    <style>
+      :root { color-scheme: light; }
+      html { scroll-behavior: smooth; }
+      body { background-image: radial-gradient(#cbd5e1 0.55px, transparent 0.55px); background-size: 18px 18px; }
+      .seam-line { border-top: 2px dashed #94a3b8; }
+      .deep { background: linear-gradient(145deg, #0f172a, #1e293b); }
+      .module-box { border: 1px solid #cbd5e1; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 0.06); }
+      .leak-arrow { color: #dc2626; font-weight: 800; }
+      .diagram { min-height: 322px; }
+      .mass-interface { background: #fecaca; border: 1px solid #f87171; }
+      .mass-implementation { background: #e2e8f0; border: 1px solid #94a3b8; }
+      .mermaid { display: flex; justify-content: center; align-items: center; min-height: 255px; }
+      code { overflow-wrap: anywhere; }
+      @media print {
+        body { background: white; }
+        article { break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans antialiased">
+    <main class="max-w-6xl mx-auto px-5 py-12 space-y-12">
+      <header class="border-b border-slate-300 pb-8">
+        <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p class="text-xs uppercase tracking-[0.24em] text-indigo-700">Architecture review</p>
+            <h1 class="mt-2 text-4xl font-serif font-semibold tracking-tight">Antmay CLI</h1>
+            <p class="mt-2 text-sm text-slate-500">2026-07-31 · scope <code class="text-slate-700">./cli</code></p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <span class="rounded border border-slate-300 bg-white px-3 py-2">solid box · module</span>
+            <span class="rounded border border-dashed border-slate-400 bg-white px-3 py-2">dashed line · seam</span>
+            <span class="rounded border border-red-200 bg-red-50 px-3 py-2 text-red-700">red arrow · leakage</span>
+            <span class="rounded bg-slate-900 px-3 py-2 text-white">dark box · deep module</span>
+          </div>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-2 text-xs text-slate-600">
+          <span class="rounded-full bg-slate-200 px-3 py-1">Evidence: CLI code + tests</span>
+          <span class="rounded-full bg-slate-200 px-3 py-1">Language: repository docs</span>
+          <span class="rounded-full bg-slate-200 px-3 py-1">Decisions: relevant docs/threads</span>
+        </div>
+      </header>
+
+      <section id="candidates" class="space-y-12">
+        <article id="git-finalization" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate 1</p>
+              <h2 class="mt-1 text-2xl font-serif font-semibold">Deepen Git policy finalization</h2>
+            </div>
+            <div class="flex gap-2">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+              <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">local-substitutable</span>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-lg bg-slate-50 p-4 font-mono text-sm text-slate-700">
+            <div>src/gitops/boundary.ts:76–224 · src/gitops/status.ts:16–69</div>
+            <div>src/runner/runner.ts:612–759 · src/commands/resume.ts:505–610</div>
+            <div>src/gitops/boundary.test.ts:44–473</div>
+          </div>
+
+          <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <section class="diagram rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-red-800">Before · protocol leaks</h3>
+                <span class="text-xs text-red-700">two callers sequence Git</span>
+              </div>
+              <pre class="mermaid">
+sequenceDiagram
+  participant R as Runner
+  participant S as Resume
+  participant G as Git status
+  participant P as Git policy
+  R->>G: read HEAD
+  R->>G: collect paths
+  R->>P: evaluate
+  R->>P: finalize
+  R->>G: read final HEAD
+  S->>G: read HEAD
+  S->>G: collect paths
+  S->>P: evaluate with recovery flags
+  S->>P: finalize
+  S->>G: read final HEAD
+              </pre>
+            </section>
+
+            <section class="diagram rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <div class="mb-2 flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-800">After · one deep module</h3>
+                <span class="text-xs text-emerald-700">Git stays internal</span>
+              </div>
+              <div class="flex h-[270px] flex-col items-center justify-center gap-4">
+                <div class="flex w-full max-w-sm items-center justify-center gap-3">
+                  <div class="module-box rounded-lg px-4 py-3 text-center text-xs uppercase tracking-wider">Runner</div>
+                  <div class="module-box rounded-lg px-4 py-3 text-center text-xs uppercase tracking-wider">Resume</div>
+                </div>
+                <div class="text-2xl text-emerald-700">↓</div>
+                <div class="seam-line w-4/5 pt-2 text-center text-[10px] uppercase tracking-[0.18em] text-slate-500">small interface</div>
+                <div class="deep w-full max-w-md rounded-xl border-4 border-slate-950 px-6 py-7 text-center text-white shadow-lg">
+                  <div class="text-xs uppercase tracking-[0.2em] text-emerald-300">Deep module</div>
+                  <div class="mt-2 font-semibold">Git policy finalization</div>
+                  <div class="mt-3 text-xs text-slate-300">observe · evaluate · commit · final HEAD</div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Problem</h3>
+              <p class="mt-2 text-sm leading-6">The module earns its keep, but its interface exposes a multi-call protocol: both callers must know HEAD timing, recovery flags, commit outcomes, and when to observe the final HEAD.</p>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Solution</h3>
+              <p class="mt-2 text-sm leading-6">Absorb observation, evaluation, optional commit, and final-HEAD reporting into the Git policy module; callers retain their checkpoint transitions.</p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-lg border-l-4 border-indigo-500 bg-indigo-50 px-4 py-3 text-sm text-indigo-950"><strong>Deletion test:</strong> deleting the module spreads selector matching, staged-set verification, and commit behavior across both callers; deepening it increases locality without adding a seam.</div>
+          <ul class="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+            <li>• Locality: HEAD rules live together</li>
+            <li>• Leverage: attempt and resume share</li>
+            <li>• Tests hit one interface</li>
+            <li>• Callers stop sequencing Git</li>
+          </ul>
+        </article>
+
+        <article id="pause-policy" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate 2</p>
+              <h2 class="mt-1 text-2xl font-serif font-semibold">Deepen pause and recovery policy</h2>
+            </div>
+            <div class="flex gap-2">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+              <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">in-process</span>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-lg bg-slate-50 p-4 font-mono text-sm text-slate-700">
+            <div>src/state/checkpoint.ts:29–127, 694–763 · src/runner/classify.ts:117–227</div>
+            <div>src/runner/runner.ts:279–347, 637–714, 753–901</div>
+            <div>src/commands/resume.ts:330–354, 674–875 · src/display/terminal.ts:895–1029</div>
+          </div>
+
+          <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <section class="diagram rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-red-800">Before · policy distributed</h3>
+              <pre class="mermaid">
+flowchart TB
+  O[Outcome parser] --> C[Classifier]
+  Q[Pending queues] --> C
+  C --> R[Runner transitions]
+  K[WaitingReason bag] --> R
+  K --> S[Resume recovery]
+  R -. knowledge .-> S
+  S --> D[Terminal rendering]
+  K --> D
+  classDef leak stroke:#dc2626,stroke-width:2px,color:#991b1b;
+  class R,S,K leak;
+              </pre>
+            </section>
+
+            <section class="diagram rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-800">After · policy has depth</h3>
+              <pre class="mermaid">
+flowchart TB
+  E[Attempt and queue evidence] --> P[Pause and recovery policy]
+  P --> T[Structured transition]
+  T --> R[Runner persistence]
+  T --> S[Resume persistence]
+  T --> D[Terminal prose]
+  classDef deep fill:#0f172a,color:#fff,stroke:#020617,stroke-width:4px;
+  class P deep;
+              </pre>
+            </section>
+          </div>
+
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Problem</h3>
+              <p class="mt-2 text-sm leading-6">Kind-specific evidence, clean-worktree rules, queue refresh, saved-DONE recovery, and advance-versus-rerun behavior span five modules, while <code>WaitingReason</code> exposes a broad optional-field interface.</p>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Solution</h3>
+              <p class="mt-2 text-sm leading-6">Concentrate structured pause construction, validation, and recovery decisions in one pure deep module; persistence, I/O, and terminal prose remain outside.</p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-lg border-l-4 border-indigo-500 bg-indigo-50 px-4 py-3 text-sm text-indigo-950"><strong>Deletion test:</strong> deleting <code>governingReason()</code> moves only <code>[0]</code>; the missing depth is the policy that all callers currently reconstruct.</div>
+          <ul class="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+            <li>• Locality: recovery rules concentrate</li>
+            <li>• Leverage: every pause kind benefits</li>
+            <li>• Interface encodes valid evidence</li>
+            <li>• Tests survive orchestration refactors</li>
+          </ul>
+        </article>
+
+        <article id="harness-runtime" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate 3</p>
+              <h2 class="mt-1 text-2xl font-serif font-semibold">Deepen harness runtime selection</h2>
+            </div>
+            <div class="flex gap-2">
+              <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Strong</span>
+              <span class="rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-semibold text-fuchsia-800">mock · real seam</span>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-lg bg-slate-50 p-4 font-mono text-sm text-slate-700">
+            <div>src/program.ts:49–132 · src/commands/run.ts:154–158, 284–332</div>
+            <div>src/commands/resume.ts:217–286 · src/harness/scripted/scenario.ts</div>
+            <div>src/harness/probe.ts · src/harness/sandcastle.ts · src/harness/scripted/invoker.ts</div>
+          </div>
+
+          <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <section class="diagram rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-red-800">Before · selection repeated</h3>
+              <div class="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center text-xs">
+                <div class="space-y-2">
+                  <div class="module-box rounded p-3 font-semibold">Run command</div>
+                  <div class="module-box rounded p-2">toggle</div>
+                  <div class="module-box rounded p-2">scenario</div>
+                  <div class="module-box rounded p-2">invoker + probe</div>
+                  <div class="module-box rounded p-2">versions</div>
+                </div>
+                <div class="leak-arrow text-3xl">↔</div>
+                <div class="space-y-2">
+                  <div class="module-box rounded p-3 font-semibold">Resume command</div>
+                  <div class="module-box rounded p-2">toggle + marker</div>
+                  <div class="module-box rounded p-2">scenario</div>
+                  <div class="module-box rounded p-2">invoker + probe</div>
+                  <div class="module-box rounded p-2">versions</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="diagram rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-800">After · adapters behind one seam</h3>
+              <div class="flex h-[275px] flex-col items-center justify-center gap-3 text-center">
+                <div class="flex gap-3 text-xs">
+                  <div class="module-box rounded-lg px-5 py-3">Run</div>
+                  <div class="module-box rounded-lg px-5 py-3">Resume</div>
+                </div>
+                <div class="text-2xl text-emerald-700">↓</div>
+                <div class="seam-line w-4/5 pt-2 text-[10px] uppercase tracking-[0.18em] text-slate-500">harness runtime seam</div>
+                <div class="deep w-4/5 rounded-xl border-4 border-slate-950 p-5 text-white">
+                  <div class="text-xs uppercase tracking-[0.2em] text-fuchsia-300">Deep module</div>
+                  <div class="mt-1 font-semibold">Runtime selection + probing</div>
+                  <div class="mt-4 flex justify-center gap-3 text-xs text-slate-900">
+                    <div class="rounded bg-white px-4 py-2">Sandcastle adapter</div>
+                    <div class="rounded bg-white px-4 py-2">Scripted adapter</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Problem</h3>
+              <p class="mt-2 text-sm leading-6">Run and resume both interpret the toggle, load the live scenario, replace invocation and probing together, render diagnostics, and normalize versions; <code>RunDeps</code> exposes every concrete dependency.</p>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Solution</h3>
+              <p class="mt-2 text-sm leading-6">Let one harness runtime module own real-versus-scripted selection, fail-closed resume, prompt observation, probing, and structured version results while preserving lazy command loading.</p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-lg border-l-4 border-indigo-500 bg-indigo-50 px-4 py-3 text-sm text-indigo-950"><strong>Deletion test:</strong> the <code>HarnessInvoker</code> seam passes because Sandcastle and scripted adapters are real; the missing module is the runtime selection around that seam.</div>
+          <ul class="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+            <li>• Locality: selection changes once</li>
+            <li>• Leverage: run and resume share</li>
+            <li>• Two adapters justify seam</li>
+            <li>• Tests target runtime behavior</li>
+          </ul>
+        </article>
+
+        <article id="artifact-contracts" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate 4</p>
+              <h2 class="mt-1 text-2xl font-serif font-semibold">Make thread artifact contracts one owner</h2>
+            </div>
+            <div class="flex gap-2">
+              <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Worth exploring</span>
+              <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">local-substitutable</span>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-lg bg-slate-50 p-4 font-mono text-sm text-slate-700">
+            <div>src/pipeline/types.ts:35–77 · src/thread/artifacts.ts:18–331</div>
+            <div>src/pipeline/composition.ts:107–247 · src/state/checkpoint.ts:421–517</div>
+            <div>src/runner/runner.ts · src/commands/resume.ts · src/display/terminal.ts</div>
+          </div>
+
+          <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <section class="diagram rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-red-800">Before · raw state leaks</h3>
+              <div class="mt-5 flex h-[260px] flex-col justify-center gap-4">
+                <div class="grid grid-cols-5 gap-1 text-center text-[10px] uppercase tracking-wide">
+                  <div class="mass-interface rounded px-1 py-4">valid thread</div>
+                  <div class="mass-interface rounded px-1 py-4">proposal</div>
+                  <div class="mass-interface rounded px-1 py-4">spec</div>
+                  <div class="mass-interface rounded px-1 py-4">plan</div>
+                  <div class="mass-interface rounded px-1 py-4">report</div>
+                </div>
+                <div class="text-center text-xs text-red-700">Raw <code>ArtifactState</code> interface</div>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div class="module-box rounded p-3">Composition<br />projects</div>
+                  <div class="module-box rounded p-3">Checkpoint<br />revalidates</div>
+                  <div class="module-box rounded p-3">Display<br />describes</div>
+                  <div class="module-box rounded p-3">Runner<br />checks</div>
+                  <div class="module-box rounded p-3">Resume<br />checks again</div>
+                  <div class="module-box rounded p-3">Catalog<br />declares</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="diagram rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-800">After · implementation absorbs vocabulary</h3>
+              <div class="mt-5 flex h-[260px] flex-col items-center justify-center gap-3">
+                <div class="mass-interface w-2/5 rounded px-3 py-2 text-center text-[10px] uppercase tracking-wide">small contract interface</div>
+                <div class="deep w-4/5 rounded-xl border-4 border-slate-950 px-6 py-8 text-center text-white shadow-lg">
+                  <div class="text-xs uppercase tracking-[0.2em] text-emerald-300">Deep module</div>
+                  <div class="mt-2 font-semibold">Thread artifact contracts</div>
+                  <div class="mt-3 text-xs text-slate-300">dimensions · inspection · projection · validation · descriptions</div>
+                </div>
+                <div class="flex gap-2 text-center text-[10px] uppercase tracking-wide text-slate-600">
+                  <span class="module-box rounded px-3 py-2">catalog</span>
+                  <span class="module-box rounded px-3 py-2">execution</span>
+                  <span class="module-box rounded px-3 py-2">display</span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Problem</h3>
+              <p class="mt-2 text-sm leading-6">The canonical dimensions live in pipeline types, disk meaning and prose live in the thread module, checkpoint validation repeats the dimension set, and three callers compose checks manually.</p>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Solution</h3>
+              <p class="mt-2 text-sm leading-6">Deepen the existing thread artifact module so it owns definitions, disk inspection, projection, mismatch validation, and descriptions; catalog declarations and terminal layout stay outside.</p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-lg border-l-4 border-indigo-500 bg-indigo-50 px-4 py-3 text-sm text-indigo-950"><strong>Deletion test:</strong> the existing module already concentrates complexity; absorbing the duplicated dimension knowledge increases depth instead of adding another module.</div>
+          <ul class="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+            <li>• Locality: dimensions change once</li>
+            <li>• Leverage: every execution phase</li>
+            <li>• Interface hides raw dimensions</li>
+            <li>• Filesystem tests stay realistic</li>
+          </ul>
+        </article>
+
+        <article id="terminal-seam" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Candidate 5</p>
+              <h2 class="mt-1 text-2xl font-serif font-semibold">Unify the terminal seam</h2>
+            </div>
+            <div class="flex gap-2">
+              <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Speculative</span>
+              <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">in-process</span>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-lg bg-slate-50 p-4 font-mono text-sm text-slate-700">
+            <div>src/display/types.ts:18–110 · src/display/terminal.ts:320–1198</div>
+            <div>src/commands/run.ts · src/commands/resume.ts · src/commands/list.ts</div>
+            <div>src/runner/runner.ts</div>
+          </div>
+
+          <div class="mt-6 grid gap-5 lg:grid-cols-2">
+            <section class="diagram rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-red-800">Before · one implementation, two interfaces</h3>
+              <pre class="mermaid">
+flowchart TB
+  R[Runner] --> I[Display interface]
+  I --> T[terminal.ts]
+  C[Run and resume] --> F[Standalone print functions]
+  L[List] --> F
+  F --> T
+  C -. DisplayOptions and domain shapes .-> T
+  classDef leak stroke:#dc2626,stroke-width:2px,color:#991b1b;
+  class C,F,T leak;
+              </pre>
+            </section>
+
+            <section class="diagram rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-800">After · one seam, two adapters</h3>
+              <div class="flex h-[275px] flex-col items-center justify-center gap-3">
+                <div class="flex gap-2 text-xs">
+                  <span class="module-box rounded px-4 py-3">Commands</span>
+                  <span class="module-box rounded px-4 py-3">Runner</span>
+                </div>
+                <div class="text-2xl text-emerald-700">↓</div>
+                <div class="seam-line w-4/5 pt-2 text-center text-[10px] uppercase tracking-[0.18em] text-slate-500">one terminal interface</div>
+                <div class="deep w-4/5 rounded-xl border-4 border-slate-950 p-5 text-center text-white">
+                  <div class="text-xs uppercase tracking-[0.2em] text-emerald-300">Deep module</div>
+                  <div class="mt-1 font-semibold">Execution presentation</div>
+                  <div class="mt-4 flex justify-center gap-3 text-xs text-slate-900">
+                    <span class="rounded bg-white px-4 py-2">Terminal adapter</span>
+                    <span class="rounded bg-white px-4 py-2">Test adapter</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Problem</h3>
+              <p class="mt-2 text-sm leading-6">The runner uses a <code>Display</code> interface, while commands bypass it through standalone renderers that accept terminal options and domain-specific shapes; presentation therefore has a split seam.</p>
+            </div>
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Solution</h3>
+              <p class="mt-2 text-sm leading-6">Explore one execution-presentation module whose interface covers startup, refusals, lifecycle events, and listing, with terminal and test adapters satisfying the same seam.</p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-lg border-l-4 border-slate-400 bg-slate-50 px-4 py-3 text-sm text-slate-800"><strong>Deletion test:</strong> deleting the standalone render family moves formatting knowledge into three commands; the opportunity is consolidation, but the differing command phases may justify today’s split.</div>
+          <ul class="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+            <li>• Locality: presentation changes once</li>
+            <li>• Leverage: every command shares</li>
+            <li>• Two adapters justify seam</li>
+            <li>• Snapshot tests hit interface</li>
+          </ul>
+        </article>
+      </section>
+
+      <section id="top-recommendation" class="rounded-2xl border-2 border-emerald-500 bg-slate-950 p-7 text-white shadow-xl md:p-9">
+        <p class="text-xs uppercase tracking-[0.22em] text-emerald-300">Top recommendation</p>
+        <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-3xl font-serif font-semibold">Deepen Git policy finalization</h2>
+            <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-300">It is the narrowest high-leverage change: one existing module can absorb a duplicated, safety-critical protocol used by ordinary attempts and saved-DONE recovery, while preserving the generic runner and checkpoint model.</p>
+          </div>
+          <a href="#git-finalization" class="shrink-0 rounded-lg bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300">View candidate ↑</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
