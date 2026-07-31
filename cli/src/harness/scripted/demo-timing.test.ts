@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SPEC_CORRECT_DELAY_MS } from "./invoker.js";
+import { SPEC_CORRECT_DELAY_MS } from "./cases.js";
 
 /**
  * The demo scenario `16-runtime-prerequisite` deletes the thread's plan while a
