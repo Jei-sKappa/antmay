@@ -19,10 +19,12 @@ ordinary real execution, remove duplicated artifact-contract knowledge, and
 split the terminal god module without redesigning the terminal interface (per
 DR2, DR5–DR8).
 
-This is one implementation scope. The later strict plan owns its bounded task
-decomposition and ordering; this specification defines the complete target,
-the dependencies that constrain that plan, and the evidence required at review
-(per DR9).
+This is one implementation scope. Delivery proceeds through this handoff-grade
+specification and its applicable revision and review steps, a strict plan and
+its applicable revision steps, and implementation of that plan with subagents.
+The strict plan owns its bounded task decomposition and ordering; this
+specification defines the complete target, the dependencies that constrain that
+plan, and the evidence required at review (per DR9).
 
 ## Context
 
