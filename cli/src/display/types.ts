@@ -6,7 +6,12 @@ import type { WaitingInfo } from "../state/checkpoint.js";
  * derived from the attempt's own terminal token, never from the reason that
  * governs the run's pause.
  */
-export type StageDisposition = "refused" | "blocked" | "failed" | "interrupted";
+export type StageDisposition =
+  | "refused"
+  | "blocked"
+  | "failed"
+  | "interrupted"
+  | "paused";
 
 /** The selected stage at the checkpoint cursor when a run pauses. */
 export type CurrentStageInfo = {

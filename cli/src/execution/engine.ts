@@ -273,6 +273,17 @@ function stageDisposition(
   return "failed";
 }
 
+function unexpectedHeadMovementMessage(interval: AttemptInterval): string {
+  return (
+    "The stage produced a commit even though its Git policy does not expect " +
+    `one; the attempt moved HEAD from ${interval.headAtStart} to ${interval.headAfterAttempt}.`
+  );
+}
+
+const HEAD_MOVEMENT_NEXT_ACTION =
+  "Inspect the attempt's commits if needed. This HEAD movement will not block " +
+  "the next resume; Antmay will continue if the promised artifact and remaining Git checks pass.";
+
 /** The originating signal name when the abort reason is a `SignalInterruption`,
  * else `null` for any other (or absent) abort. */
 function signalReason(signal: AbortSignal): NodeJS.Signals | null {
@@ -1286,7 +1297,12 @@ export async function executeEngine(
     }
 
     let boundary: BoundaryDisposition = { evaluated: false };
+    let headMovementAdvisory = false;
     if (isDone) {
+      const attemptInterval = {
+        headAtStart: attemptStartHead,
+        headAfterAttempt: observedHead,
+      };
       const finalization = await finalizeGitBoundary({
         repoRoot,
         threadRelPath,
@@ -1296,10 +1312,7 @@ export async function executeEngine(
         // exactly the interval between its two observations.
         context: {
           kind: "attempt",
-          attempt: {
-            headAtStart: attemptStartHead,
-            headAfterAttempt: observedHead,
-          },
+          attempt: attemptInterval,
         },
       });
       // The finalization owns every Git observation this boundary makes, so the
@@ -1308,6 +1321,9 @@ export async function executeEngine(
       if (finalization.kind !== "git-error") {
         observedHead = finalization.headAfterFinalization;
       }
+      headMovementAdvisory =
+        finalization.kind === "git-policy-violation" &&
+        finalization.cause === "head-rule";
       boundary =
         finalization.kind === "finalized"
           ? { evaluated: true, ok: true }
@@ -1317,10 +1333,14 @@ export async function executeEngine(
               kind:
                 finalization.kind === "git-error"
                   ? "commit-error"
+                  : headMovementAdvisory
+                    ? "unexpected-head-movement"
                   : finalization.kind,
               message:
                 finalization.kind === "git-error"
                   ? `Git finalization failed during ${finalization.phase}: ${finalization.message}`
+                  : headMovementAdvisory
+                    ? unexpectedHeadMovementMessage(attemptInterval)
                   : finalization.message,
             };
     }
@@ -1465,7 +1485,9 @@ export async function executeEngine(
             pausedAtHead: observedHead,
           }
         : { kind: "retry-stage" },
-      nextAction: UNVALIDATED_CHANGES_NOTE,
+      nextAction: headMovementAdvisory
+        ? HEAD_MOVEMENT_NEXT_ACTION
+        : UNVALIDATED_CHANGES_NOTE,
     };
     const settled: AttemptRecord = withAgentSession(
       {
@@ -1489,7 +1511,9 @@ export async function executeEngine(
     display.stageStopped({
       stagePosition,
       durationMs,
-      disposition: stageDisposition(aborted, parse),
+      disposition: headMovementAdvisory
+        ? "paused"
+        : stageDisposition(aborted, parse),
     });
     renderPause(waiting, settled);
     return { kind: "paused", waiting };

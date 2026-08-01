@@ -953,6 +953,25 @@ describe("validateCheckpoint — waiting recovery round trips (AC-2.1)", () => {
     });
   }
 
+  it("accepts the advisory HEAD-movement waiting kind", () => {
+    const doc = withRecovery(RETRY_GIT);
+    doc.waiting = {
+      reasons: [
+        {
+          kind: "unexpected-head-movement",
+          message: "The attempt moved HEAD from aaa111 to bbb222.",
+        },
+      ],
+      recovery: RETRY_GIT,
+      nextAction: "Inspect the commits, then resume.",
+    };
+
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.checkpoint.waiting).toEqual(doc.waiting);
+  });
+
   it("accepts the same recovery whatever order the diagnostic reasons are in", () => {
     const doc = withRecovery(RETRY_GIT);
     const reversed = {

@@ -18,7 +18,10 @@ export type BoundaryDisposition =
   | {
       evaluated: true;
       ok: false;
-      kind: "git-policy-violation" | "commit-error";
+      kind:
+        | "unexpected-head-movement"
+        | "git-policy-violation"
+        | "commit-error";
       message: string;
     };
 

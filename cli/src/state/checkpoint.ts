@@ -40,6 +40,7 @@ export type WaitingKind =
   | "idle-timeout"
   | "interrupted"
   | "gate-error"
+  | "unexpected-head-movement"
   | "git-policy-violation"
   | "commit-error"
   | "stage-prerequisite-unmet"
@@ -295,6 +296,7 @@ const WAITING_KINDS: ReadonlySet<string> = new Set<WaitingKind>([
   "idle-timeout",
   "interrupted",
   "gate-error",
+  "unexpected-head-movement",
   "git-policy-violation",
   "commit-error",
   "stage-prerequisite-unmet",

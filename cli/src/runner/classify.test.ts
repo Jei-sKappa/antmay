@@ -51,6 +51,12 @@ const violationBoundary: BoundaryDisposition = {
   kind: "git-policy-violation",
   message: "The worktree changed a path outside the stage's allowed selectors.",
 };
+const advisoryHeadBoundary: BoundaryDisposition = {
+  evaluated: true,
+  ok: false,
+  kind: "unexpected-head-movement",
+  message: "The attempt moved HEAD from aaa111 to bbb222.",
+};
 const commitErrorBoundary: BoundaryDisposition = {
   evaluated: true,
   ok: false,
@@ -142,6 +148,19 @@ describe("classifyAttempt", () => {
       action: "pause",
       reasons: [
         { kind: "git-policy-violation", message: violationBoundary.message },
+      ],
+    });
+  });
+
+  it("DONE + advisory HEAD movement keeps the advisory reason distinct", () => {
+    const result = classifyAttempt(input({ boundary: advisoryHeadBoundary }));
+    expect(result).toEqual({
+      action: "pause",
+      reasons: [
+        {
+          kind: "unexpected-head-movement",
+          message: advisoryHeadBoundary.message,
+        },
       ],
     });
   });

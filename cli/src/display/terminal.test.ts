@@ -526,6 +526,7 @@ describe("stageStopped", () => {
     expect(stopped("blocked")).toContain("Stage 2/6 blocked in 41s 🛑");
     expect(stopped("failed")).toContain("Stage 2/6 failed in 41s ❌");
     expect(stopped("interrupted")).toContain("Stage 2/6 interrupted in 41s ⏹️");
+    expect(stopped("paused")).toContain("Stage 2/6 paused in 41s ⏸️");
   });
 
   it("gives blocked and failed distinguishable marks", () => {
@@ -621,6 +622,29 @@ describe("runPaused", () => {
   it("says nothing about a reason count when only one reason holds", () => {
     const { out } = paused();
     expect(out.text).not.toContain("reasons:");
+  });
+
+  it("renders unexpected HEAD movement as an advisory pause", () => {
+    const { out } = paused({
+      waiting: governedBy(
+        {
+          kind: "unexpected-head-movement",
+          message:
+            "The stage produced a commit and moved HEAD from aaa111 to bbb222.",
+        },
+        {
+          nextAction:
+            "This HEAD movement will not block the next resume.",
+        },
+      ),
+    });
+
+    expect(out.text).toContain("HEAD MOVED — review advised ⚠️");
+    expect(out.text).toContain("aaa111");
+    expect(out.text).toContain("bbb222");
+    expect(out.text).toContain("will not block the next resume");
+    expect(out.text).not.toContain("FAILED — git policy violation");
+    expect(out.text).not.toContain("unvalidated");
   });
 
   it("labels the closing lines in place, leaving no unexplained gap", () => {

@@ -57,6 +57,7 @@ const STAGE_DISPOSITION: Record<
   blocked: { verb: "blocked", icon: "🛑", color: "red" },
   failed: { verb: "failed", icon: "❌", color: "red" },
   interrupted: { verb: "interrupted", icon: "⏹️", color: "yellow" },
+  paused: { verb: "paused", icon: "⏸️", color: "yellow" },
 };
 
 /**
@@ -93,6 +94,12 @@ const REASON_BANNER: Record<
     label: "FAILED — git policy violation",
     icon: "❌",
     color: "red",
+    group: "stage",
+  },
+  "unexpected-head-movement": {
+    label: "HEAD MOVED — review advised",
+    icon: "⚠️",
+    color: "yellow",
     group: "stage",
   },
   "commit-error": {

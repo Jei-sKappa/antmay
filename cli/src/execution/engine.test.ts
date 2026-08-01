@@ -1245,6 +1245,57 @@ describe.concurrent("executeEngine — pre-attempt queue gates (AC-11.2, AC-11.5
 });
 
 describe.concurrent("executeEngine — boundary failures preserve the attempt (AC-11.6, AC-12.2, AC-12.4)", () => {
+  it("pauses unexpected HEAD movement advisorily, then accepts it on resume", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const headAtStart = await readHead(fixture.root);
+    const rec = recorder();
+    const harness = createFakeHarness([
+      {
+        before: async () => {
+          await writeThreadFile(fixture, "notes.md", "committed by the stage\n");
+          await fixture.git(["add", "-A"]);
+          await fixture.git(["commit", "-m", "chore: stage-owned commit"]);
+        },
+      },
+    ]);
+
+    const first = await executeEngine(
+      makeContext(
+        buildCheckpoint(fixture, [alphaStage]),
+        runDir,
+        harness,
+        rec.display,
+      ),
+    );
+
+    expect(first.kind).toBe("paused");
+    const paused = await loadCheckpoint(runDir);
+    const headAfterAttempt = await readHead(fixture.root);
+    expect(paused.waiting?.reasons[0]).toMatchObject({
+      kind: "unexpected-head-movement",
+    });
+    expect(paused.waiting?.reasons[0].message).toContain(headAtStart);
+    expect(paused.waiting?.reasons[0].message).toContain(headAfterAttempt);
+    expect(paused.waiting?.nextAction).toContain(
+      "will not block the next resume",
+    );
+    expect(paused.waiting?.nextAction).not.toContain("unvalidated");
+    expect(paused.waiting?.recovery).toEqual({
+      kind: "retry-git-finalization",
+      attempt: { stageIndex: 0, attempt: 1 },
+      pausedAtHead: headAfterAttempt,
+    });
+    expect(rec.stageStopped[0]?.disposition).toBe("paused");
+
+    const resumed = await resumeFromDisk(runDir, []);
+    expect(resumed.result).toEqual({ kind: "completed" });
+    expect(resumed.harness.calls).toHaveLength(0);
+    const completed = await loadCheckpoint(runDir);
+    expect(completed.condition).toBe("completed");
+    expect(completed.attempts[0]?.result).toBe("done");
+  });
+
   it("pauses git-policy-violation for an out-of-bounds change", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
