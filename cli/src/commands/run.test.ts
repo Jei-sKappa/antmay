@@ -1420,7 +1420,9 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
     it(`enters the engine with the allocated cursor and maps ${testCase.name}`, async () => {
       const h = await setup();
       const entries: ExecutionEntry[] = [];
+      const contexts: ExecutionContext[] = [];
       engineStub = async (ctx) => {
+        contexts.push(ctx);
         entries.push(ctx.entry);
         return testCase.result;
       };
@@ -1434,6 +1436,8 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
       expect(cp.ok && cp.checkpoint.runId).toBe(runId);
       // The cursor handed over is the initial checkpoint that was just written.
       expect(entries[0]?.checkpoint).toEqual(cp.ok ? cp.checkpoint : null);
+      expect(contexts[0]).not.toHaveProperty("stateRoot");
+      expect(contexts[0]).not.toHaveProperty("lock");
       expect(result.code).toBe(testCase.code);
       if (testCase.stderr !== undefined) {
         expect(result.err).toContain(testCase.stderr);

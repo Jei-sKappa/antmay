@@ -112,6 +112,8 @@ export type ExecutionContext = {
   inspectArtifactState?: typeof inspectArtifactState;
   /** Git HEAD reader seam for exercising refusal and recovery paths. */
   readHead?: typeof readHead;
+  /** Git-boundary seam for exercising structured finalization failures. */
+  finalizeGitBoundary?: typeof finalizeGitBoundary;
 };
 
 /**
@@ -371,6 +373,7 @@ export async function executeEngine(
   const persistCheckpoint = ctx.persistCheckpoint ?? writeCheckpoint;
   const inspectArtifacts = ctx.inspectArtifactState ?? inspectArtifactState;
   const readCurrentHead = ctx.readHead ?? readHead;
+  const finalizeBoundary = ctx.finalizeGitBoundary ?? finalizeGitBoundary;
   let checkpoint = ctx.entry.checkpoint;
 
   const repoRoot = checkpoint.repoRoot;
@@ -861,7 +864,7 @@ export async function executeEngine(
           pausedAtHead: directive.recovery.pausedAtHead,
         };
       }
-      const finalization = await finalizeGitBoundary({
+      const finalization = await finalizeBoundary({
         repoRoot,
         threadRelPath,
         threadFolder,
@@ -1383,7 +1386,7 @@ export async function executeEngine(
         headAtStart,
         headAfterAttempt: observedHead,
       };
-      const finalization = await finalizeGitBoundary({
+      const finalization = await finalizeBoundary({
         repoRoot,
         threadRelPath,
         threadFolder,

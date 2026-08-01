@@ -1042,6 +1042,53 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     expect(attemptCountAt(cp, 0)).toBe(1);
   });
 
+  it("rechecks a boundary retry's promise before finalizing the saved DONE", async () => {
+    const h = await setup();
+    await seed(h, [
+      {
+        before: () => {
+          writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
+          writeRootFileSync(h.fixture, "stray.txt", "x");
+        },
+        outcome: DONE,
+      },
+    ]);
+    const runId = await soleRunId(h);
+    await fs.rm(path.join(h.fixture.threadPath as string, "spec.md"));
+    await fs.rm(path.join(h.fixture.root, "stray.txt"));
+
+    const stale = await resume(
+      h,
+      runId,
+      standardSteps(h.fixture).slice(1),
+    );
+    expect(stale.code).toBe(2);
+    expect(stale.invoker.calls).toHaveLength(0);
+    const contractPause = await readCp(h, runId);
+    expect(contractPause.waiting?.reasons[0].kind).toBe(
+      "stage-contract-violation",
+    );
+    expect(contractPause.waiting?.recovery).toMatchObject({
+      kind: "recheck-stage-contract",
+      attempt: { stageIndex: 0, attempt: 1 },
+    });
+    expect(contractPause.waiting?.nextAction).toContain(
+      "Repair the promised artifact",
+    );
+
+    writeThreadFileSync(h.fixture, "spec.md", "# Repaired spec\n");
+    const repaired = await resume(
+      h,
+      runId,
+      standardSteps(h.fixture).slice(1),
+    );
+    expect(repaired.code).toBe(0);
+    expect(
+      repaired.invoker.calls.filter((call) => call.stage.id === "spec"),
+    ).toHaveLength(0);
+    expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
+  });
+
   it("keeps the same attempt finalizable when the boundary refuses again, then commits it", async () => {
     const h = await setup();
     await seed(h, [
@@ -2158,7 +2205,9 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       const runId = await soleRunId(h);
       const durable = await readCp(h, runId);
       const entries: ExecutionEntry[] = [];
+      const contexts: ExecutionContext[] = [];
       engineStub = async (ctx) => {
+        contexts.push(ctx);
         entries.push(ctx.entry);
         return testCase.result;
       };
@@ -2169,6 +2218,8 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       // The cursor is the validated checkpoint exactly as it was found: recovering
       // the pause belongs to the engine, so nothing is adjusted on the way in.
       expect(entries[0]?.checkpoint).toEqual(durable);
+      expect(contexts[0]).not.toHaveProperty("stateRoot");
+      expect(contexts[0]).not.toHaveProperty("lock");
       expect(result.code).toBe(testCase.code);
       if (testCase.stderr !== undefined) {
         expect(result.err).toContain(testCase.stderr);

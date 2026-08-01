@@ -148,15 +148,17 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   `stage-contract-violation` and never reaches boundary evaluation.
 - Once the promise holds, the **Git boundary** (`src/gitops/boundary.ts`)
   validates that post-DONE changes fall within the stage's allowed selectors and
-  produces the declared boundary commit — the `git-policy-violation` path, which
-  fires when changes fall outside the selectors, `HEAD` moved where the stage
-  forbids it, or a `changeRequired` stage left nothing. This includes the
-  implementation stages: the skill makes its own per-task code commits and leaves
-  the thread's `implementation-report.md` uncommitted, and the stage boundary is
-  what commits that report. One call finalizes a boundary in every context — a
-  fresh attempt, first-time finalization after a repaired contract, or a retry
-  after an earlier boundary or commit failure — so no caller sequences status
-  collection, evaluation, staging, commit, and the final `HEAD` read itself.
+  produces the declared boundary commit. Each refusal carries a structured cause:
+  unexpected attempt-owned `HEAD` movement is an advisory pause that one resume
+  may accept, while out-of-bounds changes, an unmet `changeRequired` rule, and an
+  unresolvable selector remain blocking `git-policy-violation` pauses. This
+  includes the implementation stages: the skill makes its own per-task code
+  commits and leaves the thread's `implementation-report.md` uncommitted, and the
+  stage boundary is what commits that report. One call finalizes a boundary in
+  every context — a fresh attempt, first-time finalization after a repaired
+  contract, or a retry after an earlier boundary or commit failure — and returns
+  structured Git failures, so no caller sequences or catches status collection,
+  evaluation, staging, commit, and the final `HEAD` read itself.
 - **Pauses** surface as exit code `2` (waiting): when a queue gate finds pending
   work (e.g. a file under the thread's `.pending-decisions/`), the run
   checkpoints and prints the exact `antmay afk resume <run-id>` command.
@@ -174,13 +176,20 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   The decision table
   (`src/execution/recovery-policy.ts`) turns a validated recovery plus fresh
   evidence into a directive and touches nothing: no filesystem, Git, clock,
-  harness, or checkpoint.
+  harness, or checkpoint. A Git-boundary retry re-inspects the saved `DONE`'s
+  promised artifact first; an unmet or unreadable promise returns to contract
+  repair without discarding that attempt. Refreshed diagnostics are rebuilt from
+  current facts, and an unchanged waiting object is rendered without rewriting
+  the checkpoint or restamping `updatedAt`.
 - **Git evidence belongs to the attempt that produced it.** Every attempt
   records the `HEAD` it was launched from and, once settled, the `HEAD` its
   settlement left behind, so a boundary is judged across its own attempt's
   interval. A recovery that may finalize a boundary after a human worked across
   the pause carries the pause's own latest `HEAD` as well, which is what tells
-  that movement apart from the attempt's.
+  that movement apart from the attempt's. Engine-owned `HEAD` reads fail as
+  structured refusals. If the post-attempt read fails, the checkpoint remains
+  `executing`; a later resume settles it through abandoned-attempt recovery once
+  Git is readable.
 - **Resume reads only the checkpoint.** Every resolved value a run needs — both
   document identities and their source paths, the selected stages with their
   catalog definitions, resolved targets, instructions, and bindings — is
@@ -188,8 +197,9 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   settings document. Its preflight is read-only with respect to that checkpoint:
   it never branches on a recovery variant or reason kind, applies no worktree
   exemption of its own, and persists nothing. A `stage-contract-violation` pause
-  is the one pause the engine exempts from the clean-worktree rule, because the
-  repair it waits for arrives uncommitted.
+  or Git-boundary pause whose recovery preserves a saved `DONE` is exempt from
+  the clean-worktree rule, because the repair or boundary diff it waits for is
+  uncommitted.
 
 ### Module layout (`src/`)
 

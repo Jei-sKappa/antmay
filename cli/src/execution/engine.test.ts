@@ -220,6 +220,7 @@ function makeContext(
   persistCheckpoint?: ExecutionContext["persistCheckpoint"],
   inspectArtifactState?: ExecutionContext["inspectArtifactState"],
   readHead?: ExecutionContext["readHead"],
+  finalizeGitBoundary?: ExecutionContext["finalizeGitBoundary"],
 ): ExecutionContext {
   return {
     entry: { kind: "allocated", checkpoint },
@@ -231,6 +232,7 @@ function makeContext(
     persistCheckpoint,
     inspectArtifactState,
     readHead,
+    finalizeGitBoundary,
   };
 }
 
@@ -379,6 +381,7 @@ async function resumeFromDisk(
     persistCheckpoint?: ExecutionContext["persistCheckpoint"];
     inspectArtifactState?: ExecutionContext["inspectArtifactState"];
     readHead?: ExecutionContext["readHead"];
+    finalizeGitBoundary?: ExecutionContext["finalizeGitBoundary"];
   } = {},
 ): Promise<{ result: ExecutionResult; harness: FakeHarness; cursor: RunCheckpoint }> {
   const cursor = overrides.checkpoint ?? (await loadCheckpoint(runDir));
@@ -394,6 +397,7 @@ async function resumeFromDisk(
         overrides.persistCheckpoint,
         overrides.inspectArtifactState,
         overrides.readHead,
+        overrides.finalizeGitBoundary,
       ),
     ),
   );
@@ -1132,6 +1136,35 @@ describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4,
     expect(attemptsAt(cp, 0).length).toBe(1);
   });
 
+  it("keeps the persisted pause tip when retry finalization cannot observe Git", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnBoundary(fixture, runDir);
+    const before = await loadCheckpoint(runDir);
+    const recovery = before.waiting?.recovery;
+    expect(recovery?.kind).toBe("retry-git-finalization");
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      finalizeGitBoundary: async () => ({
+        kind: "git-error",
+        phase: "boundary-status",
+        message: "synthetic status failure",
+      }),
+    });
+
+    expect(result.kind).toBe("paused");
+    expect(harness.calls).toHaveLength(0);
+    const after = await loadCheckpoint(runDir);
+    expect(after.waiting?.reasons[0]).toMatchObject({
+      kind: "commit-error",
+      message: expect.stringContaining("boundary-status"),
+    });
+    expect(after.waiting?.recovery).toEqual(recovery);
+    expect(after.attempts[0]?.headAfterAttempt).toBe(
+      before.attempts[0]?.headAfterAttempt,
+    );
+  });
+
   it("warns that HEAD moved across the pause without calling it a violation", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -1621,6 +1654,43 @@ describe.concurrent("executeEngine — boundary failures preserve the attempt (A
     expect(cp.waiting?.reasons[0].kind).toBe("commit-error");
     expect(cp.attempts[0].result).toBe("waiting");
     expect(await commitCount(fixture)).toBe(before);
+  });
+
+  it("uses the pre-finalization tip when Git status cannot be observed", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const headBefore = await readHead(fixture.root);
+    const harness = createFakeHarness([
+      { before: () => writeThreadFile(fixture, "notes.md", "notes\n") },
+    ]);
+    const ctx = makeContext(
+      buildCheckpoint(fixture, [alphaStage]),
+      runDir,
+      harness,
+    );
+    ctx.finalizeGitBoundary = async () => ({
+      kind: "git-error",
+      phase: "boundary-status",
+      message: "synthetic status failure",
+    });
+
+    const result = await executeEngine(ctx);
+
+    expect(result.kind).toBe("paused");
+    const cp = await loadCheckpoint(runDir);
+    expect(cp.waiting?.reasons[0]).toMatchObject({
+      kind: "commit-error",
+      message: expect.stringContaining("boundary-status"),
+    });
+    expect(cp.attempts[0]).toMatchObject({
+      result: "waiting",
+      headAfterAttempt: headBefore,
+    });
+    expect(cp.waiting?.recovery).toEqual({
+      kind: "retry-git-finalization",
+      attempt: { stageIndex: 0, attempt: 1 },
+      pausedAtHead: headBefore,
+    });
   });
 });
 
