@@ -579,6 +579,19 @@ export async function executeEngine(
     }
     const pausedWaiting = enteredWaiting;
     const pausedRecovery = pausedWaiting.recovery;
+    // Checkpoint validation guarantees that every attempt-referencing recovery
+    // names the final active record. Resolve that exact record once and carry it
+    // through finalization and rendering. A retry-stage recovery has no attempt
+    // reference; when it remains paused, its display still describes the latest
+    // persisted attempt that led to the pause.
+    const recoveryAttempt =
+      pausedRecovery.kind === "retry-stage"
+        ? undefined
+        : referencedAttempt(checkpoint, pausedRecovery.attempt);
+    const pauseAttempt =
+      pausedRecovery.kind === "retry-stage"
+        ? checkpoint.attempts[checkpoint.attempts.length - 1]
+        : recoveryAttempt;
     const stage = checkpoint.stages[checkpoint.stageIndex]!;
 
     /**
@@ -740,7 +753,9 @@ export async function executeEngine(
     async function finalizeSavedDone(
       directive: Extract<RecoveryDirective, { kind: "finalize-boundary" }>,
     ): Promise<ExecutionResult | null> {
-      const preserved = referencedAttempt(checkpoint, directive.recovery.attempt);
+      // A finalization directive can arise only from either attempt-referencing
+      // finalization recovery, so the validated record resolved above is present.
+      const preserved = recoveryAttempt!;
       const context: GitBoundaryContext =
         directive.context === "after-contract-repair"
           ? {
@@ -876,7 +891,7 @@ export async function executeEngine(
         queues,
         ...(contract !== undefined ? { contract } : {}),
       }),
-      checkpoint.attempts[checkpoint.attempts.length - 1],
+      pauseAttempt,
     );
   }
 

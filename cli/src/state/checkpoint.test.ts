@@ -120,6 +120,21 @@ function doneAttempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
   };
 }
 
+/** A newer current-stage failure that makes any reference to attempt 1 stale. */
+function laterBlockedAttempt(): AttemptRecord {
+  return doneAttempt({
+    attempt: 2,
+    result: "waiting",
+    terminalResult: {
+      token: "BLOCKED",
+      candidateLine: "Outcome: BLOCKED — later attempt",
+      detail: "later attempt",
+    },
+    failure: { kind: "outcome-blocked", message: "later attempt blocked" },
+    logPath: "logs/00-spec-attempt-02.log",
+  });
+}
+
 /**
  * A waiting checkpoint carrying two diagnostic reasons and one recovery, so a
  * case can state the recovery it is about and nothing else. The reasons are
@@ -951,6 +966,28 @@ describe("validateCheckpoint — waiting recovery round trips (AC-2.1)", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.checkpoint.waiting?.recovery).toEqual(RETRY_GIT);
   });
+
+  it("accepts prior-stage history when recovery names the final current-stage attempt", () => {
+    const recovery: WaitingRecovery = {
+      kind: "retry-git-finalization",
+      attempt: { stageIndex: 1, attempt: 1 },
+      pausedAtHead: "ccc333",
+    };
+    const doc = withRecovery(recovery, [
+      doneAttempt({ result: "done" }),
+      doneAttempt({
+        stageIndex: 1,
+        stageId: "plan-strict",
+        logPath: "logs/01-plan-strict-attempt-01.log",
+      }),
+    ]);
+    doc.stageIndex = 1;
+
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.checkpoint.waiting?.recovery).toEqual(recovery);
+  });
 });
 
 describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", () => {
@@ -989,6 +1026,27 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       document: () =>
         withRecovery({ ...RETRY_GIT, attempt: { stageIndex: 0, attempt: 2 } }),
       error: /names no recorded attempt/,
+    },
+    {
+      name: "a finalized-DONE recovery that references an older matching attempt",
+      document: () =>
+        withRecovery(RESUME_FINALIZED, [
+          doneAttempt({ result: "done" }),
+          laterBlockedAttempt(),
+        ]),
+      error: /must name the final attempt in the ordered history/,
+    },
+    {
+      name: "a contract-recheck recovery that references an older matching attempt",
+      document: () =>
+        withRecovery(RECHECK_CONTRACT, [doneAttempt(), laterBlockedAttempt()]),
+      error: /must name the final attempt in the ordered history/,
+    },
+    {
+      name: "a Git-retry recovery that references an older matching attempt",
+      document: () =>
+        withRecovery(RETRY_GIT, [doneAttempt(), laterBlockedAttempt()]),
+      error: /must name the final attempt in the ordered history/,
     },
     {
       name: "a referenced attempt whose terminal token is not DONE",

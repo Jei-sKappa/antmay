@@ -1102,11 +1102,13 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     );
   }
 
-  // The pause's recovery must resolve to the exact attempt it acts on, in the
-  // exact state that action requires. Nothing here falls back to the last
-  // attempt: a reference that names no recorded attempt, an attempt of another
-  // stage, a non-DONE verdict, or a result the action cannot start from all make
-  // the document unrecoverable rather than approximately recoverable.
+  // The pause's recovery must resolve to the final attempt in the ordered
+  // history, in the exact state that action requires. An older matching record
+  // is stale once another attempt follows it: recovering the older DONE could
+  // otherwise advance past the newer attempt. A reference that names no recorded
+  // attempt, an attempt of another stage, a stale attempt, a non-DONE verdict, or
+  // a result the action cannot start from all make the document unrecoverable
+  // rather than approximately recoverable.
   const recovery = checkpoint.waiting?.recovery;
   if (recovery !== undefined && recovery.kind !== "retry-stage") {
     const reference = recovery.attempt;
@@ -1125,6 +1127,12 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
           `waiting.recovery.attempt names no recorded attempt (stage ${reference.stageIndex}, attempt ${reference.attempt}).`,
         );
       } else {
+        const finalAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
+        if (referenced !== finalAttempt) {
+          errors.push(
+            `waiting.recovery.attempt must name the final attempt in the ordered history; stage ${reference.stageIndex}, attempt ${reference.attempt} is stale.`,
+          );
+        }
         if (referenced.terminalResult?.token !== "DONE") {
           errors.push(
             `waiting.recovery.attempt must name an attempt whose terminal token is DONE.`,

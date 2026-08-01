@@ -4,10 +4,9 @@ Source: plan.md
 
 ## Outcome
 
-All eleven plan tasks are complete and committed on
-`refactor/architecture-and-code-quality-improvements`, eleven commits from
-baseline `2d920a6` through `ec71bff`. Nothing was blocked, nothing was found
-already satisfied, and no task was skipped or reordered.
+All eleven plan tasks and the recovery-reference safety correction are complete.
+Nothing was blocked, nothing was found already satisfied, and no plan task was
+skipped or reordered.
 
 The CLI now has one execution engine that owns every durable transition after
 allocation. `runCommand` still does new-run preflight and writes the initial
@@ -15,9 +14,9 @@ allocation. `runCommand` still does new-run preflight and writes the initial
 enter `executeEngine` through a typed entry value, and under the held lock the
 engine is the only writer of an existing checkpoint. Recovery is driven by a
 required, validated recovery value rather than by diagnostic reason ordering, so
-the path that could finalize a non-`DONE` or absent attempt is gone. Recovery
-decisions, Git-boundary finalization, harness-runtime resolution, thread-artifact
-contracts, and phase-specific rendering each have one owner.
+the path that could finalize a non-`DONE`, absent, or stale earlier attempt is
+gone. Recovery decisions, Git-boundary finalization, harness-runtime resolution,
+thread-artifact contracts, and phase-specific rendering each have one owner.
 
 ## Changes
 
@@ -38,10 +37,12 @@ remain in `runner/`.
 identity (real or scripted). Every waiting checkpoint carries its non-empty
 ordered diagnostic reasons plus exactly one recovery: `retry-stage`,
 `resume-finalized-done`, `recheck-stage-contract`, or
-`retry-git-finalization` — each with an exact `(stageIndex, attempt)`
-reference, its snapshotted queue resolution where the variant takes one, and a
-pause-time `HEAD` required on exactly the two variants that may finalize Git
-after a pause and forbidden on the other two. Every attempt records
+`retry-git-finalization`. The latter three carry a reference to the final active
+`(stageIndex, attempt)` in the ordered history; validation rejects an older
+matching record once a later attempt exists. A recovery also carries its
+snapshotted queue resolution where the variant takes one, and a pause-time
+`HEAD` is required on exactly the two variants that may finalize Git after a
+pause and forbidden on the other two. Every attempt records
 `headAtStart`, and every settled attempt records `headAfterAttempt` (forbidden
 while executing). `gitCursor`, `startedScripted`, and `governingReason` are
 removed; the document stays at `schemaVersion: 0` and incompatible older
@@ -53,7 +54,10 @@ table: `decideRecovery(recovery, evidence)` returns `retry-stage`,
 or `remain-paused`. It takes no reason list, performs no I/O, and returns no
 partial checkpoint. Its exported `holdsPreservedDone` predicate drives both the
 clean-worktree exemption and the queue-scan-failure pause on the engine side, so
-those two decisions cannot disagree.
+those two decisions cannot disagree. The engine resolves an
+attempt-referencing recovery once and uses that validated record for both
+finalization and rendering; `retry-stage`, which has no attempt reference, uses
+the latest persisted attempt only when rendering an unchanged pause.
 
 **Git boundary.** `cli/src/gitops/boundary.ts` exposes one
 `finalizeGitBoundary(request)` owning pause-movement observation, status
@@ -101,9 +105,7 @@ published stage-support-table row changed.
 ## Verification
 
 `npm --prefix cli run check` (typecheck, full Vitest suite, tsup build) passes on
-the final commit: 1024 tests across 43 files, build success. It also passed on
-every commit of this implementation, and on the untouched baseline commit as a
-pre-change reference.
+the verified implementation: 1029 tests across 43 files, build success.
 
 Each task's own verification block was run and passed, including every negative
 `rg` assertion the plan prescribes (no artifact validators left in the checkpoint
@@ -111,10 +113,11 @@ module, no removed checkpoint fields, no forbidden import in the recovery policy
 no `state/persist` or transition collaborator in `resume.ts`, no concrete adapter
 in program dispatch or the commands).
 
-The closing regression sweep passed in full: the 13-file focused suite
-(510 tests); the scripted-harness marker absent from `dist/main.js` and present
-only in its own built module; and nineteen executable-UI scenario runs — the
-eleven the plan names plus five `--no-color` reruns, plus
+The regression sweeps passed in full: the 13-file focused suite (515 tests), the
+four-file recovery-focused subset (252 tests), the scripted-harness marker
+absent from `dist/main.js` and present only in its own built module, and nineteen
+executable-UI scenario runs — the eleven the plan names plus five `--no-color`
+reruns, plus
 `10-temporary-workspace-resume-refusal`, `26-interrupted`, and
 `27-checkpoint-write-failure`, which the plan's sweep list omits but AC-7.5
 covers. Every scenario exited on its declared code, and the `--no-color` runs

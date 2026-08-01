@@ -166,11 +166,12 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   retry the stage, apply a finalized `DONE`'s recorded queue resolution, recheck a
   stage contract, or retry a Git boundary. Reading a recovery out of reason order
   or reason kind is what the split exists to prevent, so reordering or adding
-  reasons never changes the action taken. Each recovery names its exact
-  `(stageIndex, attempt)` where it claims an attempt at all, and
+  reasons never changes the action taken. Each attempt-referencing recovery
+  names the final active `(stageIndex, attempt)` in the ordered history, and
   checkpoint validation rejects a reference the history does not bear out — an
-  absent attempt, another stage, a non-`DONE` token, an incompatible result, or a
-  queue resolution that is not the current stage's. The decision table
+  absent attempt, another stage, a stale earlier attempt, a non-`DONE` token, an
+  incompatible result, or a queue resolution that is not the current stage's.
+  The decision table
   (`src/execution/recovery-policy.ts`) turns a validated recovery plus fresh
   evidence into a directive and touches nothing: no filesystem, Git, clock,
   harness, or checkpoint.

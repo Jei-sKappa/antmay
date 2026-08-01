@@ -1421,6 +1421,38 @@ describe.concurrent("resumeCommand — unrecoverable recovery documents (AC-2.3)
         };
       },
     },
+    {
+      name: "a finalized-DONE recovery that references an older attempt before a newer failure",
+      mutate: (raw) => {
+        const stages = raw.stages as Array<{ queueResolution: string }>;
+        const attempts = raw.attempts as Array<Record<string, unknown>>;
+        const earlier = attempts[0]!;
+        earlier.result = "done";
+        earlier.terminalResult = {
+          token: "DONE",
+          candidateLine: "Outcome: DONE — earlier attempt",
+          detail: "earlier attempt",
+        };
+        delete earlier.failure;
+        attempts.push({
+          ...earlier,
+          attempt: 2,
+          result: "waiting",
+          terminalResult: {
+            token: "BLOCKED",
+            candidateLine: "Outcome: BLOCKED — newer attempt",
+            detail: "newer attempt",
+          },
+          failure: { kind: "outcome-blocked", message: "newer attempt blocked" },
+          logPath: "logs/01-spec-attempt-02.log",
+        });
+        (raw.waiting as Record<string, unknown>).recovery = {
+          kind: "resume-finalized-done",
+          attempt: { stageIndex: 0, attempt: 1 },
+          queueResolution: stages[0]!.queueResolution,
+        };
+      },
+    },
   ];
 
   for (const document of unrecoverable) {
@@ -1441,11 +1473,18 @@ describe.concurrent("resumeCommand — unrecoverable recovery documents (AC-2.3)
       if (!held.ok) throw new Error("expected to acquire the lock");
       heldLocks.push(held.handle);
 
-      const result = await resume(h, runId, standardSteps(h.fixture));
+      let probeCalled = false;
+      const result = await resume(h, runId, standardSteps(h.fixture), {
+        probe: async (...args) => {
+          probeCalled = true;
+          return okProbe(...args);
+        },
+      });
 
       expect(result.code).toBe(1);
       expect(result.err).toContain("malformed or unreadable");
       expect(result.err).not.toContain("already locked");
+      expect(probeCalled).toBe(false);
       expect(result.invoker.calls.length).toBe(0);
       // Nothing was persisted, so the stage cannot have advanced and the
       // referenced attempt cannot have been rewritten as done.
