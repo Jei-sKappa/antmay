@@ -71,7 +71,7 @@ const FINALIZATION_FAILED: Extract<
   { kind: "finalization-failed" }
 > = {
   kind: "finalization-failed",
-  failure: "git-policy-violation",
+  failure: { kind: "git-policy-violation", treatment: "blocking" },
   message: "changes outside the stage's allowed paths",
   observedHead: "c".repeat(40),
 };
@@ -162,17 +162,26 @@ describe("decideRecovery — contract recheck table (AC-3.2)", () => {
     ).toEqual({
       kind: "remain-paused",
       recovery: RECHECK,
-      facts: { kind: "promise-unmet", unmet: UNMET },
+      facts: { kind: "promise-unmet", unmet: UNMET, worktree: "dirty" },
     });
   });
 
   it("remains paused, keeping the saved DONE finalizable, when the thread cannot be inspected", () => {
     expect(
-      decideRecovery(RECHECK, { queues: CLEAR, contract: { kind: "uninspectable" } }),
+      decideRecovery(RECHECK, {
+        queues: CLEAR,
+        contract: {
+          kind: "uninspectable",
+          message: "cannot read the thread",
+        },
+      }),
     ).toEqual({
       kind: "remain-paused",
       recovery: RECHECK,
-      facts: { kind: "promise-uninspectable" },
+      facts: {
+        kind: "promise-uninspectable",
+        message: "cannot read the thread",
+      },
     });
   });
 
@@ -211,7 +220,9 @@ describe("decideRecovery — finalized DONE resolutions (AC-3.3)", () => {
 
 describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
   it("requests a boundary retry for the exact referenced attempt", () => {
-    expect(decideRecovery(GIT_RETRY, { queues: CLEAR })).toEqual({
+    expect(
+      decideRecovery(GIT_RETRY, { queues: CLEAR, contract: SATISFIED }),
+    ).toEqual({
       kind: "finalize-boundary",
       recovery: GIT_RETRY,
       context: "boundary-retry",
@@ -221,9 +232,52 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
   it("requests the attempt the recovery names, not the stage's latest", () => {
     const directive = decideRecovery(
       { kind: "retry-git-finalization", attempt: OTHER_REFERENCE, pausedAtHead: "d".repeat(40) },
-      { queues: CLEAR },
+      { queues: CLEAR, contract: SATISFIED },
     );
     expect(directive).toMatchObject({ recovery: { attempt: OTHER_REFERENCE } });
+  });
+
+  it("redirects an unmet promise through contract repair", () => {
+    expect(
+      decideRecovery(GIT_RETRY, {
+        queues: CLEAR,
+        contract: { kind: "unmet", unmet: UNMET, worktree: "clean" },
+      }),
+    ).toEqual({
+      kind: "remain-paused",
+      recovery: {
+        kind: "recheck-stage-contract",
+        attempt: REFERENCE,
+        pausedAtHead: GIT_RETRY.pausedAtHead,
+      },
+      facts: { kind: "promise-unmet", unmet: UNMET, worktree: "clean" },
+    });
+  });
+
+  it("redirects an uninspectable promise through contract repair", () => {
+    expect(
+      decideRecovery(GIT_RETRY, {
+        queues: CLEAR,
+        contract: { kind: "uninspectable", message: "cannot read the thread" },
+      }),
+    ).toEqual({
+      kind: "remain-paused",
+      recovery: {
+        kind: "recheck-stage-contract",
+        attempt: REFERENCE,
+        pausedAtHead: GIT_RETRY.pausedAtHead,
+      },
+      facts: {
+        kind: "promise-uninspectable",
+        message: "cannot read the thread",
+      },
+    });
+  });
+
+  it("requires fresh promise evidence before the first retry finalization", () => {
+    expect(() => decideRecovery(GIT_RETRY, { queues: CLEAR })).toThrow(
+      /requires fresh promised-artifact evidence/,
+    );
   });
 
   it("keeps the same recovery, re-aimed at the fresh tip, when the boundary still fails", () => {
@@ -238,7 +292,7 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
       },
       facts: {
         kind: "git-finalization-failed",
-        failure: "git-policy-violation",
+        failure: FINALIZATION_FAILED.failure,
         message: FINALIZATION_FAILED.message,
       },
     });
@@ -248,7 +302,11 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
     expect(
       decideRecovery(RECHECK, {
         queues: CLEAR,
-        git: { ...FINALIZATION_FAILED, failure: "commit-error", message: "the pre-commit hook rejected the commit" },
+        git: {
+          ...FINALIZATION_FAILED,
+          failure: { kind: "commit-error" },
+          message: "the pre-commit hook rejected the commit",
+        },
       }),
     ).toEqual({
       kind: "remain-paused",
@@ -259,7 +317,7 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
       },
       facts: {
         kind: "git-finalization-failed",
-        failure: "commit-error",
+        failure: { kind: "commit-error" },
         message: "the pre-commit hook rejected the commit",
       },
     });
@@ -299,7 +357,7 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
   for (const queues of [CLEAR, PENDING, SCAN_FAILED]) {
     it(`decides identically for every reason order under ${queues.kind} queues`, () => {
       const [first, ...others] = pauses.map((pause) =>
-        decideRecovery(pause.recovery, { queues }),
+        decideRecovery(pause.recovery, { queues, contract: SATISFIED }),
       );
       for (const other of others) {
         expect(other).toEqual(first);
@@ -365,7 +423,7 @@ describe("recovery-policy module — purity (AC-3.5)", () => {
     const directives: RecoveryDirective[] = [
       decideRecovery(RETRY_STAGE, { queues: CLEAR }),
       decideRecovery(FINALIZED_ADVANCE, { queues: CLEAR }),
-      decideRecovery(GIT_RETRY, { queues: CLEAR }),
+      decideRecovery(GIT_RETRY, { queues: CLEAR, contract: SATISFIED }),
       decideRecovery(RECHECK, { queues: CLEAR, contract: SATISFIED }),
       decideRecovery(RECHECK, { queues: SCAN_FAILED }),
       decideRecovery(GIT_RETRY, { queues: CLEAR, git: FINALIZATION_FAILED }),

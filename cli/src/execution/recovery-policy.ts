@@ -31,7 +31,16 @@ export type ContractEvidence =
       unmet: ArtifactMismatch[];
       worktree: WorktreeCleanliness;
     }
-  | { kind: "uninspectable" };
+  | { kind: "uninspectable"; message: string };
+
+/** The structured boundary failure observed during this recovery pass. */
+export type GitFinalizationFailure =
+  | {
+      kind: "git-policy-violation";
+      treatment: "advisory-head-movement" | "blocking";
+    }
+  | { kind: "commit-error" }
+  | { kind: "git-error" };
 
 /**
  * Whether the Git boundary of the referenced saved `DONE` attempt is still
@@ -43,7 +52,7 @@ export type GitReadiness =
   | { kind: "ready" }
   | {
       kind: "finalization-failed";
-      failure: "git-policy-violation" | "commit-error";
+      failure: GitFinalizationFailure;
       message: string;
       observedHead: string;
     };
@@ -52,11 +61,10 @@ export type GitReadiness =
  * Everything the policy is allowed to know about the world, gathered by the
  * caller before it decides anything.
  *
- * `queues` is always required. The other two are the evidence one recovery kind
- * acts on, so the caller gathers each only where the recovery it holds calls for
- * it: `contract` for a `recheck-stage-contract` recovery whose queues are clear,
- * and `git` once a requested finalization has come back. An absent `git` means
- * no finalization has been attempted in this pass.
+ * `queues` is always required. `contract` is required for either recovery that
+ * may finalize a saved `DONE` once queues are clear, and `git` is supplied only
+ * after a requested finalization has come back. A finalization failure settles
+ * that pass without consulting contract evidence again.
  */
 export type RecoveryEvidence = {
   queues: QueueEvidence;
@@ -104,11 +112,15 @@ export function holdsPreservedDone(
 export type RefreshedPauseFacts =
   | { kind: "pending-bundles"; pendingFiles: string[] }
   | { kind: "queue-scan-failed"; message: string }
-  | { kind: "promise-uninspectable" }
-  | { kind: "promise-unmet"; unmet: ArtifactMismatch[] }
+  | { kind: "promise-uninspectable"; message: string }
+  | {
+      kind: "promise-unmet";
+      unmet: ArtifactMismatch[];
+      worktree: WorktreeCleanliness;
+    }
   | {
       kind: "git-finalization-failed";
-      failure: "git-policy-violation" | "commit-error";
+      failure: GitFinalizationFailure;
       message: string;
     };
 
@@ -243,7 +255,11 @@ export function decideRecovery(
             : {
                 kind: "remain-paused",
                 recovery,
-                facts: { kind: "promise-unmet", unmet: contract.unmet },
+                facts: {
+                  kind: "promise-unmet",
+                  unmet: contract.unmet,
+                  worktree: contract.worktree,
+                },
               };
         case "uninspectable":
           // Nothing about the promise was decided. Staying paused is the only
@@ -252,7 +268,10 @@ export function decideRecovery(
           return {
             kind: "remain-paused",
             recovery,
-            facts: { kind: "promise-uninspectable" },
+            facts: {
+              kind: "promise-uninspectable",
+              message: contract.message,
+            },
           };
       }
     }
@@ -261,6 +280,48 @@ export function decideRecovery(
       if (git.kind === "finalization-failed") {
         return stillFinalizable(recovery.attempt, git);
       }
-      return { kind: "finalize-boundary", recovery, context: "boundary-retry" };
+      {
+        const contract = evidence.contract;
+        if (contract === undefined) {
+          throw new Error(
+            "a retry-git-finalization recovery requires fresh promised-artifact evidence",
+          );
+        }
+        switch (contract.kind) {
+          case "satisfied":
+            return {
+              kind: "finalize-boundary",
+              recovery,
+              context: "boundary-retry",
+            };
+          case "unmet":
+            return {
+              kind: "remain-paused",
+              recovery: {
+                kind: "recheck-stage-contract",
+                attempt: recovery.attempt,
+                pausedAtHead: recovery.pausedAtHead,
+              },
+              facts: {
+                kind: "promise-unmet",
+                unmet: contract.unmet,
+                worktree: contract.worktree,
+              },
+            };
+          case "uninspectable":
+            return {
+              kind: "remain-paused",
+              recovery: {
+                kind: "recheck-stage-contract",
+                attempt: recovery.attempt,
+                pausedAtHead: recovery.pausedAtHead,
+              },
+              facts: {
+                kind: "promise-uninspectable",
+                message: contract.message,
+              },
+            };
+        }
+      }
   }
 }

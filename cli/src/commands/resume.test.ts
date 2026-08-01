@@ -1266,7 +1266,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(cp.attempts[0]?.result).toBe("done");
   });
 
-  it("enforces the HEAD rule the runner never reached when finalizing a repaired promise", async () => {
+  it("reports the HEAD rule advisorily when a repaired promise first reaches the boundary", async () => {
     const h = await setup();
     // The stage-0 attempt commits on its own — movement the `spec` stage
     // forbids — and reports DONE without the spec it promises, so the runner
@@ -1295,8 +1295,23 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(result.invoker.calls.length).toBe(0);
     const cp = await readCp(h, runId);
     expect(cp.stageIndex).toBe(0);
-    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
-    expect(cp.waiting?.reasons[0].message).toContain("forbids HEAD movement");
+    expect(cp.waiting?.reasons[0].kind).toBe("unexpected-head-movement");
+    expect(cp.waiting?.reasons[0].message).toContain(
+      cp.attempts[0]?.headAtStart,
+    );
+    expect(cp.waiting?.reasons[0].message).toContain(
+      cp.attempts[0]?.headAfterAttempt,
+    );
+    expect(cp.waiting?.nextAction).toContain("will not block the next resume");
+    expect(cp.waiting?.nextAction).not.toContain("unvalidated");
+
+    const accepted = await resume(
+      h,
+      runId,
+      standardSteps(h.fixture).slice(1),
+    );
+    expect(accepted.code).toBe(0);
+    expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
   });
 
   it("judges the HEAD rule against the second attempt's own start, not the stage entry", async () => {

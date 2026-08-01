@@ -847,6 +847,51 @@ describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4,
     expect(cp.waiting?.recovery.kind).toBe("retry-git-finalization");
   }
 
+  it("redirects a stale promise through contract repair before finalizing", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [promisingStage], [
+      {
+        before: async () => {
+          await writeThreadFile(fixture, "spec.md", "# Spec\n");
+          await fs.writeFile(path.join(fixture.root, "stray.txt"), "x", "utf8");
+        },
+      },
+    ]);
+    const boundaryPause = await loadCheckpoint(runDir);
+    const boundaryRecovery = boundaryPause.waiting?.recovery;
+    expect(boundaryRecovery?.kind).toBe("retry-git-finalization");
+    if (boundaryRecovery?.kind !== "retry-git-finalization") return;
+
+    await fs.rm(path.join(fixture.threadPath as string, "spec.md"));
+    await fs.rm(path.join(fixture.root, "stray.txt"));
+    const redirected = await resumeFromDisk(runDir, [{}]);
+
+    expect(redirected.result.kind).toBe("paused");
+    expect(redirected.harness.calls).toHaveLength(0);
+    const contractPause = await loadCheckpoint(runDir);
+    expect(contractPause.waiting?.reasons[0]).toMatchObject({
+      kind: "stage-contract-violation",
+      contract: [{ dimension: "spec", expected: true, observed: false }],
+    });
+    expect(contractPause.waiting?.recovery).toEqual({
+      kind: "recheck-stage-contract",
+      attempt: { stageIndex: 0, attempt: 1 },
+      pausedAtHead: boundaryRecovery.pausedAtHead,
+    });
+    expect(contractPause.waiting?.nextAction).toContain(
+      "Repair the promised artifact",
+    );
+
+    await writeThreadFile(fixture, "spec.md", "# Repaired spec\n");
+    const repaired = await resumeFromDisk(runDir, [{}]);
+    expect(repaired.result).toEqual({ kind: "completed" });
+    expect(repaired.harness.calls).toHaveLength(0);
+    const completed = await loadCheckpoint(runDir);
+    expect(completed.attempts).toHaveLength(1);
+    expect(completed.attempts[0]?.result).toBe("done");
+  });
+
   it("commits the preserved diff with no harness invocation, then advances", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();

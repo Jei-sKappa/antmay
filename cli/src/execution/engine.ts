@@ -280,6 +280,13 @@ function unexpectedHeadMovementMessage(interval: AttemptInterval): string {
   );
 }
 
+function uninspectablePromiseMessage(message: string): string {
+  return (
+    "The stage reported DONE but its promised artifact state could not be " +
+    `verified: ${message}`
+  );
+}
+
 const HEAD_MOVEMENT_NEXT_ACTION =
   "Inspect the attempt's commits if needed. This HEAD movement will not block " +
   "the next resume; Antmay will continue if the promised artifact and remaining Git checks pass.";
@@ -698,17 +705,15 @@ export async function executeEngine(
           );
 
         case "promise-uninspectable": {
-          // The reason's recorded dimensions describe the earlier inspection, not
-          // this one, so they go. What can make an inspection fail, and why
-          // pausing on it is the fail-closed direction, is recorded beside the
-          // post-DONE verification below.
-          const { contract: _staleContract, ...withoutContract } = governing;
           return pauseWith(
             {
               reasons: [
                 {
-                  ...withoutContract,
-                  message: `${governing.message} It could not be re-verified on resume either.`,
+                  kind: "stage-contract-violation",
+                  message: uninspectablePromiseMessage(facts.message),
+                  diagnostics: { errorMessage: facts.message },
+                  candidateLine:
+                    attempt?.terminalResult?.candidateLine ?? undefined,
                 },
                 ...rest,
               ],
@@ -724,12 +729,17 @@ export async function executeEngine(
             {
               reasons: [
                 {
-                  ...governing,
+                  kind: "stage-contract-violation",
                   message: stillUnmetContractMessage(facts.unmet),
                   contract: facts.unmet,
                   detail:
-                    "The worktree is dirty, so the stage was not run again: those " +
-                    "changes are the attempt's own and no executor may discard them.",
+                    facts.worktree === "dirty"
+                      ? "The worktree is dirty, so the stage was not run again: those " +
+                        "changes are the attempt's own and no executor may discard them."
+                      : "The saved DONE remains preserved until the promised artifact " +
+                        "is repaired and its Git boundary can be retried.",
+                  candidateLine:
+                    attempt?.terminalResult?.candidateLine ?? undefined,
                 },
                 ...rest,
               ],
@@ -739,22 +749,42 @@ export async function executeEngine(
             attempt,
           );
 
-        case "git-finalization-failed":
+        case "git-finalization-failed": {
+          const advisory =
+            facts.failure.kind === "git-policy-violation" &&
+            facts.failure.treatment === "advisory-head-movement";
+          const interval =
+            advisory && attempt !== undefined
+              ? attemptInterval(attempt)
+              : undefined;
+          if (interval !== undefined && !interval.ok) {
+            return fatal(interval.message);
+          }
           return pauseWith(
             {
               reasons: [
                 {
-                  kind: facts.failure,
-                  message: `${facts.message}.`,
+                  kind: advisory
+                    ? "unexpected-head-movement"
+                    : facts.failure.kind === "git-policy-violation"
+                      ? "git-policy-violation"
+                      : "commit-error",
+                  message:
+                    advisory && interval?.ok
+                      ? unexpectedHeadMovementMessage(interval.value)
+                      : `${facts.message}.`,
                   candidateLine:
                     attempt?.terminalResult?.candidateLine ?? undefined,
                 },
               ],
               recovery: directive.recovery,
-              nextAction: UNVALIDATED_CHANGES_NOTE,
+              nextAction: advisory
+                ? HEAD_MOVEMENT_NEXT_ACTION
+                : UNVALIDATED_CHANGES_NOTE,
             },
             attempt,
           );
+        }
       }
     }
 
@@ -829,9 +859,18 @@ export async function executeEngine(
             queues: { kind: "clear" },
             git: {
               kind: "finalization-failed",
-              failure: failedWithoutObservation
-                ? "commit-error"
-                : finalization.kind,
+              failure:
+                finalization.kind === "git-policy-violation"
+                  ? {
+                      kind: "git-policy-violation",
+                      treatment:
+                        finalization.cause === "head-rule"
+                          ? "advisory-head-movement"
+                          : "blocking",
+                    }
+                  : finalization.kind === "git-error"
+                    ? { kind: "git-error" }
+                    : { kind: "commit-error" },
               message: failedWithoutObservation
                 ? `Git finalization failed during ${finalization.phase}: ${finalization.message}`
                 : finalization.message,
@@ -899,7 +938,8 @@ export async function executeEngine(
     let contract: ContractEvidence | undefined;
     if (
       queues.kind === "clear" &&
-      pausedRecovery.kind === "recheck-stage-contract"
+      (pausedRecovery.kind === "recheck-stage-contract" ||
+        pausedRecovery.kind === "retry-git-finalization")
     ) {
       const inspection = await inspectArtifactState(repoRoot, threadRelPath);
       if (!inspection.ok) {
@@ -908,7 +948,7 @@ export async function executeEngine(
         // that case — so no end-to-end path reaches this branch. It is written
         // anyway because pausing is the fail-closed direction: a promise that
         // could not be evaluated is never credited as kept.
-        contract = { kind: "uninspectable" };
+        contract = { kind: "uninspectable", message: inspection.message };
       } else {
         const unmet = evaluatePromisedState(inspection.state, stage.promises);
         if (unmet.length === 0) {
@@ -1239,7 +1279,7 @@ export async function executeEngine(
         // completed attempt preserved rather than advancing past it.
         violation = {
           kind: "stage-contract-violation",
-          message: `The stage reported DONE but its promised artifact state could not be verified: ${postInspection.message}`,
+          message: uninspectablePromiseMessage(postInspection.message),
           diagnostics: { errorMessage: postInspection.message },
         };
       } else {
