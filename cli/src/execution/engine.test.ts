@@ -17,6 +17,7 @@ import type {
   StageTarget,
 } from "../pipeline/types.js";
 import type { PartialArtifactState } from "../thread/artifacts.js";
+import { inspectArtifactState as inspectArtifactStateOnDisk } from "../thread/artifacts.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
@@ -217,6 +218,7 @@ function makeContext(
   display: ExecutionDisplay = nullDisplay,
   signal: AbortSignal = new AbortController().signal,
   persistCheckpoint?: ExecutionContext["persistCheckpoint"],
+  inspectArtifactState?: ExecutionContext["inspectArtifactState"],
 ): ExecutionContext {
   return {
     entry: { kind: "allocated", checkpoint },
@@ -228,6 +230,7 @@ function makeContext(
     harnessVersions: { codex: "codex 1.2.3" },
     signal,
     persistCheckpoint,
+    inspectArtifactState,
   };
 }
 
@@ -374,6 +377,7 @@ async function resumeFromDisk(
     display?: ExecutionDisplay;
     signal?: AbortSignal;
     persistCheckpoint?: ExecutionContext["persistCheckpoint"];
+    inspectArtifactState?: ExecutionContext["inspectArtifactState"];
   } = {},
 ): Promise<{ result: ExecutionResult; harness: FakeHarness; cursor: RunCheckpoint }> {
   const cursor = overrides.checkpoint ?? (await loadCheckpoint(runDir));
@@ -387,6 +391,7 @@ async function resumeFromDisk(
         overrides.display,
         overrides.signal,
         overrides.persistCheckpoint,
+        overrides.inspectArtifactState,
       ),
     ),
   );
@@ -558,6 +563,7 @@ describe.concurrent("executeEngine — queue gates on a resumed pause (AC-1.4, A
       "utf8",
     );
 
+    const before = await loadCheckpoint(runDir);
     const { result, harness } = await resumeFromDisk(runDir, [{}]);
 
     expect(result.kind).toBe("paused");
@@ -566,9 +572,11 @@ describe.concurrent("executeEngine — queue gates on a resumed pause (AC-1.4, A
     expect(cp.waiting?.reasons.map((r) => r.kind)).toEqual(["gate-error"]);
     // What the pause explains has moved on; what a later resume may do has not.
     expect(cp.waiting?.recovery).toEqual({ kind: "retry-stage" });
+    expect(cp.waiting?.nextAction).toBe(before.waiting?.nextAction);
+    expect(cp.waiting?.nextAction).toContain("unvalidated");
   });
 
-  it("keeps a preserved DONE's own kind and recovery when the scan fails again", async () => {
+  it("keeps one separate scan error and a stable checkpoint across repeated failures", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     await allocatedRun(fixture, runDir, [alphaStage], [
@@ -582,6 +590,7 @@ describe.concurrent("executeEngine — queue gates on a resumed pause (AC-1.4, A
     const paused = await loadCheckpoint(runDir);
     expect(paused.waiting?.recovery.kind).toBe("retry-git-finalization");
     const recovery = paused.waiting?.recovery;
+    const governing = paused.waiting?.reasons[0];
     await fs.writeFile(
       path.join(fixture.threadPath as string, ".pending-reviews"),
       "not a directory",
@@ -593,9 +602,24 @@ describe.concurrent("executeEngine — queue gates on a resumed pause (AC-1.4, A
     expect(result.kind).toBe("paused");
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
-    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
+    expect(cp.waiting?.reasons[0]).toEqual(governing);
+    expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
+      "git-policy-violation",
+      "gate-error",
+    ]);
     expect(cp.waiting?.recovery).toEqual(recovery);
+    const afterFirst = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+
+    const repeated = await resumeFromDisk(runDir, [{}]);
+    expect(repeated.result.kind).toBe("paused");
+    expect(repeated.harness.calls).toHaveLength(0);
+    const afterSecond = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+    expect(afterSecond).toBe(afterFirst);
+    expect(
+      (await loadCheckpoint(runDir)).waiting?.reasons.filter(
+        (reason) => reason.kind === "gate-error",
+      ),
+    ).toHaveLength(1);
   });
 });
 
@@ -738,33 +762,59 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
     expect(attemptsAt(cp, 0).length).toBe(1);
   });
 
-  it("stays paused, keeping the saved DONE finalizable, when the thread cannot be read", async () => {
+  it("keeps the canonical uninspectable-promise pause byte-identical on repeated resumes", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
-    await pauseOnContract(fixture, runDir);
-    const paused = await loadCheckpoint(runDir);
-    const threadAbs = fixture.threadPath as string;
+    let inspectionCount = 0;
+    const inspectArtifactState: NonNullable<
+      ExecutionContext["inspectArtifactState"]
+    > = async (...args) => {
+      inspectionCount += 1;
+      if (inspectionCount === 1) {
+        return inspectArtifactStateOnDisk(...args);
+      }
+      return { ok: false, message: "synthetic artifact read failure" };
+    };
+    const initial = await executeEngine(
+      makeContext(
+        buildCheckpoint(fixture, [promisingStage]),
+        runDir,
+        createFakeHarness([{}]),
+        nullDisplay,
+        undefined,
+        undefined,
+        inspectArtifactState,
+      ),
+    );
+    expect(initial.kind).toBe("paused");
+    const initiallyPaused = await loadCheckpoint(runDir);
+    const initialReason = initiallyPaused.waiting?.reasons[0];
 
-    // A thread nobody can read is also a thread whose queues nobody can scan, and
-    // the queue gate comes first — so the pause is held on the gate and the promise
-    // is never reconsidered. Either way nothing is decided about the promise and
-    // the saved DONE stays exactly as finalizable as it was. The mode is restored
-    // immediately so the fixture's own teardown still works.
-    await fs.chmod(threadAbs, 0o000);
-    let outcome: Awaited<ReturnType<typeof resumeFromDisk>>;
-    try {
-      outcome = await resumeFromDisk(runDir, [{}]);
-    } finally {
-      await fs.chmod(threadAbs, 0o755);
-    }
+    const first = await resumeFromDisk(runDir, [{}], {
+      inspectArtifactState,
+    });
+    expect(first.result.kind).toBe("paused");
+    expect(first.harness.calls).toHaveLength(0);
+    const afterFirst = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+    const checkpoint = await loadCheckpoint(runDir);
+    expect(checkpoint.waiting?.reasons[0].message).toBe(initialReason?.message);
+    expect(checkpoint.waiting?.reasons[0]).toMatchObject({
+      kind: "stage-contract-violation",
+      message:
+        "The stage reported DONE but its promised artifact state could not be " +
+        "verified: synthetic artifact read failure",
+      diagnostics: { errorMessage: "synthetic artifact read failure" },
+    });
+    expect(checkpoint.waiting?.reasons[0].message).not.toContain("re-verified");
 
-    expect(outcome.result.kind).toBe("paused");
-    expect(outcome.harness.calls.length).toBe(0);
-    const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
-    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
-    expect(cp.waiting?.recovery).toEqual(paused.waiting?.recovery);
-    expect(attemptsAt(cp, 0).map((a) => a.result)).toEqual(["waiting"]);
+    const second = await resumeFromDisk(runDir, [{}], {
+      inspectArtifactState,
+    });
+    expect(second.result.kind).toBe("paused");
+    expect(second.harness.calls).toHaveLength(0);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(
+      afterFirst,
+    );
   });
 });
 

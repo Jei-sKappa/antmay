@@ -872,6 +872,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     // What the pause explains has moved on; what a later resume may do about it
     // has not.
     expect(cp.waiting?.recovery).toEqual({ kind: "retry-stage" });
+    expect(cp.waiting?.nextAction).toContain("unvalidated");
   });
 
   it("keeps a finalized DONE's declared resolution across a scan failure, then advances", async () => {
@@ -904,6 +905,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const heldCp = await readCp(h, runId);
     expect(heldCp.waiting?.reasons[0].kind).toBe("gate-error");
     expect(heldCp.waiting?.recovery).toEqual(finalizedRecovery);
+    expect(heldCp.waiting?.nextAction).toBeUndefined();
 
     // Readable again: the resolution the pause recorded still applies, and the
     // finalized attempt is never rerun.
@@ -915,7 +917,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
   });
 
-  it("keeps a git-policy-violation kind on a scan failure, folding the diagnostic in", async () => {
+  it("keeps a git-policy violation governing and reports a separate scan failure", async () => {
     const h = await setup();
     await seed(h, [
       {
@@ -927,7 +929,8 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
       },
     ]);
     const runId = await soleRunId(h);
-    expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("git-policy-violation");
+    const initialReason = (await readCp(h, runId)).waiting?.reasons[0];
+    expect(initialReason?.kind).toBe("git-policy-violation");
     // Revert the disallowed change so only the boundary diff remains, then break
     // the queue scan by putting a regular file where the queue directory is
     // expected (ENOTDIR).
@@ -940,12 +943,13 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const result = await resume(h, runId, []);
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
-    // The governing reason is what the pause renders, so the folded-in scan
-    // failure has to reach it for the reader to ever see it.
-    expect(cp.waiting?.reasons[0].kind).toBe("git-policy-violation");
-    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
-    expect(cp.waiting?.reasons[0].diagnostics?.errorMessage).toBeDefined();
-    expect(result.out).toContain("scan failed again");
+    expect(cp.waiting?.reasons[0]).toEqual(initialReason);
+    expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
+      "git-policy-violation",
+      "gate-error",
+    ]);
+    expect(cp.waiting?.reasons[1]?.diagnostics?.errorMessage).toBeDefined();
+    expect(result.out).toContain("FAILED — queue scan error");
   });
 });
 
@@ -1356,7 +1360,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(attemptCountAt(cp, 0)).toBe(2);
   });
 
-  it("keeps the contract kind when the locked queue scan fails, folding the diagnostic in", async () => {
+  it("keeps the contract reason governing when a locked queue scan fails", async () => {
     const h = await setup();
     const runId = await seedContractViolation(h);
     // The queue scan fails while the pause is held. Downgrading the pause to a
@@ -1367,7 +1371,8 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
     expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
-    expect(cp.waiting?.reasons[0].message).toContain("scan failed again");
+    expect(cp.waiting?.reasons[1]?.kind).toBe("gate-error");
+    expect(result.out).toContain("FAILED — queue scan error");
   });
 
   it("stays paused with repair-or-revert guidance when the promise is still unmet and the worktree is dirty", async () => {

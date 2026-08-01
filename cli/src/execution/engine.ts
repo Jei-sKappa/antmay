@@ -111,6 +111,8 @@ export type ExecutionContext = {
    * production callers.
    */
   persistCheckpoint?: typeof writeCheckpoint;
+  /** Artifact inspector seam for deterministic recovery-path tests. */
+  inspectArtifactState?: typeof inspectArtifactState;
 };
 
 /**
@@ -368,6 +370,7 @@ export async function executeEngine(
   const { runDir, invoker, display, signal } = ctx;
   const clock = ctx.clock ?? (() => new Date());
   const persistCheckpoint = ctx.persistCheckpoint ?? writeCheckpoint;
+  const inspectArtifacts = ctx.inspectArtifactState ?? inspectArtifactState;
   let checkpoint = ctx.entry.checkpoint;
 
   const repoRoot = checkpoint.repoRoot;
@@ -626,9 +629,8 @@ export async function executeEngine(
     /**
      * Persist and render the refreshed pause a `remain-paused` directive
      * describes, leaving the run exactly as recoverable as this resume found it.
-     * Still-present bundles are the one case that writes nothing: the durable
-     * checkpoint stays byte-for-byte unchanged and only what is printed reflects
-     * the files that are still there.
+     * Still-present bundles write nothing, and a refresh that computes the
+     * already-persisted waiting object renders without restamping `updatedAt`.
      */
     async function remainPaused(
       directive: Extract<RecoveryDirective, { kind: "remain-paused" }>,
@@ -640,6 +642,10 @@ export async function executeEngine(
         waiting: WaitingInfo,
         rendered: AttemptRecord | undefined,
       ): Promise<ExecutionResult> => {
+        if (JSON.stringify(waiting) === JSON.stringify(checkpoint.waiting)) {
+          renderPause(waiting, rendered);
+          return { kind: "paused", waiting };
+        }
         const persisted = await persist({
           ...checkpoint,
           condition: "waiting-for-user",
@@ -665,23 +671,24 @@ export async function executeEngine(
 
         case "queue-scan-failed":
           // A pause awaiting no-harness finalization — a Git boundary or an unmet
-          // promised artifact — keeps its own kind, folding the scan diagnostic
-          // in. Downgrading it to a gate-error would describe away the saved DONE
-          // the pause is holding.
+          // promised artifact — keeps its own governing reason and records the
+          // scan diagnostic separately. Downgrading it to a gate-error would
+          // describe away the saved DONE the pause is holding.
           if (holdsPreservedDone(directive.recovery)) {
+            const withoutPriorScanError = rest.filter(
+              (reason) => reason.kind !== "gate-error",
+            );
             return pauseWith(
               {
                 ...pausedWaiting,
                 reasons: [
+                  governing,
                   {
-                    ...governing,
-                    message: `${governing.message} The pending-queue scan failed again and must be repeated before finalizing: ${facts.message}`,
-                    diagnostics: {
-                      ...governing.diagnostics,
-                      errorMessage: facts.message,
-                    },
+                    kind: "gate-error",
+                    message: gateErrorMessage(facts.message),
+                    diagnostics: { errorMessage: facts.message },
                   },
-                  ...rest,
+                  ...withoutPriorScanError,
                 ],
                 recovery: directive.recovery,
               },
@@ -700,11 +707,15 @@ export async function executeEngine(
                 },
               ],
               recovery: directive.recovery,
+              nextAction: pausedWaiting.nextAction,
             },
             undefined,
           );
 
         case "promise-uninspectable": {
+          const currentRest = rest.filter(
+            (reason) => reason.kind !== "gate-error",
+          );
           return pauseWith(
             {
               reasons: [
@@ -715,7 +726,7 @@ export async function executeEngine(
                   candidateLine:
                     attempt?.terminalResult?.candidateLine ?? undefined,
                 },
-                ...rest,
+                ...currentRest,
               ],
               recovery: directive.recovery,
               nextAction: CONTRACT_REPAIR_NOTE,
@@ -741,7 +752,7 @@ export async function executeEngine(
                   candidateLine:
                     attempt?.terminalResult?.candidateLine ?? undefined,
                 },
-                ...rest,
+                ...rest.filter((reason) => reason.kind !== "gate-error"),
               ],
               recovery: directive.recovery,
               nextAction: CONTRACT_REPAIR_NOTE,
@@ -941,7 +952,7 @@ export async function executeEngine(
       (pausedRecovery.kind === "recheck-stage-contract" ||
         pausedRecovery.kind === "retry-git-finalization")
     ) {
-      const inspection = await inspectArtifactState(repoRoot, threadRelPath);
+      const inspection = await inspectArtifacts(repoRoot, threadRelPath);
       if (!inspection.ok) {
         // A thread the artifacts cannot be read in is also a thread whose queues
         // cannot be scanned, and the queue gate above already holds the pause in
@@ -1042,7 +1053,7 @@ export async function executeEngine(
     //    can have moved since, so it is re-inspected here. An unmet
     //    prerequisite pauses on this stage having allocated no attempt, created
     //    no log, and invoked no harness.
-    const preInspection = await inspectArtifactState(repoRoot, threadRelPath);
+    const preInspection = await inspectArtifacts(repoRoot, threadRelPath);
     let prerequisiteReason: WaitingReason | null = null;
     if (!preInspection.ok) {
       prerequisiteReason = {
@@ -1264,7 +1275,7 @@ export async function executeEngine(
     // promise; the completed attempt is preserved instead, so a human repair can
     // finalize it later without running the stage again.
     if (isDone) {
-      const postInspection = await inspectArtifactState(repoRoot, threadRelPath);
+      const postInspection = await inspectArtifacts(repoRoot, threadRelPath);
       let violation: WaitingReason | null = null;
       if (!postInspection.ok) {
         // No end-to-end path reaches this branch, and none is expected to. An
