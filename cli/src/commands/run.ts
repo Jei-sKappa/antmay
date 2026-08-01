@@ -537,8 +537,6 @@ export async function runCommand(
       const result = await executeEngine({
         entry: { kind: "allocated", checkpoint },
         runDir,
-        stateRoot: roots.stateRoot,
-        lock,
         invoker: harnessRuntime.invoker,
         display,
         harnessVersions,

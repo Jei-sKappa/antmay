@@ -292,8 +292,6 @@ export async function resumeCommand(
       const result = await executeEngine({
         entry: { kind: "resume", checkpoint },
         runDir,
-        stateRoot,
-        lock,
         invoker: harnessRuntime.invoker,
         display,
         harnessVersions,

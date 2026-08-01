@@ -16,7 +16,6 @@ import type {
   QueueEvidence,
   RecoveryDirective,
 } from "./recovery-policy.js";
-import type { LockHandle } from "../state/lock.js";
 import type {
   AttemptRecord,
   AttemptReference,
@@ -98,8 +97,6 @@ export type ExecutionEntry =
 export type ExecutionContext = {
   entry: ExecutionEntry;
   runDir: string;
-  stateRoot: string;
-  lock: LockHandle;
   invoker: HarnessInvoker;
   display: ExecutionDisplay;
   harnessVersions: Record<string, string>;
@@ -113,6 +110,8 @@ export type ExecutionContext = {
   persistCheckpoint?: typeof writeCheckpoint;
   /** Artifact inspector seam for deterministic recovery-path tests. */
   inspectArtifactState?: typeof inspectArtifactState;
+  /** Git HEAD reader seam for exercising refusal and recovery paths. */
+  readHead?: typeof readHead;
 };
 
 /**
@@ -371,6 +370,7 @@ export async function executeEngine(
   const clock = ctx.clock ?? (() => new Date());
   const persistCheckpoint = ctx.persistCheckpoint ?? writeCheckpoint;
   const inspectArtifacts = ctx.inspectArtifactState ?? inspectArtifactState;
+  const readCurrentHead = ctx.readHead ?? readHead;
   let checkpoint = ctx.entry.checkpoint;
 
   const repoRoot = checkpoint.repoRoot;
@@ -381,6 +381,23 @@ export async function executeEngine(
   const pipelineName = checkpoint.pipelineName;
   const checkpointPath = path.join(runDir, "state.json");
   const resumeCommand = `antmay afk resume ${runId}`;
+
+  async function observeHead(
+    phase: "before-transition" | "after-attempt",
+  ): Promise<InvariantResult<string>> {
+    try {
+      return { ok: true, value: await readCurrentHead(repoRoot) };
+    } catch (error) {
+      const base = `Cannot read Git HEAD at ${repoRoot}: ${errorMessage(error)}`;
+      return {
+        ok: false,
+        message:
+          phase === "after-attempt"
+            ? `${base}. The attempt remains live in the checkpoint; recover it with ${resumeCommand}.`
+            : base,
+      };
+    }
+  }
 
   async function persist(next: RunCheckpoint): Promise<PersistOutcome> {
     const stamped: RunCheckpoint = { ...next, updatedAt: clock().toISOString() };
@@ -583,12 +600,16 @@ export async function executeEngine(
       const sig = signalReason(signal);
       if (sig !== null) return interruptedAtRest(sig);
       const abandoned = checkpoint.attempts[checkpoint.attempts.length - 1]!;
+      const abandonedHead = await observeHead("before-transition");
+      if (!abandonedHead.ok) {
+        return { kind: "refused", message: abandonedHead.message };
+      }
       const settled: AttemptRecord = {
         ...abandoned,
         result: "interrupted",
         endedAt: clock().toISOString(),
         terminalResult: null,
-        headAfterAttempt: await readHead(repoRoot),
+        headAfterAttempt: abandonedHead.value,
         failure: { kind: "interrupted", message: ABANDONED_ATTEMPT_NOTE },
       };
       const persisted = await persist({
@@ -1094,7 +1115,11 @@ export async function executeEngine(
 
     // 3. Attempt setup: read attempt-start HEAD, persist the executing attempt
     //    BEFORE creating its log.
-    const attemptStartHead = await readHead(repoRoot);
+    const attemptStartHead = await observeHead("before-transition");
+    if (!attemptStartHead.ok) {
+      return { kind: "refused", message: attemptStartHead.message };
+    }
+    const headAtStart = attemptStartHead.value;
     const attemptNumber = nextAttemptNumber(checkpoint.attempts, stageIndex);
     const logPaths = attemptLogPaths(runDir, ordinal, stage.id, attemptNumber);
     const startedAt = clock().toISOString();
@@ -1106,7 +1131,7 @@ export async function executeEngine(
       startedAt,
       result: "executing",
       terminalResult: null,
-      headAtStart: attemptStartHead,
+      headAtStart,
       logPath: logPaths.runRelPath,
     };
 
@@ -1168,7 +1193,7 @@ export async function executeEngine(
       return finishInterrupted({
         sig: preLaunchSig,
         executingAttempt,
-        headAfterAttempt: attemptStartHead,
+        headAfterAttempt: headAtStart,
         pendingFiles: [],
       });
     }
@@ -1243,7 +1268,11 @@ export async function executeEngine(
     const parse = outcome.kind === "completed" ? parseTerminalOutcome(outcome.finalText) : null;
     const isDone = parse !== null && parse.token === "DONE";
 
-    let observedHead = await readHead(repoRoot);
+    const postAttemptHead = await observeHead("after-attempt");
+    if (!postAttemptHead.ok) {
+      return { kind: "refused", message: postAttemptHead.message };
+    }
+    let observedHead = postAttemptHead.value;
 
     // A signal-caused abort is an interruption. This branch precedes ordinary
     // non-DONE queue/error classification: a first-signal rejection is always
@@ -1351,7 +1380,7 @@ export async function executeEngine(
     let headMovementAdvisory = false;
     if (isDone) {
       const attemptInterval = {
-        headAtStart: attemptStartHead,
+        headAtStart,
         headAfterAttempt: observedHead,
       };
       const finalization = await finalizeGitBoundary({

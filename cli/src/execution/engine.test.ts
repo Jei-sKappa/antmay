@@ -219,18 +219,18 @@ function makeContext(
   signal: AbortSignal = new AbortController().signal,
   persistCheckpoint?: ExecutionContext["persistCheckpoint"],
   inspectArtifactState?: ExecutionContext["inspectArtifactState"],
+  readHead?: ExecutionContext["readHead"],
 ): ExecutionContext {
   return {
     entry: { kind: "allocated", checkpoint },
     runDir,
-    stateRoot: path.dirname(runDir),
-    lock: { lockPath: "lock", ownerToken: "token", release: async () => undefined },
     invoker,
     display,
     harnessVersions: { codex: "codex 1.2.3" },
     signal,
     persistCheckpoint,
     inspectArtifactState,
+    readHead,
   };
 }
 
@@ -378,6 +378,7 @@ async function resumeFromDisk(
     signal?: AbortSignal;
     persistCheckpoint?: ExecutionContext["persistCheckpoint"];
     inspectArtifactState?: ExecutionContext["inspectArtifactState"];
+    readHead?: ExecutionContext["readHead"];
   } = {},
 ): Promise<{ result: ExecutionResult; harness: FakeHarness; cursor: RunCheckpoint }> {
   const cursor = overrides.checkpoint ?? (await loadCheckpoint(runDir));
@@ -392,6 +393,7 @@ async function resumeFromDisk(
         overrides.signal,
         overrides.persistCheckpoint,
         overrides.inspectArtifactState,
+        overrides.readHead,
       ),
     ),
   );
@@ -468,6 +470,155 @@ describe.concurrent("executeEngine — abandoned executing recovery (AC-1.4, AC-
     expect(rec.runFailed.length).toBe(1);
     expect(harness.calls.length).toBe(0);
     expect((await loadCheckpoint(runDir)).condition).toBe("executing");
+  });
+});
+
+describe.concurrent("executeEngine — guarded HEAD observations (AC-6.5, AC-6.6, AC-6.9)", () => {
+  const unreadableHead: NonNullable<ExecutionContext["readHead"]> = async () => {
+    throw new Error("synthetic rev-parse failure");
+  };
+
+  it("refuses an abandoned-attempt HEAD failure without changing its checkpoint", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [cleanStage], [BLOCKED_OUTCOME]);
+    const paused = await loadCheckpoint(runDir);
+    const live = { ...paused.attempts[0]! } as Record<string, unknown>;
+    live.result = "executing";
+    live.terminalResult = null;
+    delete live.endedAt;
+    delete live.failure;
+    delete live.headAfterAttempt;
+    await writeCheckpoint(runDir, {
+      ...paused,
+      condition: "executing",
+      waiting: null,
+      attempts: [live as unknown as AttemptRecord],
+    });
+    const before = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      readHead: unreadableHead,
+    });
+
+    expect(result).toEqual({
+      kind: "refused",
+      message: `Cannot read Git HEAD at ${fixture.root}: synthetic rev-parse failure`,
+    });
+    expect(harness.calls).toHaveLength(0);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(
+      before,
+    );
+  });
+
+  it("refuses an attempt-start HEAD failure before reserving an attempt", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const checkpoint = buildCheckpoint(fixture, [cleanStage]);
+    await writeCheckpoint(runDir, checkpoint);
+    const before = await fs.readFile(path.join(runDir, "state.json"), "utf8");
+    const harness = createFakeHarness([{}]);
+
+    const result = await executeEngine(
+      makeContext(
+        checkpoint,
+        runDir,
+        harness,
+        nullDisplay,
+        undefined,
+        undefined,
+        undefined,
+        unreadableHead,
+      ),
+    );
+
+    expect(result).toEqual({
+      kind: "refused",
+      message: `Cannot read Git HEAD at ${fixture.root}: synthetic rev-parse failure`,
+    });
+    expect(harness.calls).toHaveLength(0);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(
+      before,
+    );
+  });
+
+  it("leaves a post-attempt read failure abandoned until Git is readable", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    const checkpoint = buildCheckpoint(fixture, [cleanStage]);
+    await writeCheckpoint(runDir, checkpoint);
+    let reads = 0;
+    const failAfterStart: NonNullable<ExecutionContext["readHead"]> = async (
+      repoRoot,
+    ) => {
+      reads += 1;
+      if (reads === 1) return readHead(repoRoot);
+      throw new Error("synthetic post-attempt failure");
+    };
+    let executingBytes = "";
+    const harness = createFakeHarness([
+      {
+        before: async () => {
+          executingBytes = await fs.readFile(
+            path.join(runDir, "state.json"),
+            "utf8",
+          );
+        },
+      },
+    ]);
+
+    const failed = await executeEngine(
+      makeContext(
+        checkpoint,
+        runDir,
+        harness,
+        nullDisplay,
+        undefined,
+        undefined,
+        undefined,
+        failAfterStart,
+      ),
+    );
+
+    expect(failed.kind).toBe("refused");
+    if (failed.kind !== "refused") return;
+    expect(failed.message).toContain(fixture.root);
+    expect(failed.message).toContain("synthetic post-attempt failure");
+    expect(failed.message).toContain(
+      `antmay afk resume ${checkpoint.runId}`,
+    );
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(
+      executingBytes,
+    );
+    const abandoned = await loadCheckpoint(runDir);
+    expect(abandoned.condition).toBe("executing");
+    expect(abandoned.attempts[0]).toMatchObject({ result: "executing" });
+    expect(abandoned.attempts[0]?.headAfterAttempt).toBeUndefined();
+
+    const stillUnreadableBefore = await fs.readFile(
+      path.join(runDir, "state.json"),
+      "utf8",
+    );
+    const stillUnreadable = await resumeFromDisk(runDir, [{}], {
+      readHead: unreadableHead,
+    });
+    expect(stillUnreadable.result.kind).toBe("refused");
+    expect(stillUnreadable.harness.calls).toHaveLength(0);
+    expect(await fs.readFile(path.join(runDir, "state.json"), "utf8")).toBe(
+      stillUnreadableBefore,
+    );
+
+    const recovered = await resumeFromDisk(runDir, [{}]);
+    expect(recovered.result).toEqual({ kind: "completed" });
+    expect(recovered.harness.calls).toHaveLength(1);
+    const completed = await loadCheckpoint(runDir);
+    expect(completed.attempts.map((attempt) => attempt.result)).toEqual([
+      "interrupted",
+      "done",
+    ]);
+    expect(completed.attempts[0]?.headAfterAttempt).toBe(
+      await readHead(fixture.root),
+    );
   });
 });
 
