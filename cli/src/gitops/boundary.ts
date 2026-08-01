@@ -83,16 +83,59 @@ export type GitBoundaryObservation = {
   headMovedWhilePaused?: PausedHeadMovement;
 };
 
+/** The policy rule that refused an otherwise observed boundary. */
+export type GitPolicyViolationCause =
+  | "head-rule"
+  | "out-of-bounds"
+  | "change-required"
+  | "unresolvable-selector";
+
+/** The Git operation that could not be completed during finalization. */
+export type GitBoundaryFailurePhase =
+  | "paused-head"
+  | "boundary-status"
+  | "staging"
+  | "staged-status"
+  | "commit"
+  | "final-head";
+
+/**
+ * The narrow Git operations the boundary sequences. The optional injection on
+ * `finalizeGitBoundary` exists for focused failure tests; production callers use
+ * these defaults and still delegate the whole protocol through one operation.
+ */
+export type GitBoundaryOperations = {
+  readHead: typeof readHead;
+  collectBoundaryStatus: typeof collectBoundaryStatus;
+  runGit: typeof runGit;
+};
+
+const DEFAULT_OPERATIONS: GitBoundaryOperations = {
+  readHead,
+  collectBoundaryStatus,
+  runGit,
+};
+
 /**
  * The verdict of one finalization: the boundary is finalized, the policy refused
- * it, or the declared commit could not be made. Every variant carries the same
- * observations, because the transition owner has to persist Git evidence on the
- * attempt or recovery it asked about either way.
+ * it, the declared commit could not be made, or a Git invocation could not be
+ * completed. Every policy and commit verdict carries the same observations. A
+ * Git failure may occur before those observations exist, so its phase and error
+ * are the complete structured result.
  */
 export type GitBoundaryResult =
   | (GitBoundaryObservation & { kind: "finalized"; commit: BoundaryCommit })
-  | (GitBoundaryObservation & { kind: "git-policy-violation"; message: string })
-  | (GitBoundaryObservation & { kind: "commit-error"; message: string });
+  | (GitBoundaryObservation & {
+      kind: "git-policy-violation";
+      cause: GitPolicyViolationCause;
+      message: string;
+    })
+  | (GitBoundaryObservation & { kind: "commit-error"; message: string })
+  | {
+      kind: "git-error";
+      phase: GitBoundaryFailurePhase;
+      message: string;
+    };
 
 type ResolvedSelector = { kind: "exact-file" | "subtree"; path: string };
 
@@ -132,8 +175,9 @@ function headRuleViolation(
 async function pausedMovement(
   repoRoot: string,
   pausedAtHead: string,
+  operations: GitBoundaryOperations,
 ): Promise<PausedHeadMovement | undefined> {
-  const observedHead = await readHead(repoRoot);
+  const observedHead = await operations.readHead(repoRoot);
   if (observedHead === pausedAtHead) return undefined;
   return { pausedAtHead, observedHead };
 }
@@ -146,26 +190,39 @@ async function pausedMovement(
  * validated set. Reads only policy data and paths — never pipeline, stage, or
  * skill names.
  */
+type PolicyViolation = {
+  cause: GitPolicyViolationCause;
+  message: string;
+};
+
 function policyViolation(
   policy: GitPolicy,
   threadRelPath: string,
   observedPaths: string[],
   context: GitBoundaryContext,
-): string | null {
+): PolicyViolation | null {
   const headMoved = headRuleViolation(policy, context);
-  if (headMoved !== null) return headMoved;
+  if (headMoved !== null) {
+    return { cause: "head-rule", message: headMoved };
+  }
 
   const resolved: ResolvedSelector[] = [];
   for (const selector of policy.allowedChanges) {
     const result = resolveSelector(selector, threadRelPath);
     if (!result.ok) {
-      return `unresolvable allowed-change selector: ${result.error}`;
+      return {
+        cause: "unresolvable-selector",
+        message: `unresolvable allowed-change selector: ${result.error}`,
+      };
     }
     resolved[resolved.length] = result.selector;
   }
 
   if (resolved.length === 0 && observedPaths.length > 0) {
-    return `stage requires a clean boundary but observed changes: ${observedPaths.join(", ")}`;
+    return {
+      cause: "out-of-bounds",
+      message: `stage requires a clean boundary but observed changes: ${observedPaths.join(", ")}`,
+    };
   }
 
   const outOfBounds = observedPaths.filter(
@@ -173,7 +230,10 @@ function policyViolation(
       !resolved.some((selector) => selectorMatches(selector, observedPath)),
   );
   if (outOfBounds.length > 0) {
-    return `observed changes outside the stage's allowed selectors: ${outOfBounds.join(", ")}`;
+    return {
+      cause: "out-of-bounds",
+      message: `observed changes outside the stage's allowed selectors: ${outOfBounds.join(", ")}`,
+    };
   }
 
   // A recovery finalizes a boundary whose intended diff a human may already have
@@ -183,29 +243,14 @@ function policyViolation(
     observedPaths.length === 0 &&
     context.kind === "attempt"
   ) {
-    return "stage requires at least one allowed change but the boundary is empty";
+    return {
+      cause: "change-required",
+      message:
+        "stage requires at least one allowed change but the boundary is empty",
+    };
   }
 
   return null;
-}
-
-/**
- * Read the staged path set of `repoRoot` via a NUL-delimited plumbing form so
- * filenames with whitespace, quotes, or newlines round-trip intact.
- */
-async function stagedPaths(repoRoot: string): Promise<string[]> {
-  const result = await runGit(repoRoot, [
-    "diff",
-    "--cached",
-    "--name-only",
-    "-z",
-  ]);
-  if (result.code !== 0) {
-    throw new Error(
-      `git diff --cached failed (code ${result.code}): ${result.stderr.trim()}`,
-    );
-  }
-  return splitNul(result.stdout);
 }
 
 /**
@@ -222,7 +267,12 @@ async function commitValidated(
   policy: GitPolicy,
   threadFolder: string,
   validatedPaths: string[],
-): Promise<BoundaryCommit | { kind: "error"; message: string }> {
+  operations: GitBoundaryOperations,
+): Promise<
+  | BoundaryCommit
+  | { kind: "error"; message: string }
+  | Extract<GitBoundaryResult, { kind: "git-error" }>
+> {
   if (validatedPaths.length === 0 || policy.commitSubjectTemplate === null) {
     return { kind: "none" };
   }
@@ -233,7 +283,16 @@ async function commitValidated(
 
   const validated = [...validatedPaths].sort();
 
-  const addResult = await runGit(repoRoot, ["add", "--", ...validated]);
+  let addResult;
+  try {
+    addResult = await operations.runGit(repoRoot, [
+      "add",
+      "--",
+      ...validated,
+    ]);
+  } catch (error) {
+    return gitFailure("staging", error);
+  }
   if (addResult.code !== 0) {
     return {
       kind: "error",
@@ -241,7 +300,23 @@ async function commitValidated(
     };
   }
 
-  const staged = (await stagedPaths(repoRoot)).sort();
+  let staged: string[];
+  try {
+    const result = await operations.runGit(repoRoot, [
+      "diff",
+      "--cached",
+      "--name-only",
+      "-z",
+    ]);
+    if (result.code !== 0) {
+      throw new Error(
+        `git diff --cached failed (code ${result.code}): ${result.stderr.trim()}`,
+      );
+    }
+    staged = splitNul(result.stdout).sort();
+  } catch (error) {
+    return gitFailure("staged-status", error);
+  }
   const stagedEqualsValidated =
     staged.length === validated.length &&
     staged.every((entry, index) => entry === validated[index]);
@@ -252,7 +327,16 @@ async function commitValidated(
     };
   }
 
-  const commitResult = await runGit(repoRoot, ["commit", "-m", subject]);
+  let commitResult;
+  try {
+    commitResult = await operations.runGit(repoRoot, [
+      "commit",
+      "-m",
+      subject,
+    ]);
+  } catch (error) {
+    return gitFailure("commit", error);
+  }
   if (commitResult.code !== 0) {
     return {
       kind: "error",
@@ -261,6 +345,17 @@ async function commitValidated(
   }
 
   return { kind: "committed", subject };
+}
+
+function gitFailure(
+  phase: GitBoundaryFailurePhase,
+  error: unknown,
+): Extract<GitBoundaryResult, { kind: "git-error" }> {
+  return {
+    kind: "git-error",
+    phase,
+    message: error instanceof Error ? error.message : String(error),
+  };
 }
 
 /**
@@ -277,25 +372,47 @@ async function commitValidated(
  */
 export async function finalizeGitBoundary(
   request: GitBoundaryRequest,
+  operations: GitBoundaryOperations = DEFAULT_OPERATIONS,
 ): Promise<GitBoundaryResult> {
   const { repoRoot, threadRelPath, threadFolder, policy, context } = request;
 
   // A recovery measures the tip its pause recorded against the tip it finds, so
   // movement across the pause is reported as evidence rather than judged.
-  const movement =
-    context.kind === "attempt"
-      ? undefined
-      : await pausedMovement(repoRoot, context.pausedAtHead);
+  let movement: PausedHeadMovement | undefined;
+  if (context.kind !== "attempt") {
+    try {
+      movement = await pausedMovement(
+        repoRoot,
+        context.pausedAtHead,
+        operations,
+      );
+    } catch (error) {
+      return gitFailure("paused-head", error);
+    }
+  }
 
-  const observedPaths = await collectBoundaryStatus(repoRoot);
+  let observedPaths: string[];
+  try {
+    observedPaths = await operations.collectBoundaryStatus(repoRoot);
+  } catch (error) {
+    return gitFailure("boundary-status", error);
+  }
 
   // The tip is read once the work is done, so every verdict reports where this
   // finalization left it — the boundary commit's tip when it made one.
-  const observe = async (): Promise<GitBoundaryObservation> => ({
-    observedPaths,
-    headAfterFinalization: await readHead(repoRoot),
-    ...(movement !== undefined ? { headMovedWhilePaused: movement } : {}),
-  });
+  const observe = async (): Promise<
+    GitBoundaryObservation | Extract<GitBoundaryResult, { kind: "git-error" }>
+  > => {
+    try {
+      return {
+        observedPaths,
+        headAfterFinalization: await operations.readHead(repoRoot),
+        ...(movement !== undefined ? { headMovedWhilePaused: movement } : {}),
+      };
+    } catch (error) {
+      return gitFailure("final-head", error);
+    }
+  };
 
   const violation = policyViolation(
     policy,
@@ -304,10 +421,13 @@ export async function finalizeGitBoundary(
     context,
   );
   if (violation !== null) {
+    const observation = await observe();
+    if ("kind" in observation) return observation;
     return {
       kind: "git-policy-violation",
-      message: violation,
-      ...(await observe()),
+      cause: violation.cause,
+      message: violation.message,
+      ...observation,
     };
   }
 
@@ -316,10 +436,14 @@ export async function finalizeGitBoundary(
     policy,
     threadFolder,
     observedPaths,
+    operations,
   );
+  if (commit.kind === "git-error") return commit;
+  const observation = await observe();
+  if ("kind" in observation) return observation;
   if (commit.kind === "error") {
-    return { kind: "commit-error", message: commit.message, ...(await observe()) };
+    return { kind: "commit-error", message: commit.message, ...observation };
   }
 
-  return { kind: "finalized", commit, ...(await observe()) };
+  return { kind: "finalized", commit, ...observation };
 }

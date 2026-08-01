@@ -798,7 +798,10 @@ export async function executeEngine(
 
       // What a human did to the tip across the pause is evidence the reader is
       // owed and no policy forbids.
-      const moved = finalization.headMovedWhilePaused;
+      const moved =
+        finalization.kind === "git-error"
+          ? undefined
+          : finalization.headMovedWhilePaused;
       if (moved !== undefined) {
         display.warn(
           `HEAD moved while the run was paused (${moved.pausedAtHead} → ${moved.observedHead}); this is diagnostic only and is not a policy violation.`,
@@ -809,14 +812,21 @@ export async function executeEngine(
       // other: the policy decides what the run does about it, and keeps the
       // preserved attempt finalizable from wherever this attempt left the tip.
       if (finalization.kind !== "finalized") {
+        const failedWithoutObservation = finalization.kind === "git-error";
         return applyDirective(
           decideRecovery(directive.recovery, {
             queues: { kind: "clear" },
             git: {
               kind: "finalization-failed",
-              failure: finalization.kind,
-              message: finalization.message,
-              observedHead: finalization.headAfterFinalization,
+              failure: failedWithoutObservation
+                ? "commit-error"
+                : finalization.kind,
+              message: failedWithoutObservation
+                ? `Git finalization failed during ${finalization.phase}: ${finalization.message}`
+                : finalization.message,
+              observedHead: failedWithoutObservation
+                ? directive.recovery.pausedAtHead
+                : finalization.headAfterFinalization,
             },
           }),
           preserved,
@@ -1295,15 +1305,23 @@ export async function executeEngine(
       // The finalization owns every Git observation this boundary makes, so the
       // tip it left behind — the boundary commit's, when it made one — is what
       // the settled attempt records.
-      observedHead = finalization.headAfterFinalization;
+      if (finalization.kind !== "git-error") {
+        observedHead = finalization.headAfterFinalization;
+      }
       boundary =
         finalization.kind === "finalized"
           ? { evaluated: true, ok: true }
           : {
               evaluated: true,
               ok: false,
-              kind: finalization.kind,
-              message: finalization.message,
+              kind:
+                finalization.kind === "git-error"
+                  ? "commit-error"
+                  : finalization.kind,
+              message:
+                finalization.kind === "git-error"
+                  ? `Git finalization failed during ${finalization.phase}: ${finalization.message}`
+                  : finalization.message,
             };
     }
 

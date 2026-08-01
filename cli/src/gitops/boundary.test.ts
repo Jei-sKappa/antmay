@@ -10,7 +10,12 @@ import {
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
 import { finalizeGitBoundary } from "./boundary.js";
-import type { GitBoundaryContext, GitBoundaryResult } from "./boundary.js";
+import type {
+  GitBoundaryContext,
+  GitBoundaryOperations,
+  GitBoundaryResult,
+} from "./boundary.js";
+import { runGit } from "./git.js";
 import { collectBoundaryStatus, readHead } from "./status.js";
 
 const fixtures: RepoFixture[] = [];
@@ -74,6 +79,30 @@ async function finalize(
   });
 }
 
+function boundaryOperations(
+  overrides: Partial<GitBoundaryOperations>,
+): GitBoundaryOperations {
+  return { readHead, collectBoundaryStatus, runGit, ...overrides };
+}
+
+async function finalizeWithOperations(
+  fixture: RepoFixture,
+  policy: GitPolicy,
+  context: GitBoundaryContext,
+  overrides: Partial<GitBoundaryOperations>,
+): Promise<GitBoundaryResult> {
+  return finalizeGitBoundary(
+    {
+      repoRoot: fixture.root,
+      threadRelPath: fixture.threadRelPath as string,
+      threadFolder: fixture.threadFolder as string,
+      policy,
+      context,
+    },
+    boundaryOperations(overrides),
+  );
+}
+
 /** The context of an attempt that left the tip exactly where it found it. */
 async function steadyAttempt(
   fixture: RepoFixture,
@@ -125,6 +154,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
     );
 
     expect(result.kind).toBe("finalized");
+    if (result.kind !== "finalized") return;
     expect(result.observedPaths).toEqual([
       `${rel}/plan-tasks/${awkward}`,
       `${rel}/plan.md`,
@@ -166,6 +196,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("out-of-bounds");
     expect(result.message).toContain(`${rel}/spec.md`);
     expect(result.observedPaths).toEqual([`${rel}/spec.md`]);
     expect(await commitCount(fixture)).toBe(before);
@@ -208,6 +239,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("out-of-bounds");
     expect(result.message).toContain("stray.txt");
   });
 
@@ -222,6 +254,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("change-required");
     expect(result.message).toContain("at least one allowed change");
     expect(result.observedPaths).toEqual([]);
   });
@@ -242,6 +275,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("change-required");
     expect(result.message).toContain("at least one allowed change");
     expect(result.observedPaths).toEqual([]);
     expect(await commitCount(fixture)).toBe(before);
@@ -308,6 +342,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("head-rule");
     expect(result.message).toContain("forbids HEAD movement");
     expect(result.headAfterFinalization).toBe(headAfterAttempt);
     expect(await commitCount(fixture)).toBe(before);
@@ -331,6 +366,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
     );
 
     expect(result.kind).toBe("finalized");
+    if (result.kind !== "finalized") return;
     expect(result.observedPaths).toEqual([`${rel}/implementation-report.md`]);
     expect(result.headAfterFinalization).not.toBe(headAfterAttempt);
   });
@@ -355,7 +391,29 @@ describe("finalizeGitBoundary — a normal attempt", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("out-of-bounds");
     expect(result.message).toContain(`${rel}/leftover.txt`);
+  });
+
+  it("identifies an unresolvable allowed-change selector", async () => {
+    const fixture = await newFixture();
+    const policy: GitPolicy = {
+      ...policyOf("spec"),
+      allowedChanges: [
+        { kind: "exact-file", threadRelativePath: "../outside.md" },
+      ],
+    };
+
+    const result = await finalize(
+      fixture,
+      policy,
+      await steadyAttempt(fixture),
+    );
+
+    expect(result.kind).toBe("git-policy-violation");
+    if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("unresolvable-selector");
+    expect(result.message).toContain("must not contain");
   });
 });
 
@@ -379,6 +437,7 @@ describe("finalizeGitBoundary — first finalization after a contract repair", (
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("head-rule");
     expect(result.message).toContain("forbids HEAD movement");
     expect(result.message).toContain(headAtStart);
     expect(result.message).toContain(headAfterAttempt);
@@ -430,6 +489,7 @@ describe("finalizeGitBoundary — retry after a refused boundary", () => {
     });
 
     expect(result.kind).toBe("finalized");
+    if (result.kind !== "finalized") return;
     expect(result.observedPaths).toEqual([`${rel}/spec.md`]);
     expect(result.headMovedWhilePaused).toEqual({ pausedAtHead, observedHead });
     expect(await lastSubject(fixture)).toBe(
@@ -462,6 +522,31 @@ describe("finalizeGitBoundary — retry after a refused boundary", () => {
     expect(await commitCount(fixture)).toBe(before);
   });
 
+  it.each(["after-contract-repair", "boundary-retry"] as const)(
+    "waives changeRequired in the %s context",
+    async (kind) => {
+      const fixture = await newFixture();
+      const head = await readHead(fixture.root);
+      const context: GitBoundaryContext =
+        kind === "after-contract-repair"
+          ? {
+              kind,
+              attempt: { headAtStart: head, headAfterAttempt: head },
+              pausedAtHead: head,
+            }
+          : { kind, pausedAtHead: head };
+
+      const result = await finalize(fixture, policyOf("spec"), context);
+
+      expect(result).toEqual({
+        kind: "finalized",
+        commit: { kind: "none" },
+        observedPaths: [],
+        headAfterFinalization: head,
+      });
+    },
+  );
+
   it("keeps the selectors strict on a retry", async () => {
     const fixture = await newFixture();
     const pausedAtHead = await readHead(fixture.root);
@@ -475,6 +560,7 @@ describe("finalizeGitBoundary — retry after a refused boundary", () => {
 
     expect(result.kind).toBe("git-policy-violation");
     if (result.kind !== "git-policy-violation") return;
+    expect(result.cause).toBe("out-of-bounds");
     expect(result.message).toContain("stray.txt");
     expect(result.headMovedWhilePaused).toBeUndefined();
   });
@@ -543,6 +629,113 @@ describe("finalizeGitBoundary — commit failures", () => {
     expect(result.message).toContain("staged set does not equal");
     expect(result.message).toContain(`${rel}/seed.md`);
     expect(await commitCount(fixture)).toBe(before);
+  });
+});
+
+describe("finalizeGitBoundary — Git invocation failures", () => {
+  function fail(operation: string): never {
+    throw new Error(`${operation} unavailable`);
+  }
+
+  async function expectGitFailure(
+    result: GitBoundaryResult,
+    phase: Extract<GitBoundaryResult, { kind: "git-error" }>['phase'],
+  ): Promise<void> {
+    expect(result.kind).toBe("git-error");
+    if (result.kind !== "git-error") return;
+    expect(result.phase).toBe(phase);
+    expect(result.message).toContain("unavailable");
+  }
+
+  it("returns the paused-head phase when recovery cannot read the current tip", async () => {
+    const fixture = await newFixture();
+    const head = await readHead(fixture.root);
+
+    const result = await finalizeWithOperations(
+      fixture,
+      policyOf("spec"),
+      { kind: "boundary-retry", pausedAtHead: head },
+      { readHead: async () => fail("paused HEAD") },
+    );
+
+    await expectGitFailure(result, "paused-head");
+  });
+
+  it("returns the boundary-status phase when status cannot be collected", async () => {
+    const fixture = await newFixture();
+
+    const result = await finalizeWithOperations(
+      fixture,
+      policyOf("spec"),
+      await steadyAttempt(fixture),
+      { collectBoundaryStatus: async () => fail("boundary status") },
+    );
+
+    await expectGitFailure(result, "boundary-status");
+  });
+
+  it("returns the staging phase when git add cannot be run", async () => {
+    const fixture = await newFixture();
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+
+    const result = await finalizeWithOperations(
+      fixture,
+      policyOf("spec"),
+      await steadyAttempt(fixture),
+      {
+        runGit: async (cwd, args) =>
+          args[0] === "add" ? fail("git add") : runGit(cwd, args),
+      },
+    );
+
+    await expectGitFailure(result, "staging");
+  });
+
+  it("returns the staged-status phase when the staged set cannot be read", async () => {
+    const fixture = await newFixture();
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+
+    const result = await finalizeWithOperations(
+      fixture,
+      policyOf("spec"),
+      await steadyAttempt(fixture),
+      {
+        runGit: async (cwd, args) =>
+          args[0] === "diff" ? fail("staged status") : runGit(cwd, args),
+      },
+    );
+
+    await expectGitFailure(result, "staged-status");
+  });
+
+  it("returns the commit phase when git commit cannot be run", async () => {
+    const fixture = await newFixture();
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+
+    const result = await finalizeWithOperations(
+      fixture,
+      policyOf("spec"),
+      await steadyAttempt(fixture),
+      {
+        runGit: async (cwd, args) =>
+          args[0] === "commit" ? fail("git commit") : runGit(cwd, args),
+      },
+    );
+
+    await expectGitFailure(result, "commit");
+  });
+
+  it("returns the final-head phase when the resulting tip cannot be read", async () => {
+    const fixture = await newFixture();
+
+    const result = await finalizeWithOperations(
+      fixture,
+      policyOf("reconcile-spec"),
+      await steadyAttempt(fixture),
+      { readHead: async () => fail("final HEAD") },
+    );
+
+    await expectGitFailure(result, "final-head");
   });
 });
 
