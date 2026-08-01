@@ -6,12 +6,13 @@ An Antmay CLI operator who hits a Git-boundary refusal, a repeated resume, or a
 `git` failure mid-run reads a pause that tells them the truth about what happened
 and what the next resume will do. Specifically: a stage that committed where its
 policy does not expect a commit produces a pause that says so, names the two
-commits to inspect, and states that resuming proceeds — instead of a red failure
-banner indistinguishable from a refusal that actually blocks; a boundary retry
-never finalizes against a promise that has since stopped holding; resuming a stuck
-pause repeatedly leaves the durable checkpoint unchanged instead of growing a
-duplicate sentence per resume; and a broken `git` ends the run with the executor's
-own diagnostic and a resume command instead of a raw Node stack trace.
+commits to inspect, and states that its `HEAD` movement will not block resumption —
+instead of a red failure banner indistinguishable from a refusal that actually
+blocks; a boundary retry never finalizes against a promise that has since stopped
+holding; resuming a stuck pause repeatedly leaves the durable checkpoint unchanged
+instead of growing a duplicate sentence per resume; and a broken `git` ends the
+run with the executor's own diagnostic instead of a raw Node stack trace, with the
+post-attempt refusal naming the command that resumes its abandoned attempt.
 
 Nothing about the pipeline's stage sequence, the command surface, or the artifact
 contracts changes. The work is confined to how the engine and the Git-boundary
@@ -23,7 +24,8 @@ A code review of the preceding CLI architecture and code-quality refactor record
 six findings in the pending-review bundle quoted verbatim in `seed.md`. FND3 — the
 execution engine's function size and nested-closure structure — is tracked as a
 GitHub issue and is out of scope here. The remaining five were discussed and
-settled as `DR1`–`DR6` in `decisions.md`; this spec elaborates those records into
+settled as `DR1`–`DR7` in `decisions.md`, with `DR7` superseding `DR4` only for a
+failed post-attempt `HEAD` read; this spec elaborates those records into
 implementable behavior.
 
 Two of the settled decisions deliberately depart from the review's own suggested
@@ -86,10 +88,12 @@ nothing about pipelines, stages, or skills.
 ### 2. A `HEAD`-rule refusal pauses advisorily
 
 When a boundary is refused because the attempt's own recorded interval moved
-`HEAD` on a stage that forbids it, the run pauses and the next resume clears it.
-The recovery stays `retry-git-finalization` naming that attempt, and a
-`boundary-retry` continues to skip the `HEAD` rule entirely, so a bare `antmay afk
-resume` finalizes the boundary and advances the stage (per `decisions.md` DR1).
+`HEAD` on a stage that forbids it, the run pauses. The recovery stays
+`retry-git-finalization` naming that attempt, and a `boundary-retry` continues to
+skip the `HEAD` rule entirely, so the `HEAD`-rule refusal itself does not survive
+the next resume. When the fresh promise check in §4 is satisfied and no other
+retry-time policy check refuses, a bare `antmay afk resume` finalizes the boundary
+and advances the stage (per `decisions.md` DR1 and DR2).
 
 What changes is the pause itself. Its governing reason is a waiting kind distinct
 from `git-policy-violation`, and its banner does not present the stage as failed —
@@ -99,21 +103,20 @@ expect one, both ends of the movement (`headAtStart` and `headAfterAttempt`, so
 the human can inspect that range before deciding), and that the `HEAD` movement
 will not block the next resume.
 
-It does not carry `UNVALIDATED_CHANGES_NOTE` when the boundary observed no paths,
-because that instruction describes uncommitted work an agent which committed
-everything has already removed from the worktree (per `decisions.md` DR1). When
-the boundary did observe paths, the note is carried: those changes are genuinely
-unvalidated and still in the worktree, and `DR1`'s reason for dropping the note
-does not hold. This is the one place where `DR1`'s text, written for the clean
-case, is applied conditionally on a fact the boundary already reports.
+It does not carry `UNVALIDATED_CHANGES_NOTE`, because that instruction describes
+uncommitted work an agent which committed everything has already removed from the
+worktree (per `decisions.md` DR1).
 
-### 3. Other refusals keep blocking language
+### 3. Other refusals keep their existing presentation
 
 An out-of-bounds, `change-required`, or unresolvable-selector refusal keeps
 today's `git-policy-violation` reason kind, its banner, and
 `UNVALIDATED_CHANGES_NOTE` (per `decisions.md` DR1). The path selectors and the
-selector-resolution check continue to be judged on a `boundary-retry`, so such a
-refusal holds until a human repairs it.
+selector-resolution check continue to be judged on a `boundary-retry`, so an
+out-of-bounds or unresolvable-selector refusal holds until a human repairs it. A
+`change-required` refusal keeps that presentation, but the rule remains waived in
+both recovery contexts and the fresh promise check in §4 governs whether the
+retry finalizes (per `decisions.md` DR2).
 
 ### 4. A boundary retry re-verifies the promise
 
@@ -138,8 +141,9 @@ empty boundary means "already committed, nothing to do".
 ### 5. A refreshed pause reason is computed from its own facts
 
 No pause refresh reads the message already persisted on the checkpoint, so
-refreshing the same pause any number of times leaves the persisted `waiting` value
-identical from the second refresh onward (per `decisions.md` DR3).
+refreshing the same pause against the same facts any number of times leaves the
+entire persisted checkpoint byte-identical from the second refresh onward (per
+`decisions.md` DR3).
 
 A pending-queue scan that fails again on a pause holding a preserved `DONE` leaves
 the governing reason untouched and reports the failure as its own `gate-error`
@@ -230,9 +234,9 @@ and the test helper stop computing and passing the removed fields.
 - Test-suite conventions in `commands/resume.test.ts`, `commands/run.test.ts`, and
   `execution/engine.test.ts` hold: `describe.concurrent`, allocation through the
   existing helpers, and no per-case teardown.
-- Checkpoint equality assertions must compare the persisted `waiting` value, not
-  the whole document: `persist` stamps `updatedAt` on every write, so a literal
-  byte comparison of the checkpoint can never hold across two resumes.
+- Checkpoint equality assertions compare the whole persisted document. An
+  idempotent refresh does not rewrite the checkpoint merely to change
+  `updatedAt`.
 - Both uninspectable-promise code paths (`engine.ts:1208` and `engine.ts:884`) are
   documented as unreachable end to end, and the change in §5 does not make them
   reachable. Tests reach them by injection, as they do today.
@@ -251,7 +255,7 @@ and the test helper stop computing and passing the removed fields.
 - **AC-1.3** No production code branches on the content of a
   `git-policy-violation` message string. (§1, DR1)
 
-### FR-2 — A `HEAD`-rule refusal pauses advisorily and clears on resume
+### FR-2 — A `HEAD`-rule refusal pauses advisorily and does not block resume
 
 - **AC-2.1** A `spec`-stage attempt that reports `DONE` after committing its own
   work pauses with a `recovery` of `retry-git-finalization` naming that attempt.
@@ -262,22 +266,22 @@ and the test helper stop computing and passing the removed fields.
   refused attempt. (§2, DR1)
 - **AC-2.4** The pause states that the stage produced a commit its policy does not
   expect, and that the `HEAD` movement will not block the next resume. (§2, DR1)
-- **AC-2.5** With a clean worktree at the boundary, the pause carries no
-  `UNVALIDATED_CHANGES_NOTE`; with at least one observed path, it carries it.
-  (§2, DR1)
+- **AC-2.5** The pause carries no `UNVALIDATED_CHANGES_NOTE`. (§2, DR1)
 - **AC-2.6** Starting from the fixture at `cli/src/commands/resume.test.ts:1269`,
-  a second resume with the worktree untouched finalizes the boundary and advances
-  the stage. (§2, DR1)
+  a second resume with the worktree untouched and the promised artifact satisfied
+  finalizes the boundary and advances the stage. (§2, DR1, DR2)
 - **AC-2.7** `headRuleViolation` still returns no violation for a `boundary-retry`
   context, whatever the attempt's recorded interval was. (§2, DR1)
 - **AC-2.8** The run's exit code at this pause is `2`. (§2, DR1)
 
-### FR-3 — Other refusals still block
+### FR-3 — Other refusals keep their existing presentation
 
-- **AC-3.1** An out-of-bounds refusal keeps the `git-policy-violation` reason kind
-  and carries `UNVALIDATED_CHANGES_NOTE`. (§3, DR1)
-- **AC-3.2** Resuming from an out-of-bounds refusal with the offending path still
-  present refuses again rather than finalizing. (§3, DR1)
+- **AC-3.1** An out-of-bounds, `change-required`, or unresolvable-selector refusal
+  keeps the `git-policy-violation` reason kind, its blocking banner, and
+  `UNVALIDATED_CHANGES_NOTE`. (§3, DR1)
+- **AC-3.2** Resuming from an out-of-bounds or unresolvable-selector refusal with
+  the underlying defect still present refuses again rather than finalizing. (§3,
+  DR1)
 
 ### FR-4 — A boundary retry re-verifies the promise
 
@@ -307,14 +311,14 @@ and the test helper stop computing and passing the removed fields.
   governing reason's message is identical to the one the pause already carried,
   and the scan failure is present as a separate `gate-error` reason ordered after
   it. (§5, DR3)
-- **AC-5.2** Resuming three times while the queue remains unreadable leaves
-  exactly one `gate-error` reason, and the persisted `waiting` value after the
-  third resume is deep-equal to the value after the second. (§5, DR3)
+- **AC-5.2** Resuming twice while the queue remains unreadable leaves exactly one
+  `gate-error` reason, and the whole persisted checkpoint after the second resume
+  is byte-identical to the checkpoint after the first. (§5, DR3)
 - **AC-5.3** The message for an uninspectable promised-artifact state is composed
   from that pass's inspection error and contains no sentence about
   re-verification also having failed. (§5, DR3)
-- **AC-5.4** Resuming twice on a still-uninspectable promise leaves the persisted
-  `waiting` value deep-equal across the two passes. (§5, DR3)
+- **AC-5.4** Resuming twice on a still-uninspectable promise leaves the whole
+  persisted checkpoint byte-identical across the two passes. (§5, DR3)
 
 ### FR-6 — Git failures are structured and resumable
 
@@ -372,9 +376,9 @@ and the test helper stop computing and passing the removed fields.
 
 ### Coverage
 
-Every behavior in §1–§8 is covered: §1 by FR-1, §2 by FR-2 and FR-9, §3 by FR-3,
-§4 by FR-4, §5 by FR-5, §6 by FR-6, §7 by FR-7, §8 by FR-8. No criterion is left
-open.
+Every behavior in §1–§8 is covered: §1 by FR-1, §2 by FR-2 and FR-9, §3 by FR-3
+and AC-4.7, §4 by FR-4, §5 by FR-5, §6 by FR-6, §7 by FR-7, §8 by FR-8. No
+criterion is left open.
 
 ## Degrees of freedom
 
@@ -401,8 +405,8 @@ would weigh differently, and each is reversible without revising this spec:
 - Whether the new demo scenario is a new file or an extension of an existing one
   that can be made to end on the FR-2 rendering, and its number within the reading
   order.
-- Test file placement, fixture construction, and whether AC-5.2's third resume is
-  a new case or an extension of an existing one.
+- Test file placement, fixture construction, and whether AC-5.2's second resume
+  is a new case or an extension of an existing one.
 
 Not degrees of freedom, stated because they are the plausible places to assume
 otherwise: whether the `HEAD` rule is judged on a retry (it is not), whether the
