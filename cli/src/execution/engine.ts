@@ -153,6 +153,10 @@ function replaceAttempt(
   );
 }
 
+type InvariantResult<Value> =
+  | { ok: true; value: Value }
+  | { ok: false; message: string };
+
 /**
  * The one attempt a recovery reference names. Checkpoint validation already
  * proved it exists in the state resuming from it requires, so a caller holding a
@@ -161,18 +165,19 @@ function replaceAttempt(
 function referencedAttempt(
   checkpoint: RunCheckpoint,
   reference: AttemptReference,
-): AttemptRecord {
+): InvariantResult<AttemptRecord> {
   const found = checkpoint.attempts.find(
     (attempt) =>
       attempt.stageIndex === reference.stageIndex &&
       attempt.attempt === reference.attempt,
   );
   if (found === undefined) {
-    throw new Error(
-      `the validated checkpoint records no attempt ${reference.attempt} for stage ${reference.stageIndex}`,
-    );
+    return {
+      ok: false,
+      message: `The validated checkpoint records no attempt ${reference.attempt} for stage ${reference.stageIndex}.`,
+    };
   }
-  return found;
+  return { ok: true, value: found };
 }
 
 /**
@@ -180,14 +185,18 @@ function referencedAttempt(
  * validation requires the post-attempt observation on every settled attempt, so
  * a record without one was never settled and no boundary of it can be judged.
  */
-function attemptInterval(attempt: AttemptRecord): AttemptInterval {
+function attemptInterval(attempt: AttemptRecord): InvariantResult<AttemptInterval> {
   const headAfterAttempt = attempt.headAfterAttempt;
   if (headAfterAttempt === undefined) {
-    throw new Error(
-      `attempt ${attempt.attempt} of stage ${attempt.stageIndex} records no post-attempt HEAD observation`,
-    );
+    return {
+      ok: false,
+      message: `Attempt ${attempt.attempt} of stage ${attempt.stageIndex} records no post-attempt HEAD observation.`,
+    };
   }
-  return { headAtStart: attempt.headAtStart, headAfterAttempt };
+  return {
+    ok: true,
+    value: { headAtStart: attempt.headAtStart, headAfterAttempt },
+  };
 }
 
 function stillUnmetContractMessage(unmet: readonly ArtifactMismatch[]): string {
@@ -584,10 +593,12 @@ export async function executeEngine(
     // through finalization and rendering. A retry-stage recovery has no attempt
     // reference; when it remains paused, its display still describes the latest
     // persisted attempt that led to the pause.
-    const recoveryAttempt =
-      pausedRecovery.kind === "retry-stage"
-        ? undefined
-        : referencedAttempt(checkpoint, pausedRecovery.attempt);
+    let recoveryAttempt: AttemptRecord | undefined;
+    if (pausedRecovery.kind !== "retry-stage") {
+      const resolved = referencedAttempt(checkpoint, pausedRecovery.attempt);
+      if (!resolved.ok) return fatal(resolved.message);
+      recoveryAttempt = resolved.value;
+    }
     const pauseAttempt =
       pausedRecovery.kind === "retry-stage"
         ? checkpoint.attempts[checkpoint.attempts.length - 1]
@@ -754,19 +765,29 @@ export async function executeEngine(
       directive: Extract<RecoveryDirective, { kind: "finalize-boundary" }>,
     ): Promise<ExecutionResult | null> {
       // A finalization directive can arise only from either attempt-referencing
-      // finalization recovery, so the validated record resolved above is present.
-      const preserved = recoveryAttempt!;
-      const context: GitBoundaryContext =
-        directive.context === "after-contract-repair"
-          ? {
-              kind: "after-contract-repair",
-              attempt: attemptInterval(preserved),
-              pausedAtHead: directive.recovery.pausedAtHead,
-            }
-          : {
-              kind: "boundary-retry",
-              pausedAtHead: directive.recovery.pausedAtHead,
-            };
+      // finalization recovery, so absence here is an invalid engine entry rather
+      // than a reason to approximate from another history record.
+      const preserved = recoveryAttempt;
+      if (preserved === undefined) {
+        return fatal(
+          `The validated "${directive.recovery.kind}" recovery has no resolved attempt.`,
+        );
+      }
+      let context: GitBoundaryContext;
+      if (directive.context === "after-contract-repair") {
+        const interval = attemptInterval(preserved);
+        if (!interval.ok) return fatal(interval.message);
+        context = {
+          kind: "after-contract-repair",
+          attempt: interval.value,
+          pausedAtHead: directive.recovery.pausedAtHead,
+        };
+      } else {
+        context = {
+          kind: "boundary-retry",
+          pausedAtHead: directive.recovery.pausedAtHead,
+        };
+      }
       const finalization = await finalizeGitBoundary({
         repoRoot,
         threadRelPath,

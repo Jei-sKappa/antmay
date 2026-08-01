@@ -611,6 +611,74 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
     expect(cp.waiting?.recovery.kind).toBe("recheck-stage-contract");
   }
 
+  it("returns a typed fatal result when a recovery reference resolves to no attempt", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnContract(fixture, runDir);
+    const paused = await loadCheckpoint(runDir);
+    const malformed: RunCheckpoint = {
+      ...paused,
+      waiting: {
+        ...paused.waiting!,
+        recovery: {
+          kind: "recheck-stage-contract",
+          attempt: { stageIndex: 0, attempt: 99 },
+          pausedAtHead: await readHead(fixture.root),
+        },
+      },
+    };
+    let persistenceCalls = 0;
+    const rec = recorder();
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      checkpoint: malformed,
+      display: rec.display,
+      persistCheckpoint: async () => {
+        persistenceCalls += 1;
+      },
+    });
+
+    expect(result).toEqual({
+      kind: "fatal-checkpoint",
+      message: "The validated checkpoint records no attempt 99 for stage 0.",
+    });
+    expect(rec.runFailed).toHaveLength(1);
+    expect(persistenceCalls).toBe(0);
+    expect(harness.calls).toHaveLength(0);
+  });
+
+  it("returns a typed fatal result when a finalizable attempt has no settled HEAD", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await pauseOnContract(fixture, runDir);
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    const paused = await loadCheckpoint(runDir);
+    const malformedAttempt = { ...paused.attempts[0]! } as Record<string, unknown>;
+    delete malformedAttempt.headAfterAttempt;
+    const malformed: RunCheckpoint = {
+      ...paused,
+      attempts: [malformedAttempt as unknown as AttemptRecord],
+    };
+    let persistenceCalls = 0;
+    const rec = recorder();
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}], {
+      checkpoint: malformed,
+      display: rec.display,
+      persistCheckpoint: async () => {
+        persistenceCalls += 1;
+      },
+    });
+
+    expect(result).toEqual({
+      kind: "fatal-checkpoint",
+      message: "Attempt 1 of stage 0 records no post-attempt HEAD observation.",
+    });
+    expect(rec.runFailed).toHaveLength(1);
+    expect(persistenceCalls).toBe(0);
+    expect(harness.calls).toHaveLength(0);
+  });
+
   it("finalizes the preserved DONE from an uncommitted repair, exempt from the clean rule", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();

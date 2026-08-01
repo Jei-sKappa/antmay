@@ -1135,6 +1135,44 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       error: /attempt is not permitted on a "retry-stage" recovery/,
     },
     {
+      name: "a queue resolution on a retry-stage recovery",
+      document: () =>
+        withRecovery({ kind: "retry-stage", queueResolution: "rerun" } as never),
+      error: /queueResolution is not permitted on a "retry-stage" recovery/,
+    },
+    {
+      name: "a queue resolution on a recheck-stage-contract recovery",
+      document: () =>
+        withRecovery({ ...RECHECK_CONTRACT, queueResolution: "advance" } as never),
+      error:
+        /queueResolution is not permitted on a "recheck-stage-contract" recovery/,
+    },
+    {
+      name: "a queue resolution on a retry-git-finalization recovery",
+      document: () =>
+        withRecovery({ ...RETRY_GIT, queueResolution: "advance" } as never),
+      error:
+        /queueResolution is not permitted on a "retry-git-finalization" recovery/,
+    },
+    {
+      name: "an arbitrary field on a resume-finalized-done recovery",
+      document: () =>
+        withRecovery({ ...RESUME_FINALIZED, legacyCursor: "old" } as never, [
+          doneAttempt({ result: "done" }),
+        ]),
+      error:
+        /legacyCursor is not permitted on a "resume-finalized-done" recovery/,
+    },
+    {
+      name: "an arbitrary field in an attempt reference",
+      document: () =>
+        withRecovery({
+          ...RETRY_GIT,
+          attempt: { stageIndex: 0, attempt: 1, stageId: "spec" },
+        } as never),
+      error: /waiting\.recovery\.attempt\.stageId is not permitted/,
+    },
+    {
       name: "a recovery on a checkpoint that is not waiting",
       document: () => ({ ...withRecovery(RETRY_GIT), condition: "ready", stageIndex: 1 }),
       error: /requires waiting to be null/,

@@ -35,13 +35,7 @@ export type ArtifactState = {
  * dimension must equal the given value, and every omitted dimension is
  * unconstrained.
  */
-export type PartialArtifactState = {
-  validThread?: boolean;
-  proposal?: boolean;
-  spec?: boolean;
-  plan?: PlanState;
-  implementationReport?: boolean;
-};
+export type PartialArtifactState = Partial<ArtifactState>;
 
 /**
  * The artifact state a catalog stage requires before it may be invoked. Checked
@@ -141,24 +135,34 @@ const ARTIFACT_DESCRIPTIONS: ArtifactDescriptions = {
 };
 
 /**
- * The kind of value one artifact-state dimension holds. It is what decides
- * whether a serialized pattern or mismatch may carry a boolean or a plan state
- * for that dimension.
+ * The runtime value-kind table must agree with the actual value type of each
+ * artifact-state dimension. A new value type therefore has no representable
+ * kind until this mapping deliberately learns it.
  */
-type ArtifactValueKind = "boolean" | "plan-state";
+type ArtifactValueKindFor<Value> = Value extends boolean
+  ? "boolean"
+  : Value extends PlanState
+    ? "plan-state"
+    : never;
+
+type ArtifactValueKinds = {
+  [Dimension in keyof ArtifactState]: ArtifactValueKindFor<
+    ArtifactState[Dimension]
+  >;
+};
 
 /**
  * The value kind of every artifact-state dimension. Typed as a total record, so
  * a new dimension has no kind until it is written here — and this is the one
  * dimension list the domain keeps, so every membership test reads it.
  */
-const ARTIFACT_VALUE_KINDS: Record<keyof ArtifactState, ArtifactValueKind> = {
+const ARTIFACT_VALUE_KINDS = {
   validThread: "boolean",
   proposal: "boolean",
   spec: "boolean",
   plan: "plan-state",
   implementationReport: "boolean",
-};
+} satisfies ArtifactValueKinds;
 
 /**
  * Every legal plan state, read off the description table's own plan row. That

@@ -663,6 +663,7 @@ function validateAttemptReference(
     errors.push(`${label} must be an object naming a stage index and attempt.`);
     return;
   }
+  validateAllowedKeys(value, label, ["stageIndex", "attempt"], errors);
   if (
     typeof value.stageIndex !== "number" ||
     !Number.isInteger(value.stageIndex) ||
@@ -676,6 +677,23 @@ function validateAttemptReference(
     value.attempt <= 0
   ) {
     errors.push(`${label}.attempt must be a positive integer.`);
+  }
+}
+
+/** Reject every object key outside one closed serialized shape. */
+function validateAllowedKeys(
+  value: Record<string, unknown>,
+  label: string,
+  allowed: readonly string[],
+  errors: string[],
+  context?: string,
+): void {
+  const allowedKeys = new Set(allowed);
+  for (const key of Object.keys(value)) {
+    if (allowedKeys.has(key)) continue;
+    errors.push(
+      `${label}.${key} is not permitted${context === undefined ? "" : ` ${context}`}.`,
+    );
   }
 }
 
@@ -699,30 +717,30 @@ function validateWaitingRecovery(value: unknown, errors: string[]): void {
     }
     validateAttemptReference(value.attempt, `${label}.attempt`, errors);
   };
-  const forbidPausedHead = (): void => {
-    if (value.pausedAtHead !== undefined) {
-      errors.push(
-        `${label}.pausedAtHead is not permitted on a "${String(kind)}" recovery.`,
-      );
-    }
+  const requireExactKeys = (allowed: readonly string[]): void => {
+    validateAllowedKeys(
+      value,
+      label,
+      allowed,
+      errors,
+      `on a "${String(kind)}" recovery`,
+    );
   };
 
   if (kind === "retry-stage") {
-    if (value.attempt !== undefined) {
-      errors.push(`${label}.attempt is not permitted on a "retry-stage" recovery.`);
-    }
-    forbidPausedHead();
+    requireExactKeys(["kind"]);
     return;
   }
   if (kind === "resume-finalized-done") {
+    requireExactKeys(["kind", "attempt", "queueResolution"]);
     requireReference();
     if (value.queueResolution !== "advance" && value.queueResolution !== "rerun") {
       errors.push(`${label}.queueResolution must be "advance" or "rerun".`);
     }
-    forbidPausedHead();
     return;
   }
   if (kind === "recheck-stage-contract" || kind === "retry-git-finalization") {
+    requireExactKeys(["kind", "attempt", "pausedAtHead"]);
     requireReference();
     if (!isNonEmptyString(value.pausedAtHead)) {
       errors.push(
@@ -731,6 +749,7 @@ function validateWaitingRecovery(value: unknown, errors: string[]): void {
     }
     return;
   }
+  validateAllowedKeys(value, label, ["kind"], errors, "on an unknown recovery");
   errors.push(`${label}.kind must be a known waiting recovery kind.`);
 }
 

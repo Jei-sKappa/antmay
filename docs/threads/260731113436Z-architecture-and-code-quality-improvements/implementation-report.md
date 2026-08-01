@@ -245,3 +245,30 @@ live terminal remains the stronger oracle.
   is a change to the scenario module rule rather than to this implementation.
 - Retire the stale cross-thread AC identifiers in test `describe` titles when
   those files are next edited.
+
+## Closure review
+
+A focused closure revision resolved three of the concerns above. Waiting
+recovery objects and their nested attempt references now reject every key
+outside the exact serialized shape of their variant. The artifact domain derives
+its partial state and per-dimension runtime value kind from `ArtifactState`, and
+its coverage test derives the dimension set from a compile-time-total state.
+The engine's missing referenced-attempt and missing post-attempt-`HEAD`
+invariants both return the existing typed `fatal-checkpoint` result without
+persisting or invoking a harness. These statements supersede the corresponding
+entries and follow-ups above; the other concerns retain their reported status.
+The closure revision passes `npm --prefix cli run check`: typecheck, 1038 tests
+across 43 files, and the production build. Scenarios 26 and 27 also pass in
+non-color mode with their `INTERRUPTED` and `FAILED — checkpoint write` closing
+blocks intact.
+
+The accepted resume terminal contract has three explicit shapes beyond the new
+immutable-runtime refusal: a dirty-worktree refusal prints the snapshotted
+startup summary after taking the workspace lock; a signal at the resumed durable
+cursor renders the `INTERRUPTED` block; and a checkpoint write failure during an
+entry transition renders the `FAILED — checkpoint write` block. These are
+accepted deviations from the specification's broad rendering-preservation
+requirement. Their process exit codes, stderr diagnostics, and durable checkpoint
+bytes retain the behavior recorded in this report. The earlier statement that
+all pre-existing renderings are unchanged is qualified by exactly these three
+cases. The historical specification and decision record remain unchanged.

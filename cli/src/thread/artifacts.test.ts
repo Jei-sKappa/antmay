@@ -300,6 +300,11 @@ const BASE_STATE: ArtifactState = {
   implementationReport: false,
 };
 
+/** A runtime dimension list derived from a compile-time-total state fixture. */
+const ARTIFACT_DIMENSIONS = (Object.keys(BASE_STATE) as Array<
+  keyof ArtifactState
+>).sort();
+
 describe("evaluateArtifactPrerequisite (AC-3.4)", () => {
   it("accepts a satisfied prerequisite", () => {
     expect(
@@ -508,16 +513,21 @@ describe("formatArtifactMismatch and describeContractSide (AC-9.3, AC-9.5)", () 
 });
 
 describe("describeArtifactDimension (AC-9.1)", () => {
-  const DIMENSIONS = [...new Set(DESCRIBED_PAIRS.map(({ dimension }) => dimension))];
+  it("has descriptive cases for every artifact-state dimension", () => {
+    const described = [
+      ...new Set(DESCRIBED_PAIRS.map(({ dimension }) => dimension)),
+    ].sort();
+    expect(described).toEqual(ARTIFACT_DIMENSIONS);
+  });
 
   it("gives every dimension its own heading, and none of them a key", () => {
-    const headings = DIMENSIONS.map((dimension) =>
+    const headings = ARTIFACT_DIMENSIONS.map((dimension) =>
       describeArtifactDimension(dimension),
     );
     for (const heading of headings) {
       expect(heading.length).toBeGreaterThan(0);
     }
-    expect(new Set(headings).size).toBe(DIMENSIONS.length);
+    expect(new Set(headings).size).toBe(ARTIFACT_DIMENSIONS.length);
     expect(headings.join(" ")).not.toMatch(/validThread|implementationReport/);
   });
 });

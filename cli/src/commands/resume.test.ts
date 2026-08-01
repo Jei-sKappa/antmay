@@ -703,6 +703,8 @@ describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
     await fs.writeFile(path.join(h.fixture.root, "stray.txt"), "dirty\n", "utf8");
     const result = await resume(h, runId, standardSteps(h.fixture));
     expect(result.code).toBe(1);
+    expect(result.out).toContain("Run details");
+    expect(result.out).toContain(runId);
     expect(result.err).toContain("not clean");
     const after = await readCp(h, runId);
     expect(after.condition).toBe("waiting-for-user");
@@ -1451,6 +1453,14 @@ describe.concurrent("resumeCommand — unrecoverable recovery documents (AC-2.3)
           attempt: { stageIndex: 0, attempt: 1 },
           queueResolution: stages[0]!.queueResolution,
         };
+      },
+    },
+    {
+      name: "a recovery carrying an extra control field",
+      mutate: (raw) => {
+        const waiting = raw.waiting as Record<string, unknown>;
+        const recovery = waiting.recovery as Record<string, unknown>;
+        recovery.legacyCursor = "old";
       },
     },
   ];
