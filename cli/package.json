@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm run test && npm run build",
-    "demo": "node scripts/demo.mjs"
+    "demo": "node scripts/demo.mjs",
+    "trace": "node scripts/trace.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

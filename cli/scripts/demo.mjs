@@ -34,7 +34,12 @@ const SCENARIO_DIR = path.join(SCRIPT_DIR, "scenarios");
 const DEFAULT_SCENARIO_ID = "01-all-done";
 const SCRIPTED_TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
 const USAGE =
-  "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--no-color] [--show-demo-summary]";
+  "Usage: node scripts/demo.mjs [--scenario <id>] [--list] [--no-color] [--show-demo-summary]\n" +
+  "                            [--cli-binary <path>] [--trace-dir <path>]";
+
+// The binary every invocation step runs. `scripts/trace.mjs` points this at a
+// call-traced build instead, which is the only reason it is not a constant.
+let cliBinary = DIST_MAIN;
 
 class DemoError extends Error {}
 
@@ -74,7 +79,7 @@ function command(commandName, args, options = {}) {
  */
 function runChild(step, ctx, childEnv) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [DIST_MAIN, ...step.argv(ctx)], {
+    const child = spawn(process.execPath, [cliBinary, ...step.argv(ctx)], {
       cwd: ctx.repoRoot,
       env: childEnv,
       stdio: "inherit",
@@ -142,6 +147,8 @@ const NPM_SWALLOWED_FLAGS = new Map([
   ["npm_config_list", "--list"],
   ["npm_config_scenario", "--scenario"],
   ["npm_config_show_demo_summary", "--show-demo-summary"],
+  ["npm_config_cli_binary", "--cli-binary"],
+  ["npm_config_trace_dir", "--trace-dir"],
 ]);
 
 function assertFlagsWereForwarded() {
@@ -174,6 +181,8 @@ function parseArgs(argv) {
     list: false,
     showSummary: false,
     noColor: npmDisabledColor(),
+    cliBinary: undefined,
+    traceDir: undefined,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -187,6 +196,16 @@ function parseArgs(argv) {
     }
     if (argument === "--no-color") {
       parsed.noColor = true;
+      continue;
+    }
+    if (argument === "--cli-binary" || argument === "--trace-dir") {
+      const value = argv[index + 1];
+      index += 1;
+      if (value === undefined) {
+        fail(`${argument} requires a path.\n${USAGE}`);
+      }
+      parsed[argument === "--cli-binary" ? "cliBinary" : "traceDir"] =
+        path.resolve(value);
       continue;
     }
     if (argument === "--scenario" || argument === "-s") {
@@ -399,7 +418,7 @@ function printSummary(context) {
 
   console.log("\nInspect further with:");
   console.log(
-    `  ANTMAY_CONFIG_HOME=${configRoot} ANTMAY_STATE_HOME=${stateRoot} \\\n    ${SCRIPTED_TOGGLE}=1 \\\n    node ${DIST_MAIN} afk list`,
+    `  ANTMAY_CONFIG_HOME=${configRoot} ANTMAY_STATE_HOME=${stateRoot} \\\n    ${SCRIPTED_TOGGLE}=1 \\\n    node ${cliBinary} afk list`,
   );
 }
 
@@ -413,10 +432,16 @@ async function main() {
   }
   const scenario = await selectScenario(scenarios, args.scenarioId);
 
-  console.log("\nBuilding CLI (tests are not run)...");
-  const build = command("npm", ["run", "build"], { cwd: CLI_ROOT });
-  if (!build.ok) {
-    fail(`The CLI build failed: ${build.error}`);
+  // Supplying the binary means the caller built it, so the driver does not.
+  if (args.cliBinary === undefined) {
+    console.log("\nBuilding CLI (tests are not run)...");
+    const build = command("npm", ["run", "build"], { cwd: CLI_ROOT });
+    if (!build.ok) {
+      fail(`The CLI build failed: ${build.error}`);
+    }
+  } else {
+    cliBinary = args.cliBinary;
+    console.log(`\nUsing supplied CLI binary: ${cliBinary}`);
   }
 
   const demoRoot = realpathSync(mkdtempSync(`/tmp/antmay-demo-${scenario.id}-`));
@@ -477,6 +502,7 @@ async function main() {
     ANTMAY_STATE_HOME: stateRoot,
     [SCRIPTED_TOGGLE]: "1",
     ...(args.noColor ? { NO_COLOR: "1" } : {}),
+    ...(args.traceDir === undefined ? {} : { ANTMAY_TRACE_DIR: args.traceDir }),
   };
 
   // Everything a scenario's own action steps are given. The run identifiers are
