@@ -495,7 +495,9 @@ runs that by hand periodically and no schedule asks anyone to — it is a standi
 gap, worth spending a disposable repository on when a change reaches one of those
 four paths.
 
-## Engineering Principles
+## Engineering philosophy
+
+### Principles
 
 These principles guide all implementation decisions in this project:
 
@@ -505,73 +507,41 @@ These principles guide all implementation decisions in this project:
 - **Premature Optimization is the Root of All Evil**: Optimize only when there is evidence it matters. Readability and correctness come first.
 - **Defensive Programming**: Assume inputs, dependencies, and environments may fail or misbehave. Validate and safeguard at system boundaries.
 - **Design for Testability**: Structure code so it is easy to verify automatically. Testable code tends to be more modular and loosely coupled.
-- **KISS**: Avoid unnecessary complexity. Simplicity is better than cleverness.
-- **YAGNI**: Do not build features until they are actually needed.
 - **DRY**: Avoid duplication. Code that repeats itself is harder to maintain.
+- **YAGNI**: Do not build application features until they are actually needed.
 
-## Behavioral guidelines
+### Structure is a deliverable
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions or explicit user requests as needed.
+Working code is half of what a change delivers. The other half is a shape the
+next change can land in safely, because most of a system's life is spent being
+modified by someone who was not there when it was written.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+In the core of a system — the modules that carry its central workflow, that
+every feature change touches, and that a mistake in is expensive — a seam is
+justified by extensibility alone, before there is a second implementation to
+justify it. The point of the seam is that adding the second one is a new file
+rather than a hunt through an old one.
 
-### 1. Think Before Coding
+- **One file states one purpose.** A function long enough to need internal
+  section comments is a set of collaborators that has not been named yet.
+- **Prefer a closed set of cases with exhaustive matching** over a boolean, a
+  bare string, or a chain of conditionals. Adding a case should fail to build,
+  never fail at runtime.
+- **Prefer polymorphism, or a lookup keyed by identity, over branching on that
+  identity.** The same branch appearing in more than one module means the
+  abstraction it implies is missing.
+- **Make a state change a value rather than an assignment.** A transition that
+  can be named, passed, and inspected is one that can be tested; the same
+  transition buried in a long procedure is not.
+- **Make illegal states unrepresentable** where the type system allows it, in
+  preference to validating them after they have been constructed.
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+Two limits keep this from becoming its own failure mode. It licenses no
+speculative capability: a feature, option, or configuration nobody asked for is
+still YAGNI, and this is about the shape of code that already exists rather than
+about how much of it there is. And a seam with no plausible second
+implementation, sitting outside that core, is decoration — indirection that
+costs a reader a jump and returns nothing.
 
-Before implementing:
-
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-### 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-### 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-### 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+When these goals genuinely conflict with delivering the change at hand, say so
+and name the trade-off rather than silently resolving it in either direction.
