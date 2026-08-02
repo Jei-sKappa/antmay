@@ -150,12 +150,17 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   validates that post-DONE changes fall within the stage's allowed selectors and
   produces the declared boundary commit. Each refusal carries a structured cause:
   unexpected attempt-owned `HEAD` movement is an advisory pause that one resume
-  may accept, while out-of-bounds changes, an unmet `changeRequired` rule, and an
-  unresolvable selector remain blocking `git-policy-violation` pauses. This
+  may accept, while out-of-bounds changes and an unresolvable selector are
+  judged in every context and hold their blocking `git-policy-violation` pause
+  until a human repairs them. An unmet `changeRequired` presents as the same
+  blocking violation, but the rule is applied only to a fresh attempt: a
+  finalization after a repaired contract or a boundary retry accepts an empty
+  boundary, because the intended diff may already be committed deliberately
+  there and the verified promise is the requirement that actually governs. This
   includes the implementation stages: the skill makes its own per-task code
-  commits and leaves the thread's `implementation-report.md` uncommitted, and the
-  stage boundary is what commits that report. One call finalizes a boundary in
-  every context — a fresh attempt, first-time finalization after a repaired
+  commits and leaves the thread's `implementation-report.md` uncommitted, and
+  the stage boundary is what commits that report. One call finalizes a boundary
+  in every context — a fresh attempt, first-time finalization after a repaired
   contract, or a retry after an earlier boundary or commit failure — and returns
   structured Git failures, so no caller sequences or catches status collection,
   evaluation, staging, commit, and the final `HEAD` read itself.
