@@ -51,7 +51,7 @@ import type {
   ExecutionEntry,
   ExecutionResult,
 } from "../execution/engine.js";
-import type { ProbeResult } from "../harness/probe.js";
+import type { ProbeResult } from "../harness/backends/probe.js";
 import type {
   HarnessExecutableProbe,
   HarnessRuntimeLoader,

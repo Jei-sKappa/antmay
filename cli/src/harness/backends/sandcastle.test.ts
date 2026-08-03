@@ -15,8 +15,8 @@ vi.mock("@ai-hero/sandcastle", async (importOriginal) => {
 
 import { run } from "@ai-hero/sandcastle";
 
-import { createAttemptLog, attemptLogPaths } from "../state/logs.js";
-import type { AttemptRequest, HarnessEvent } from "./types.js";
+import { createAttemptLog, attemptLogPaths } from "../../state/logs.js";
+import type { AttemptRequest, HarnessEvent } from "../types.js";
 import {
   buildSandcastleRunOptions,
   createSandcastleInvoker,

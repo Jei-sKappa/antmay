@@ -395,11 +395,91 @@ describe("display consumers are phase-specific (AC-7.1, AC-7.2)", () => {
   });
 });
 
+describe("a harness is a provider object, never a literal", () => {
+  /** The one declaration of what a harness is. */
+  const FACE = "harness/provider.ts";
+  /** The one place a harness id is turned into the harness it names. */
+  const REGISTRY = "harness/providers/index.ts";
+  const PROVIDER_DOMAIN = "harness/providers/";
+
+  /**
+   * Comparing an id to a literal is exactly the branch a provider object
+   * replaces. Only comparison forms match, so the id union's own declaration
+   * and a record keyed by id are both left alone.
+   */
+  const ID_COMPARISON =
+    /(?:[=!]==?\s*|\bcase\s+)["'](?:codex|claude-code)["']|["'](?:codex|claude-code)["']\s*[=!]==?/;
+
+  it("compares a harness id to a literal nowhere outside the providers", async () => {
+    // Such a comparison is never exhaustive: `harness === "codex" ? … : …`
+    // silently treats every other harness as Claude Code, so a harness added
+    // later runs with the wrong trigger, resume command, and executable rather
+    // than failing to build.
+    for (const module of await productionModules()) {
+      if (module.id.startsWith(PROVIDER_DOMAIN)) continue;
+      expect(
+        withoutComments(module.source),
+        `${module.id} branches on a harness id`,
+      ).not.toMatch(ID_COMPARISON);
+    }
+  });
+
+  it("declares the face once, and makes every consumer of it depend on it", async () => {
+    const modules = await productionModules();
+    const declaration = /^export\s+interface\s+AgentHarness\b/m;
+    expect(
+      modules.filter((module) => declaration.test(module.source)).map((m) => m.id),
+    ).toEqual([FACE]);
+    for (const module of modules) {
+      if (module.id === FACE || !/\bAgentHarness\b/.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names AgentHarness`).toContain(FACE);
+    }
+  });
+
+  it("keeps a provider free of I/O, of packages, and of the backends", async () => {
+    // The prompt renderer imports the registry statically and the engine
+    // imports the prompt renderer, so anything a provider loads is loaded on
+    // every run — including a scripted one that must contact no provider.
+    for (const module of await productionModules()) {
+      if (!module.id.startsWith(PROVIDER_DOMAIN)) continue;
+      for (const reference of module.references) {
+        expect(
+          reference.target,
+          `${module.id} imports ${reference.specifier}`,
+        ).not.toBeNull();
+        expect(
+          /^harness\/(?:backends|scripted)\//.test(reference.target!),
+          `${module.id} imports ${reference.target}`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("reaches a concrete provider through the registry only", async () => {
+    for (const module of await productionModules()) {
+      if (!module.id.startsWith(PROVIDER_DOMAIN) || module.id === REGISTRY) continue;
+      const importers = await importersOf(module.id);
+      if (/:\s*AgentHarness\b/.test(module.source)) {
+        // A caller that names one harness is a caller that handles that harness
+        // and not the others — the hunt the registry exists to remove.
+        expect(importers, `importers of ${module.id}`).toEqual([REGISTRY]);
+        continue;
+      }
+      for (const importer of importers) {
+        expect(
+          importer.startsWith(PROVIDER_DOMAIN),
+          `${importer} imports the provider-internal ${module.id}`,
+        ).toBe(true);
+      }
+    }
+  });
+});
+
 describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => {
   /** What resolving a runtime loads: one family's invoker paired with its probe. */
   const ENTRY_ADAPTERS = [
-    "harness/sandcastle.ts",
-    "harness/probe.ts",
+    "harness/backends/sandcastle.ts",
+    "harness/backends/probe.ts",
     "harness/scripted/invoker.ts",
     "harness/scripted/probe.ts",
   ];
@@ -458,7 +538,7 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
   it("keeps the provider SDK behind the real adapter", async () => {
     for (const module of await productionModules()) {
       const packages = module.references.map((reference) => reference.specifier);
-      if (module.id === "harness/sandcastle.ts") {
+      if (module.id === "harness/backends/sandcastle.ts") {
         expect(packages).toContain("@ai-hero/sandcastle");
         continue;
       }

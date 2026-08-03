@@ -1,8 +1,8 @@
 import path from "node:path";
 
 import type { ExecutionDisplay, StageDisposition } from "../display/types.js";
-import { nativeContinuationCommand } from "../harness/native-session.js";
 import { renderStagePrompt } from "../harness/prompt.js";
+import { HARNESSES } from "../harness/providers/index.js";
 import type { AttemptOutcome, HarnessInvoker } from "../harness/types.js";
 import { isWorktreeClean, readHead } from "../gitops/status.js";
 import { finalizeGitBoundary } from "../gitops/boundary.js";
@@ -456,10 +456,9 @@ export async function executeEngine(
       attempt === undefined ? null : path.join(runDir, attempt.logPath);
     const continuationCommand =
       attempt?.agentSession !== undefined
-        ? nativeContinuationCommand(
-            checkpoint.stages[attempt.stageIndex]!.binding.agent.harness,
-            attempt.agentSession.id,
-          )
+        ? HARNESSES[
+            checkpoint.stages[attempt.stageIndex]!.binding.agent.harness
+          ].continuationCommand(attempt.agentSession.id)
         : undefined;
     display.runPaused({
       waiting,

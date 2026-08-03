@@ -233,9 +233,16 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   tracked-content preflight (`temporary-workspaces.ts`), and the one
   Git-boundary finalization operation (`boundary.ts`).
 - `harness/` — the provider-neutral request, event, and outcome boundary
-  (`types.ts`), prompt assembly, the lazy runtime resolver (`runtime.ts`), the
-  Sandcastle adapter with its own executable probe, and the developer scripted
-  family under `scripted/`.
+  (`types.ts`), prompt assembly, and the lazy runtime resolver (`runtime.ts`),
+  over two independent axes. **What a harness is** lives in `provider.ts` (the
+  `AgentHarness` face) and `providers/`, one file per harness plus the
+  `HARNESSES` record that is total over `HarnessId`; a harness declares only
+  SDK-free facts, so the engine reaches one statically without loading an
+  adapter. **How a harness is driven** lives in the two adapter families — the
+  real one under `backends/` (the Sandcastle adapter and the executable probe)
+  and the developer scripted one under `scripted/` — which the resolver pairs
+  and loads one of. Availability belongs to the family rather than the harness,
+  because the scripted family establishes it without contacting anything.
 - `state/` — durable run state: the checkpoint schema, its exhaustive validator
   and reader (`checkpoint.ts`), the atomic writer (`persist.ts`), logs, run
   records, and the exclusive workspace lock.

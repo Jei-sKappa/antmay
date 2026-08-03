@@ -1,15 +1,10 @@
 import { execFile } from "node:child_process";
 
-import type { HarnessId } from "../config/execution.js";
+import type { HarnessId } from "../../config/execution.js";
+import { HARNESSES } from "../providers/index.js";
 
 /** The `--version` probe timeout, fixed at 10 seconds. */
 const PROBE_TIMEOUT_MS = 10_000;
-
-/** The executable name each harness is invoked through. */
-const HARNESS_BINARY: Record<HarnessId, string> = {
-  codex: "codex",
-  "claude-code": "claude",
-};
 
 /**
  * One failing harness probe: the harness that failed, the binary that was
@@ -154,8 +149,8 @@ function interpret(
 /**
  * Probe every requested harness's executable with `<binary> --version`.
  *
- * De-duplicates the requested harnesses, runs each probe with the fixed binary
- * mapping (`codex` → `codex`, `claude-code` → `claude`), inherited `PATH`,
+ * De-duplicates the requested harnesses, runs each probe against the executable
+ * that harness declares, with inherited `PATH`,
  * `cwd: repoRoot`, and a fixed 10-second timeout. Success requires exit `0` and
  * non-whitespace output; the trimmed version line is recorded under the
  * requested harness. Every failing harness is reported together, each diagnosed
@@ -172,7 +167,7 @@ export async function probeHarnessExecutables(
 
   await Promise.all(
     unique.map(async (harness) => {
-      const binary = HARNESS_BINARY[harness];
+      const binary = HARNESSES[harness].executable;
       const outcome = interpret(await exec(binary, repoRoot, PROBE_TIMEOUT_MS));
       if (outcome.ok) {
         versions[harness] = outcome.version;

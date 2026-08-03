@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HarnessId } from "../config/execution.js";
+import type { HarnessId } from "../../config/execution.js";
 import type { ProbeExec } from "./probe.js";
 import { probeHarnessExecutables } from "./probe.js";
 

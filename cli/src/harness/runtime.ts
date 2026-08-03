@@ -1,6 +1,6 @@
 import type { HarnessId } from "../config/execution.js";
 import type { HarnessRuntimeIdentity } from "../state/checkpoint.js";
-import type { ProbeFailure, ProbeResult } from "./probe.js";
+import type { ProbeFailure, ProbeResult } from "./backends/probe.js";
 import type { ScriptedScenario } from "./scripted/scenario.js";
 import {
   SCRIPTED_HARNESS_TOGGLE_VAR,
@@ -294,7 +294,10 @@ export async function resolveHarnessRuntime(
 export const productionHarnessRuntimeLoader: HarnessRuntimeLoader = {
   real: async () => {
     const [{ createSandcastleInvoker }, { probeHarnessExecutables }] =
-      await Promise.all([import("./sandcastle.js"), import("./probe.js")]);
+      await Promise.all([
+        import("./backends/sandcastle.js"),
+        import("./backends/probe.js"),
+      ]);
     return {
       createInvoker: createSandcastleInvoker,
       probe: probeHarnessExecutables,

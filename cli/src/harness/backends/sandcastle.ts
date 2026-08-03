@@ -2,12 +2,13 @@ import { run, codex, claudeCode } from "@ai-hero/sandcastle";
 import type { AgentProvider, RunOptions, RunResult } from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 
+import type { HarnessId } from "../../config/execution.js";
 import type {
   AttemptOutcome,
   AttemptRequest,
   HarnessEvent,
   HarnessInvoker,
-} from "./types.js";
+} from "../types.js";
 
 /** The completion signals the harness emits to end the single iteration. */
 const COMPLETION_SIGNALS = [
@@ -19,6 +20,36 @@ const COMPLETION_SIGNALS = [
 /** The completion grace window (seconds) after a completion signal is seen. */
 const COMPLETION_TIMEOUT_SECONDS = 60;
 
+/** How a single attempt's permissions are governed. */
+type PermissionPolicy = "ai-mediated" | "harness-bypass";
+
+/**
+ * How each harness is constructed through the Sandcastle SDK, keyed by harness
+ * id and total over it. Both the SDK factory and the option that expresses an
+ * AI-mediated policy are harness-specific, and this is the one place either is
+ * named: the SDK stays behind this adapter, so a harness cannot declare its own
+ * construction without dragging the SDK into the statically loaded providers.
+ */
+const SANDCASTLE_AGENTS: Record<
+  HarnessId,
+  (model: string, policy: PermissionPolicy) => AgentProvider
+> = {
+  codex: (model, policy) =>
+    policy === "harness-bypass"
+      ? codex(model, { captureSessions: false })
+      : codex(model, {
+          captureSessions: false,
+          approvalsReviewer: "auto_review",
+        }),
+  "claude-code": (model, policy) =>
+    policy === "harness-bypass"
+      ? claudeCode(model, { captureSessions: false })
+      : claudeCode(model, {
+          captureSessions: false,
+          permissionMode: "auto",
+        }),
+};
+
 /**
  * Build the agent provider for a request, applying the exact permission policy.
  *
@@ -29,20 +60,10 @@ const COMPLETION_TIMEOUT_SECONDS = 60;
  * stays disabled.
  */
 function buildAgent(request: AttemptRequest): AgentProvider {
-  if (request.harness === "codex") {
-    return request.dangerouslySkipPermissions
-      ? codex(request.model, { captureSessions: false })
-      : codex(request.model, {
-          captureSessions: false,
-          approvalsReviewer: "auto_review",
-        });
-  }
-  return request.dangerouslySkipPermissions
-    ? claudeCode(request.model, { captureSessions: false })
-    : claudeCode(request.model, {
-        captureSessions: false,
-        permissionMode: "auto",
-      });
+  return SANDCASTLE_AGENTS[request.harness](
+    request.model,
+    request.dangerouslySkipPermissions ? "harness-bypass" : "ai-mediated",
+  );
 }
 
 /**
