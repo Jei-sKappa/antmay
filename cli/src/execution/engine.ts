@@ -10,6 +10,12 @@ import type {
   AttemptInterval,
   GitBoundaryContext,
 } from "../gitops/boundary.js";
+import {
+  Pause,
+  isAdvisoryHeadMovement,
+  unexpectedHeadMovementMessage,
+  waitingEquals,
+} from "./pause.js";
 import { decideRecovery, holdsPreservedDone } from "./recovery-policy.js";
 import type {
   ContractEvidence,
@@ -24,19 +30,12 @@ import type {
   TerminalResult,
   WaitingDiagnostics,
   WaitingInfo,
-  WaitingReason,
-  WaitingReasons,
-} from "../state/checkpoint.js";
-import {
-  CONTRACT_REPAIR_NOTE,
-  UNVALIDATED_CHANGES_NOTE,
 } from "../state/checkpoint.js";
 import { attemptLogPaths, createAttemptLog } from "../state/logs.js";
 import type { AttemptLogHeader } from "../state/logs.js";
 import { writeCheckpoint } from "../state/persist.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import {
-  describeContractSide,
   evaluateArtifactPrerequisite,
   evaluatePromisedState,
   inspectArtifactState,
@@ -44,29 +43,13 @@ import {
 import type { QueueScan } from "../thread/queues.js";
 import { scanPendingQueues } from "../thread/queues.js";
 import type { BoundaryDisposition } from "../runner/classify.js";
-import {
-  classifyAttempt,
-  gateErrorMessage,
-  pendingQueuesMessage,
-  queueReasons,
-} from "../runner/classify.js";
+import { classifyAttempt } from "../runner/classify.js";
 import type { OutcomeParse } from "../runner/outcome.js";
 import { parseTerminalOutcome } from "../runner/outcome.js";
 import { SignalInterruption } from "../runner/signals.js";
 
 /** Milliseconds per second, for turning the binding's interval into a timer. */
 const MS_PER_SECOND = 1000;
-
-/**
- * The instruction a pre-attempt prerequisite pause carries: the stage was never
- * launched, so there is nothing to revert — the artifacts the pause listed have
- * to come back, and the worktree has to be clean, before the stage can run.
- *
- * One static sentence, never composed from the unmet dimensions: the pause's
- * requirement sections already show which thread files need attention.
- */
-const RESTORE_PREREQUISITE_NOTE =
-  "Fix the thread files shown above and leave the worktree clean, then resume.";
 
 /**
  * How an attempt that was live when its executor disappeared is settled. The
@@ -161,6 +144,15 @@ type InvariantResult<Value> =
   | { ok: false; message: string };
 
 /**
+ * Why a recognized `DONE`'s promised artifact state was not accepted: it was
+ * evaluated and came back unmet, or the thread could not be read to evaluate it
+ * at all. Both preserve the completed attempt, and they are worded differently.
+ */
+type PromiseViolation =
+  | { kind: "unmet"; unmet: ArtifactMismatch[] }
+  | { kind: "uninspectable"; message: string };
+
+/**
  * The one attempt a recovery reference names. Checkpoint validation already
  * proved it exists in the state resuming from it requires, so a caller holding a
  * validated recovery reads the record itself and never the history's tail.
@@ -200,35 +192,6 @@ function attemptInterval(attempt: AttemptRecord): InvariantResult<AttemptInterva
     ok: true,
     value: { headAtStart: attempt.headAtStart, headAfterAttempt },
   };
-}
-
-function stillUnmetContractMessage(unmet: readonly ArtifactMismatch[]): string {
-  return (
-    "The stage reported DONE and the artifact state it promises is still " +
-    `missing: it promises ${describeContractSide(unmet, "expected")}, but the ` +
-    `thread has ${describeContractSide(unmet, "observed")}.`
-  );
-}
-
-/**
- * The pause's reasons with the queue reason restated over the files a fresh scan
- * just found. A pause that recorded no queue reason gains one, because files
- * present now are the reason this resume cannot proceed and the reader is owed
- * that list either way.
- */
-function refreshPendingReason(
-  reasons: WaitingReasons,
-  pendingFiles: string[],
-): WaitingReasons {
-  const message = pendingQueuesMessage(pendingFiles);
-  let replaced = false;
-  const next = reasons.map((reason) => {
-    if (reason.kind !== "pending-queues") return reason;
-    replaced = true;
-    return { ...reason, message, pendingFiles };
-  }) as WaitingReasons;
-  if (replaced) return next;
-  return [...next, { kind: "pending-queues", message, pendingFiles }];
 }
 
 /** A fresh queue scan in the shape the recovery policy reads it. */
@@ -276,24 +239,6 @@ function stageDisposition(
   return "failed";
 }
 
-function unexpectedHeadMovementMessage(interval: AttemptInterval): string {
-  return (
-    "The stage produced a commit even though its Git policy does not expect " +
-    `one; the attempt moved HEAD from ${interval.headAtStart} to ${interval.headAfterAttempt}.`
-  );
-}
-
-function uninspectablePromiseMessage(message: string): string {
-  return (
-    "The stage reported DONE but its promised artifact state could not be " +
-    `verified: ${message}`
-  );
-}
-
-const HEAD_MOVEMENT_NEXT_ACTION =
-  "Inspect the attempt's commits if needed. This HEAD movement will not block " +
-  "the next resume; Antmay will continue if the promised artifact and remaining Git checks pass.";
-
 /** The originating signal name when the abort reason is a `SignalInterruption`,
  * else `null` for any other (or absent) abort. */
 function signalReason(signal: AbortSignal): NodeJS.Signals | null {
@@ -326,26 +271,6 @@ function withAgentSession(
   return { ...record, agentSession: session };
 }
 
-function prerequisiteMessage(
-  stagePosition: string,
-  stageId: string,
-  unmet: readonly ArtifactMismatch[],
-): string {
-  return (
-    `Stage ${stagePosition} "${stageId}" cannot start: it requires ` +
-    `${describeContractSide(unmet, "expected")}, but the thread's current ` +
-    `artifact state has ${describeContractSide(unmet, "observed")}.`
-  );
-}
-
-function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
-  return (
-    "The stage reported DONE without leaving the artifact state it promises: " +
-    `it promises ${describeContractSide(unmet, "expected")}, but the thread ` +
-    `has ${describeContractSide(unmet, "observed")}.`
-  );
-}
-
 /**
  * Drive one run from the entry cursor to a durable pause, a refused gate, a fatal
  * checkpoint error, or pipeline completion.
@@ -360,10 +285,12 @@ function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
  *
  * The engine consumes only snapshotted stage data and typed inputs — never a
  * pipeline, stage, or skill identity — and coordinates the queue, artifact,
- * harness, log, Git, policy, and display collaborators rather than reproducing
- * their rules. Every rewrite of an existing checkpoint goes through `persist`
- * below, which is the engine's own persistence boundary and is handed to no
- * collaborator. The caller releases the lock.
+ * harness, log, Git, policy, pause, and display collaborators rather than
+ * reproducing their rules: it decides which pause situation holds and asks
+ * `Pause` for the value, never assembling one itself. Every rewrite of an
+ * existing checkpoint goes through `persist` below, which is the engine's own
+ * persistence boundary and is handed to no collaborator. The caller releases the
+ * lock.
  */
 export async function executeEngine(
   ctx: ExecutionContext,
@@ -490,8 +417,6 @@ export async function executeEngine(
     agentSession?: { id: string };
   }): Promise<ExecutionResult> {
     const endedAt = clock().toISOString();
-    const baseMessage =
-      "The attempt was interrupted before producing a terminal outcome.";
     const pending = args.pendingFiles.length > 0 ? args.pendingFiles : undefined;
     const diagnostics: WaitingDiagnostics = args.failure
       ? {
@@ -500,23 +425,13 @@ export async function executeEngine(
           origin: args.sig,
         }
       : { origin: args.sig };
-    // The interruption is what stopped the run; pending paths observed on the
-    // way out are a second, independent reason it cannot simply resume.
-    const reasons: WaitingReasons = [
-      { kind: "interrupted", message: baseMessage, diagnostics },
-    ];
-    if (pending !== undefined) {
-      reasons.push({
-        kind: "pending-queues",
-        message: pendingQueuesMessage(pending),
-        pendingFiles: pending,
-      });
-    }
-    const waiting: WaitingInfo = {
-      reasons,
-      recovery: { kind: "retry-stage" },
-      nextAction: UNVALIDATED_CHANGES_NOTE,
-    };
+    const waiting = Pause.attemptInterrupted({
+      diagnostics,
+      pendingFiles: args.pendingFiles,
+    });
+    // The attempt records the reason that governs its pause, which is the one
+    // the pause leads with.
+    const governing = waiting.reasons[0];
     const settled: AttemptRecord = withAgentSession(
       {
         ...args.executingAttempt,
@@ -524,7 +439,7 @@ export async function executeEngine(
         endedAt,
         terminalResult: null,
         pendingFiles: pending,
-        failure: { kind: "interrupted", message: baseMessage },
+        failure: { kind: governing.kind, message: governing.message },
         headAfterAttempt: args.headAfterAttempt,
       },
       args.agentSession,
@@ -660,12 +575,12 @@ export async function executeEngine(
       attempt: AttemptRecord | undefined,
     ): Promise<ExecutionResult> {
       const facts = directive.facts;
-      const [governing, ...rest] = pausedWaiting.reasons;
+      const candidateLine = attempt?.terminalResult?.candidateLine ?? undefined;
       const pauseWith = async (
         waiting: WaitingInfo,
         rendered: AttemptRecord | undefined,
       ): Promise<ExecutionResult> => {
-        if (JSON.stringify(waiting) === JSON.stringify(checkpoint.waiting)) {
+        if (waitingEquals(waiting, checkpoint.waiting)) {
           renderPause(waiting, rendered);
           return { kind: "paused", waiting };
         }
@@ -681,141 +596,81 @@ export async function executeEngine(
 
       switch (facts.kind) {
         case "pending-bundles": {
-          const waiting: WaitingInfo = {
-            ...pausedWaiting,
-            reasons: refreshPendingReason(
-              pausedWaiting.reasons,
-              facts.pendingFiles,
-            ),
-          };
+          const waiting = Pause.refreshPendingBundles({
+            paused: pausedWaiting,
+            pendingFiles: facts.pendingFiles,
+          });
           renderPause(waiting, attempt);
           return { kind: "paused", waiting };
         }
 
         case "queue-scan-failed":
-          // A pause awaiting no-harness finalization — a Git boundary or an unmet
-          // promised artifact — keeps its own governing reason and records the
-          // scan diagnostic separately. Downgrading it to a gate-error would
-          // describe away the saved DONE the pause is holding.
+          // A pause holding a saved DONE for finalization still describes the
+          // attempt holding it; a pause whose whole explanation the scan failure
+          // replaced has no attempt left to describe.
           if (holdsPreservedDone(directive.recovery)) {
-            const withoutPriorScanError = rest.filter(
-              (reason) => reason.kind !== "gate-error",
-            );
             return pauseWith(
-              {
-                ...pausedWaiting,
-                reasons: [
-                  governing,
-                  {
-                    kind: "gate-error",
-                    message: gateErrorMessage(facts.message),
-                    diagnostics: { errorMessage: facts.message },
-                  },
-                  ...withoutPriorScanError,
-                ],
+              Pause.refreshQueueUnreadableHoldingDone({
+                paused: pausedWaiting,
                 recovery: directive.recovery,
-              },
+                scanMessage: facts.message,
+              }),
               attempt,
             );
           }
           return pauseWith(
-            {
-              // The scan failure replaces what the pause explains, never what a
-              // later resume may safely do about it.
-              reasons: [
-                {
-                  kind: "gate-error",
-                  message: gateErrorMessage(facts.message),
-                  diagnostics: { errorMessage: facts.message },
-                },
-              ],
+            Pause.refreshQueueUnreadable({
+              paused: pausedWaiting,
               recovery: directive.recovery,
-              nextAction: pausedWaiting.nextAction,
-            },
+              scanMessage: facts.message,
+            }),
             undefined,
           );
 
-        case "promise-uninspectable": {
-          const currentRest = rest.filter(
-            (reason) => reason.kind !== "gate-error",
-          );
+        case "promise-uninspectable":
           return pauseWith(
-            {
-              reasons: [
-                {
-                  kind: "stage-contract-violation",
-                  message: uninspectablePromiseMessage(facts.message),
-                  diagnostics: { errorMessage: facts.message },
-                  candidateLine:
-                    attempt?.terminalResult?.candidateLine ?? undefined,
-                },
-                ...currentRest,
-              ],
+            Pause.refreshPromiseUninspectable({
+              paused: pausedWaiting,
               recovery: directive.recovery,
-              nextAction: CONTRACT_REPAIR_NOTE,
-            },
+              message: facts.message,
+              candidateLine,
+            }),
             attempt,
           );
-        }
 
         case "promise-unmet":
           return pauseWith(
-            {
-              reasons: [
-                {
-                  kind: "stage-contract-violation",
-                  message: stillUnmetContractMessage(facts.unmet),
-                  contract: facts.unmet,
-                  detail:
-                    facts.worktree === "dirty"
-                      ? "The worktree is dirty, so the stage was not run again: those " +
-                        "changes are the attempt's own and no executor may discard them."
-                      : "The saved DONE remains preserved until the promised artifact " +
-                        "is repaired and its Git boundary can be retried.",
-                  candidateLine:
-                    attempt?.terminalResult?.candidateLine ?? undefined,
-                },
-                ...rest.filter((reason) => reason.kind !== "gate-error"),
-              ],
+            Pause.refreshPromiseUnmet({
+              paused: pausedWaiting,
               recovery: directive.recovery,
-              nextAction: CONTRACT_REPAIR_NOTE,
-            },
+              unmet: facts.unmet,
+              worktree: facts.worktree,
+              candidateLine,
+            }),
             attempt,
           );
 
         case "git-finalization-failed": {
-          const advisory =
-            facts.failure.kind === "git-policy-violation" &&
-            facts.failure.treatment === "advisory-head-movement";
+          // An advisory movement is worded from the preserved attempt's own
+          // interval, so that interval has to be resolvable before the pause can
+          // be built at all.
           const interval =
-            advisory && attempt !== undefined
+            isAdvisoryHeadMovement(facts.failure) && attempt !== undefined
               ? attemptInterval(attempt)
               : undefined;
           if (interval !== undefined && !interval.ok) {
             return fatal(interval.message);
           }
           return pauseWith(
-            {
-              reasons: [
-                {
-                  kind: advisory
-                    ? "unexpected-head-movement"
-                    : facts.failure.kind === "git-policy-violation"
-                      ? "git-policy-violation"
-                      : "commit-error",
-                  message:
-                    advisory && interval?.ok
-                      ? unexpectedHeadMovementMessage(interval.value)
-                      : `${facts.message}.`,
-                  candidateLine:
-                    attempt?.terminalResult?.candidateLine ?? undefined,
-                },
-              ],
+            Pause.refreshBoundaryRefused({
               recovery: directive.recovery,
-              nextAction: advisory
-                ? HEAD_MOVEMENT_NEXT_ACTION
-                : UNVALIDATED_CHANGES_NOTE,
-            },
+              failure: facts.failure,
+              message:
+                interval?.ok === true
+                  ? unexpectedHeadMovementMessage(interval.value)
+                  : `${facts.message}.`,
+              candidateLine,
+            }),
             attempt,
           );
         }
@@ -1034,17 +889,7 @@ export async function executeEngine(
     //    log, or launches the harness; the pause payload carries no log path.
     const preScan = await scanPendingQueues(repoRoot, threadRelPath);
     if (!preScan.ok) {
-      const message = gateErrorMessage(preScan.message);
-      const waiting: WaitingInfo = {
-        reasons: [
-          {
-            kind: "gate-error",
-            message,
-            diagnostics: { errorMessage: preScan.message },
-          },
-        ],
-        recovery: { kind: "retry-stage" },
-      };
+      const waiting = Pause.queueUnreadable(preScan.message);
       const persisted = await persist({
         ...checkpoint,
         condition: "waiting-for-user",
@@ -1055,12 +900,7 @@ export async function executeEngine(
       return { kind: "paused", waiting };
     }
     if (preScan.pendingFiles.length > 0) {
-      const pendingFiles = preScan.pendingFiles;
-      const message = pendingQueuesMessage(pendingFiles);
-      const waiting: WaitingInfo = {
-        reasons: [{ kind: "pending-queues", message, pendingFiles }],
-        recovery: { kind: "retry-stage" },
-      };
+      const waiting = Pause.queueBlocked(preScan.pendingFiles);
       const persisted = await persist({
         ...checkpoint,
         condition: "waiting-for-user",
@@ -1077,34 +917,28 @@ export async function executeEngine(
     //    prerequisite pauses on this stage having allocated no attempt, created
     //    no log, and invoked no harness.
     const preInspection = await inspectArtifacts(repoRoot, threadRelPath);
-    let prerequisiteReason: WaitingReason | null = null;
+    let unrunnable: WaitingInfo | null = null;
     if (!preInspection.ok) {
-      prerequisiteReason = {
-        kind: "stage-prerequisite-unmet",
-        message:
-          `The requirements for stage ${stagePosition} "${stage.id}" could not ` +
-          `be checked: ${preInspection.message}`,
-        diagnostics: { errorMessage: preInspection.message },
-      };
+      unrunnable = Pause.prerequisiteUninspectable({
+        stagePosition,
+        stageId: stage.id,
+        message: preInspection.message,
+      });
     } else {
       const unmet = evaluateArtifactPrerequisite(
         preInspection.state,
         stage.prerequisite,
       );
       if (unmet.length > 0) {
-        prerequisiteReason = {
-          kind: "stage-prerequisite-unmet",
-          message: prerequisiteMessage(stagePosition, stage.id, unmet),
-          contract: unmet,
-        };
+        unrunnable = Pause.prerequisiteUnmet({
+          stagePosition,
+          stageId: stage.id,
+          unmet,
+        });
       }
     }
-    if (prerequisiteReason !== null) {
-      const waiting: WaitingInfo = {
-        reasons: [prerequisiteReason],
-        recovery: { kind: "retry-stage" },
-        nextAction: RESTORE_PREREQUISITE_NOTE,
-      };
+    if (unrunnable !== null) {
+      const waiting = unrunnable;
       const persisted = await persist({
         ...checkpoint,
         condition: "waiting-for-user",
@@ -1307,7 +1141,7 @@ export async function executeEngine(
     // finalize it later without running the stage again.
     if (isDone) {
       const postInspection = await inspectArtifacts(repoRoot, threadRelPath);
-      let violation: WaitingReason | null = null;
+      let violation: PromiseViolation | null = null;
       if (!postInspection.ok) {
         // No end-to-end path reaches this branch, and none is expected to. An
         // inspection fails only when the thread directory cannot be read at all,
@@ -1319,36 +1153,31 @@ export async function executeEngine(
         // fail-closed direction: a promise that could not be evaluated is never
         // credited as kept, so an unreadable thread stops the pipeline with the
         // completed attempt preserved rather than advancing past it.
-        violation = {
-          kind: "stage-contract-violation",
-          message: uninspectablePromiseMessage(postInspection.message),
-          diagnostics: { errorMessage: postInspection.message },
-        };
+        violation = { kind: "uninspectable", message: postInspection.message };
       } else {
         const unmet = evaluatePromisedState(postInspection.state, stage.promises);
-        if (unmet.length > 0) {
-          violation = {
-            kind: "stage-contract-violation",
-            message: contractViolationMessage(unmet),
-            contract: unmet,
-          };
-        }
+        if (unmet.length > 0) violation = { kind: "unmet", unmet };
       }
       if (violation !== null) {
         const endedAt = clock().toISOString();
-        const waiting: WaitingInfo = {
-          reasons: [violation, ...queueReasons(pendingFiles, queueScanError)],
-          // This stage's boundary is never reached, so the finalization a repair
-          // unlocks is the one and only judgement of the stage's HEAD rule. What
-          // that rule judges is the preserved attempt's own movement, which is
-          // exactly what the attempt's two observations record.
-          recovery: {
-            kind: "recheck-stage-contract",
-            attempt: { stageIndex, attempt: attemptNumber },
-            pausedAtHead: observedHead,
-          },
-          nextAction: CONTRACT_REPAIR_NOTE,
+        // This stage's boundary is never reached, so the finalization a repair
+        // unlocks is the one and only judgement of the stage's HEAD rule. What
+        // that rule judges is the preserved attempt's own movement, which is
+        // exactly what the attempt's two observations record.
+        const preserved = {
+          attempt: { stageIndex, attempt: attemptNumber },
+          pausedAtHead: observedHead,
+          pendingFiles,
+          queueScanError,
         };
+        const waiting =
+          violation.kind === "unmet"
+            ? Pause.contractViolated({ ...preserved, unmet: violation.unmet })
+            : Pause.contractUninspectable({
+                ...preserved,
+                message: violation.message,
+              });
+        const governing = waiting.reasons[0];
         const settled: AttemptRecord = withAgentSession(
           {
             ...executingAttempt,
@@ -1356,7 +1185,7 @@ export async function executeEngine(
             endedAt,
             terminalResult: terminalResultFrom(parse),
             pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
-            failure: { kind: violation.kind, message: violation.message },
+            failure: { kind: governing.kind, message: governing.message },
             headAfterAttempt: observedHead,
           },
           agentSession,
@@ -1490,17 +1319,11 @@ export async function executeEngine(
         },
         agentSession,
       );
-      // The stage is finished and its boundary is committed; only the queue is
-      // holding the run, so releasing it applies the resolution the stage
-      // declared and never finalizes this attempt a second time.
-      const waiting: WaitingInfo = {
-        reasons: classification.reasons,
-        recovery: {
-          kind: "resume-finalized-done",
-          attempt: attemptReference,
-          queueResolution: stage.queueResolution,
-        },
-      };
+      const waiting = Pause.donePendingQueues({
+        classified: classification.reasons,
+        attempt: attemptReference,
+        queueResolution: stage.queueResolution,
+      });
       const persisted = await persist({
         ...checkpoint,
         attempts: replaceLast(checkpoint.attempts, done),
@@ -1518,11 +1341,6 @@ export async function executeEngine(
     // classification.action === "pause": every non-DONE pause. When the abort
     // signal caused it, the attempt records `interrupted` with its origin.
     const aborted = outcome.kind === "failed" && outcome.category === "aborted";
-    const governing = classification.reasons[0];
-    const kind = aborted ? "interrupted" : governing.kind;
-    const baseMessage = aborted
-      ? "The attempt was interrupted before producing a terminal outcome."
-      : governing.message;
     let diagnostics: WaitingDiagnostics | undefined;
     if (outcome.kind === "failed") {
       diagnostics = aborted
@@ -1533,44 +1351,24 @@ export async function executeEngine(
           }
         : { errorClass: outcome.errorClass, errorMessage: outcome.errorMessage };
     }
-
-    // An abort replaces the stage's own reason with the interruption, but the
-    // queue-level reasons it observed still hold and are still reported. Either
-    // way the attempt's failure telemetry rides on the reason that reports that
-    // failure, which is the only reason it describes.
-    const reasons: WaitingReasons = aborted
-      ? [
-          { kind: "interrupted", message: baseMessage, diagnostics },
-          ...classification.reasons.filter(
-            (reason) =>
-              reason.kind === "pending-queues" || reason.kind === "gate-error",
-          ),
-        ]
-      : diagnostics === undefined
-        ? classification.reasons
-        : (classification.reasons.map((reason) =>
-            reason.kind === "harness-error" || reason.kind === "idle-timeout"
-              ? { ...reason, diagnostics }
-              : reason,
-          ) as WaitingReasons);
-
-    // A boundary that was reached and refused preserves a finalizable DONE, so
-    // its recovery retries that boundary rather than the stage. Every other
-    // non-DONE pause has no attempt to finalize and runs the stage again.
-    const boundaryRefused = boundary.evaluated && !boundary.ok;
-    const waiting: WaitingInfo = {
-      reasons,
-      recovery: boundaryRefused
-        ? {
-            kind: "retry-git-finalization",
-            attempt: attemptReference,
-            pausedAtHead: observedHead,
-          }
-        : { kind: "retry-stage" },
-      nextAction: headMovementAdvisory
-        ? HEAD_MOVEMENT_NEXT_ACTION
-        : UNVALIDATED_CHANGES_NOTE,
-    };
+    const waiting = Pause.attemptStopped({
+      classified: classification.reasons,
+      aborted,
+      diagnostics,
+      attempt: attemptReference,
+      boundary:
+        boundary.evaluated && !boundary.ok
+          ? {
+              refused: true,
+              advisoryHeadMovement: headMovementAdvisory,
+              observedHead,
+            }
+          : { refused: false },
+    });
+    // The attempt's failure telemetry rides on the reason that reports that
+    // failure, which is the reason the pause leads with and the only one it
+    // describes.
+    const governing = waiting.reasons[0];
     const settled: AttemptRecord = withAgentSession(
       {
         ...executingAttempt,
@@ -1578,7 +1376,7 @@ export async function executeEngine(
         endedAt,
         terminalResult,
         pendingFiles: pendingFiles.length > 0 ? pendingFiles : undefined,
-        failure: { kind, message: baseMessage },
+        failure: { kind: governing.kind, message: governing.message },
         headAfterAttempt: observedHead,
       },
       agentSession,

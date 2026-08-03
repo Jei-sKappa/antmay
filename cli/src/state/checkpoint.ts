@@ -57,26 +57,6 @@ export type WaitingDiagnostics = {
 };
 
 /**
- * The instruction every non-DONE and boundary pause carries: the attempt's file
- * changes never passed the terminal-outcome gate, so a human must dispose of
- * them deliberately before the stage runs again.
- */
-export const UNVALIDATED_CHANGES_NOTE =
-  "The attempt's file changes are unvalidated: revert them or deliberately " +
-  "commit them before resuming.";
-
-/**
- * The instruction a `stage-contract-violation` pause carries. The attempt
- * reported `DONE` without leaving the artifact state its stage promises, so the
- * human chooses which of the two recoveries resume takes: repairing the
- * artifact finalizes the completed attempt, and reverting its changes runs the
- * stage again.
- */
-export const CONTRACT_REPAIR_NOTE =
-  "Repair the promised artifact and resume to finalize the completed attempt, " +
-  "or revert the attempt's unvalidated changes and resume to run the stage again.";
-
-/**
  * One reason a run stopped. Several can hold at once — a stage that reported
  * REFUSED while a pending bundle also awaits resolution stops for both — so a
  * pause records every reason it observed rather than only the one that governs

@@ -289,6 +289,7 @@ describe("the thread domain owns every artifact contract (AC-6.1, AC-6.5)", () =
     "ArtifactMismatch",
     "validateSerializedArtifactPattern",
     "validateSerializedArtifactMismatches",
+    "artifactMismatchesEqual",
     "inspectArtifactState",
     "evaluateArtifactPrerequisite",
     "evaluatePromisedState",
@@ -341,6 +342,84 @@ describe("the thread domain owns every artifact contract (AC-6.1, AC-6.5)", () =
           `${module.id} imports ${target}`,
         ).toBe(false);
       }
+    }
+  });
+});
+
+describe("a pause is built in one module and compared field by field", () => {
+  /** The one builder of every pause the executor can record. */
+  const BUILDER = "execution/pause.ts";
+  /** The module that declares the shape, and so states its keys once. */
+  const SCHEMA = "state/checkpoint.ts";
+
+  /**
+   * An object literal led by the reason list: the shape of a pause. Only that
+   * form matches, which is the form a hand-assembled pause naturally takes —
+   * the same trade the harness-id guard makes.
+   */
+  const PAUSE_LITERAL = /\{\s*(?:\.\.\.[\w$.]+,\s*)?reasons\s*[,:]/;
+
+  it("assembles a pause nowhere else", async () => {
+    // A pause is three parts that have to agree — the reasons that explain it,
+    // the one recovery that decides its resume, and the instruction the run as a
+    // whole carries — so assembling one is a judgement per situation. Spread
+    // across the engine, those judgements drift: the same situation gets
+    // different wording before an attempt, after one, and on the resume that
+    // refreshes it, and no file can be read to learn which pauses exist.
+    for (const module of await productionModules()) {
+      if (module.id === BUILDER || module.id === SCHEMA) continue;
+      expect(
+        withoutComments(module.source),
+        `${module.id} assembles a pause`,
+      ).not.toMatch(PAUSE_LITERAL);
+    }
+  });
+
+  it("compares two pauses field by field, never by serializing", async () => {
+    // `JSON.stringify` equality is key-insertion-order sensitive, so it answers
+    // "were these two built the same way", not "do they say the same thing". A
+    // pause rebuilt from its fields compares unequal to a byte-identical
+    // persisted one, and every unchanged refresh then rewrites the checkpoint
+    // and restamps `updatedAt` — which no assertion about content would catch.
+    for (const module of await productionModules()) {
+      const source = withoutComments(module.source);
+      if (module.id.startsWith("execution/")) {
+        expect(source, `${module.id} serializes a domain value`).not.toMatch(
+          /JSON\.stringify/,
+        );
+      }
+      expect(source, `${module.id} serializes a pause`).not.toMatch(
+        /JSON\.stringify\(\s*[\w.]*[Ww]aiting/,
+      );
+    }
+  });
+
+  it("declares the one equality and makes every comparer depend on it", async () => {
+    const modules = await productionModules();
+    expect(
+      modules
+        .filter((module) => /^export\s+function\s+waitingEquals\b/m.test(module.source))
+        .map((module) => module.id),
+    ).toEqual([BUILDER]);
+    for (const module of modules) {
+      if (module.id === BUILDER || !/\bwaitingEquals\b/.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names waitingEquals`).toContain(BUILDER);
+    }
+  });
+
+  it("keeps every builder a pure function of the facts it is handed", async () => {
+    // Purity is what lets the whole pause catalog be enumerated and tested from
+    // one file: a builder that read the filesystem or the clock could only be
+    // exercised by driving the engine to the situation that calls it.
+    const builder = await moduleNamed(BUILDER);
+    expect(withoutComments(builder.source)).not.toMatch(
+      /\b(?:writeCheckpoint|inspectArtifactState|scanPendingQueues|readHead|isWorktreeClean|Date|process)\b/,
+    );
+    for (const reference of builder.references) {
+      expect(
+        reference.specifier.startsWith("node:"),
+        `${BUILDER} imports ${reference.specifier}`,
+      ).toBe(false);
     }
   });
 });

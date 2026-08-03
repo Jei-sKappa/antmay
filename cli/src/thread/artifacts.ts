@@ -264,6 +264,30 @@ export function validateSerializedArtifactMismatches(
 }
 
 /**
+ * Whether two recorded mismatch lists state the same unmet dimensions, in the
+ * same order. An absent list and an empty one are different facts: a contract
+ * that was never evaluated is not one that came back matching.
+ *
+ * It lives here because a mismatch's fields are this domain's to know, so a
+ * caller comparing two of them never has to enumerate them itself.
+ */
+export function artifactMismatchesEqual(
+  a: readonly ArtifactMismatch[] | undefined,
+  b: readonly ArtifactMismatch[] | undefined,
+): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  if (a.length !== b.length) return false;
+  return a.every((left, index) => {
+    const right = b[index]!;
+    return (
+      left.dimension === right.dimension &&
+      left.expected === right.expected &&
+      left.observed === right.observed
+    );
+  });
+}
+
+/**
  * The phrase describing one dimension holding one value. Total by construction:
  * the signature admits only a value the dimension can actually hold, and every
  * such pair has an entry in the table.

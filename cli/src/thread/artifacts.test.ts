@@ -13,6 +13,7 @@ import type {
 } from "./artifacts.js";
 import {
   applyArtifactTransition,
+  artifactMismatchesEqual,
   describeArtifact,
   describeArtifactDimension,
   describeContractSide,
@@ -418,6 +419,45 @@ describe("evaluatePromisedState (AC-3.4)", () => {
     ).toEqual([
       { dimension: "implementationReport", expected: true, observed: false },
     ]);
+  });
+});
+
+describe("artifactMismatchesEqual", () => {
+  const spec: ArtifactMismatch = {
+    dimension: "spec",
+    expected: true,
+    observed: false,
+  };
+  const plan: ArtifactMismatch = {
+    dimension: "plan",
+    expected: "brief",
+    observed: "absent",
+  };
+
+  it("holds for separately built lists stating the same dimensions", () => {
+    expect(artifactMismatchesEqual([spec, plan], [{ ...spec }, { ...plan }])).toBe(
+      true,
+    );
+  });
+
+  it("separates a list that was never evaluated from one that came back empty", () => {
+    expect(artifactMismatchesEqual(undefined, undefined)).toBe(true);
+    expect(artifactMismatchesEqual(undefined, [])).toBe(false);
+    expect(artifactMismatchesEqual([], undefined)).toBe(false);
+    expect(artifactMismatchesEqual([], [])).toBe(true);
+  });
+
+  it("separates lists differing in order, length, dimension, or either side", () => {
+    for (const other of [
+      [plan, spec],
+      [spec],
+      [spec, plan, plan],
+      [{ ...spec, dimension: "implementationReport" as const }, plan],
+      [{ ...spec, expected: false }, plan],
+      [spec, { ...plan, observed: "strict" as const }],
+    ]) {
+      expect(artifactMismatchesEqual([spec, plan], other)).toBe(false);
+    }
   });
 });
 
