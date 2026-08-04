@@ -1,6 +1,6 @@
 import { isWorktreeClean } from "../gitops/status.js";
 import type { RunContext } from "./context.js";
-import type { WorktreeCleanliness } from "./recovery-policy.js";
+import type { WorktreeCleanliness } from "./recovery.js";
 import type { InvariantResult } from "./result.js";
 
 /**

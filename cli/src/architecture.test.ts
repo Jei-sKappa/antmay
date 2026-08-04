@@ -223,6 +223,7 @@ describe("resume preflight reaches no transition collaborator (AC-1.3)", () => {
   const ENGINE_OWNED = [
     "state/persist.ts",
     "execution/run-state.ts",
+    "execution/recovery.ts",
     "execution/recovery-policy.ts",
     "gitops/boundary.ts",
     "gitops/status.ts",
@@ -265,11 +266,13 @@ describe("resume preflight reaches no transition collaborator (AC-1.3)", () => {
     }
   });
 
-  it("keeps the recovery decision table inside the execution domain", async () => {
-    for (const importer of await importersOf("execution/recovery-policy.ts")) {
-      expect(importer.startsWith("execution/"), `${importer} decides recovery`).toBe(
-        true,
-      );
+  it("keeps the recovery vocabulary and its decision table inside the execution domain", async () => {
+    for (const module of ["execution/recovery.ts", "execution/recovery-policy.ts"]) {
+      for (const importer of await importersOf(module)) {
+        expect(importer.startsWith("execution/"), `${importer} reaches ${module}`).toBe(
+          true,
+        );
+      }
     }
   });
 });
@@ -477,6 +480,106 @@ describe("a pause is built in one module and compared field by field", () => {
         reference.specifier.startsWith("node:"),
         `${BUILDER} imports ${reference.specifier}`,
       ).toBe(false);
+    }
+  });
+});
+
+describe("every recovery declares the evidence it is decided from", () => {
+  /** The one module that says what a recovery is and what deciding one requires. */
+  const VOCABULARY = "execution/recovery.ts";
+  /** The one module that turns a recovery and its evidence into a directive. */
+  const POLICY = "execution/recovery-policy.ts";
+  /** The module that declares the recorded union, and so states its kinds once. */
+  const SCHEMA = "state/checkpoint.ts";
+  /** The one module that observes what a pause is decided from. */
+  const OBSERVER = "execution/entry/evidence.ts";
+
+  /** The handshake between the observation and the decision, by exported name. */
+  const HANDSHAKE = [
+    "QueueEvidence",
+    "HeldQueues",
+    "WorktreeCleanliness",
+    "GitFinalizationFailure",
+    "FailedFinalization",
+    "PreservedDoneEvidence",
+    "RecoveryEvidenceKind",
+    "DECIDED_FROM",
+    "RecoveryDecidedFrom",
+    "FinalizingRecovery",
+    "AttemptReferencingRecovery",
+    "ClassifiedRecovery",
+    "RecoveryCase",
+  ];
+
+  /**
+   * Comparing a recorded recovery's kind to a literal, in either order. A
+   * `case` clause is deliberately not matched: a switch over the union is checked
+   * for totality, so adding a kind breaks it, while a comparison is the partial
+   * test that silently sends the new kind down an existing branch.
+   */
+  const KINDS = "retry-stage|resume-finalized-done|recheck-stage-contract|retry-git-finalization";
+  const KIND_COMPARISON = new RegExp(
+    `[=!]==?\\s*["'](?:${KINDS})["']|["'](?:${KINDS})["']\\s*[=!]==?`,
+  );
+
+  it("declares the handshake in one module, and makes every consumer depend on it", async () => {
+    const modules = await productionModules();
+    for (const name of HANDSHAKE) {
+      const declaration = new RegExp(
+        `^export\\s+(?:type|const|function)\\s+${name}\\b`,
+        "m",
+      );
+      const owners = modules
+        .filter((module) => declaration.test(module.source))
+        .map((module) => module.id);
+      expect(owners, `declarations of ${name}`).toEqual([VOCABULARY]);
+    }
+    // Two statements of what a recovery needs are two statements no compiler
+    // reconciles: the observer would gather one set and the decision read
+    // another, which is the unwritten handshake this vocabulary replaces.
+    const handshake = new RegExp(`\\b(?:${HANDSHAKE.join("|")})\\b`);
+    for (const module of modules) {
+      if (module.id === VOCABULARY || !handshake.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names part of the handshake`).toContain(
+        VOCABULARY,
+      );
+    }
+  });
+
+  it("tests a recovery kind by comparison nowhere outside the schema", async () => {
+    // Such a test is never exhaustive: a fifth recovery kind added later takes
+    // whichever branch the comparison leaves it, so no evidence is gathered for
+    // it or its attempt reference is never resolved — and it fails on a resume in
+    // production rather than in this gate. The vocabulary needs no exemption: it
+    // keys its table by the kind instead of comparing to one.
+    for (const module of await productionModules()) {
+      if (module.id === SCHEMA) continue;
+      expect(
+        withoutComments(module.source),
+        `${module.id} branches on a recovery kind`,
+      ).not.toMatch(KIND_COMPARISON);
+    }
+  });
+
+  it("gives the decision one driver, and keeps the observation independent of it", async () => {
+    // One module decides, so "queues come first" and every other precedence in
+    // the table is stated once. And the observer cannot see a directive: an
+    // observation that branched on what the decision would be is an observation
+    // that has started deciding, in the module that reaches Git and the thread.
+    expect(await driversOf(POLICY)).toEqual(["execution/entry/recover.ts"]);
+    expect(targetsOf(await moduleNamed(OBSERVER)), `${OBSERVER} reaches the policy`)
+      .not.toContain(POLICY);
+  });
+
+  it("leaves neither pure module able to fail at runtime", async () => {
+    // The handshake is closed by types, so there is no input either module has to
+    // refuse. A `throw` reappearing is how an author papers over a kind they did
+    // not finish wiring: the run then crashes on the resume that reaches it.
+    for (const id of [VOCABULARY, POLICY]) {
+      expect(
+        withoutComments((await moduleNamed(id)).source),
+        `${id} can fail at runtime`,
+      ).not.toMatch(/\bthrow\b/);
     }
   });
 });

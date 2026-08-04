@@ -676,7 +676,7 @@ describe("resumeCommand — preflight owns no transition (AC-1.3)", () => {
     for (const forbidden of [
       "state/persist",
       "writeCheckpoint",
-      "recovery-policy",
+      "recovery",
       "decideRecovery",
       "WaitingRecovery",
       "gitops/boundary",

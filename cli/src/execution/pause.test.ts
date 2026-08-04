@@ -11,7 +11,7 @@ import type {
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 
 import { Pause, isAdvisoryHeadMovement, waitingEquals } from "./pause.js";
-import type { GitFinalizationFailure } from "./recovery-policy.js";
+import type { GitFinalizationFailure } from "./recovery.js";
 
 const ATTEMPT: AttemptReference = { stageIndex: 1, attempt: 2 };
 const HEAD = "a".repeat(40);

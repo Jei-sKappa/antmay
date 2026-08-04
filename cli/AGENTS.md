@@ -245,13 +245,19 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   is stamped, the one place the atomic writer is called after allocation, and the
   one place a pause the checkpoint already records is recognized as needing no
   write. Several transitions in one commit are one document, which is what keeps
-  a settled attempt and the pause it settled into a single write. Two modules are
-  pure: the pause-recovery decision table (`recovery-policy.ts`), and `pause.ts`,
-  which holds one builder per pause situation plus the field-by-field
-  `waitingEquals` the durable-write decision rests on. A phase decides which
-  situation holds and asks for the value; it assembles no waiting object and no
-  checkpoint itself, so every pause the terminal can draw is enumerable from one
-  file and every durable transition from another.
+  a settled attempt and the pause it settled into a single write. Three modules
+  are pure. `recovery.ts` is the recovery vocabulary: one table, total over the
+  recovery union, declares what fresh evidence each recovery kind is decided
+  from, and a recovery reaches the decision already paired with exactly that
+  evidence — so a new recovery kind fails to compile until it states what its
+  decision rests on, and neither the resume that observes the world nor the table
+  that decides it may test a kind for itself. `recovery-policy.ts` is that
+  decision table, total over those pairs, so nothing can ask it to decide on
+  evidence no one observed. `pause.ts` holds one builder per pause situation plus
+  the field-by-field `waitingEquals` the durable-write decision rests on. A phase
+  decides which situation holds and asks for the value; it assembles no waiting
+  object and no checkpoint itself, so every pause the terminal can draw is
+  enumerable from one file and every durable transition from another.
 - `runner/` — attempt classification, terminal-outcome recognition, and signal
   handling.
 - `gitops/` — the Git wrapper and its NUL-output splitter (`git.ts`),
@@ -335,7 +341,9 @@ bearing.
   above are built on: one checkpoint writer outside allocation, a resume
   preflight that reaches no transition collaborator, the Git protocol behind its
   one operation, artifact contracts declared only in the thread domain, pauses
-  assembled in one module and compared field by field, durable state changed
+  assembled in one module and compared field by field, each recovery kind's
+  declared evidence read from one table rather than tested for by comparison,
+  durable state changed
   only by committing a named transition, one caller per execution phase and one
   module that ends an invocation, phase-specific display consumers, and
   adapter families loaded only through the runtime resolver. It reads source

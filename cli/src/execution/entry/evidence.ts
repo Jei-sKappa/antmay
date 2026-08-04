@@ -6,23 +6,26 @@ import type { StageContext } from "../context.js";
 import { signalReason } from "../interruption.js";
 import { readWorktreeCleanliness } from "../observations.js";
 import type {
-  ContractEvidence,
+  PreservedDoneEvidence,
   QueueEvidence,
-  RecoveryEvidence,
-} from "../recovery-policy.js";
+  RecoveryCase,
+} from "../recovery.js";
+import { classifyRecovery } from "../recovery.js";
 
 /**
  * The fresh facts a resumed pause is decided from, observed before anything is
  * decided.
  *
  * Queue evidence gates every recovery alike, so it is read first and read always.
- * The rest is observed only where the recorded recovery calls for it: held queues
+ * The rest is observed only where the recorded recovery declared it: held queues
  * decide the pause on their own, and nothing further is read while a human still
- * owes the thread work.
+ * owes the thread work. Which observation a recovery declared is the recovery
+ * vocabulary's to say, so nothing here tests a recovery kind for itself.
  */
 
 export type EvidenceOutcome =
-  | { kind: "gathered"; evidence: RecoveryEvidence }
+  /** The pause and exactly the evidence its recovery is decided from. */
+  | { kind: "gathered"; paused: RecoveryCase }
   /** A signal arrived while the cursor was still durably at rest. */
   | { kind: "interrupted"; signal: NodeJS.Signals }
   /** The worktree could not be inspected, so who owns the uncommitted work — the
@@ -48,39 +51,41 @@ export async function gatherRecoveryEvidence(
   const sig = signalReason(ctx.signal);
   if (sig !== null) return { kind: "interrupted", signal: sig };
 
-  let contract: ContractEvidence | undefined;
-  if (
-    queues.kind === "clear" &&
-    (recovery.kind === "recheck-stage-contract" ||
-      recovery.kind === "retry-git-finalization")
-  ) {
-    const inspection = await ctx.inspectArtifacts(ctx.repoRoot, ctx.threadRelPath);
-    if (!inspection.ok) {
-      // A thread the artifacts cannot be read in is also a thread whose queues
-      // cannot be scanned, and the queue gate above already holds the pause in
-      // that case — so no end-to-end path reaches this branch. It is written
-      // anyway because pausing is the fail-closed direction: a promise that
-      // could not be evaluated is never credited as kept.
-      contract = { kind: "uninspectable", message: inspection.message };
-    } else {
-      const unmet = evaluatePromisedState(inspection.state, ctx.stage.promises);
-      if (unmet.length === 0) {
-        contract = { kind: "satisfied" };
-      } else {
-        const worktree = await readWorktreeCleanliness(ctx);
-        if (!worktree.ok) {
-          return { kind: "worktree-unreadable", message: worktree.message };
-        }
-        contract = { kind: "unmet", unmet, worktree: worktree.value };
-      }
-    }
+  if (queues.kind !== "clear") {
+    return {
+      kind: "gathered",
+      paused: { decidedFrom: "held-queues", recovery, queues },
+    };
   }
 
-  return {
-    kind: "gathered",
-    evidence: {
-      queues,
-      ...(contract !== undefined ? { contract } : {}),
-    },
-  };
+  const classified = classifyRecovery(recovery);
+  switch (classified.decidedFrom) {
+    case "queues-only":
+      return { kind: "gathered", paused: classified };
+
+    case "preserved-done": {
+      let evidence: PreservedDoneEvidence;
+      const inspection = await ctx.inspectArtifacts(ctx.repoRoot, ctx.threadRelPath);
+      if (!inspection.ok) {
+        // A thread the artifacts cannot be read in is also a thread whose queues
+        // cannot be scanned, and the queue gate above already holds the pause in
+        // that case — so no end-to-end path reaches this branch. It is written
+        // anyway because pausing is the fail-closed direction: a promise that
+        // could not be evaluated is never credited as kept.
+        evidence = { kind: "promise-uninspectable", message: inspection.message };
+      } else {
+        const unmet = evaluatePromisedState(inspection.state, ctx.stage.promises);
+        if (unmet.length === 0) {
+          evidence = { kind: "promise-satisfied" };
+        } else {
+          const worktree = await readWorktreeCleanliness(ctx);
+          if (!worktree.ok) {
+            return { kind: "worktree-unreadable", message: worktree.message };
+          }
+          evidence = { kind: "promise-unmet", unmet, worktree: worktree.value };
+        }
+      }
+      return { kind: "gathered", paused: { ...classified, evidence } };
+    }
+  }
 }

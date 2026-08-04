@@ -4,8 +4,9 @@ import type { RunContext, StageContext } from "../context.js";
 import { stageContext } from "../context.js";
 import { signalReason } from "../interruption.js";
 import { observeHead, readWorktreeCleanliness } from "../observations.js";
+import { holdsPreservedDone, referencesAttempt } from "../recovery.js";
 import type { RecoveryDirective } from "../recovery-policy.js";
-import { decideRecovery, holdsPreservedDone } from "../recovery-policy.js";
+import { decideRecovery } from "../recovery-policy.js";
 import type { ExecutionResult } from "../result.js";
 import {
   commitCursor,
@@ -47,9 +48,9 @@ type PausedCursor = {
   /** The record the recovery names, absent for a recovery that names none. */
   recoveryAttempt: AttemptRecord | undefined;
   /**
-   * The record a pause that stays paused describes. A retry-stage recovery has
-   * no attempt reference, so its display describes the latest persisted attempt
-   * that led to the pause.
+   * The record a pause that stays paused describes. A recovery that names no
+   * attempt has none of its own to describe, so its display describes the latest
+   * persisted attempt that led to the pause.
    */
   describedAttempt: AttemptRecord | undefined;
 };
@@ -79,9 +80,10 @@ async function applyDirective(
       return applyDirective(
         ctx,
         { ...cursor, describedAttempt: cursor.recoveryAttempt },
-        decideRecovery(directive.recovery, {
-          queues: { kind: "clear" },
-          git: finalization.git,
+        decideRecovery({
+          decidedFrom: "preserved-done",
+          recovery: directive.recovery,
+          evidence: finalization.evidence,
         }),
       );
     }
@@ -151,18 +153,19 @@ export async function recoverFromDurableCursor(
 
   const pausedRecovery = enteredWaiting.recovery;
   let recoveryAttempt: AttemptRecord | undefined;
-  if (pausedRecovery.kind !== "retry-stage") {
+  let describedAttempt: AttemptRecord | undefined;
+  if (referencesAttempt(pausedRecovery)) {
     const resolved = referencedAttempt(run.checkpoint, pausedRecovery.attempt);
     if (!resolved.ok) return fatal(ctx, resolved.message);
     recoveryAttempt = resolved.value;
+    describedAttempt = resolved.value;
+  } else {
+    describedAttempt = run.checkpoint.attempts[run.checkpoint.attempts.length - 1];
   }
   const cursor: PausedCursor = {
     paused: enteredWaiting,
     recoveryAttempt,
-    describedAttempt:
-      pausedRecovery.kind === "retry-stage"
-        ? run.checkpoint.attempts[run.checkpoint.attempts.length - 1]
-        : recoveryAttempt,
+    describedAttempt,
   };
   const stage = stageContext(ctx);
 
@@ -172,9 +175,5 @@ export async function recoverFromDurableCursor(
   }
   if (gathered.kind === "worktree-unreadable") return refused(gathered.message);
 
-  return applyDirective(
-    stage,
-    cursor,
-    decideRecovery(pausedRecovery, gathered.evidence),
-  );
+  return applyDirective(stage, cursor, decideRecovery(gathered.paused));
 }

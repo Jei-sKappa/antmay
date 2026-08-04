@@ -2,7 +2,8 @@ import type { GitBoundaryContext } from "../../gitops/boundary.js";
 import type { AttemptRecord } from "../../state/checkpoint.js";
 import { attemptInterval } from "../attempts.js";
 import type { StageContext } from "../context.js";
-import type { GitReadiness, RecoveryDirective } from "../recovery-policy.js";
+import type { FailedFinalization } from "../recovery.js";
+import type { RecoveryDirective } from "../recovery-policy.js";
 import type { ExecutionResult } from "../result.js";
 import { commitCursor, fatal } from "../result.js";
 import type { Transition } from "../run-state.js";
@@ -32,10 +33,7 @@ import type { Transition } from "../run-state.js";
  */
 export type FinalizationOutcome =
   | { kind: "resolved"; result: ExecutionResult | null }
-  | {
-      kind: "unfinalized";
-      git: Extract<GitReadiness, { kind: "finalization-failed" }>;
-    };
+  | { kind: "unfinalized"; evidence: FailedFinalization };
 
 export async function finalizeSavedDone(
   ctx: StageContext,
@@ -95,7 +93,7 @@ export async function finalizeSavedDone(
     const failedWithoutObservation = finalization.kind === "git-error";
     return {
       kind: "unfinalized",
-      git: {
+      evidence: {
         kind: "finalization-failed",
         failure:
           finalization.kind === "git-policy-violation"

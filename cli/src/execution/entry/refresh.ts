@@ -6,8 +6,8 @@ import {
   isAdvisoryHeadMovement,
   unexpectedHeadMovementMessage,
 } from "../pause.js";
+import { holdsPreservedDone } from "../recovery.js";
 import type { RecoveryDirective } from "../recovery-policy.js";
-import { holdsPreservedDone } from "../recovery-policy.js";
 import type { ExecutionResult } from "../result.js";
 import { fatal, pauseRun, renderPause } from "../result.js";
 

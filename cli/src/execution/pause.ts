@@ -20,7 +20,7 @@ import {
 import type {
   GitFinalizationFailure,
   WorktreeCleanliness,
-} from "./recovery-policy.js";
+} from "./recovery.js";
 
 /**
  * Every pause the executor can record, and the one equality that says whether
@@ -620,7 +620,7 @@ function referenceEquals(a: AttemptReference, b: AttemptReference): boolean {
 function recoveryEquals(a: WaitingRecovery, b: WaitingRecovery): boolean {
   switch (a.kind) {
     case "retry-stage":
-      return b.kind === "retry-stage";
+      return b.kind === a.kind;
     case "resume-finalized-done":
       return (
         b.kind === a.kind &&

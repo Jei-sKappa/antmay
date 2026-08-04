@@ -10,13 +10,15 @@ import type {
 } from "../state/checkpoint.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 
-import { decideRecovery, holdsPreservedDone } from "./recovery-policy.js";
 import type {
-  ContractEvidence,
-  GitReadiness,
-  QueueEvidence,
-  RecoveryDirective,
-} from "./recovery-policy.js";
+  FailedFinalization,
+  HeldQueues,
+  PreservedDoneEvidence,
+  RecoveryCase,
+} from "./recovery.js";
+import { classifyRecovery, holdsPreservedDone } from "./recovery.js";
+import { decideRecovery } from "./recovery-policy.js";
+import type { RecoveryDirective } from "./recovery-policy.js";
 
 const REFERENCE: AttemptReference = { stageIndex: 2, attempt: 3 };
 const OTHER_REFERENCE: AttemptReference = { stageIndex: 2, attempt: 1 };
@@ -32,16 +34,16 @@ const FINALIZED_RERUN: WaitingRecovery = {
   attempt: REFERENCE,
   queueResolution: "rerun",
 };
-const RECHECK: WaitingRecovery = {
+const RECHECK = {
   kind: "recheck-stage-contract",
   attempt: REFERENCE,
   pausedAtHead: "a".repeat(40),
-};
-const GIT_RETRY: WaitingRecovery = {
+} as const;
+const GIT_RETRY = {
   kind: "retry-git-finalization",
   attempt: REFERENCE,
   pausedAtHead: "b".repeat(40),
-};
+} as const;
 
 /** Every recovery a paused checkpoint can record, so a table can be exhaustive. */
 const EVERY_RECOVERY: WaitingRecovery[] = [
@@ -52,12 +54,11 @@ const EVERY_RECOVERY: WaitingRecovery[] = [
   GIT_RETRY,
 ];
 
-const CLEAR: QueueEvidence = { kind: "clear" };
-const PENDING: QueueEvidence = {
+const PENDING: HeldQueues = {
   kind: "pending",
   pendingFiles: ["docs/threads/t/.pending-decisions/01-choice.md"],
 };
-const SCAN_FAILED: QueueEvidence = {
+const SCAN_FAILED: HeldQueues = {
   kind: "scan-failed",
   message: "Cannot scan /repo/docs/threads/t/.pending-reviews: EACCES",
 };
@@ -66,21 +67,34 @@ const UNMET: ArtifactMismatch[] = [
   { dimension: "implementationReport", expected: true, observed: false },
 ];
 
-const FINALIZATION_FAILED: Extract<
-  GitReadiness,
-  { kind: "finalization-failed" }
-> = {
+const FINALIZATION_FAILED: FailedFinalization = {
   kind: "finalization-failed",
   failure: { kind: "git-policy-violation", treatment: "blocking" },
   message: "changes outside the stage's allowed paths",
   observedHead: "c".repeat(40),
 };
 
+const SATISFIED: PreservedDoneEvidence = { kind: "promise-satisfied" };
+
+/** The case a held queue makes of any recovery, whatever that recovery is. */
+function held(recovery: WaitingRecovery, queues: HeldQueues): RecoveryCase {
+  return { decidedFrom: "held-queues", recovery, queues };
+}
+
 /**
- * The evidence a contract recheck needs, so the queue table can exercise that
- * recovery without asserting anything about the promise.
+ * The case a clear queue makes of one recovery, with the evidence its kind
+ * declares. Built through the classification rather than by naming a variant, so
+ * a recovery can only be paired with the evidence it is actually decided from.
  */
-const SATISFIED: ContractEvidence = { kind: "satisfied" };
+function cleared(
+  recovery: WaitingRecovery,
+  evidence: PreservedDoneEvidence,
+): RecoveryCase {
+  const classified = classifyRecovery(recovery);
+  return classified.decidedFrom === "preserved-done"
+    ? { ...classified, evidence }
+    : classified;
+}
 
 describe("decideRecovery — queues gate every recovery (AC-3.1)", () => {
   for (const recovery of EVERY_RECOVERY) {
@@ -89,11 +103,7 @@ describe("decideRecovery — queues gate every recovery (AC-3.1)", () => {
     }`;
 
     it(`keeps a ${label} recovery paused when the queue scan fails`, () => {
-      const directive = decideRecovery(recovery, {
-        queues: SCAN_FAILED,
-        contract: SATISFIED,
-      });
-      expect(directive).toEqual({
+      expect(decideRecovery(held(recovery, SCAN_FAILED))).toEqual({
         kind: "remain-paused",
         recovery,
         facts: { kind: "queue-scan-failed", message: SCAN_FAILED.message },
@@ -101,11 +111,7 @@ describe("decideRecovery — queues gate every recovery (AC-3.1)", () => {
     });
 
     it(`keeps a ${label} recovery paused while bundles are still pending`, () => {
-      const directive = decideRecovery(recovery, {
-        queues: PENDING,
-        contract: SATISFIED,
-      });
-      expect(directive).toEqual({
+      expect(decideRecovery(held(recovery, PENDING))).toEqual({
         kind: "remain-paused",
         recovery,
         facts: {
@@ -116,16 +122,18 @@ describe("decideRecovery — queues gate every recovery (AC-3.1)", () => {
     });
 
     it(`lets a ${label} recovery act once the queues are clear`, () => {
-      const directive = decideRecovery(recovery, {
-        queues: CLEAR,
-        contract: SATISFIED,
-      });
-      expect(directive.kind).not.toBe("remain-paused");
+      expect(decideRecovery(cleared(recovery, SATISFIED)).kind).not.toBe(
+        "remain-paused",
+      );
     });
   }
 
-  it("needs no promise, worktree, or Git evidence to hold a pause", () => {
-    expect(decideRecovery(RECHECK, { queues: PENDING })).toEqual({
+  it("carries no promise, worktree, or Git evidence at all while a queue is held", () => {
+    // The held case is the whole of what a held queue is decided from, so
+    // evidence gathered under one has nowhere to be put and nothing to override.
+    const paused = held(RECHECK, PENDING);
+    expect(Object.keys(paused).sort()).toEqual(["decidedFrom", "queues", "recovery"]);
+    expect(decideRecovery(paused)).toEqual({
       kind: "remain-paused",
       recovery: RECHECK,
       facts: { kind: "pending-bundles", pendingFiles: PENDING.pendingFiles },
@@ -135,9 +143,7 @@ describe("decideRecovery — queues gate every recovery (AC-3.1)", () => {
 
 describe("decideRecovery — contract recheck table (AC-3.2)", () => {
   it("requests first-time finalization of the referenced attempt when the promise is satisfied", () => {
-    expect(
-      decideRecovery(RECHECK, { queues: CLEAR, contract: { kind: "satisfied" } }),
-    ).toEqual({
+    expect(decideRecovery(cleared(RECHECK, { kind: "promise-satisfied" }))).toEqual({
       kind: "finalize-boundary",
       recovery: RECHECK,
       context: "after-contract-repair",
@@ -146,19 +152,17 @@ describe("decideRecovery — contract recheck table (AC-3.2)", () => {
 
   it("retries the stage when the promise is unmet over a clean worktree", () => {
     expect(
-      decideRecovery(RECHECK, {
-        queues: CLEAR,
-        contract: { kind: "unmet", unmet: UNMET, worktree: "clean" },
-      }),
+      decideRecovery(
+        cleared(RECHECK, { kind: "promise-unmet", unmet: UNMET, worktree: "clean" }),
+      ),
     ).toEqual({ kind: "retry-stage" });
   });
 
   it("remains paused with the unmet dimensions when the worktree is dirty", () => {
     expect(
-      decideRecovery(RECHECK, {
-        queues: CLEAR,
-        contract: { kind: "unmet", unmet: UNMET, worktree: "dirty" },
-      }),
+      decideRecovery(
+        cleared(RECHECK, { kind: "promise-unmet", unmet: UNMET, worktree: "dirty" }),
+      ),
     ).toEqual({
       kind: "remain-paused",
       recovery: RECHECK,
@@ -168,13 +172,12 @@ describe("decideRecovery — contract recheck table (AC-3.2)", () => {
 
   it("remains paused, keeping the saved DONE finalizable, when the thread cannot be inspected", () => {
     expect(
-      decideRecovery(RECHECK, {
-        queues: CLEAR,
-        contract: {
-          kind: "uninspectable",
+      decideRecovery(
+        cleared(RECHECK, {
+          kind: "promise-uninspectable",
           message: "cannot read the thread",
-        },
-      }),
+        }),
+      ),
     ).toEqual({
       kind: "remain-paused",
       recovery: RECHECK,
@@ -185,44 +188,49 @@ describe("decideRecovery — contract recheck table (AC-3.2)", () => {
     });
   });
 
-  it("refuses to decide a contract recheck without fresh promise evidence", () => {
-    expect(() => decideRecovery(RECHECK, { queues: CLEAR })).toThrow(
-      /requires fresh promised-artifact evidence/,
-    );
+  it("cannot be asked to decide a contract recheck without fresh promise evidence", () => {
+    // The property is the type's, not a runtime check's: a recovery that declared
+    // promise evidence arrives with it or does not arrive at all, so there is no
+    // input the decision has to refuse. The assertion is the compiler's — remove
+    // the evidence and `npm run typecheck` fails here rather than a resume
+    // throwing in production.
+    // @ts-expect-error a preserved-done case is unconstructable without its evidence
+    const missing: RecoveryCase = { decidedFrom: "preserved-done", recovery: RECHECK };
+    expect(missing.decidedFrom).toBe("preserved-done");
   });
 });
 
 describe("decideRecovery — finalized DONE resolutions (AC-3.3)", () => {
   it("advances exactly once for a declared advance resolution", () => {
-    expect(decideRecovery(FINALIZED_ADVANCE, { queues: CLEAR })).toEqual({
+    expect(decideRecovery(cleared(FINALIZED_ADVANCE, SATISFIED))).toEqual({
       kind: "advance-stage",
     });
   });
 
   it("starts a new attempt at the same stage for a declared rerun resolution", () => {
-    expect(decideRecovery(FINALIZED_RERUN, { queues: CLEAR })).toEqual({
+    expect(decideRecovery(cleared(FINALIZED_RERUN, SATISFIED))).toEqual({
       kind: "retry-stage",
     });
   });
 
   it("neither advances nor reruns before the queues clear", () => {
     for (const recovery of [FINALIZED_ADVANCE, FINALIZED_RERUN]) {
-      expect(decideRecovery(recovery, { queues: PENDING }).kind).toBe("remain-paused");
+      expect(decideRecovery(held(recovery, PENDING)).kind).toBe("remain-paused");
     }
   });
 
   it("never touches the finalized attempt again", () => {
     for (const recovery of [FINALIZED_ADVANCE, FINALIZED_RERUN]) {
-      expect(decideRecovery(recovery, { queues: CLEAR })).not.toHaveProperty("attempt");
+      expect(decideRecovery(cleared(recovery, SATISFIED))).not.toHaveProperty(
+        "attempt",
+      );
     }
   });
 });
 
 describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
   it("requests a boundary retry for the exact referenced attempt", () => {
-    expect(
-      decideRecovery(GIT_RETRY, { queues: CLEAR, contract: SATISFIED }),
-    ).toEqual({
+    expect(decideRecovery(cleared(GIT_RETRY, SATISFIED))).toEqual({
       kind: "finalize-boundary",
       recovery: GIT_RETRY,
       context: "boundary-retry",
@@ -231,18 +239,23 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
 
   it("requests the attempt the recovery names, not the stage's latest", () => {
     const directive = decideRecovery(
-      { kind: "retry-git-finalization", attempt: OTHER_REFERENCE, pausedAtHead: "d".repeat(40) },
-      { queues: CLEAR, contract: SATISFIED },
+      cleared(
+        {
+          kind: "retry-git-finalization",
+          attempt: OTHER_REFERENCE,
+          pausedAtHead: "d".repeat(40),
+        },
+        SATISFIED,
+      ),
     );
     expect(directive).toMatchObject({ recovery: { attempt: OTHER_REFERENCE } });
   });
 
   it("redirects an unmet promise through contract repair", () => {
     expect(
-      decideRecovery(GIT_RETRY, {
-        queues: CLEAR,
-        contract: { kind: "unmet", unmet: UNMET, worktree: "clean" },
-      }),
+      decideRecovery(
+        cleared(GIT_RETRY, { kind: "promise-unmet", unmet: UNMET, worktree: "clean" }),
+      ),
     ).toEqual({
       kind: "remain-paused",
       recovery: {
@@ -256,10 +269,12 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
 
   it("redirects an uninspectable promise through contract repair", () => {
     expect(
-      decideRecovery(GIT_RETRY, {
-        queues: CLEAR,
-        contract: { kind: "uninspectable", message: "cannot read the thread" },
-      }),
+      decideRecovery(
+        cleared(GIT_RETRY, {
+          kind: "promise-uninspectable",
+          message: "cannot read the thread",
+        }),
+      ),
     ).toEqual({
       kind: "remain-paused",
       recovery: {
@@ -274,16 +289,8 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
     });
   });
 
-  it("requires fresh promise evidence before the first retry finalization", () => {
-    expect(() => decideRecovery(GIT_RETRY, { queues: CLEAR })).toThrow(
-      /requires fresh promised-artifact evidence/,
-    );
-  });
-
   it("keeps the same recovery, re-aimed at the fresh tip, when the boundary still fails", () => {
-    expect(
-      decideRecovery(GIT_RETRY, { queues: CLEAR, git: FINALIZATION_FAILED }),
-    ).toEqual({
+    expect(decideRecovery(cleared(GIT_RETRY, FINALIZATION_FAILED))).toEqual({
       kind: "remain-paused",
       recovery: {
         kind: "retry-git-finalization",
@@ -300,14 +307,13 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
 
   it("leaves a repaired contract's failed boundary retryable without reconsulting the promise", () => {
     expect(
-      decideRecovery(RECHECK, {
-        queues: CLEAR,
-        git: {
+      decideRecovery(
+        cleared(RECHECK, {
           ...FINALIZATION_FAILED,
           failure: { kind: "commit-error" },
           message: "the pre-commit hook rejected the commit",
-        },
-      }),
+        }),
+      ),
     ).toEqual({
       kind: "remain-paused",
       recovery: {
@@ -326,7 +332,7 @@ describe("decideRecovery — Git finalization retry (AC-3.4)", () => {
 
 describe("decideRecovery — retry-stage recovery", () => {
   it("launches a fresh attempt once the queues are clear", () => {
-    expect(decideRecovery(RETRY_STAGE, { queues: CLEAR })).toEqual({
+    expect(decideRecovery(cleared(RETRY_STAGE, SATISFIED))).toEqual({
       kind: "retry-stage",
     });
   });
@@ -354,10 +360,15 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
     },
   ];
 
-  for (const queues of [CLEAR, PENDING, SCAN_FAILED]) {
-    it(`decides identically for every reason order under ${queues.kind} queues`, () => {
+  const cases: [string, (recovery: WaitingRecovery) => RecoveryCase][] = [
+    ["clear", (recovery) => cleared(recovery, SATISFIED)],
+    ["pending", (recovery) => held(recovery, PENDING)],
+    ["scan-failed", (recovery) => held(recovery, SCAN_FAILED)],
+  ];
+  for (const [label, asCase] of cases) {
+    it(`decides identically for every reason order under ${label} queues`, () => {
       const [first, ...others] = pauses.map((pause) =>
-        decideRecovery(pause.recovery, { queues, contract: SATISFIED }),
+        decideRecovery(asCase(pause.recovery)),
       );
       for (const other of others) {
         expect(other).toEqual(first);
@@ -366,20 +377,10 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
   }
 });
 
-describe("holdsPreservedDone — which pauses hold a saved DONE (AC-3.4)", () => {
-  it("names exactly the two recoveries a finalization can be requested for", () => {
-    expect(EVERY_RECOVERY.filter(holdsPreservedDone).map((r) => r.kind)).toEqual([
-      "recheck-stage-contract",
-      "retry-git-finalization",
-    ]);
-  });
-
-  it("requests a finalization carrying a recovery a failure can be re-decided from", () => {
+describe("decideRecovery — requesting a finalization (AC-3.4)", () => {
+  it("carries a recovery a failure can be re-decided from", () => {
     for (const recovery of [RECHECK, GIT_RETRY]) {
-      const requested = decideRecovery(recovery, {
-        queues: CLEAR,
-        contract: SATISFIED,
-      });
+      const requested = decideRecovery(cleared(recovery, SATISFIED));
       if (requested.kind !== "finalize-boundary") {
         throw new Error(`expected ${recovery.kind} to request a finalization`);
       }
@@ -388,9 +389,10 @@ describe("holdsPreservedDone — which pauses hold a saved DONE (AC-3.4)", () =>
       // fresh Git evidence for.
       expect(holdsPreservedDone(requested.recovery)).toBe(true);
       expect(
-        decideRecovery(requested.recovery, {
-          queues: CLEAR,
-          git: FINALIZATION_FAILED,
+        decideRecovery({
+          decidedFrom: "preserved-done",
+          recovery: requested.recovery,
+          evidence: FINALIZATION_FAILED,
         }),
       ).toMatchObject({
         kind: "remain-paused",
@@ -407,26 +409,27 @@ describe("recovery-policy module — purity (AC-3.5)", () => {
     // A static source assertion rather than a fixture: the property under test is
     // what the module may reach at all, which no runtime call can demonstrate.
     const statements = [...source.matchAll(/^import[\s\S]*?;$/gm)].map((m) => m[0]);
-    expect(statements).toHaveLength(2);
-    // Type-only, so the module has no runtime dependency on either.
+    expect(statements).toHaveLength(3);
+    // Type-only, so the module has no runtime dependency on any of them.
     for (const statement of statements) {
       expect(statement.startsWith("import type ")).toBe(true);
     }
     expect(statements.map((s) => /from "([^"]+)"/.exec(s)?.[1])).toEqual([
       "../state/checkpoint.js",
       "../thread/artifacts.js",
+      "./recovery.js",
     ]);
     expect(source).not.toMatch(/node:|Date\(|process\./);
   });
 
   it("returns domain directives rather than checkpoint fragments", () => {
     const directives: RecoveryDirective[] = [
-      decideRecovery(RETRY_STAGE, { queues: CLEAR }),
-      decideRecovery(FINALIZED_ADVANCE, { queues: CLEAR }),
-      decideRecovery(GIT_RETRY, { queues: CLEAR, contract: SATISFIED }),
-      decideRecovery(RECHECK, { queues: CLEAR, contract: SATISFIED }),
-      decideRecovery(RECHECK, { queues: SCAN_FAILED }),
-      decideRecovery(GIT_RETRY, { queues: CLEAR, git: FINALIZATION_FAILED }),
+      decideRecovery(cleared(RETRY_STAGE, SATISFIED)),
+      decideRecovery(cleared(FINALIZED_ADVANCE, SATISFIED)),
+      decideRecovery(cleared(GIT_RETRY, SATISFIED)),
+      decideRecovery(cleared(RECHECK, SATISFIED)),
+      decideRecovery(held(RECHECK, SCAN_FAILED)),
+      decideRecovery(cleared(GIT_RETRY, FINALIZATION_FAILED)),
     ];
     for (const directive of directives) {
       expect(Object.keys(directive).sort()).not.toContain("condition");
