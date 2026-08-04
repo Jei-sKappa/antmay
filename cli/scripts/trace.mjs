@@ -21,10 +21,13 @@
  * Two things to know before reading a trace:
  *
  * - **Only a top-level `function` declaration is traced.** Instrumentation
- *   replaces the binding rather than the body, and a module-scope
- *   `const f = () => …` has no binding to replace. Those are listed under
- *   "Not instrumented", so a function missing from a trace is either reported
- *   there or genuinely never called.
+ *   replaces the binding rather than the body, so a `const` holding a function,
+ *   a class method or accessor, and a method on a module-scope object literal
+ *   each have no binding to replace. Those are listed under "Not instrumented",
+ *   so a function missing from a trace is either reported there or genuinely
+ *   never called. A function nested inside another is invisible for the same
+ *   reason; those are not listed, having no module-level name to be looked for
+ *   under.
  * - **The cross-module edges are call sites, not dependencies.** A closure
  *   carries no wrapper, so the calls it makes are recorded against whichever
  *   module invoked the closure — the engine's display and session callbacks
@@ -229,8 +232,10 @@ function notInstrumentedSection(uninstrumented) {
   return [
     "## Not instrumented",
     "",
-    "Held by a `const` rather than declared, so the binding cannot be replaced",
-    "and no call to one of these appears anywhere in a trace:",
+    "Reachable by name but not declared as a top-level function, so there is no",
+    "binding to replace and no call to one of these appears anywhere in a trace.",
+    "An `Owner.member` entry is a class method or accessor, or a method on a",
+    "module-scope object literal; a bare name is a `const` holding a function:",
     "",
     "```",
     ...uninstrumented,

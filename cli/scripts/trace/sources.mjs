@@ -60,13 +60,77 @@ export function productionModules() {
   return modules;
 }
 
+/** The property name a member is written under, without its quotes. */
+function memberName(name) {
+  if (name === undefined) return null;
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
+  if (ts.isPrivateIdentifier(name)) return name.text;
+  return null;
+}
+
+/** Whether the node holds a function value rather than describing one. */
+function holdsFunction(node) {
+  return node !== undefined && (ts.isArrowFunction(node) || ts.isFunctionExpression(node));
+}
+
+/**
+ * Every function a statement makes reachable by name without declaring it, as
+ * `owner.member` for a member and a bare name for a `const`.
+ *
+ * A constructor is omitted: `new X(…)` records nothing either way, and the name
+ * a reader would look for in a trace is the class, not `X.constructor`.
+ */
+function unreachableBindings(statement) {
+  if (ts.isClassDeclaration(statement)) {
+    const owner = statement.name?.text;
+    if (owner === undefined) return [];
+    return statement.members
+      .filter(
+        (member) =>
+          ts.isMethodDeclaration(member) ||
+          ts.isGetAccessor(member) ||
+          ts.isSetAccessor(member),
+      )
+      .flatMap((member) => {
+        const name = memberName(member.name);
+        return name === null ? [] : [`${owner}.${name}`];
+      });
+  }
+  if (!ts.isVariableStatement(statement)) return [];
+  const found = [];
+  for (const declaration of statement.declarationList.declarations) {
+    if (!ts.isIdentifier(declaration.name)) continue;
+    const owner = declaration.name.text;
+    const initializer = declaration.initializer;
+    if (holdsFunction(initializer)) {
+      found.push(owner);
+      continue;
+    }
+    if (initializer === undefined || !ts.isObjectLiteralExpression(initializer)) {
+      continue;
+    }
+    for (const property of initializer.properties) {
+      const holds =
+        ts.isMethodDeclaration(property) ||
+        (ts.isPropertyAssignment(property) && holdsFunction(property.initializer));
+      if (!holds) continue;
+      const name = memberName(property.name);
+      if (name !== null) found.push(`${owner}.${name}`);
+    }
+  }
+  return found;
+}
+
 /**
  * The functions a trace can see and the functions it cannot.
  *
- * A top-level function declaration has a writable binding, so replacing it
- * wraps every later reference. A module-scope `const f = () => …` holds a
- * function just the same but its binding cannot be replaced, so it is reported
- * rather than silently absent.
+ * A top-level function declaration has a writable binding, so replacing it wraps
+ * every later reference. Every other way a module makes a function reachable —
+ * a `const` holding one, a class method or accessor, a method on a module-scope
+ * object literal — has no binding to replace, so it is reported rather than
+ * silently absent. A function nested inside another is invisible for the same
+ * reason and is not reported, having no module-level name to be looked for
+ * under.
  */
 export function scanFunctions() {
   const perModule = new Map();
@@ -80,14 +144,8 @@ export function scanFunctions() {
         names.push(statement.name.text);
         continue;
       }
-      if (!ts.isVariableStatement(statement)) continue;
-      for (const declaration of statement.declarationList.declarations) {
-        const initializer = declaration.initializer;
-        if (initializer === undefined || !ts.isIdentifier(declaration.name)) continue;
-        if (!ts.isArrowFunction(initializer) && !ts.isFunctionExpression(initializer)) {
-          continue;
-        }
-        uninstrumented.push(`${module.relative} · ${declaration.name.text}`);
+      for (const name of unreachableBindings(statement)) {
+        uninstrumented.push(`${module.relative} · ${name}`);
       }
     }
     perModule.set(module.relative, names);
