@@ -224,13 +224,20 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   catalog (`catalog.ts`), pipeline-document loading and validation
   (`documents.ts`), suffix selection and artifact-state composition
   (`composition.ts`), and target-rule resolution (`targets.ts`).
-- `execution/` — the stage loop and its persistence boundary (`engine.ts`) over
-  two pure collaborators: the pause-recovery decision table
-  (`recovery-policy.ts`), and `pause.ts`, which holds one builder per pause
-  situation plus the field-by-field `waitingEquals` the durable-write decision
-  rests on. The engine decides which situation holds and asks for the value; it
-  assembles no waiting object itself, so every pause the terminal can draw is
-  enumerable from one file.
+- `execution/` — the stage loop (`engine.ts`) over three collaborators.
+  `run-state.ts` is the run's durable cursor and the whole persistence boundary
+  of a run in flight: every way a cursor can move is one named `Transition`,
+  applied through one reducer, and committing them is the one place `updatedAt`
+  is stamped, the one place the atomic writer is called after allocation, and the
+  one place a pause the checkpoint already records is recognized as needing no
+  write. Several transitions in one commit are one document, which is what keeps
+  a settled attempt and the pause it settled into a single write. The other two
+  are pure: the pause-recovery decision table (`recovery-policy.ts`), and
+  `pause.ts`, which holds one builder per pause situation plus the field-by-field
+  `waitingEquals` the durable-write decision rests on. The engine decides which
+  situation holds and asks for the value; it assembles no waiting object and no
+  checkpoint itself, so every pause the terminal can draw is enumerable from one
+  file and every durable transition from another.
 - `runner/` — attempt classification, terminal-outcome recognition, and signal
   handling.
 - `gitops/` — the Git wrapper and its NUL-output splitter (`git.ts`),
@@ -314,11 +321,12 @@ bearing.
   above are built on: one checkpoint writer outside allocation, a resume
   preflight that reaches no transition collaborator, the Git protocol behind its
   one operation, artifact contracts declared only in the thread domain, pauses
-  assembled in one module and compared field by field, phase-specific display
-  consumers, and adapter families loaded only through the
-  runtime resolver. It reads source text, so a static, dynamic, re-export, or
-  type-only import is judged for what it is. When it fails, the boundary moved —
-  argue the direction, do not relax the guard to match the new import.
+  assembled in one module and compared field by field, durable state changed
+  only by committing a named transition, phase-specific display consumers, and
+  adapter families loaded only through the runtime resolver. It reads source
+  text, so a static, dynamic, re-export, or type-only import is judged for what
+  it is. When it fails, the boundary moved — argue the direction, do not relax
+  the guard to match the new import.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal

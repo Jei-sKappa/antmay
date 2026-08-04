@@ -14,7 +14,6 @@ import {
   Pause,
   isAdvisoryHeadMovement,
   unexpectedHeadMovementMessage,
-  waitingEquals,
 } from "./pause.js";
 import { decideRecovery, holdsPreservedDone } from "./recovery-policy.js";
 import type {
@@ -22,18 +21,22 @@ import type {
   QueueEvidence,
   RecoveryDirective,
 } from "./recovery-policy.js";
+import { RunState } from "./run-state.js";
+import type {
+  CheckpointWriter,
+  CommitOutcome,
+  Transition,
+} from "./run-state.js";
 import type {
   AttemptRecord,
   AttemptReference,
   RunCheckpoint,
-  SnapshottedStage,
   TerminalResult,
   WaitingDiagnostics,
   WaitingInfo,
 } from "../state/checkpoint.js";
 import { attemptLogPaths, createAttemptLog } from "../state/logs.js";
 import type { AttemptLogHeader } from "../state/logs.js";
-import { writeCheckpoint } from "../state/persist.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import {
   evaluateArtifactPrerequisite,
@@ -86,11 +89,10 @@ export type ExecutionContext = {
   signal: AbortSignal;
   clock?: () => Date;
   /**
-   * Atomic checkpoint writer. Defaults to production `writeCheckpoint`; tests
-   * may inject a wrapper to control ordering and failure without changing
-   * production callers.
+   * Checkpoint-writing seam the run's cursor persists through. Tests inject a
+   * wrapper to control ordering and failure without changing production callers.
    */
-  persistCheckpoint?: typeof writeCheckpoint;
+  persistCheckpoint?: CheckpointWriter;
   /** Artifact inspector seam for deterministic recovery-path tests. */
   inspectArtifactState?: typeof inspectArtifactState;
   /** Git HEAD reader seam for exercising refusal and recovery paths. */
@@ -115,28 +117,8 @@ export type ExecutionResult =
   | { kind: "refused"; message: string }
   | { kind: "fatal-checkpoint"; message: string };
 
-type PersistOutcome = { ok: true } | { ok: false; message: string };
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function replaceLast(
-  attempts: AttemptRecord[],
-  record: AttemptRecord,
-): AttemptRecord[] {
-  return [...attempts.slice(0, -1), record];
-}
-
-function replaceAttempt(
-  attempts: AttemptRecord[],
-  record: AttemptRecord,
-): AttemptRecord[] {
-  return attempts.map((attempt) =>
-    attempt.stageIndex === record.stageIndex && attempt.attempt === record.attempt
-      ? record
-      : attempt,
-  );
 }
 
 type InvariantResult<Value> =
@@ -287,28 +269,33 @@ function withAgentSession(
  * pipeline, stage, or skill identity — and coordinates the queue, artifact,
  * harness, log, Git, policy, pause, and display collaborators rather than
  * reproducing their rules: it decides which pause situation holds and asks
- * `Pause` for the value, never assembling one itself. Every rewrite of an
- * existing checkpoint goes through `persist` below, which is the engine's own
- * persistence boundary and is handed to no collaborator. The caller releases the
- * lock.
+ * `Pause` for the value, never assembling one itself. It moves the run's cursor
+ * only by committing named transitions to the `RunState` below, which owns every
+ * rewrite of an existing checkpoint and is handed to no collaborator. The caller
+ * releases the lock.
  */
 export async function executeEngine(
   ctx: ExecutionContext,
 ): Promise<ExecutionResult> {
   const { runDir, invoker, display, signal } = ctx;
   const clock = ctx.clock ?? (() => new Date());
-  const persistCheckpoint = ctx.persistCheckpoint ?? writeCheckpoint;
   const inspectArtifacts = ctx.inspectArtifactState ?? inspectArtifactState;
   const readCurrentHead = ctx.readHead ?? readHead;
   const finalizeBoundary = ctx.finalizeGitBoundary ?? finalizeGitBoundary;
-  let checkpoint = ctx.entry.checkpoint;
+  const run = new RunState({
+    checkpoint: ctx.entry.checkpoint,
+    runDir,
+    clock,
+    persistCheckpoint: ctx.persistCheckpoint,
+  });
 
-  const repoRoot = checkpoint.repoRoot;
-  const threadRelPath = checkpoint.threadRelPath;
+  // Everything a run is fixed at: no transition moves any of it.
+  const repoRoot = run.checkpoint.repoRoot;
+  const threadRelPath = run.checkpoint.threadRelPath;
   const threadFolder = path.posix.basename(threadRelPath);
-  const stageCount = checkpoint.stages.length;
-  const runId = checkpoint.runId;
-  const pipelineName = checkpoint.pipelineName;
+  const stageCount = run.checkpoint.stages.length;
+  const runId = run.checkpoint.runId;
+  const pipelineName = run.checkpoint.pipelineName;
   const checkpointPath = path.join(runDir, "state.json");
   const resumeCommand = `antmay afk resume ${runId}`;
 
@@ -329,19 +316,8 @@ export async function executeEngine(
     }
   }
 
-  async function persist(next: RunCheckpoint): Promise<PersistOutcome> {
-    const stamped: RunCheckpoint = { ...next, updatedAt: clock().toISOString() };
-    try {
-      await persistCheckpoint(runDir, stamped);
-      checkpoint = stamped;
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, message: errorMessage(error) };
-    }
-  }
-
   function elapsedMs(): number {
-    return clock().getTime() - Date.parse(checkpoint.createdAt);
+    return clock().getTime() - Date.parse(run.checkpoint.createdAt);
   }
 
   // A signal that arrives while the checkpoint is durably at rest — between
@@ -371,6 +347,23 @@ export async function executeEngine(
     return { kind: "fatal-checkpoint", message };
   }
 
+  /**
+   * Move the run's cursor by one durable step, or end the run with the fatal
+   * result a failed checkpoint write is. `null` means the cursor is durably where
+   * the transitions put it and the caller may carry on; anything else is the
+   * whole of what this invocation reports.
+   *
+   * Several transitions in one call are one document on disk. That is what keeps
+   * a settled attempt and the pause it settled into, or a finalized `DONE` and
+   * the advance it earned, from being two writes and two chances to fail.
+   */
+  async function commitCursor(
+    ...transitions: Transition[]
+  ): Promise<ExecutionResult | null> {
+    const committed = await run.commit(...transitions);
+    return committed.ok ? null : fatal(committed.message);
+  }
+
   // Render the durable pause. `createdAt` never changes across a persist, so the
   // run's total elapsed time is derived at call time from the live checkpoint.
   // Log and Continue both come from the persisted attempt this pause is about;
@@ -384,15 +377,15 @@ export async function executeEngine(
     const continuationCommand =
       attempt?.agentSession !== undefined
         ? HARNESSES[
-            checkpoint.stages[attempt.stageIndex]!.binding.agent.harness
+            run.checkpoint.stages[attempt.stageIndex]!.binding.agent.harness
           ].continuationCommand(attempt.agentSession.id)
         : undefined;
     display.runPaused({
       waiting,
       currentStage: {
-        id: checkpoint.stages[checkpoint.stageIndex]!.id,
-        position: checkpoint.stageIndex + 1,
-        count: checkpoint.stages.length,
+        id: run.stage.id,
+        position: run.checkpoint.stageIndex + 1,
+        count: run.checkpoint.stages.length,
       },
       runId,
       pipelineName,
@@ -444,13 +437,11 @@ export async function executeEngine(
       },
       args.agentSession,
     );
-    const persisted = await persist({
-      ...checkpoint,
-      attempts: replaceLast(checkpoint.attempts, settled),
-      condition: "waiting-for-user",
-      waiting,
-    });
-    if (!persisted.ok) return fatal(persisted.message);
+    const failed = await commitCursor(
+      { kind: "settle-attempt", attempt: settled },
+      { kind: "pause", waiting },
+    );
+    if (failed !== null) return failed;
     display.stageStopped({
       stagePosition: `${args.executingAttempt.stageIndex + 1}/${stageCount}`,
       durationMs: Date.parse(endedAt) - Date.parse(args.executingAttempt.startedAt),
@@ -458,21 +449,6 @@ export async function executeEngine(
     });
     renderPause(waiting, settled);
     return { kind: "interrupted", signal: args.sig };
-  }
-
-  // Advance past the stage the cursor sits on and persist the resulting cursor:
-  // `ready`, or `completed` once the snapshot is exhausted. Returning `null`
-  // leaves the loop (or its completion tail) to take it from there.
-  async function advanceCursor(): Promise<ExecutionResult | null> {
-    const nextIndex = checkpoint.stageIndex + 1;
-    const persisted = await persist({
-      ...checkpoint,
-      stageIndex: nextIndex,
-      condition: nextIndex === stageCount ? "completed" : "ready",
-      waiting: null,
-    });
-    if (!persisted.ok) return fatal(persisted.message);
-    return null;
   }
 
   /**
@@ -484,7 +460,7 @@ export async function executeEngine(
    * treated as one atomic step.
    */
   async function enterFromDurableCursor(): Promise<ExecutionResult | null> {
-    const enteredWaiting = checkpoint.waiting;
+    const enteredWaiting = run.checkpoint.waiting;
     const enteredRecovery = enteredWaiting?.recovery ?? null;
 
     // Clean-worktree rule: required for a ready or executing cursor and for every
@@ -513,10 +489,11 @@ export async function executeEngine(
     // An attempt that was live when its executor disappeared is settled before
     // any other transition: it records the tip observed now as its post-attempt
     // observation, and the cursor becomes a durable retry at the same stage.
-    if (checkpoint.condition === "executing") {
+    if (run.checkpoint.condition === "executing") {
       const sig = signalReason(signal);
       if (sig !== null) return interruptedAtRest(sig);
-      const abandoned = checkpoint.attempts[checkpoint.attempts.length - 1]!;
+      const abandoned =
+        run.checkpoint.attempts[run.checkpoint.attempts.length - 1]!;
       const abandonedHead = await observeHead("before-transition");
       if (!abandonedHead.ok) {
         return { kind: "refused", message: abandonedHead.message };
@@ -529,20 +506,18 @@ export async function executeEngine(
         headAfterAttempt: abandonedHead.value,
         failure: { kind: "interrupted", message: ABANDONED_ATTEMPT_NOTE },
       };
-      const persisted = await persist({
-        ...checkpoint,
-        attempts: replaceLast(checkpoint.attempts, settled),
-        condition: "ready",
-        waiting: null,
-      });
-      if (!persisted.ok) return fatal(persisted.message);
+      const failed = await commitCursor(
+        { kind: "settle-attempt", attempt: settled },
+        { kind: "become-ready" },
+      );
+      if (failed !== null) return failed;
     }
 
     // A ready cursor — allocated, or just recovered above — records no recovery,
     // so there is nothing to decide: the loop's own pre-attempt gate is what
     // pauses it on queued work or an unreadable queue.
     if (enteredWaiting === null) {
-      checkpoint = { ...checkpoint, condition: "ready", waiting: null };
+      run.apply({ kind: "become-ready" });
       return null;
     }
     const pausedWaiting = enteredWaiting;
@@ -554,15 +529,15 @@ export async function executeEngine(
     // persisted attempt that led to the pause.
     let recoveryAttempt: AttemptRecord | undefined;
     if (pausedRecovery.kind !== "retry-stage") {
-      const resolved = referencedAttempt(checkpoint, pausedRecovery.attempt);
+      const resolved = referencedAttempt(run.checkpoint, pausedRecovery.attempt);
       if (!resolved.ok) return fatal(resolved.message);
       recoveryAttempt = resolved.value;
     }
     const pauseAttempt =
       pausedRecovery.kind === "retry-stage"
-        ? checkpoint.attempts[checkpoint.attempts.length - 1]
+        ? run.checkpoint.attempts[run.checkpoint.attempts.length - 1]
         : recoveryAttempt;
-    const stage = checkpoint.stages[checkpoint.stageIndex]!;
+    const stage = run.stage;
 
     /**
      * Persist and render the refreshed pause a `remain-paused` directive
@@ -580,16 +555,8 @@ export async function executeEngine(
         waiting: WaitingInfo,
         rendered: AttemptRecord | undefined,
       ): Promise<ExecutionResult> => {
-        if (waitingEquals(waiting, checkpoint.waiting)) {
-          renderPause(waiting, rendered);
-          return { kind: "paused", waiting };
-        }
-        const persisted = await persist({
-          ...checkpoint,
-          condition: "waiting-for-user",
-          waiting,
-        });
-        if (!persisted.ok) return fatal(persisted.message);
+        const failed = await commitCursor({ kind: "pause", waiting });
+        if (failed !== null) return failed;
         renderPause(waiting, rendered);
         return { kind: "paused", waiting };
       };
@@ -776,24 +743,19 @@ export async function executeEngine(
       // this finalization left it at, clear waiting, then apply the declared
       // resolution when the attempt listed pending files, else the normal
       // successful-stage advance.
-      const doneAttempts = replaceAttempt(checkpoint.attempts, {
-        ...preserved,
-        result: "done",
-        headAfterAttempt: finalization.headAfterFinalization,
-      });
+      const finalized: Transition = {
+        kind: "finalize-preserved-done",
+        attempt: {
+          ...preserved,
+          result: "done",
+          headAfterAttempt: finalization.headAfterFinalization,
+        },
+      };
       const hadPending = (preserved.pendingFiles?.length ?? 0) > 0;
       if (hadPending && stage.queueResolution === "rerun") {
-        const persisted = await persist({
-          ...checkpoint,
-          attempts: doneAttempts,
-          condition: "ready",
-          waiting: null,
-        });
-        if (!persisted.ok) return fatal(persisted.message);
-        return null;
+        return commitCursor(finalized, { kind: "become-ready" });
       }
-      checkpoint = { ...checkpoint, attempts: doneAttempts };
-      return advanceCursor();
+      return commitCursor(finalized, { kind: "advance" });
     }
 
     /** Carry out one recovery directive as a durable transition. */
@@ -803,10 +765,10 @@ export async function executeEngine(
     ): Promise<ExecutionResult | null> {
       switch (directive.kind) {
         case "retry-stage":
-          checkpoint = { ...checkpoint, condition: "ready", waiting: null };
+          run.apply({ kind: "become-ready" });
           return null;
         case "advance-stage":
-          return advanceCursor();
+          return commitCursor({ kind: "advance" });
         case "finalize-boundary":
           return finalizeSavedDone(directive);
         case "remain-paused":
@@ -874,12 +836,12 @@ export async function executeEngine(
     if (entered !== null) return entered;
   }
 
-  while (checkpoint.stageIndex < stageCount) {
+  while (!run.isExhausted) {
     const readySig = signalReason(signal);
     if (readySig !== null) return interruptedAtRest(readySig);
 
-    const stageIndex = checkpoint.stageIndex;
-    const stage: SnapshottedStage = checkpoint.stages[stageIndex];
+    const stageIndex = run.checkpoint.stageIndex;
+    const stage = run.stage;
     const binding = stage.binding;
     const agent = binding.agent;
     const ordinal = stageIndex + 1;
@@ -890,23 +852,15 @@ export async function executeEngine(
     const preScan = await scanPendingQueues(repoRoot, threadRelPath);
     if (!preScan.ok) {
       const waiting = Pause.queueUnreadable(preScan.message);
-      const persisted = await persist({
-        ...checkpoint,
-        condition: "waiting-for-user",
-        waiting,
-      });
-      if (!persisted.ok) return fatal(persisted.message);
+      const failed = await commitCursor({ kind: "pause", waiting });
+      if (failed !== null) return failed;
       renderPause(waiting);
       return { kind: "paused", waiting };
     }
     if (preScan.pendingFiles.length > 0) {
       const waiting = Pause.queueBlocked(preScan.pendingFiles);
-      const persisted = await persist({
-        ...checkpoint,
-        condition: "waiting-for-user",
-        waiting,
-      });
-      if (!persisted.ok) return fatal(persisted.message);
+      const failed = await commitCursor({ kind: "pause", waiting });
+      if (failed !== null) return failed;
       renderPause(waiting);
       return { kind: "paused", waiting };
     }
@@ -939,12 +893,8 @@ export async function executeEngine(
     }
     if (unrunnable !== null) {
       const waiting = unrunnable;
-      const persisted = await persist({
-        ...checkpoint,
-        condition: "waiting-for-user",
-        waiting,
-      });
-      if (!persisted.ok) return fatal(persisted.message);
+      const failed = await commitCursor({ kind: "pause", waiting });
+      if (failed !== null) return failed;
       renderPause(waiting);
       return { kind: "paused", waiting };
     }
@@ -956,7 +906,7 @@ export async function executeEngine(
       return { kind: "refused", message: attemptStartHead.message };
     }
     const headAtStart = attemptStartHead.value;
-    const attemptNumber = nextAttemptNumber(checkpoint.attempts, stageIndex);
+    const attemptNumber = nextAttemptNumber(run.checkpoint.attempts, stageIndex);
     const logPaths = attemptLogPaths(runDir, ordinal, stage.id, attemptNumber);
     const startedAt = clock().toISOString();
 
@@ -971,14 +921,12 @@ export async function executeEngine(
       logPath: logPaths.runRelPath,
     };
 
-    const executingPersist = await persist({
-      ...checkpoint,
-      condition: "executing",
-      waiting: null,
-      attempts: [...checkpoint.attempts, executingAttempt],
-    });
     // A persistence failure creates no log and prevents launch.
-    if (!executingPersist.ok) return fatal(executingPersist.message);
+    const reserveFailed = await commitCursor({
+      kind: "reserve-attempt",
+      attempt: executingAttempt,
+    });
+    if (reserveFailed !== null) return reserveFailed;
 
     // Only after persistence succeeds, exclusively create the header log. A
     // log-header failure leaves the durable executing attempt recoverable, does
@@ -992,7 +940,7 @@ export async function executeEngine(
       model: agent.model,
       harnessVersion:
         ctx.harnessVersions[agent.harness] ??
-        checkpoint.observedHarnessVersions[agent.harness] ??
+        run.checkpoint.observedHarnessVersions[agent.harness] ??
         "unknown",
       repoRoot,
       threadRelPath,
@@ -1043,7 +991,7 @@ export async function executeEngine(
     // Live session capture: first non-empty ID starts exactly one provisional
     // checkpoint write. The promise is retained and awaited before settlement.
     let liveSession: { id: string } | undefined;
-    let provisionalWrite: Promise<PersistOutcome> | undefined;
+    let provisionalWrite: Promise<CommitOutcome> | undefined;
 
     let outcome: AttemptOutcome;
     try {
@@ -1062,21 +1010,21 @@ export async function executeEngine(
           attemptNumber,
         },
         idleTimeoutSeconds: binding.idleTimeoutSeconds,
-        dangerouslySkipPermissions: checkpoint.dangerouslySkipPermissions,
-        workspace: checkpoint.workspace.execution,
+        dangerouslySkipPermissions: run.checkpoint.dangerouslySkipPermissions,
+        workspace: run.checkpoint.workspace.execution,
         logFilePath: logPaths.absPath,
         onEvent: (event) => display.harnessEvent(event),
         onSessionCaptured: (session) => {
           if (liveSession !== undefined) return;
           if (typeof session.id !== "string" || session.id.length === 0) return;
           liveSession = { id: session.id };
-          // Do not await here — retain the promise and serialize before settlement.
-          provisionalWrite = persist({
-            ...checkpoint,
-            attempts: replaceLast(
-              checkpoint.attempts,
-              withAgentSession(executingAttempt, liveSession),
-            ),
+          // Committed directly rather than through `commitCursor`: a session this
+          // attempt is still holding is worth recording and not worth ending the
+          // run over, so the failure is warned about below instead. Do not await
+          // here — retain the promise and serialize before settlement.
+          provisionalWrite = run.commit({
+            kind: "attach-session",
+            attempt: withAgentSession(executingAttempt, liveSession),
           });
         },
         signal,
@@ -1190,13 +1138,11 @@ export async function executeEngine(
           },
           agentSession,
         );
-        const persisted = await persist({
-          ...checkpoint,
-          attempts: replaceLast(checkpoint.attempts, settled),
-          condition: "waiting-for-user",
-          waiting,
-        });
-        if (!persisted.ok) return fatal(persisted.message);
+        const failed = await commitCursor(
+          { kind: "settle-attempt", attempt: settled },
+          { kind: "pause", waiting },
+        );
+        if (failed !== null) return failed;
         display.stageStopped({
           stagePosition,
           durationMs: Date.parse(endedAt) - Date.parse(startedAt),
@@ -1283,18 +1229,13 @@ export async function executeEngine(
         },
         agentSession,
       );
-      const nextIndex = stageIndex + 1;
-      const completed = nextIndex === stageCount;
-      const persisted = await persist({
-        ...checkpoint,
-        attempts: replaceLast(checkpoint.attempts, done),
-        stageIndex: nextIndex,
-        condition: completed ? "completed" : "ready",
-        waiting: null,
-      });
-      if (!persisted.ok) return fatal(persisted.message);
+      const failed = await commitCursor(
+        { kind: "settle-attempt", attempt: done },
+        { kind: "advance" },
+      );
+      if (failed !== null) return failed;
       display.stageSucceeded({ stagePosition, durationMs });
-      if (completed) {
+      if (run.isExhausted) {
         display.runCompleted({
           runId,
           pipelineName,
@@ -1324,13 +1265,11 @@ export async function executeEngine(
         attempt: attemptReference,
         queueResolution: stage.queueResolution,
       });
-      const persisted = await persist({
-        ...checkpoint,
-        attempts: replaceLast(checkpoint.attempts, done),
-        condition: "waiting-for-user",
-        waiting,
-      });
-      if (!persisted.ok) return fatal(persisted.message);
+      const failed = await commitCursor(
+        { kind: "settle-attempt", attempt: done },
+        { kind: "pause", waiting },
+      );
+      if (failed !== null) return failed;
       // The stage itself succeeded — it reported DONE and its boundary was
       // finalized. Only the pending bundle keeps the run from advancing.
       display.stageSucceeded({ stagePosition, durationMs });
@@ -1381,13 +1320,11 @@ export async function executeEngine(
       },
       agentSession,
     );
-    const persisted = await persist({
-      ...checkpoint,
-      attempts: replaceLast(checkpoint.attempts, settled),
-      condition: "waiting-for-user",
-      waiting,
-    });
-    if (!persisted.ok) return fatal(persisted.message);
+    const failed = await commitCursor(
+      { kind: "settle-attempt", attempt: settled },
+      { kind: "pause", waiting },
+    );
+    if (failed !== null) return failed;
     display.stageStopped({
       stagePosition,
       durationMs,

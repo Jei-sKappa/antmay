@@ -161,23 +161,32 @@ describe("one post-allocation checkpoint writer (AC-1.3, AC-1.5)", () => {
   it("gives the atomic writer exactly two production importers", async () => {
     expect(await importersOf("state/persist.ts")).toEqual([
       "commands/run.ts",
-      "execution/engine.ts",
+      "execution/run-state.ts",
     ]);
   });
 
   it("keeps run's own write to the one allocation write", async () => {
     // Creating the initial `ready` checkpoint is allocation, not a transition of
-    // existing state, so it is the one write outside the engine.
+    // existing state, so it is the one write outside the run's own cursor.
     const run = await moduleNamed("commands/run.ts");
     expect(occurrencesOf(run.source, /\bwriteCheckpoint\(/g)).toBe(1);
   });
 
-  it("routes every engine write through the engine's own persistence boundary", async () => {
-    const engine = await moduleNamed("execution/engine.ts");
-    // The engine calls its injectable boundary, never the module function, and
+  it("routes every transition through the cursor's one persistence boundary", async () => {
+    const state = await moduleNamed("execution/run-state.ts");
+    // The cursor calls its injectable boundary, never the module function, and
     // that boundary has exactly one call site to stamp and persist through.
-    expect(occurrencesOf(engine.source, /\bwriteCheckpoint\(/g)).toBe(0);
-    expect(occurrencesOf(engine.source, /\bpersistCheckpoint\(/g)).toBe(1);
+    expect(occurrencesOf(state.source, /\bwriteCheckpoint\(/g)).toBe(0);
+    expect(occurrencesOf(state.source, /\bpersistCheckpoint\(/g)).toBe(1);
+  });
+
+  it("leaves the engine unable to write at all", async () => {
+    const engine = await moduleNamed("execution/engine.ts");
+    for (const writer of ["writeCheckpoint", "persistCheckpoint"]) {
+      expect(
+        occurrencesOf(engine.source, new RegExp(`\\b${writer}\\(`, "g")),
+      ).toBe(0);
+    }
   });
 
   it("leaves the writer a writer", async () => {
@@ -191,6 +200,7 @@ describe("resume preflight reaches no transition collaborator (AC-1.3)", () => {
   /** Everything the engine owns under the lock. */
   const ENGINE_OWNED = [
     "state/persist.ts",
+    "execution/run-state.ts",
     "execution/recovery-policy.ts",
     "gitops/boundary.ts",
     "gitops/status.ts",
@@ -419,6 +429,97 @@ describe("a pause is built in one module and compared field by field", () => {
       expect(
         reference.specifier.startsWith("node:"),
         `${BUILDER} imports ${reference.specifier}`,
+      ).toBe(false);
+    }
+  });
+});
+
+describe("durable state changes only by committing a named transition", () => {
+  /** The one module that turns a transition into the next checkpoint. */
+  const APPLIER = "execution/run-state.ts";
+  /** The module that declares the document, and so states its fields once. */
+  const SCHEMA = "state/checkpoint.ts";
+  /** Writing the first checkpoint of a run is allocation, not a transition. */
+  const ALLOCATION = "commands/run.ts";
+
+  /**
+   * An object literal that derives a checkpoint from an existing one: led by a
+   * spread and carrying a field only a checkpoint has. That is the form a
+   * hand-rolled transition naturally takes, and the form the applier owns.
+   */
+  const CHECKPOINT_DERIVATION =
+    /\{\s*\.\.\.[\w$.]+,[^}]*\b(?:condition|stageIndex|attempts)\s*:/;
+
+  it("derives a checkpoint from another checkpoint nowhere else", async () => {
+    // A caller that assembles its own next state has to reproduce the invariants
+    // the document carries — an appended attempt is the only executing one, a
+    // pause and only a pause holds a waiting object, completion is the cursor
+    // reaching the stage count — and nothing makes it. Two such callers drift,
+    // silently, because every existing case still passes.
+    for (const module of await productionModules()) {
+      if (module.id === APPLIER) continue;
+      expect(
+        withoutComments(module.source),
+        `${module.id} assembles its own next checkpoint`,
+      ).not.toMatch(CHECKPOINT_DERIVATION);
+    }
+  });
+
+  it("declares the transition vocabulary once, and makes every producer depend on it", async () => {
+    const modules = await productionModules();
+    expect(
+      modules
+        .filter((module) => /^export\s+type\s+Transition\b/m.test(module.source))
+        .map((module) => module.id),
+    ).toEqual([APPLIER]);
+    for (const module of modules) {
+      if (module.id === APPLIER || !/\bTransition\b/.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names Transition`).toContain(APPLIER);
+    }
+  });
+
+  it("stamps updatedAt at allocation and in the applier only", async () => {
+    // The stamp is what makes a checkpoint's age mean anything, and it is the
+    // half of a write that is easiest to forget. Keeping it to the two modules
+    // that may write at all is what keeps "every write is stamped" true by
+    // construction rather than by review.
+    //
+    // Giving the field a value of its own is stamping. Declaring its type and
+    // carrying an already-stamped value forward onto a display row are not, so
+    // both are read for what they are rather than counted as a second stamp.
+    const stamps = (source: string): boolean =>
+      [...source.matchAll(/\bupdatedAt\s*:\s*([^,;\n]*)/g)].some((match) => {
+        const value = match[1]!.trim();
+        return value !== "string" && !/^[\w$.]*\.updatedAt$/.test(value);
+      });
+    const owners = (await productionModules())
+      .filter((module) => stamps(withoutComments(module.source)))
+      .map((module) => module.id);
+    expect(owners).toEqual([ALLOCATION, APPLIER]);
+  });
+
+  it("gives the applier one stamp for its one write", async () => {
+    const applier = await moduleNamed(APPLIER);
+    expect(occurrencesOf(applier.source, /\bupdatedAt\s*:/g)).toBe(1);
+    // The document the stamp lands on is the one the schema declares, so the
+    // applier states the fields it moves and never a shape of its own.
+    expect(targetsOf(applier)).toContain(SCHEMA);
+  });
+
+  it("keeps the applier a pure function of the cursor and the transition", async () => {
+    // It reaches the clock and the writer it was handed, and nothing else: a
+    // transition that inspected the thread, Git, or the harness could only be
+    // exercised by driving the engine to the situation that commits it.
+    const applier = await moduleNamed(APPLIER);
+    expect(withoutComments(applier.source)).not.toMatch(
+      /\b(?:inspectArtifactState|scanPendingQueues|readHead|isWorktreeClean|finalizeGitBoundary|process)\b/,
+    );
+    for (const target of targetsOf(applier)) {
+      expect(
+        /^(?:display|harness|runner|gitops|pipeline|thread|config|commands)\//.test(
+          target,
+        ),
+        `${APPLIER} imports ${target}`,
       ).toBe(false);
     }
   });
