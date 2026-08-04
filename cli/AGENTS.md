@@ -224,17 +224,31 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   catalog (`catalog.ts`), pipeline-document loading and validation
   (`documents.ts`), suffix selection and artifact-state composition
   (`composition.ts`), and target-rule resolution (`targets.ts`).
-- `execution/` — the stage loop (`engine.ts`) over three collaborators.
+- `execution/` — the run, as a loop over named phases.
+  `engine.ts` is that loop and only that loop: it states the order — recover a
+  resumed cursor, then per stage a signal at rest, the queue gate, the artifact
+  prerequisite, the attempt's launch, its settlement — and reaches no
+  collaborator itself. Each step is one module under `phases/`, driven from
+  exactly one caller, so the order above is the only order there is; the
+  resume-only recovery is the same shape under `entry/`. Both trees are guarded:
+  a phase with a second caller, or a loop that imports a collaborator, fails
+  `architecture.test.ts` rather than quietly making the sequence unreadable.
+  Four modules carry what more than one phase needs and no phase owns —
+  `context.ts` (what a command hands the engine, and the context every phase
+  reads it through), `result.ts`, `observations.ts`, `attempts.ts`.
+  `result.ts` is where an invocation ends: each of the five results is returned
+  together with the terminal event it is only correct alongside, and the one
+  `commitCursor` there is what turns a failed write into a fatal ending.
   `run-state.ts` is the run's durable cursor and the whole persistence boundary
   of a run in flight: every way a cursor can move is one named `Transition`,
   applied through one reducer, and committing them is the one place `updatedAt`
   is stamped, the one place the atomic writer is called after allocation, and the
   one place a pause the checkpoint already records is recognized as needing no
   write. Several transitions in one commit are one document, which is what keeps
-  a settled attempt and the pause it settled into a single write. The other two
-  are pure: the pause-recovery decision table (`recovery-policy.ts`), and
-  `pause.ts`, which holds one builder per pause situation plus the field-by-field
-  `waitingEquals` the durable-write decision rests on. The engine decides which
+  a settled attempt and the pause it settled into a single write. Two modules are
+  pure: the pause-recovery decision table (`recovery-policy.ts`), and `pause.ts`,
+  which holds one builder per pause situation plus the field-by-field
+  `waitingEquals` the durable-write decision rests on. A phase decides which
   situation holds and asks for the value; it assembles no waiting object and no
   checkpoint itself, so every pause the terminal can draw is enumerable from one
   file and every durable transition from another.
@@ -322,7 +336,8 @@ bearing.
   preflight that reaches no transition collaborator, the Git protocol behind its
   one operation, artifact contracts declared only in the thread domain, pauses
   assembled in one module and compared field by field, durable state changed
-  only by committing a named transition, phase-specific display consumers, and
+  only by committing a named transition, one caller per execution phase and one
+  module that ends an invocation, phase-specific display consumers, and
   adapter families loaded only through the runtime resolver. It reads source
   text, so a static, dynamic, re-export, or type-only import is judged for what
   it is. When it fails, the boundary moved — argue the direction, do not relax

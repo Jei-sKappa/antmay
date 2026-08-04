@@ -127,6 +127,21 @@ async function importersOf(target: ModuleId): Promise<ModuleId[]> {
     .map((module) => module.id);
 }
 
+/**
+ * Which production modules load `target`, sorted. A type-only reference states a
+ * dependency direction but loads nothing and can call nothing, so a module that
+ * only names another's types is not one of its drivers.
+ */
+async function driversOf(target: ModuleId): Promise<ModuleId[]> {
+  return (await productionModules())
+    .filter((module) =>
+      module.references.some(
+        (reference) => reference.target === target && !reference.typeOnly,
+      ),
+    )
+    .map((module) => module.id);
+}
+
 /** Which production modules mention `name` as an identifier, sorted. */
 async function modulesNaming(name: string): Promise<ModuleId[]> {
   const pattern = new RegExp(`\\b${name}\\b`);
@@ -180,12 +195,19 @@ describe("one post-allocation checkpoint writer (AC-1.3, AC-1.5)", () => {
     expect(occurrencesOf(state.source, /\bpersistCheckpoint\(/g)).toBe(1);
   });
 
-  it("leaves the engine unable to write at all", async () => {
-    const engine = await moduleNamed("execution/engine.ts");
-    for (const writer of ["writeCheckpoint", "persistCheckpoint"]) {
-      expect(
-        occurrencesOf(engine.source, new RegExp(`\\b${writer}\\(`, "g")),
-      ).toBe(0);
+  it("leaves the engine and each of its phases unable to write at all", async () => {
+    // The engine is a loop over phase modules, so the property is a domain
+    // property: whichever of them moves the run states the transition and lets
+    // the cursor decide when that reaches disk.
+    for (const module of await productionModules()) {
+      if (!module.id.startsWith("execution/")) continue;
+      if (module.id === "execution/run-state.ts") continue;
+      for (const writer of ["writeCheckpoint", "persistCheckpoint"]) {
+        expect(
+          occurrencesOf(module.source, new RegExp(`\\b${writer}\\(`, "g")),
+          `${module.id} calls ${writer}`,
+        ).toBe(0);
+      }
     }
   });
 
@@ -217,6 +239,12 @@ describe("resume preflight reaches no transition collaborator (AC-1.3)", () => {
     expect(targets).toContain("execution/engine.ts");
     for (const owned of ENGINE_OWNED) {
       expect(targets, `resume imports ${owned}`).not.toContain(owned);
+    }
+    // The engine is several modules, and its entry is the only one a command
+    // may reach: a preflight holding a phase could gate on it, which is what
+    // would make the pause vocabulary a resume's business again.
+    for (const target of targets.filter((id) => id.startsWith("execution/"))) {
+      expect(target, `resume imports ${target}`).toBe("execution/engine.ts");
     }
   });
 
@@ -265,9 +293,28 @@ describe("the whole Git boundary protocol is one operation (AC-4.4)", () => {
     }
   });
 
-  it("offers the engine one entry point into that protocol", async () => {
-    expect(await modulesNaming("finalizeGitBoundary")).toEqual([
-      "execution/engine.ts",
+  it("offers the execution domain one entry point into that protocol", async () => {
+    // The domain names the operation in three places — the injectable seam's
+    // type, its default, and the boundary itself — so what the guard pins is
+    // the direction: nothing outside the run's own domain finalizes a boundary.
+    const namers = await modulesNaming("finalizeGitBoundary");
+    expect(namers).toContain("gitops/boundary.ts");
+    for (const id of namers) {
+      expect(
+        id === "gitops/boundary.ts" || id.startsWith("execution/"),
+        `${id} names the boundary operation`,
+      ).toBe(true);
+    }
+    // Calling it is finalizing a boundary, and only the two phases that own one
+    // do that: the stage's own boundary, and the retry a resume may finalize.
+    const callers = (await productionModules())
+      .filter((module) =>
+        /\bfinalize(?:Git)?Boundary\(/.test(withoutComments(module.source)),
+      )
+      .map((module) => module.id);
+    expect(callers).toEqual([
+      "execution/entry/finalize.ts",
+      "execution/phases/boundary.ts",
       "gitops/boundary.ts",
     ]);
   });
@@ -525,17 +572,131 @@ describe("durable state changes only by committing a named transition", () => {
   });
 });
 
+describe("the engine is one loop over named phases", () => {
+  /** The loop, and the one module each phase and entry step is driven from. */
+  const PHASE_CALLERS: Record<ModuleId, ModuleId> = {
+    "execution/phases/queue-gate.ts": "execution/engine.ts",
+    "execution/phases/prerequisite.ts": "execution/engine.ts",
+    "execution/phases/attempt.ts": "execution/engine.ts",
+    "execution/phases/settlement.ts": "execution/engine.ts",
+    "execution/phases/verify-promise.ts": "execution/phases/settlement.ts",
+    "execution/phases/boundary.ts": "execution/phases/settlement.ts",
+    "execution/entry/recover.ts": "execution/engine.ts",
+    "execution/entry/evidence.ts": "execution/entry/recover.ts",
+    "execution/entry/refresh.ts": "execution/entry/recover.ts",
+    "execution/entry/finalize.ts": "execution/entry/recover.ts",
+  };
+  /** The one module that states the order above. */
+  const LOOP = "execution/engine.ts";
+  /** The one module that turns an ending into a value and the event for it. */
+  const RESULT = "execution/result.ts";
+
+  it("declares every phase that exists", async () => {
+    // A phase file the table does not name is a step of the run nothing above
+    // accounts for, whether it is orphaned or driven from somewhere unexpected.
+    const onDisk = (await productionModules())
+      .map((module) => module.id)
+      .filter((id) => /^execution\/(?:phases|entry)\//.test(id));
+    expect([...onDisk].sort()).toEqual(Object.keys(PHASE_CALLERS).sort());
+  });
+
+  it("drives each phase from exactly the one module that states its place", async () => {
+    // What a run does to a stage, in what order, is readable in one file only
+    // while each phase has one caller. A second caller is how that reading stops
+    // being the truth: the same gate then runs at a point the loop does not show,
+    // and the pause/resume bug class this structure exists to close comes back.
+    //
+    // A phase may still name what an earlier one produced — a settlement is
+    // handed the attempt a launch returned — because a type reference invokes
+    // nothing and leaves the order above the only one there is.
+    for (const [phase, caller] of Object.entries(PHASE_CALLERS)) {
+      expect(await driversOf(phase), `drivers of ${phase}`).toEqual([caller]);
+    }
+  });
+
+  it("lets no phase reach back into the loop", async () => {
+    for (const phase of Object.keys(PHASE_CALLERS)) {
+      expect(
+        targetsOf(await moduleNamed(phase)),
+        `${phase} reaches the loop`,
+      ).not.toContain(LOOP);
+    }
+  });
+
+  it("keeps the loop free of every collaborator a phase drives", async () => {
+    // The loop states the order and does none of the work, so it reaches its own
+    // domain and nothing else. The queue scanner, artifact inspector, harness
+    // invoker, log writer, Git boundary, classifier, and pause builder are each
+    // reachable only from the phase that owns them — which is what stops the
+    // loop from re-absorbing them one import at a time.
+    const loop = await moduleNamed(LOOP);
+    for (const reference of loop.references) {
+      expect(
+        reference.target,
+        `the loop imports ${reference.specifier}`,
+      ).not.toBeNull();
+      expect(
+        reference.target!.startsWith("execution/"),
+        `the loop imports ${reference.target}`,
+      ).toBe(true);
+    }
+  });
+
+  it("ends an invocation in one module", async () => {
+    // Every ending is a value the command maps to an exit code *and* an event the
+    // terminal is owed, and the two are only correct together: a pause nothing
+    // rendered exits 2 with a blank screen, and a fatal write failure nothing
+    // rendered ends the run with no explanation. With fifteen modules able to
+    // return one, no assertion about a returned value would catch the omission.
+    //
+    // `interrupted` is left out of the literal check on purpose: a waiting reason
+    // and a settled attempt's failure both legitimately carry that kind, so it is
+    // held by the type rule below instead — the same trade the pause guard makes.
+    const ENDING = /\bkind:\s*"(?:completed|paused|refused|fatal-checkpoint)"/;
+    const modules = await productionModules();
+    for (const module of modules) {
+      if (module.id === RESULT || !module.id.startsWith("execution/")) continue;
+      expect(
+        withoutComments(module.source),
+        `${module.id} ends an invocation`,
+      ).not.toMatch(ENDING);
+    }
+    expect(
+      modules
+        .filter((module) =>
+          /^export\s+type\s+ExecutionResult\b/m.test(module.source),
+        )
+        .map((module) => module.id),
+    ).toEqual([RESULT]);
+    for (const module of modules) {
+      if (module.id === RESULT || !/\bExecutionResult\b/.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names ExecutionResult`).toContain(
+        RESULT,
+      );
+    }
+  });
+});
+
 describe("display consumers are phase-specific (AC-7.1, AC-7.2)", () => {
   /** The execution lifecycle renderer and the interface it implements. */
   const EXECUTION_PHASE = ["display/execution.ts", "display/types.ts"];
   /** One import point over all phases, for a reader or test that spans them. */
   const CROSS_PHASE_BARREL = "display/terminal.ts";
 
-  it("keeps the engine on the narrow lifecycle interface", async () => {
-    const engine = await moduleNamed("execution/engine.ts");
-    expect(targetsOf(engine).filter((target) => target.startsWith("display/"))).toEqual(
-      ["display/types.ts"],
-    );
+  it("keeps the execution domain on the narrow lifecycle interface", async () => {
+    // The engine is a loop over phase modules, several of which draw something,
+    // so the property is a domain property: each reaches the interface and never
+    // a concrete renderer or another phase's entry point.
+    for (const module of await productionModules()) {
+      if (!module.id.startsWith("execution/")) continue;
+      for (const target of targetsOf(module)) {
+        if (!target.startsWith("display/")) continue;
+        expect(target, `${module.id} reaches a display phase`).toBe(
+          "display/types.ts",
+        );
+      }
+    }
+    expect(await importersOf("display/types.ts")).toContain("execution/context.ts");
   });
 
   it("keeps listing and preflight off the lifecycle and off the barrel", async () => {
