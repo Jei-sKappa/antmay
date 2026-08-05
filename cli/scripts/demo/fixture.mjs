@@ -108,6 +108,52 @@ export function chmodPath(absPath, mode) {
 }
 
 /**
+ * Install a `commit-msg` hook that rejects every subject matching the `grep`
+ * basic-regexp `match` and lets every other through, so the stages before the
+ * rejected one commit normally. The fixture points `core.hooksPath` at its own
+ * directory, which is where this writes.
+ */
+export function rejectCommitSubject(ctx, { match, message }) {
+  const hookPath = path.join(ctx.repoRoot, ".git", "hooks-disabled", "commit-msg");
+  writeFileSync(
+    hookPath,
+    [
+      "#!/bin/sh",
+      `if grep -q ${JSON.stringify(match)} "$1"; then`,
+      `  echo ${JSON.stringify(message)} >&2`,
+      "  exit 1",
+      "fi",
+      "exit 0",
+      "",
+    ].join("\n"),
+  );
+  chmodSync(hookPath, 0o755);
+  return hookPath;
+}
+
+/**
+ * Delete every workspace lock under the fixture's state root — by hand, which is
+ * the only way a lock is ever released after the executor holding it disappeared.
+ * A scenario that kills the executor outright needs this before it can resume.
+ */
+export function removeStaleLocks(ctx) {
+  const locksDir = path.join(ctx.stateRoot, "afk-locks");
+  const removed = [];
+  let entries;
+  try {
+    entries = readdirSync(locksDir, { withFileTypes: true });
+  } catch {
+    return removed;
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".lock")) continue;
+    rmSync(path.join(locksDir, entry.name));
+    removed.push(entry.name);
+  }
+  return removed;
+}
+
+/**
  * Leave the worktree dirty by writing an untracked file at the repository root.
  * The preflight clean-worktree check is what this is for.
  */

@@ -21,6 +21,11 @@ export async function checkPrerequisite(
 ): Promise<PrerequisiteVerdict> {
   const inspection = await ctx.inspectArtifacts(ctx.repoRoot, ctx.threadRelPath);
   if (!inspection.ok) {
+    // A thread the artifacts cannot be read in is also a thread whose queues
+    // cannot be scanned, and the queue gate runs ahead of this one — so no
+    // end-to-end path reaches this branch, and no demo scenario can show it. It
+    // is written anyway because pausing is the fail-closed direction: a stage
+    // whose requirements could not be checked is never started on that basis.
     return {
       kind: "unmet",
       waiting: Pause.prerequisiteUninspectable({
