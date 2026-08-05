@@ -577,10 +577,17 @@ npm run demo -- --list                  # every scenario, and the state it ends 
 npm run demo -- --scenario 13-refused   # by full id
 npm run demo -- --scenario refused      # by name
 npm run demo -- --scenario 11           # by number
+npm run demo:all                        # the whole catalog, as one verdict
 ```
 
 Without `--scenario` the demo prompts when it has a terminal, taking the first
 scenario when answered with Enter alone.
+
+Every invocation a scenario makes declares the exit code it must produce and the
+output that identifies the state it ends on, so a scenario that reaches the wrong
+state fails instead of passing on a shared exit code. `npm run demo:all` builds
+once and runs the whole catalog serially, printing a line per scenario, the full
+transcript of any that failed, and its own wall clock.
 
 Each run gets a unique directory under `/tmp/antmay-demo-<scenario>-*` holding an
 isolated config root, an isolated state root, and the disposable Git repository,

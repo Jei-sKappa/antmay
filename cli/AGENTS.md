@@ -74,7 +74,8 @@ behavior stay stable.
 - Commands: `npm --prefix cli run check` (typecheck + test + build) is the full
   gate; `npm run build`, `npm run typecheck`, `npm run test` run the pieces.
   `npm run demo` builds without tests and executes one scripted scenario in a
-  unique disposable repository under `/tmp`.
+  unique disposable repository under `/tmp`; `npm run demo:all` runs the whole
+  scenario catalog and reports it as one verdict.
   The binary is `dist/main.js`, exposed as `antmay` via the `bin` field.
 
 ### Command surface
@@ -428,10 +429,11 @@ and the list's `Latest session` field with no real harness and no per-scenario
 session setup.
 
 The demo driver is generic and holds no scenario-specific knowledge: it builds
-the CLI, stands up the fixture, executes the scenario's ordered steps, and
-compares exit codes. Anything a single scenario needs — a rejecting Git hook, an
-unreadable queue, a revoked permission, a hook that changes the world while a
-child is live — belongs in that scenario's own file, never in the driver. A
+the CLI, stands up the fixture, executes the scenario's ordered steps, and checks
+each invocation against the exit code and the output that step declares. Anything
+a single scenario needs — a rejecting Git hook, an unreadable queue, a revoked
+permission, a hook that changes the world while a child is live — belongs in that
+scenario's own file, never in the driver. A
 scenario needing different executor configuration declares its own pipeline,
 profile, or per-stage binding overrides rather than reaching for a demo-only
 hook, so the demo exercises the same path a user would.
@@ -511,17 +513,29 @@ content, or interaction paths require separate scenarios. Then:
 - **Keep the scenario's own `label` accurate**, naming the state it exists to
   show. That label is the catalog: `--list` and the selection prompt render every
   row from it, so no document repeats them. Then run the affected scenario to
-  confirm the exit code it declares.
+  confirm the exit code and the required output it declares.
 
 Run the scenario with `--no-color` as well whenever the rendering leans on color,
-to confirm it still reads when color carries nothing.
+to confirm it still reads when color carries nothing. Markers are matched with
+ANSI escapes stripped, so a colored and an uncolored run assert the same thing.
 
-`npm run demo` sits deliberately outside the CLI grammar and the check/CI gate.
-Unit tests remain responsible for exact behavior, edge cases, and output
-assertions. They complement scenarios but never substitute for running the built
-CLI and inspecting its interface. Conversely, behavior with no visible output
-belongs in the `*.test.ts` suite: the demo checks one exit code per invocation
-and is not the correctness gate.
+**A scenario asserts the rendering it reaches.** Each invocation declares the
+output that identifies that rendering next to the exit code it must produce,
+because the code alone identifies no screen: every pause exits `2` and every
+preflight refusal exits `1`. What identifies a rendering is the *conjunction* of a
+scenario's markers, so pair the banner with the line that separates this scenario
+from its neighbours — `BLOCKED` alone appears in most transcripts. A marker list is
+required where the step is constructed, and two scenarios declaring the same
+plain-string set are refused before anything runs, so a declaration can decay
+neither by omission nor into a banner every neighbour shares. What a marker may be
+lives in `scripts/demo/markers.mjs`.
+
+What a scenario does not assert is exactness. Unit tests keep exact terminal text
+and edge cases, and behavior with no visible output at all belongs to the
+`*.test.ts` suite alone: a marker claims that a rendering was reached, never that
+every character of it is right. `npm run demo` and `npm run demo:all` sit outside
+the CLI grammar and outside `npm run check`, so neither substitutes for running
+the built CLI and reading its interface yourself.
 
 ### What only a real harness proves
 
