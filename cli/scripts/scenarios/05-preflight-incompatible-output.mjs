@@ -12,5 +12,14 @@ export default {
     "plan-brief",
     "implement-plan",
   ]),
-  steps: [run({ expectExit: 1 })],
+  steps: [
+    run({
+      expectExit: 1,
+      markers: [
+        "Pipeline cannot start",
+        '1 requirement for "implement-plan" is not satisfied.',
+        "After stage 1 · plan-brief:",
+      ],
+    }),
+  ],
 };

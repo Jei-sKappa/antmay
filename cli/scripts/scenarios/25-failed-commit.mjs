@@ -1,6 +1,7 @@
 import { chmodSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { action, run } from "../demo/steps.mjs";
 
@@ -33,6 +34,13 @@ export default {
       );
       chmodSync(hookPath, 0o755);
     }),
-    run({ expectExit: 2 }),
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — commit failed",
+        "commit-msg hook: the plan commit is rejected by this fixture",
+        printedResumeCommand,
+      ],
+    }),
   ],
 };

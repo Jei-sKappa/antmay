@@ -328,6 +328,14 @@ export default {
   note: "Writes five checkpoints straight into the state root, including two interleaved waiting runs that expose global updated-time ordering. `ready` and `executing` cannot be produced on demand; `list` validates every seed, so the scenario fails if the checkpoint schema moves out from under them.",
   steps: [
     action(`seed ${ROWS.length} runs into the state root`, seedRuns),
-    list({ expectExit: 0 }),
+    list({
+      expectExit: 0,
+      markers: [
+        "EXECUTING (UNVERIFIED) · updated",
+        "WAITING FOR USER · updated",
+        "READY · updated",
+        "COMPLETED · updated",
+      ],
+    }),
   ],
 };

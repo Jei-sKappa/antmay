@@ -4,14 +4,22 @@
  * about what any individual scenario is demonstrating.
  *
  * Two kinds exist. An *invocation* runs the built CLI and is checked against the
- * exit code it must produce. An *action* runs scenario-owned code against the
- * fixture between invocations, so the setup a single scenario needs — sabotaging
- * the repository, resolving a queued bundle, revoking a permission — lives in
- * that scenario's own file rather than in the shared driver.
+ * exit code it must produce and the output it must show. An *action* runs
+ * scenario-owned code against the fixture between invocations, so the setup a
+ * single scenario needs — sabotaging the repository, resolving a queued bundle,
+ * revoking a permission — lives in that scenario's own file rather than in the
+ * shared driver.
+ *
+ * Every invocation declares both halves: `expectExit` and a non-empty `markers`
+ * list, which `demo/markers.mjs` defines and checks. Neither is optional, and a
+ * step missing or malforming either one throws where it is constructed.
  */
 
+import { assertMarkers } from "./markers.mjs";
+
 /**
- * Run `antmay afk run <pipeline> --thread <thread>` and require `expectExit`.
+ * Run `antmay afk run <pipeline> --thread <thread>` and require `expectExit`
+ * together with every marker in `markers`.
  *
  * The pipeline reference is the declared name of the document the driver wrote
  * into the isolated config root, so the run resolves it exactly as a user's
@@ -22,12 +30,14 @@
  * and the live child process — the seam a scenario uses to signal the run or to
  * change the world underneath it while an attempt is in flight.
  */
-export function run({ expectExit, flags = [], during, afterMs = 400 } = {}) {
+export function run({ expectExit, markers, flags = [], during, afterMs = 400 } = {}) {
   assertExit(expectExit, "run");
+  assertMarkers(markers, "run");
   return {
     kind: "invoke",
     argv: (ctx) => ["afk", "run", ctx.pipeline, "--thread", ctx.threadName, ...flags],
     expectExit,
+    markers,
     during,
     afterMs,
   };
@@ -35,27 +45,30 @@ export function run({ expectExit, flags = [], during, afterMs = 400 } = {}) {
 
 /**
  * Run `antmay afk resume <run-id>` against the run this scenario created, and
- * require `expectExit`.
+ * require `expectExit` together with every marker in `markers`.
  */
-export function resume({ expectExit, during, afterMs = 400 } = {}) {
+export function resume({ expectExit, markers, during, afterMs = 400 } = {}) {
   assertExit(expectExit, "resume");
+  assertMarkers(markers, "resume");
   return {
     kind: "invoke",
     argv: (ctx) => ["afk", "resume", ctx.runId()],
     expectExit,
+    markers,
     during,
     afterMs,
   };
 }
 
 /**
- * Run `antmay afk list` and require `expectExit`. Renders the run listing rather
- * than the run stream, so a scenario can show how its own final condition reads
- * in the listing.
+ * Run `antmay afk list` and require `expectExit` together with every marker in
+ * `markers`. Renders the run listing rather than the run stream, so a scenario
+ * can show how its own final condition reads in the listing.
  */
-export function list({ expectExit = 0 } = {}) {
+export function list({ expectExit = 0, markers } = {}) {
   assertExit(expectExit, "list");
-  return { kind: "invoke", argv: () => ["afk", "list"], expectExit };
+  assertMarkers(markers, "list");
+  return { kind: "invoke", argv: () => ["afk", "list"], expectExit, markers };
 }
 
 /**

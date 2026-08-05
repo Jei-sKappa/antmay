@@ -109,6 +109,14 @@ export default {
   scenario: scriptedRun(["spec"]),
   steps: [
     action("seed a real-harness run into the state root", seedRealRun),
-    resume({ expectExit: 1 }),
+    resume({
+      expectExit: 1,
+      markers: [
+        "Run cannot resume",
+        "Harness runtime identity",
+        "This run was started against a real harness",
+        "unset ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS",
+      ],
+    }),
   ],
 };

@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll, writeThreadFile } from "../demo/fixture.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { action, run } from "../demo/steps.mjs";
@@ -26,6 +27,13 @@ export default {
       writeThreadFile(ctx, "plan-tasks/01-fake-task.md", TASK);
       commitAll(ctx, "docs: seed the plan the stage will not change");
     }),
-    run({ expectExit: 2 }),
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — git policy violation",
+        "stage requires at least one allowed change but the boundary is empty",
+        printedResumeCommand,
+      ],
+    }),
   ],
 };

@@ -12,5 +12,15 @@ export default {
     "plan-brief",
     "reconcile-plan",
   ]),
-  steps: [run({ expectExit: 1 })],
+  steps: [
+    run({
+      expectExit: 1,
+      markers: [
+        "Pipeline cannot start",
+        '2 requirements for "reconcile-plan" are not satisfied.',
+        "Spec projection",
+        "Plan projection",
+      ],
+    }),
+  ],
 };

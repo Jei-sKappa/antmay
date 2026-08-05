@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { chmodPath } from "../demo/fixture.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
@@ -20,10 +21,19 @@ export default {
     "write.",
   scenario: standardScenario({ "review-spec": ["outcome-blocked"] }),
   steps: [
-    run({ expectExit: 2 }),
+    run({
+      expectExit: 2,
+      markers: ["BLOCKED", "Stage 3/6 blocked in", printedResumeCommand],
+    }),
     action("Revoke write permission on the run directory", (ctx) => {
       ctx.onCleanup(chmodPath(ctx.runDir(), 0o555));
     }),
-    resume({ expectExit: 1 }),
+    resume({
+      expectExit: 1,
+      markers: [
+        "FAILED — checkpoint write",
+        "A fatal checkpoint error ended the resume before it could pause safely",
+      ],
+    }),
   ],
 };

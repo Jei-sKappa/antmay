@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -16,5 +17,15 @@ export default {
   label: "DONE without the promised artifact — ends on the contract banner",
   pipeline: pipelineDocument("spec-only", ["spec"]),
   scenario: scriptedRun(["spec"], { spec: ["outcome-done"] }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — promised artifact state unmet",
+        "it promises a non-empty spec.md, but the thread has no spec.md",
+        "expected a non-empty spec.md, found no spec.md",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

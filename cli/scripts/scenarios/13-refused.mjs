@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -8,5 +9,15 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "A stage reports REFUSED — ends on the REFUSED banner",
   scenario: standardScenario({ "review-spec": ["outcome-refused"] }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "REFUSED",
+        "The stage reported Outcome: REFUSED and paused for human attention.",
+        "Fake refusal; no files changed",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

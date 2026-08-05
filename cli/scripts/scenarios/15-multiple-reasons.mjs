@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -12,5 +13,17 @@ export default {
   scenario: standardScenario({
     "review-spec": ["outcome-blocked-pending-decision"],
   }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "Run stopped for 2 reasons:",
+        "BLOCKED",
+        "WAITING FOR USER",
+        "Fake pause; one fake decision queued",
+        "blocked-fake-decision.md",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

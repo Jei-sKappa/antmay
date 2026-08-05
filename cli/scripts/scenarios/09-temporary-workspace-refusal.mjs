@@ -49,6 +49,15 @@ export default {
         commitAll(ctx, "chore: track an implementation run and unignore two workspaces");
       },
     ),
-    run({ expectExit: 1 }),
+    run({
+      expectExit: 1,
+      markers: [
+        "Pipeline cannot start",
+        "Temporary workspace Git safety",
+        "Missing ignore coverage",
+        "Tracked temporary content",
+        "No run was created and no stages were run.",
+      ],
+    }),
   ],
 };

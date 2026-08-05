@@ -17,5 +17,15 @@ export default {
   label: "Everything correct — six stages, ends on SUCCESS",
   profile: DEMO_PROFILE,
   scenario: standardScenario(),
-  steps: [run({ expectExit: 0, flags: ["--profile", DEMO_PROFILE.name] })],
+  steps: [
+    run({
+      expectExit: 0,
+      flags: ["--profile", DEMO_PROFILE.name],
+      markers: [
+        "SUCCESS — 6/6 stages completed",
+        "codex-planning",
+        "Stage 6/6 done in",
+      ],
+    }),
+  ],
 };

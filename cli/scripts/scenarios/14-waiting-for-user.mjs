@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -12,5 +13,16 @@ export default {
   scenario: standardScenario({
     "reconcile-spec": ["reconcile-spec-pending-decision"],
   }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "WAITING FOR USER",
+        "1 pending bundle file awaits human resolution.",
+        "reconcile-spec-fake-decision.md",
+        "Stage 2/6 done in",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

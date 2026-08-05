@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -9,5 +10,14 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "The agent goes quiet — ends on the idle-timeout banner",
   scenario: standardScenario({ "review-spec": ["harness-idle-timeout"] }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — idle timeout",
+        "the agent produced no output within the idle timeout",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

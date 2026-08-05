@@ -12,5 +12,16 @@ export default {
     "spec",
     "plan-strict",
   ]),
-  steps: [run({ expectExit: 1, flags: ["--from", "plan-strict"] })],
+  steps: [
+    run({
+      expectExit: 1,
+      flags: ["--from", "plan-strict"],
+      markers: [
+        "Pipeline cannot start",
+        "selected stage 1 of 1 from --from plan-strict",
+        "Spec projection",
+        "none — this is the first selected stage",
+      ],
+    }),
+  ],
 };

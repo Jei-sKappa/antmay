@@ -18,6 +18,13 @@ export default {
       writeThreadFile(ctx, "plan.md", "# Plan\n\nAn incomplete strict plan.\n");
       mkdirSync(path.join(ctx.threadRoot, "plan-tasks"));
     }),
-    run({ expectExit: 1 }),
+    run({
+      expectExit: 1,
+      markers: [
+        "Pipeline cannot start",
+        "a plan.md and plan-tasks/ folder combination that does not form a usable plan",
+        "Required by stage 1 · implement-plan:",
+      ],
+    }),
   ],
 };

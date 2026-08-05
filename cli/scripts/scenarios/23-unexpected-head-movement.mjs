@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll } from "../demo/fixture.mjs";
 import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
@@ -22,6 +23,12 @@ export default {
     run({
       expectExit: 2,
       afterMs: 1000,
+      markers: [
+        "HEAD MOVED — review advised",
+        "The stage produced a commit even though its Git policy does not expect one",
+        "Stage 1/1 paused in",
+        printedResumeCommand,
+      ],
       during: (ctx) => {
         commitAll(ctx, "docs: stage committed its own spec");
       },

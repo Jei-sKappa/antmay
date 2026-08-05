@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { writeThreadFile } from "../demo/fixture.mjs";
 import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
@@ -27,10 +28,17 @@ export default {
   pipeline: pipelineDocument("spec-only", ["spec"]),
   scenario: scriptedRun(["spec"], { spec: ["outcome-done"] }),
   steps: [
-    run({ expectExit: 2 }),
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — promised artifact state unmet",
+        "expected a non-empty spec.md, found no spec.md",
+        printedResumeCommand,
+      ],
+    }),
     action("Write the promised spec.md and leave it uncommitted", (ctx) => {
       writeThreadFile(ctx, "spec.md", SPEC);
     }),
-    resume({ expectExit: 0 }),
+    resume({ expectExit: 0, markers: ["SUCCESS — 1/1 stages completed"] }),
   ],
 };

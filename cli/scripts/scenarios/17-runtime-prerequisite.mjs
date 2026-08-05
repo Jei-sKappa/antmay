@@ -1,6 +1,7 @@
 import { appendFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll, threadPath, writeThreadFile } from "../demo/fixture.mjs";
 import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
 import { action, run } from "../demo/steps.mjs";
@@ -59,6 +60,12 @@ export default {
       // recheck its prerequisite while the plan is still there, so both stages
       // complete at exit 0. This step declares exit 2, which neither produces.
       afterMs: 1000,
+      markers: [
+        "STAGE CANNOT START — requirements not met",
+        "Plan requirement",
+        'The pipeline passed preflight, but the thread\'s plan no longer matches what stage 2 "implement" requires.',
+        printedResumeCommand,
+      ],
       during: (ctx) => {
         rmSync(threadPath(ctx, "plan.md"));
       },

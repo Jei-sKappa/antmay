@@ -41,10 +41,11 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { scenarioIds } from "./demo/catalog.mjs";
 import { buildTracedCli } from "./trace/instrument.mjs";
 import { EDGE_PREAMBLE, edgeLines, renderTraceDirectory } from "./trace/report.mjs";
 import { scanFunctions } from "./trace/sources.mjs";
@@ -52,16 +53,8 @@ import { scanFunctions } from "./trace/sources.mjs";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CLI_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEMO = path.join(SCRIPT_DIR, "demo.mjs");
-const SCENARIO_DIR = path.join(SCRIPT_DIR, "scenarios");
 const USAGE =
   "Usage: node scripts/trace.mjs [--scenario <id>]... [--out <dir>] [--depth <n>]";
-
-function scenarioIds() {
-  return readdirSync(SCENARIO_DIR)
-    .filter((name) => name.endsWith(".mjs"))
-    .map((name) => name.slice(0, -".mjs".length))
-    .sort((left, right) => left.localeCompare(right));
-}
 
 function parseArgs(argv) {
   const parsed = { scenarios: [], out: undefined, depth: undefined };

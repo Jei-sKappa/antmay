@@ -9,5 +9,15 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "Unknown --from entry point — ends on the pipeline stage list",
   pipeline: pipelineDocument("invalid-entry-point", ["spec", "plan-strict"]),
-  steps: [run({ expectExit: 1, flags: ["--from", "implement"] })],
+  steps: [
+    run({
+      expectExit: 1,
+      flags: ["--from", "implement"],
+      markers: [
+        "Pipeline cannot start",
+        "The requested entry point is not selected by this pipeline.",
+        "Pipeline stages:",
+      ],
+    }),
+  ],
 };

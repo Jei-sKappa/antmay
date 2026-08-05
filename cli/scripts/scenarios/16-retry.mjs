@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll, writeThreadFile } from "../demo/fixture.mjs";
 import { scriptedRun, STANDARD_STAGE_IDS } from "../demo/pipeline.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
@@ -31,7 +32,17 @@ export default {
       writeThreadFile(ctx, "spec.md", "# Spec: Fake\n\nPlaceholder\n");
       commitAll(ctx, "docs: seed the spec the suffix run starts from");
     }),
-    run({ expectExit: 2, flags: ["--from", "reconcile-spec"] }),
-    resume({ expectExit: 0 }),
+    run({
+      expectExit: 2,
+      flags: ["--from", "reconcile-spec"],
+      markers: ["BLOCKED", "Stage 1/5 blocked in", printedResumeCommand],
+    }),
+    resume({
+      expectExit: 0,
+      markers: [
+        "Stage 1/5 · reconcile-spec · attempt 2",
+        "SUCCESS — 5/5 stages completed",
+      ],
+    }),
   ],
 };

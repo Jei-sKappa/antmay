@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -15,5 +16,16 @@ export default {
   scenario: standardScenario({
     "reconcile-spec": ["outcome-blocked-long-detail"],
   }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "Run stopped for 2 reasons:",
+        "3 pending bundle files await human resolution.",
+        "the roadmap allocates this thread the read path only",
+        "whether-to-normalize-thread-relative-paths-before-comparison.md",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

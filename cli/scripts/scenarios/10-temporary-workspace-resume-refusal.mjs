@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll, git, writeThreadFile } from "../demo/fixture.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
@@ -26,7 +27,15 @@ export default {
     "unsafe while it is paused, so resume can show its run-specific refusal.",
   scenario: standardScenario({ spec: ["outcome-blocked"] }),
   steps: [
-    run({ expectExit: 2 }),
+    run({
+      expectExit: 2,
+      markers: [
+        "BLOCKED",
+        "Fake pause; no files changed",
+        "Stage 1/6 blocked in",
+        printedResumeCommand,
+      ],
+    }),
     action(
       "Drop two workspace ignore rules and commit content under the third",
       (ctx) => {
@@ -36,6 +45,14 @@ export default {
         commitAll(ctx, "chore: make temporary workspaces unsafe while paused");
       },
     ),
-    resume({ expectExit: 1 }),
+    resume({
+      expectExit: 1,
+      markers: [
+        "Run cannot resume",
+        "Temporary workspace Git safety",
+        "Checkpoint unchanged. No lock was acquired and no stage was run.",
+        printedResumeCommand,
+      ],
+    }),
   ],
 };

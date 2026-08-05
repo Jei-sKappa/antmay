@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -16,6 +17,13 @@ export default {
     run({
       expectExit: 130,
       afterMs: 2500,
+      markers: [
+        "INTERRUPTED",
+        "The attempt was interrupted before producing a terminal outcome.",
+        "Stage 3/6 interrupted in",
+        "Received SIGINT; finishing the current attempt and pausing.",
+        printedResumeCommand,
+      ],
       during: (_ctx, child) => {
         child.kill("SIGINT");
       },

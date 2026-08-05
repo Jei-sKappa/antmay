@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -8,5 +9,14 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "The provider errors — ends on the harness-error banner",
   scenario: standardScenario({ "review-spec": ["harness-provider-error"] }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — harness error",
+        "the provider closed the stream before the agent returned a result",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

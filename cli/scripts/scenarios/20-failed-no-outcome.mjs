@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -9,5 +10,15 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "No terminal outcome — ends on the quoted candidate line",
   scenario: standardScenario({ "review-spec": ["outcome-malformed"] }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "FAILED — no terminal outcome",
+        "Candidate outcome line:",
+        "I think that covers it — let me know if you want anything adjusted.",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

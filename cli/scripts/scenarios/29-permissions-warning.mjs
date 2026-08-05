@@ -13,5 +13,15 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "Unrestricted permissions — opens on the boxed warning",
   scenario: standardScenario(),
-  steps: [run({ expectExit: 0, flags: ["--dangerously-skip-permissions"] })],
+  steps: [
+    run({
+      expectExit: 0,
+      flags: ["--dangerously-skip-permissions"],
+      markers: [
+        "WARNING: running with --dangerously-skip-permissions",
+        "Only use this in an isolated or otherwise trusted setup.",
+        "SUCCESS — 6/6 stages completed",
+      ],
+    }),
+  ],
 };

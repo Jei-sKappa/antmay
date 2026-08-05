@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { chmodThreadPath } from "../demo/fixture.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
@@ -22,10 +23,20 @@ export default {
     "what renders the banner.",
   scenario: standardScenario({ "review-spec": ["outcome-blocked"] }),
   steps: [
-    run({ expectExit: 2 }),
+    run({
+      expectExit: 2,
+      markers: ["BLOCKED", "Stage 3/6 blocked in", printedResumeCommand],
+    }),
     action("Make the thread's .pending-decisions/ unreadable", (ctx) => {
       ctx.onCleanup(chmodThreadPath(ctx, ".pending-decisions", 0o000));
     }),
-    resume({ expectExit: 2 }),
+    resume({
+      expectExit: 2,
+      markers: [
+        "FAILED — queue scan error",
+        "The advancement invariant could not be evaluated because the pending-queue scan failed",
+        printedResumeCommand,
+      ],
+    }),
   ],
 };

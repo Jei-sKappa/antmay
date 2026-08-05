@@ -1,3 +1,4 @@
+import { printedResumeCommand } from "../demo/markers.mjs";
 import { standardScenario } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
@@ -9,5 +10,16 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "A stage reports BLOCKED — ends on the BLOCKED banner",
   scenario: standardScenario({ "review-spec": ["outcome-blocked"] }),
-  steps: [run({ expectExit: 2 })],
+  steps: [
+    run({
+      expectExit: 2,
+      markers: [
+        "BLOCKED",
+        "The stage reported Outcome: BLOCKED and paused for human attention.",
+        "Fake pause; no files changed",
+        "Stage 3/6 blocked in",
+        printedResumeCommand,
+      ],
+    }),
+  ],
 };

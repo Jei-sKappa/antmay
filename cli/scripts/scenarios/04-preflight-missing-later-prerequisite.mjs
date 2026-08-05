@@ -9,5 +9,14 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "Later stage input stays absent — ends on the unchanged projection",
   pipeline: pipelineDocument("missing-later-prerequisite", ["spec", "implement"]),
-  steps: [run({ expectExit: 1 })],
+  steps: [
+    run({
+      expectExit: 1,
+      markers: [
+        "Pipeline cannot start",
+        '1 requirement for "implement" is not satisfied.',
+        'none — stage 1 "spec" does not change the plan',
+      ],
+    }),
+  ],
 };
