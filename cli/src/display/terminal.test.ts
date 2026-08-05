@@ -46,15 +46,14 @@ class Capture extends Writable {
 }
 
 function makeOptions(
-  overrides: Partial<Pick<DisplayOptions, "isTTY" | "noColor">> = {},
+  overrides: Partial<Pick<DisplayOptions, "color">> = {},
 ): { options: DisplayOptions; out: Capture; err: Capture } {
   const out = new Capture();
   const err = new Capture();
   const options: DisplayOptions = {
     stdout: out,
     stderr: err,
-    isTTY: false,
-    noColor: true,
+    color: false,
     ...overrides,
   };
   return { options, out, err };
@@ -64,10 +63,7 @@ const ANSI_PATTERN = /\x1b\[\d+m/;
 
 describe("printRunList", () => {
   it("gives every run condition a distinct color", () => {
-    const { options, out, err } = makeOptions({
-      isTTY: true,
-      noColor: false,
-    });
+    const { options, out, err } = makeOptions({ color: true });
     const common = {
       updatedAt: "2026-07-26T09:18:42.000Z",
       pipelineName: "standard",
@@ -180,7 +176,7 @@ describe("printHarnessRuntimeRefusal", () => {
       runId: "260101T000000000Z-run",
       toggleVar: TOGGLE,
     });
-    const colored = makeOptions({ isTTY: true, noColor: false });
+    const colored = makeOptions({ color: true });
     printHarnessRuntimeRefusal(colored.options, {
       kind: "real-runtime-refuses-toggle",
       runId: "260101T000000000Z-run",
@@ -896,7 +892,7 @@ describe("runCompleted", () => {
   });
 
   it("paints the success banner green on a color-enabled TTY", () => {
-    const { options, out } = makeOptions({ isTTY: true, noColor: false });
+    const { options, out } = makeOptions({ color: true });
     createTerminalExecutionDisplay(options).runCompleted({
       runId: "run-1",
       pipelineName: "standard",
@@ -956,8 +952,8 @@ describe("warn", () => {
 });
 
 describe("color discipline", () => {
-  it("emits no ANSI codes when not a TTY", () => {
-    const { options, out } = makeOptions({ isTTY: false, noColor: false });
+  it("emits no ANSI codes when color is off", () => {
+    const { options, out } = makeOptions({ color: false });
     createTerminalExecutionDisplay(options).stageSucceeded({
       stagePosition: "1/1",
       durationMs: 1000,
@@ -965,17 +961,8 @@ describe("color discipline", () => {
     expect(ANSI_PATTERN.test(out.text)).toBe(false);
   });
 
-  it("emits no ANSI codes when noColor is set even on a TTY", () => {
-    const { options, out } = makeOptions({ isTTY: true, noColor: true });
-    createTerminalExecutionDisplay(options).stageSucceeded({
-      stagePosition: "1/1",
-      durationMs: 1000,
-    });
-    expect(ANSI_PATTERN.test(out.text)).toBe(false);
-  });
-
-  it("emits ANSI codes on a TTY with color enabled", () => {
-    const { options, out } = makeOptions({ isTTY: true, noColor: false });
+  it("emits ANSI codes when color is on", () => {
+    const { options, out } = makeOptions({ color: true });
     createTerminalExecutionDisplay(options).stageSucceeded({
       stagePosition: "1/1",
       durationMs: 1000,
@@ -1127,7 +1114,7 @@ describe("printUnrestrictedWarning", () => {
   });
 
   it("paints the warning yellow on a color-enabled TTY", () => {
-    const { options, err } = makeOptions({ isTTY: true, noColor: false });
+    const { options, err } = makeOptions({ color: true });
     printUnrestrictedWarning(options);
     expect(err.text).toContain("\x1b[33m");
   });

@@ -297,7 +297,6 @@ async function run(
     env: {
       ANTMAY_CONFIG_HOME: h.configRoot,
       ANTMAY_STATE_HOME: h.stateRoot,
-      NO_COLOR: "1",
       ...overrides.env,
     },
     cwd: h.fixture.root,
@@ -305,7 +304,7 @@ async function run(
     harnessRuntime: testRuntimeLoader(invoker, overrides.probe ?? okProbe),
     stdout: out,
     stderr: err,
-    isTTY: false,
+    color: false,
     createAbortController: overrides.createAbortController,
     // Default to a no-op installer so tests never register real process handlers.
     installSignals: overrides.installSignals ?? fakeSignals(),
@@ -1209,7 +1208,6 @@ function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
   return {
     ANTMAY_CONFIG_HOME: h.configRoot,
     ANTMAY_STATE_HOME: h.stateRoot,
-    NO_COLOR: "1",
     [SCRIPTED_HARNESS_TOGGLE_VAR]: "1",
   };
 }

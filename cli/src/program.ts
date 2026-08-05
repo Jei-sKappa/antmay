@@ -18,6 +18,29 @@ export interface CommandHandlers {
 }
 
 /**
+ * Whether the display emits ANSI color, resolved once from the process the
+ * handlers below read and handed to a command as the single answer rather than
+ * the inputs to recombine. Dispatch owns it because dispatch is the only place
+ * the real environment and the real stdout are read.
+ *
+ * `NO_COLOR` outranks everything: any non-empty value keeps color off, so an
+ * explicit off never loses to an on switch a wrapper exported. Otherwise
+ * `FORCE_COLOR` turns color on — any value but empty or `0` — which is what
+ * makes a piped stdout render in color for a pager, a CI log, or a driver
+ * capturing the stream. With neither set, a terminal stdout decides. No
+ * color-level value is interpreted: color is on or off.
+ */
+export function resolveDisplayColor(
+  env: NodeJS.ProcessEnv,
+  isTTY: boolean,
+): boolean {
+  if ((env.NO_COLOR ?? "") !== "") return false;
+  const forced = env.FORCE_COLOR ?? "";
+  if (forced !== "" && forced !== "0") return true;
+  return isTTY;
+}
+
+/**
  * Parse `argv` and dispatch. `help`/`version`/`usage-error` are handled here
  * before any handler runs; the three real subcommands defer to the injected
  * handlers. Never prompts and has no effect merely from being imported.
@@ -77,7 +100,7 @@ async function runHandler(command: RunCommand): Promise<number> {
       harnessRuntime: productionHarnessRuntimeLoader,
       stdout: process.stdout,
       stderr: process.stderr,
-      isTTY: process.stdout.isTTY === true,
+      color: resolveDisplayColor(process.env, process.stdout.isTTY === true),
     },
   );
 }
@@ -105,7 +128,7 @@ async function resumeHandler(command: ResumeCommand): Promise<number> {
       harnessRuntime: productionHarnessRuntimeLoader,
       stdout: process.stdout,
       stderr: process.stderr,
-      isTTY: process.stdout.isTTY === true,
+      color: resolveDisplayColor(process.env, process.stdout.isTTY === true),
     },
   );
 }
@@ -127,7 +150,7 @@ async function listHandler(_command: ListCommand): Promise<number> {
     homedir: os.homedir(),
     stdout: process.stdout,
     stderr: process.stderr,
-    isTTY: process.stdout.isTTY === true,
+    color: resolveDisplayColor(process.env, process.stdout.isTTY === true),
   });
 }
 

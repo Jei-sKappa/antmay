@@ -51,12 +51,10 @@ export async function resumeCommand(
   deps: RunDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
-  const noColor = (deps.env.NO_COLOR ?? "") !== "";
   const displayOptions: DisplayOptions = {
     stdout: deps.stdout,
     stderr: deps.stderr,
-    isTTY: deps.isTTY,
-    noColor,
+    color: deps.color,
   };
   const display = createTerminalExecutionDisplay(displayOptions);
 

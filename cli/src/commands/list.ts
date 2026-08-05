@@ -16,16 +16,16 @@ import { runsDirectory } from "../state/runs.js";
 
 /**
  * The dependency bag `listCommand` runs against. `env` and `homedir` resolve the
- * state root; `stdout`/`stderr` carry summaries and warnings; `isTTY` (with a
- * non-empty `NO_COLOR`) decides whether meaning-free color is emitted. `list`
- * never resolves a config root, reads settings, acquires a lock, or writes.
+ * state root; `stdout`/`stderr` carry summaries and warnings; the resolved
+ * `color` decides whether meaning-free color is emitted. `list` never resolves a
+ * config root, reads settings, acquires a lock, or writes.
  */
 export type ListDeps = {
   env: NodeJS.ProcessEnv;
   homedir: string | undefined;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
-  isTTY: boolean;
+  color: boolean;
 };
 
 function errorMessage(error: unknown): string {
@@ -168,8 +168,7 @@ export async function listCommand(deps: ListDeps): Promise<number> {
     {
       stdout: deps.stdout,
       stderr: deps.stderr,
-      isTTY: deps.isTTY,
-      noColor: (deps.env.NO_COLOR ?? "") !== "",
+      color: deps.color,
     },
     checkpoints.map(summarizeRun),
   );

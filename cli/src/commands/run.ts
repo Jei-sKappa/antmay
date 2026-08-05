@@ -55,8 +55,8 @@ import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.j
 /**
  * The injected dependency bag `runCommand` runs against. `env`, `cwd`, and
  * `homedir` root every path and settings decision; `harnessRuntime` is the one
- * lazy adapter-family seam the end-to-end tests fake; the streams, `isTTY`, and
- * derived `NO_COLOR` drive the display. `createAbortController` and `installSignals` are
+ * lazy adapter-family seam the end-to-end tests fake; the streams and the
+ * resolved `color` drive the display. `createAbortController` and `installSignals` are
  * the signal-ownership seams: production defaults to a fresh controller and the
  * real handler installer, while tests inject controlled implementations without
  * emitting real process signals. `clock` overrides the wall clock in tests, and
@@ -70,7 +70,7 @@ export type RunDeps = {
   harnessRuntime: HarnessRuntimeLoader;
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
-  isTTY: boolean;
+  color: boolean;
   clock?: () => Date;
   createAbortController?: () => AbortController;
   installSignals?: typeof installSignalHandlers;
@@ -113,12 +113,10 @@ export async function runCommand(
   deps: RunDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
-  const noColor = (deps.env.NO_COLOR ?? "") !== "";
   const displayOptions: DisplayOptions = {
     stdout: deps.stdout,
     stderr: deps.stderr,
-    isTTY: deps.isTTY,
-    noColor,
+    color: deps.color,
   };
 
   const fail = (message: string): number => {

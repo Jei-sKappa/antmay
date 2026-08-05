@@ -1,13 +1,13 @@
 /**
  * The stream and rendering context every terminal renderer and standalone
- * render helper shares. `isTTY` and `noColor` decide whether ANSI color codes
- * are emitted; the caller derives `noColor` from a non-empty `NO_COLOR` env.
+ * render helper shares. `color` decides whether ANSI color codes are emitted,
+ * as one answer the caller has already resolved from the stream and the
+ * environment.
  */
 export interface DisplayOptions {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
-  isTTY: boolean;
-  noColor: boolean;
+  color: boolean;
 }
 
 const ANSI = {
@@ -39,9 +39,10 @@ export const VALUE_STYLE: readonly Ansi[] = ["white"];
 export type Painter = (text: string, ...codes: Ansi[]) => string;
 
 export function createPainter(options: DisplayOptions): Painter {
-  const useColor = options.isTTY && !options.noColor;
   return (text, ...codes) =>
-    useColor ? `${codes.map((code) => ANSI[code]).join("")}${text}${ANSI.reset}` : text;
+    options.color
+      ? `${codes.map((code) => ANSI[code]).join("")}${text}${ANSI.reset}`
+      : text;
 }
 
 /** Write a block as one newline-terminated chunk, exactly as composed. */

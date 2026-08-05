@@ -147,7 +147,7 @@ async function seedRun(stateRoot: string, checkpoint: RunCheckpoint): Promise<st
   return runDir;
 }
 
-function deps(env: NodeJS.ProcessEnv, isTTY = false): {
+function deps(env: NodeJS.ProcessEnv, color = false): {
   deps: ListDeps;
   out: Capture;
   err: Capture;
@@ -155,7 +155,7 @@ function deps(env: NodeJS.ProcessEnv, isTTY = false): {
   const out = new Capture();
   const err = new Capture();
   return {
-    deps: { env, homedir: undefined, stdout: out, stderr: err, isTTY },
+    deps: { env, homedir: undefined, stdout: out, stderr: err, color },
     out,
     err,
   };
@@ -323,7 +323,7 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
     expect(summary).not.toContain("codex ·");
   });
 
-  it("emits meaning-free color only on a TTY with NO_COLOR unset", async () => {
+  it("emits meaning-free color only when the resolved color is on", async () => {
     const stateRoot = await tempDir("antmay-list-");
     await seedRun(
       stateRoot,
@@ -335,17 +335,13 @@ describe("listCommand rendering (AC-16.1, AC-16.2)", () => {
       }),
     );
 
-    const tty = deps({ ANTMAY_STATE_HOME: stateRoot }, true);
-    expect(await listCommand(tty.deps)).toBe(0);
-    expect(tty.out.text).toContain("\x1b[");
+    const colored = deps({ ANTMAY_STATE_HOME: stateRoot }, true);
+    expect(await listCommand(colored.deps)).toBe(0);
+    expect(colored.out.text).toContain("\x1b[");
 
-    const noColor = deps({ ANTMAY_STATE_HOME: stateRoot, NO_COLOR: "1" }, true);
-    expect(await listCommand(noColor.deps)).toBe(0);
-    expect(noColor.out.text).not.toContain("\x1b[");
-
-    const piped = deps({ ANTMAY_STATE_HOME: stateRoot }, false);
-    expect(await listCommand(piped.deps)).toBe(0);
-    expect(piped.out.text).not.toContain("\x1b[");
+    const plain = deps({ ANTMAY_STATE_HOME: stateRoot }, false);
+    expect(await listCommand(plain.deps)).toBe(0);
+    expect(plain.out.text).not.toContain("\x1b[");
   });
 });
 

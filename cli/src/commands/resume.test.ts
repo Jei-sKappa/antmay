@@ -227,7 +227,6 @@ function baseEnv(h: Harness): NodeJS.ProcessEnv {
   return {
     ANTMAY_CONFIG_HOME: h.configRoot,
     ANTMAY_STATE_HOME: h.stateRoot,
-    NO_COLOR: "1",
   };
 }
 
@@ -253,7 +252,7 @@ async function seed(
     harnessRuntime: testRuntimeLoader(invoker, overrides.probe ?? okProbe),
     stdout: out,
     stderr: err,
-    isTTY: false,
+    color: false,
     installSignals: overrides.installSignals ?? fakeSignals(),
     createAbortController: overrides.createAbortController,
   };
@@ -290,7 +289,7 @@ async function resume(
     harnessRuntime: testRuntimeLoader(invoker, overrides.probe ?? okProbe),
     stdout: out,
     stderr: err,
-    isTTY: false,
+    color: false,
     installSignals: overrides.installSignals ?? fakeSignals(),
     createAbortController: overrides.createAbortController,
   };
@@ -534,7 +533,6 @@ describe.concurrent("resumeCommand — preflight rejections (AC-15.2)", () => {
       env: {
         ANTMAY_CONFIG_HOME: "relative/not/absolute",
         ANTMAY_STATE_HOME: h.stateRoot,
-        NO_COLOR: "1",
       },
     });
     expect(result.code).toBe(0);

@@ -439,6 +439,18 @@ line appears only for a suffix run. Everything shown here is snapshotted into th
 run's checkpoint, so a resume continues on exactly these values without reading
 the pipeline, profile, or settings documents again.
 
+## Color
+
+Color never carries meaning: every line reads the same with the escape codes
+stripped. By default it is emitted only when stdout is a terminal, and two
+environment variables override that:
+
+- **`FORCE_COLOR`** — any value other than empty or `0` emits color even when
+  stdout is not a terminal, which is what you want when piping a run into a pager
+  or a CI log. No color level is interpreted; color is on or off.
+- **`NO_COLOR`** — any non-empty value keeps color off, and outranks
+  `FORCE_COLOR` when both are set.
+
 ## Artifact contracts at runtime
 
 Preflight proves the selection is possible against the state it saw. Concrete
