@@ -15,7 +15,7 @@
  * step missing or malforming either one throws where it is constructed.
  */
 
-import { assertMarkers } from "./markers.mjs";
+import { assertMarkers, stripAnsi } from "./markers.mjs";
 
 /**
  * Run `antmay afk run <pipeline> --thread <thread>` and require `expectExit`
@@ -69,6 +69,31 @@ export function list({ expectExit = 0, markers } = {}) {
   assertExit(expectExit, "list");
   assertMarkers(markers, "list");
   return { kind: "invoke", argv: () => ["afk", "list"], expectExit, markers };
+}
+
+/**
+ * Send `signal` the first time the child's own output contains `text`, for use
+ * from inside a `during` hook.
+ *
+ * A window that opens between two of the executor's own steps can be far too
+ * narrow to hit with a timer measured from process spawn — the run at rest
+ * between two stages is microseconds wide. A scenario that needs such a window
+ * waits for the last thing the executor prints before it instead, which is
+ * deterministic. The hook that installs this listener should fire early enough
+ * that it is attached before that output arrives.
+ */
+export function signalOnOutput(child, { text, signal }) {
+  let seen = "";
+  let fired = false;
+  const watch = (chunk) => {
+    if (fired) return;
+    seen += stripAnsi(chunk);
+    if (!seen.includes(text)) return;
+    fired = true;
+    child.kill(signal);
+  };
+  child.stdout?.on("data", watch);
+  child.stderr?.on("data", watch);
 }
 
 /**

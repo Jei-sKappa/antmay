@@ -30,6 +30,15 @@
 const ANSI_PATTERN = /\x1b\[\d+m/g;
 
 /**
+ * `text` with the paint removed. What a scenario names is always the text: a
+ * painted line interleaves escape codes with its own words, so `1. spec` is not a
+ * substring of the colored stage line until they are stripped.
+ */
+export function stripAnsi(text) {
+  return text.replace(ANSI_PATTERN, "");
+}
+
+/**
  * The exact `antmay afk resume <run-id>` command a pause prints, resolved from
  * the run this scenario created. Requiring it asserts the run's own id rather
  * than any id, and it is checked against the child's output alone — the driver
@@ -131,7 +140,7 @@ function occurrences(haystack, needle) {
  * rendering it declared.
  */
 export function missingMarkers(markers, ctx, output) {
-  const plain = output.replace(ANSI_PATTERN, "");
+  const plain = stripAnsi(output);
   const missing = [];
   for (const marker of markers) {
     const { text, atLeast } = resolveMarker(marker, ctx);
