@@ -23,7 +23,7 @@ import type {
   RunCheckpoint,
   SnapshottedStage,
 } from "../state/checkpoint/types.js";
-import { readCheckpoint } from "../state/checkpoint.js";
+import { readCheckpoint } from "../state/checkpoint/read.js";
 import { writeCheckpoint } from "../state/persist.js";
 import {
   createFakeHarness,

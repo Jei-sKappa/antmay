@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { readCheckpoint } from "./checkpoint/read.js";
 import type { RunCheckpoint } from "./checkpoint/types.js";
-import { readCheckpoint } from "./checkpoint.js";
 import type { FileHandleLike, FsOps } from "./persist.js";
 import { writeCheckpoint } from "./persist.js";
 

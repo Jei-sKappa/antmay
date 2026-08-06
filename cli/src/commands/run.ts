@@ -33,12 +33,12 @@ import type { HarnessRuntimeLoader } from "../harness/runtime.js";
 import { composePipeline } from "../pipeline/composition.js";
 import { loadPipelineDocument } from "../pipeline/documents.js";
 import { installSignalHandlers } from "../runner/signals.js";
+import { readCheckpoint } from "../state/checkpoint/read.js";
 import type {
   ProfileSelection,
   RunCheckpoint,
   SnapshottedStage,
 } from "../state/checkpoint/types.js";
-import { readCheckpoint } from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { writeCheckpoint } from "../state/persist.js";

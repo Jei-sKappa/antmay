@@ -18,7 +18,7 @@ import { executeEngine } from "../execution/engine.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import { resolveHarnessRuntime } from "../harness/runtime.js";
 import { installSignalHandlers } from "../runner/signals.js";
-import { readCheckpoint } from "../state/checkpoint.js";
+import { readCheckpoint } from "../state/checkpoint/read.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
 import { resolveThreadTarget } from "../thread/resolve.js";

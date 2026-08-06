@@ -259,8 +259,13 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   decides which situation holds and asks for the value; it assembles no waiting
   object and no checkpoint itself, so every pause the terminal can draw is
   enumerable from one file and every durable transition from another.
-- `runner/` — attempt classification, terminal-outcome recognition, and signal
-  handling.
+- `runner/` — attempt classification, signal handling, and the terminal-outcome
+  protocol. `outcome.ts` is the sole declaration of the outcome tokens, the
+  `Outcome: ` prefix, and the line they compose into, so moving the protocol
+  cannot leave a hand-written copy watching for a string that never appears
+  again. It is held to importing nothing, which is what lets the four domains
+  that derive from it — `runner/`, `state/`, `harness/`, `execution/` — depend
+  on a module in one of them without a cycle.
 - `gitops/` — the Git wrapper and its NUL-output splitter (`git.ts`),
   working-tree status (`status.ts`), the temporary-workspace ignore and
   tracked-content preflight (`temporary-workspaces.ts`), and the one
@@ -275,10 +280,23 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   real one under `backends/` (the Sandcastle adapter and the executable probe)
   and the developer scripted one under `scripted/` — which the resolver pairs
   and loads one of. Availability belongs to the family rather than the harness,
-  because the scripted family establishes it without contacting anything.
-- `state/` — durable run state: the checkpoint schema, its exhaustive validator
-  and reader (`checkpoint.ts`), the atomic writer (`persist.ts`), logs, run
-  records, and the exclusive workspace lock.
+  because the scripted family establishes it without contacting anything. Across
+  both axes, **which harnesses exist** is `id.ts`: the id union, the ids
+  themselves, and the one predicate that narrows an untrusted value into the
+  union. The settings parser and checkpoint validation reach it rather than
+  `provider.ts`, so a module needing only which ids exist does not depend on the
+  declaration of what a harness is, and the widening an untrusted test needs
+  stays inside the predicate.
+- `state/` — durable run state: the checkpoint, split three ways under
+  `checkpoint/` — the declarations every consumer is written in terms of
+  (`types.ts`), the exhaustive validator of an untrusted document
+  (`validate.ts`), and the load of one run's `state.json` from disk (`read.ts`) —
+  plus the atomic writer (`persist.ts`), logs, run records, and the exclusive
+  workspace lock. No barrel spans the three: a consumer imports the one it
+  needs, so its import list says whether it loads a checkpoint, validates one,
+  or only names the shape. Loading is deliberately apart from writing, which is what
+  leaves a read-only consumer unable to reach a writer through the module it
+  reads from.
 - `thread/` — thread resolution, queue gates, and the artifact domain
   (`artifacts.ts`): the canonical owner of artifact-state vocabulary, the
   validators that accept it as untrusted serialized data, filesystem inspection,
@@ -339,15 +357,17 @@ bearing.
   Node guard, dispatch, and per-command dependency loading lazy so help,
   version, and grammar errors stay cheap.
 - **`src/architecture.test.ts` enforces the dependency directions** the modules
-  above are built on: one checkpoint writer outside allocation, a resume
-  preflight that reaches no transition collaborator, the Git protocol behind its
-  one operation, artifact contracts declared only in the thread domain, pauses
+  above are built on: one checkpoint writer outside allocation, a checkpoint
+  vocabulary holding nothing but type declarations, a resume preflight that
+  reaches no transition collaborator, the terminal-outcome protocol spelled out
+  nowhere but the leaf module that declares it, the Git protocol behind its one
+  operation, artifact contracts declared only in the thread domain, pauses
   assembled in one module and compared field by field, each recovery kind's
   declared evidence read from one table rather than tested for by comparison,
-  durable state changed
-  only by committing a named transition, one caller per execution phase and one
-  module that ends an invocation, phase-specific display consumers, and
-  adapter families loaded only through the runtime resolver. It reads source
+  durable state changed only by committing a named transition, one caller per
+  execution phase and one module that ends an invocation, phase-specific display
+  consumers, and adapter families loaded only through the runtime resolver. It
+  reads source
   text, so a static, dynamic, re-export, or type-only import is judged for what
   it is. When it fails, the boundary moved — argue the direction, do not relax
   the guard to match the new import.

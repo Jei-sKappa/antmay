@@ -7,11 +7,11 @@ import {
   printRunList,
   type RunListSummary,
 } from "../display/list.js";
+import { readCheckpoint } from "../state/checkpoint/read.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
 } from "../state/checkpoint/types.js";
-import { readCheckpoint } from "../state/checkpoint.js";
 import { runsDirectory } from "../state/runs.js";
 
 /**

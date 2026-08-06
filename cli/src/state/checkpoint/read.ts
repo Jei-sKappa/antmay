@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { CheckpointResult } from "./checkpoint/types.js";
-import { validateCheckpoint } from "./checkpoint/validate.js";
+import type { CheckpointResult } from "./types.js";
+import { validateCheckpoint } from "./validate.js";
 
 /**
  * Read and validate `<runDir>/state.json`. Only `state.json` is authoritative;

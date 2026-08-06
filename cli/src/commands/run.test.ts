@@ -52,7 +52,7 @@ import type { installSignalHandlers } from "../runner/signals.js";
 import { SignalInterruption } from "../runner/signals.js";
 import { acquireWorkspaceLock, locksDirectory } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
-import { readCheckpoint } from "../state/checkpoint.js";
+import { readCheckpoint } from "../state/checkpoint/read.js";
 import { createRunDirectory, runsDirectory } from "../state/runs.js";
 import {
   createFakeHarness,
