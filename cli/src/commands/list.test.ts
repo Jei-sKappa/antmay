@@ -13,7 +13,7 @@ import type {
   RunCondition,
   SnapshottedStage,
 } from "../state/checkpoint/types.js";
-import { validateCheckpoint } from "../state/checkpoint.js";
+import { validateCheckpoint } from "../state/checkpoint/validate.js";
 import { writeCheckpoint } from "../state/persist.js";
 import { runsDirectory } from "../state/runs.js";
 import { governedBy } from "../test-helpers/waiting.js";

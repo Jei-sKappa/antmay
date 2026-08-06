@@ -668,7 +668,7 @@ describe("every recovery declares the evidence it is decided from", () => {
   /** The one module that turns a recovery and its evidence into a directive. */
   const POLICY = "execution/recovery-policy.ts";
   /** The module that reads a recovery out of untrusted JSON, kind by kind. */
-  const VALIDATOR = "state/checkpoint.ts";
+  const VALIDATOR = "state/checkpoint/validate.ts";
   /** The one module that observes what a pause is decided from. */
   const OBSERVER = "execution/entry/evidence.ts";
 
