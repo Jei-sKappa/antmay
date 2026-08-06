@@ -1,6 +1,7 @@
 import { appendFile, lstat, mkdir, readdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { formatTerminalOutcome } from "../../runner/outcome.js";
 import type { ScriptedCaseName } from "./scenario.js";
 
 /** Exact bytes written by `spec-correct` and `spec-correct-delayed`. */
@@ -567,17 +568,17 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
   "outcome-done": async () => ({
     ok: true,
     progress: ["Making no changes."],
-    finalText: "Outcome: DONE — Fake completion; no files changed",
+    finalText: formatTerminalOutcome("DONE", "Fake completion; no files changed"),
   }),
   "outcome-blocked": async () => ({
     ok: true,
     progress: ["Making no changes."],
-    finalText: "Outcome: BLOCKED — Fake pause; no files changed",
+    finalText: formatTerminalOutcome("BLOCKED", "Fake pause; no files changed"),
   }),
   "outcome-refused": async () => ({
     ok: true,
     progress: ["Making no changes."],
-    finalText: "Outcome: REFUSED — Fake refusal; no files changed",
+    finalText: formatTerminalOutcome("REFUSED", "Fake refusal; no files changed"),
   }),
   "outcome-malformed": async () => ({
     ok: true,
@@ -600,7 +601,10 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress: [`Writing ${BLOCKED_PENDING_DECISION_PATH}.`],
-      finalText: `Outcome: BLOCKED — Fake pause; one fake decision queued: ${BLOCKED_PENDING_DECISION_PATH}`,
+      finalText: formatTerminalOutcome(
+        "BLOCKED",
+        `Fake pause; one fake decision queued: ${BLOCKED_PENDING_DECISION_PATH}`,
+      ),
     };
   },
   "outcome-blocked-long-detail": async ({ threadRelPath, threadAbsRoot }) => {
@@ -628,7 +632,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress,
-      finalText: `Outcome: BLOCKED — ${LONG_DETAIL_TEXT}`,
+      finalText: formatTerminalOutcome("BLOCKED", LONG_DETAIL_TEXT),
     };
   },
   "harness-provider-error": async () => ({
@@ -668,7 +672,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress: ["Writing spec.md.", writeFileToolLine("spec.md", SPEC_CORRECT_CONTENT)],
-      finalText: "Outcome: DONE — Fake spec written: spec.md",
+      finalText: formatTerminalOutcome("DONE", "Fake spec written: spec.md"),
     };
   },
   "spec-correct-delayed": async ({ threadRelPath, threadAbsRoot }) => {
@@ -691,7 +695,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
         writeFileToolLine("spec.md", SPEC_CORRECT_CONTENT),
         `Waiting ${SPEC_CORRECT_DELAY_MS / 1000}s before finishing.`,
       ],
-      finalText: "Outcome: DONE — Fake spec written: spec.md",
+      finalText: formatTerminalOutcome("DONE", "Fake spec written: spec.md"),
     };
   },
   "reconcile-spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
@@ -702,7 +706,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress: [...append.progress],
-      finalText: "Outcome: DONE — Fake reconciliation appended: spec.md",
+      finalText: formatTerminalOutcome("DONE", "Fake reconciliation appended: spec.md"),
     };
   },
   "reconcile-spec-pending-decision": async ({
@@ -732,7 +736,10 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
           RECONCILE_SPEC_PENDING_DECISION_CONTENT,
         ),
       ],
-      finalText: `Outcome: DONE — Fake reconciliation appended: spec.md; one fake decision queued: ${RECONCILE_SPEC_PENDING_DECISION_PATH}`,
+      finalText: formatTerminalOutcome(
+        "DONE",
+        `Fake reconciliation appended: spec.md; one fake decision queued: ${RECONCILE_SPEC_PENDING_DECISION_PATH}`,
+      ),
     };
   },
   "plan-strict-correct": async ({ threadRelPath, threadAbsRoot }) => {
@@ -765,7 +772,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress,
-      finalText: "Outcome: DONE — Fake plan written: plan.md",
+      finalText: formatTerminalOutcome("DONE", "Fake plan written: plan.md"),
     };
   },
   "reconcile-plan-correct": async ({ threadRelPath, threadAbsRoot }) => {
@@ -826,7 +833,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     return {
       ok: true,
       progress,
-      finalText: "Outcome: DONE — Fake reconciliation appended: plan.md",
+      finalText: formatTerminalOutcome("DONE", "Fake reconciliation appended: plan.md"),
     };
   },
 
@@ -849,8 +856,10 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
         "Writing implementation-report.md.",
         writeFileToolLine("implementation-report.md", IMPLEMENT_REPORT_CONTENT),
       ],
-      finalText:
-        "Outcome: DONE — Fake implementation report written: implementation-report.md",
+      finalText: formatTerminalOutcome(
+        "DONE",
+        "Fake implementation report written: implementation-report.md",
+      ),
     };
   },
 };

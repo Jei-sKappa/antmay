@@ -1,6 +1,58 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTerminalOutcome } from "./outcome.js";
+import {
+  formatTerminalOutcome,
+  isTerminalOutcome,
+  OUTCOME_PREFIX,
+  parseTerminalOutcome,
+  TERMINAL_OUTCOMES,
+} from "./outcome.js";
+
+describe("the terminal-outcome vocabulary", () => {
+  // The values and their order are the published contract the skill suite emits
+  // against, so they are pinned here rather than derived from the module under
+  // test: a change to either has to be made deliberately, in two places.
+  it("declares the three tokens in protocol order", () => {
+    expect(TERMINAL_OUTCOMES).toEqual(["DONE", "BLOCKED", "REFUSED"]);
+  });
+
+  it("declares the exact line prefix, trailing space included", () => {
+    expect(OUTCOME_PREFIX).toBe("Outcome: ");
+  });
+
+  it("recognizes exactly the three tokens", () => {
+    for (const token of TERMINAL_OUTCOMES) {
+      expect(isTerminalOutcome(token)).toBe(true);
+    }
+    for (const value of ["done", "MAYBE", "Outcome: DONE", "", null, undefined, 1, {}]) {
+      expect(isTerminalOutcome(value), `${String(value)} is not a token`).toBe(false);
+    }
+  });
+});
+
+describe("formatTerminalOutcome", () => {
+  it("emits the bare line when no detail is supplied", () => {
+    expect(formatTerminalOutcome("DONE")).toBe("Outcome: DONE");
+    expect(formatTerminalOutcome("BLOCKED")).toBe("Outcome: BLOCKED");
+    expect(formatTerminalOutcome("REFUSED")).toBe("Outcome: REFUSED");
+  });
+
+  it("separates a supplied detail with the dash form an agent writes", () => {
+    expect(formatTerminalOutcome("BLOCKED", "needs a human")).toBe(
+      "Outcome: BLOCKED — needs a human",
+    );
+  });
+
+  it("round-trips through the parser it shares its vocabulary with", () => {
+    for (const token of TERMINAL_OUTCOMES) {
+      expect(parseTerminalOutcome(formatTerminalOutcome(token, "why"))).toEqual({
+        token,
+        candidateLine: `Outcome: ${token} — why`,
+        detail: "— why",
+      });
+    }
+  });
+});
 
 describe("parseTerminalOutcome", () => {
   it("parses a bare token with empty detail", () => {

@@ -4,6 +4,7 @@ import type {
   WaitingReason,
   WaitingReasons,
 } from "../state/checkpoint.js";
+import { formatTerminalOutcome, TERMINAL_OUTCOMES } from "./outcome.js";
 import type { OutcomeParse } from "./outcome.js";
 
 /**
@@ -54,8 +55,16 @@ export type Classification =
   | { action: "pause"; reasons: WaitingReasons }
   | { action: "pause-done"; reasons: WaitingReasons };
 
-const EXPECTED_PREFIXES =
-  "Outcome: DONE, Outcome: BLOCKED, or Outcome: REFUSED";
+/**
+ * Every accepted opening as the malformed-outcome diagnostic lists them: one
+ * complete outcome line per token in protocol order, with the last introduced by
+ * `or` so the sentence reads as English rather than as a joined list.
+ */
+const EXPECTED_PREFIXES = TERMINAL_OUTCOMES.map((token, index) =>
+  index === TERMINAL_OUTCOMES.length - 1
+    ? `or ${formatTerminalOutcome(token)}`
+    : formatTerminalOutcome(token),
+).join(", ");
 
 function sortPending(pendingFiles: string[]): string[] {
   return [...pendingFiles].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
@@ -164,7 +173,7 @@ function stageReason(
     const blocked = parse.token === "BLOCKED";
     return {
       kind: blocked ? "outcome-blocked" : "outcome-refused",
-      message: `The stage reported Outcome: ${parse.token} and paused for human attention.`,
+      message: `The stage reported ${formatTerminalOutcome(parse.token)} and paused for human attention.`,
       detail: detailOf(parse.detail),
       candidateLine: parse.candidateLine,
     };

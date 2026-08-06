@@ -3,6 +3,10 @@ import type { AgentProvider, RunOptions, RunResult } from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 
 import type { HarnessId } from "../../config/execution.js";
+import {
+  formatTerminalOutcome,
+  TERMINAL_OUTCOMES,
+} from "../../runner/outcome.js";
 import type {
   AttemptOutcome,
   AttemptRequest,
@@ -11,11 +15,9 @@ import type {
 } from "../types.js";
 
 /** The completion signals the harness emits to end the single iteration. */
-const COMPLETION_SIGNALS = [
-  "Outcome: DONE",
-  "Outcome: BLOCKED",
-  "Outcome: REFUSED",
-];
+const COMPLETION_SIGNALS = TERMINAL_OUTCOMES.map((token) =>
+  formatTerminalOutcome(token),
+);
 
 /** The completion grace window (seconds) after a completion signal is seen. */
 const COMPLETION_TIMEOUT_SECONDS = 60;

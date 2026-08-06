@@ -250,7 +250,12 @@ describe("classifyAttempt", () => {
       classifyAttempt(input({ parse: blockedParse, boundary: okBoundary })),
     );
     expect(result.kind).toBe("outcome-blocked");
-    expect(result.message).toContain("BLOCKED");
+    // The sentence quotes the outcome line the attempt ended on, so it is pinned
+    // byte for byte: it reaches the terminal, and the tokens and the prefix it
+    // spells out are the protocol the skill suite emits against.
+    expect(result.message).toBe(
+      "The stage reported Outcome: BLOCKED and paused for human attention.",
+    );
     // The agent's own reason travels separately from the classification
     // sentence, stripped of the dash that separated it from the token.
     expect(result.detail).toBe("needs input");
@@ -270,6 +275,9 @@ describe("classifyAttempt", () => {
   it("REFUSED with no pending files pauses as outcome-refused", () => {
     const result = pauseOf(classifyAttempt(input({ parse: refusedParse })));
     expect(result.kind).toBe("outcome-refused");
+    expect(result.message).toBe(
+      "The stage reported Outcome: REFUSED and paused for human attention.",
+    );
   });
 
   it("REFUSED with pending files is governed by pending-queues but reports both", () => {
@@ -347,10 +355,14 @@ describe("classifyAttempt", () => {
       ),
     );
     expect(result.kind).toBe("malformed-outcome");
-    expect(result.message).toContain("Outcome: DONE");
-    expect(result.message).toContain("Outcome: BLOCKED");
-    expect(result.message).toContain("Outcome: REFUSED");
-    expect(result.message).toContain("I think I finished");
+    // The listed openings are the whole point of the diagnostic — an agent reads
+    // them and writes its next final line from them — so the sentence is pinned
+    // whole, including the `or` before the last of the three.
+    expect(result.message).toBe(
+      "The attempt produced no recognizable terminal outcome. The trimmed final " +
+        "non-empty line must begin with one of: Outcome: DONE, Outcome: BLOCKED, " +
+        'or Outcome: REFUSED. The final non-empty line was: "I think I finished".',
+    );
   });
 
   it("a Sandcastle completion signal without a valid final-line token classifies as malformed, never advance (AC-10.2)", () => {
@@ -378,7 +390,10 @@ describe("classifyAttempt", () => {
       ),
     );
     expect(result.kind).toBe("malformed-outcome");
-    expect(result.message).toContain("Outcome: DONE");
-    expect(result.message).toContain("No candidate final line");
+    expect(result.message).toBe(
+      "The attempt produced no recognizable terminal outcome. The trimmed final " +
+        "non-empty line must begin with one of: Outcome: DONE, Outcome: BLOCKED, " +
+        "or Outcome: REFUSED. No candidate final line was present.",
+    );
   });
 });

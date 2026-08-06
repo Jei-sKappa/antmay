@@ -6,6 +6,8 @@ import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStage } from "../pipeline/catalog.js";
 import type { CatalogStageId } from "../pipeline/types.js";
+import { isTerminalOutcome, TERMINAL_OUTCOMES } from "../runner/outcome.js";
+import type { TerminalOutcome } from "../runner/outcome.js";
 import { isPlainObject } from "../shared/validation.js";
 import {
   validateSerializedArtifactMismatches,
@@ -157,7 +159,7 @@ export type WaitingInfo = {
  * terminal text has returned.
  */
 export type TerminalResult = {
-  token: "DONE" | "BLOCKED" | "REFUSED" | null;
+  token: TerminalOutcome | null;
   candidateLine: string | null;
   detail: string;
 };
@@ -281,12 +283,6 @@ const WAITING_KINDS: ReadonlySet<string> = new Set<WaitingKind>([
   "commit-error",
   "stage-prerequisite-unmet",
   "stage-contract-violation",
-]);
-
-const TERMINAL_TOKENS: ReadonlySet<string> = new Set([
-  "DONE",
-  "BLOCKED",
-  "REFUSED",
 ]);
 
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
@@ -518,8 +514,10 @@ function validateTerminalResult(value: unknown, label: string, errors: string[])
     return;
   }
   const token = value.token;
-  if (token !== null && (typeof token !== "string" || !TERMINAL_TOKENS.has(token))) {
-    errors.push(`${label}.token must be DONE, BLOCKED, REFUSED, or null.`);
+  if (token !== null && !isTerminalOutcome(token)) {
+    errors.push(
+      `${label}.token must be ${TERMINAL_OUTCOMES.join(", ")}, or null.`,
+    );
   }
   const candidate = value.candidateLine;
   if (candidate !== null && typeof candidate !== "string") {

@@ -406,6 +406,137 @@ describe("the thread domain owns every artifact contract (AC-6.1, AC-6.5)", () =
   });
 });
 
+describe("the terminal-outcome protocol has one owner", () => {
+  /** The one module that declares the tokens, the prefix, and the line form. */
+  const OWNER = "runner/outcome.ts";
+
+  /** The protocol vocabulary, by exported name. */
+  const VOCABULARY = [
+    "TERMINAL_OUTCOMES",
+    "TerminalOutcome",
+    "OUTCOME_PREFIX",
+    "isTerminalOutcome",
+    "formatTerminalOutcome",
+  ];
+
+  /** The three tokens, in the protocol order the owner declares them in. */
+  const TOKENS = ["DONE", "BLOCKED", "REFUSED"];
+
+  /**
+   * The opening every outcome line carries, matched without its trailing space
+   * so a copy that drops or relocates that space is caught with the rest.
+   */
+  const PREFIX = /Outcome:/;
+
+  /**
+   * Every quoted form a string may take, in one alternation so the source is
+   * scanned once and in order: a quote character inside another quote's literal
+   * is then consumed with it rather than opening a literal of its own.
+   */
+  const STRING_LITERAL = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g;
+
+  /** The contents of every string literal in a module, quotes stripped. */
+  function stringLiterals(source: string): string[] {
+    return [...withoutComments(source).matchAll(STRING_LITERAL)].map((match) =>
+      match[0].slice(1, -1),
+    );
+  }
+
+  /** Which of the tokens a literal spells out as a word. */
+  function tokensNamed(literal: string): string[] {
+    return TOKENS.filter((token) => new RegExp(`\\b${token}\\b`).test(literal));
+  }
+
+  /**
+   * Two token literals side by side: joined by `|` they are the union declared a
+   * second time, and separated by `,` they are a second runtime collection. Two
+   * comparisons joined by `||` put an operand between them, so neither form
+   * reaches a test of an already-narrowed token.
+   */
+  const tokensJoinedBy = (separator: string): RegExp => {
+    const token = `["'](?:${TOKENS.join("|")})["']`;
+    return new RegExp(`${token}\\s*${separator}\\s*${token}`);
+  };
+  const TOKEN_UNION = tokensJoinedBy("\\|");
+  const TOKEN_COLLECTION = tokensJoinedBy(",");
+
+  it("declares the vocabulary in the owner, and makes every consumer depend on it", async () => {
+    const modules = await productionModules();
+    for (const name of VOCABULARY) {
+      const declaration = new RegExp(
+        `^export\\s+(?:type|const|function)\\s+${name}\\b`,
+        "m",
+      );
+      const owners = modules
+        .filter((module) => declaration.test(module.source))
+        .map((module) => module.id);
+      expect(owners, `declarations of ${name}`).toEqual([OWNER]);
+    }
+    const vocabulary = new RegExp(`\\b(?:${VOCABULARY.join("|")})\\b`);
+    for (const module of modules) {
+      if (module.id === OWNER || !vocabulary.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names the vocabulary`).toContain(OWNER);
+    }
+  });
+
+  it("spells out an outcome line nowhere else", async () => {
+    // This is the silent break the owner exists to prevent: a token change leaves
+    // a hand-written copy watching for a string that no longer appears, and
+    // nothing fails to build. The Sandcastle completion signals are the sharpest
+    // case — the SDK stops recognizing completion, the attempt runs to its idle
+    // timeout — and the scripted catalog's fabricated final messages are worse
+    // placed still, since the demo they turn red sits outside `npm run check`.
+    //
+    // The prefix is held as tightly as the tokens: a copy assembled one
+    // interpolation later, as `Outcome: ${token}`, carries exactly the same risk
+    // and would otherwise be a hole in the middle of this rule's own subject.
+    for (const module of await productionModules()) {
+      if (module.id === OWNER) continue;
+      for (const literal of stringLiterals(module.source)) {
+        expect(literal, `${module.id} spells out an outcome line`).not.toMatch(PREFIX);
+      }
+    }
+  });
+
+  it("repeats the token vocabulary in no string, type, or collection", async () => {
+    // A literal naming several tokens is the vocabulary itself, written down
+    // again: the diagnostic that lists what a recorded token may be drifts from
+    // what one may be the moment either end moves. So is a union redeclaring the
+    // tokens, and so is a runtime set or array of them — a `ReadonlySet<string>`
+    // most of all, since it accepts whatever the owner no longer recognizes.
+    //
+    // Two forms are deliberately left outside the subject. A comparison against
+    // an already-narrowed token needs no guard: TypeScript rejects a literal that
+    // has left the union (TS2367), so the compiler is the guard, and the two
+    // `display/execution.ts` labels are outside it for a different reason — they
+    // name the `outcome-blocked` and `outcome-refused` event kinds rather than
+    // the protocol. And a sentence naming one verdict describes what an attempt
+    // reported; nothing matches it, so it cannot break silently, while the
+    // strings that can all carry the prefix the rule above holds.
+    for (const module of await productionModules()) {
+      if (module.id === OWNER) continue;
+      const source = withoutComments(module.source);
+      for (const literal of stringLiterals(module.source)) {
+        expect(
+          tokensNamed(literal).length,
+          `${module.id} lists the tokens in "${literal}"`,
+        ).toBeLessThan(2);
+      }
+      expect(source, `${module.id} redeclares the token union`).not.toMatch(TOKEN_UNION);
+      expect(source, `${module.id} collects the tokens`).not.toMatch(TOKEN_COLLECTION);
+    }
+  });
+
+  it("leaves the owner a leaf", async () => {
+    // Four domains derive their tokens from this module, and one of them —
+    // `runner/classify.ts` — is reached back from `state/`, so the domain graph
+    // has a loop in it on paper. A module the build holds to importing nothing
+    // can be depended on from anywhere without that loop ever becoming a runtime
+    // cycle, which is what makes the owner's placement a naming artifact.
+    expect((await moduleNamed(OWNER)).references).toEqual([]);
+  });
+});
+
 describe("a pause is built in one module and compared field by field", () => {
   /** The one builder of every pause the executor can record. */
   const BUILDER = "execution/pause.ts";
