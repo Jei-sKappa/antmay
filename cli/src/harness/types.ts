@@ -1,5 +1,5 @@
-import type { HarnessId } from "../config/execution.js";
 import type { WorkspaceExecution } from "../workspace/types.js";
+import type { HarnessId } from "./id.js";
 
 /**
  * Antmay-owned stage metadata supplied on every harness invocation so adapters

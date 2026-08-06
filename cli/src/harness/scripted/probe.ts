@@ -1,5 +1,5 @@
-import type { HarnessId } from "../../config/execution.js";
 import type { ProbeResult } from "../backends/probe.js";
+import type { HarnessId } from "../id.js";
 
 /** Deterministic version observation returned for every logical harness. */
 export const SCRIPTED_PROBE_VERSION = "scripted-harness 1.0.0";

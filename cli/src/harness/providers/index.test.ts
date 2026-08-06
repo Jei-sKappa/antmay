@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HARNESS_IDS } from "../../config/execution.js";
+import { HARNESS_IDS } from "../id.js";
 import { HARNESSES } from "./index.js";
 
 describe("the harness registry", () => {

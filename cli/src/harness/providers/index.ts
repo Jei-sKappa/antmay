@@ -1,4 +1,4 @@
-import type { HarnessId } from "../../config/execution.js";
+import type { HarnessId } from "../id.js";
 import type { AgentHarness } from "../provider.js";
 import { CLAUDE_CODE } from "./claude-code.js";
 import { CODEX } from "./codex.js";

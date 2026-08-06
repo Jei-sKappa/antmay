@@ -1,8 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { HARNESS_IDS } from "../config/execution.js";
-import type { HarnessId, ResolvedStageBinding } from "../config/execution.js";
+import type { ResolvedStageBinding } from "../config/execution.js";
+import { isHarnessId } from "../harness/id.js";
+import type { HarnessId } from "../harness/id.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStage } from "../pipeline/catalog.js";
 import type { CatalogStageId } from "../pipeline/types.js";
@@ -402,7 +403,7 @@ function validateStageBinding(value: unknown, label: string, errors: string[]): 
   if (!isPlainObject(agent)) {
     errors.push(`${label}.agent must be an object.`);
   } else {
-    if (typeof agent.harness !== "string" || !HARNESS_IDS.includes(agent.harness)) {
+    if (!isHarnessId(agent.harness)) {
       errors.push(`${label}.agent.harness must be a known harness id.`);
     }
     if (!isNonEmptyString(agent.model)) {
@@ -956,7 +957,7 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     errors.push(`observedHarnessVersions must be an object.`);
   } else {
     for (const [key, val] of Object.entries(doc.observedHarnessVersions)) {
-      if (!HARNESS_IDS.includes(key)) {
+      if (!isHarnessId(key)) {
         errors.push(`observedHarnessVersions.${key} is not a known harness id.`);
       } else if (!isNonEmptyString(val)) {
         errors.push(`observedHarnessVersions.${key} must be a non-empty string.`);

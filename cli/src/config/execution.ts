@@ -1,34 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { HARNESS_IDS, isHarnessId } from "../harness/id.js";
+import type { HarnessId } from "../harness/id.js";
 import { isCatalogStageId } from "../pipeline/catalog.js";
 import type { CatalogStageId } from "../pipeline/types.js";
 import { isPlainObject } from "../shared/validation.js";
 import { isValidDocumentName, DOCUMENT_NAME_PATTERN } from "./references.js";
-
-/**
- * A supported agentic harness the executor can drive.
- */
-export type HarnessId = "codex" | "claude-code";
-
-/**
- * Every harness id the executor recognizes, in the order user-facing diagnostics
- * list them. This is the one such collection: every membership test and every
- * diagnostic that names the supported ids reads it. It is typed as strings so an
- * untrusted value can be tested directly, while `satisfies` keeps its entries
- * pinned to `HarnessId`.
- */
-export const HARNESS_IDS: readonly string[] = [
-  "codex",
-  "claude-code",
-] satisfies readonly HarnessId[];
-
-/**
- * Whether an untrusted value names a supported harness.
- */
-function isHarnessId(value: unknown): value is HarnessId {
-  return typeof value === "string" && HARNESS_IDS.includes(value);
-}
 
 /**
  * The external agent a stage runs on. Harness and model are one indivisible

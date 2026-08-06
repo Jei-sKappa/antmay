@@ -1,4 +1,4 @@
-import type { HarnessId } from "../config/execution.js";
+import type { HarnessId } from "./id.js";
 
 /**
  * One agentic harness the executor can drive: everything Antmay must know about

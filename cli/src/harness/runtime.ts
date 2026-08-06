@@ -1,6 +1,6 @@
-import type { HarnessId } from "../config/execution.js";
 import type { HarnessRuntimeIdentity } from "../state/checkpoint.js";
 import type { ProbeFailure, ProbeResult } from "./backends/probe.js";
+import type { HarnessId } from "./id.js";
 import type { ScriptedScenario } from "./scripted/scenario.js";
 import {
   SCRIPTED_HARNESS_TOGGLE_VAR,

@@ -2,11 +2,11 @@ import { run, codex, claudeCode } from "@ai-hero/sandcastle";
 import type { AgentProvider, RunOptions, RunResult } from "@ai-hero/sandcastle";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 
-import type { HarnessId } from "../../config/execution.js";
 import {
   formatTerminalOutcome,
   TERMINAL_OUTCOMES,
 } from "../../runner/outcome.js";
+import type { HarnessId } from "../id.js";
 import type {
   AttemptOutcome,
   AttemptRequest,

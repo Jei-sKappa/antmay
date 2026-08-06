@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import type { HarnessId } from "../../config/execution.js";
+import type { HarnessId } from "../id.js";
 import { HARNESSES } from "../providers/index.js";
 
 /** The `--version` probe timeout, fixed at 10 seconds. */

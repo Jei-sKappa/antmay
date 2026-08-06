@@ -45,13 +45,13 @@ import {
   EXIT_SIGINT,
   EXIT_WAITING,
 } from "../cli/exit-codes.js";
-import type { HarnessId } from "../config/execution.js";
 import type {
   ExecutionContext,
   ExecutionEntry,
   ExecutionResult,
 } from "../execution/engine.js";
 import type { ProbeResult } from "../harness/backends/probe.js";
+import type { HarnessId } from "../harness/id.js";
 import type {
   HarnessExecutableProbe,
   HarnessRuntimeLoader,
