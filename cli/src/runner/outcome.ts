@@ -16,6 +16,9 @@
  */
 export const TERMINAL_OUTCOMES = ["DONE", "BLOCKED", "REFUSED"] as const;
 
+/** The terminal outcome that advances a stage. */
+export const DONE_OUTCOME = TERMINAL_OUTCOMES[0];
+
 /** One recognized terminal outcome. */
 export type TerminalOutcome = (typeof TERMINAL_OUTCOMES)[number];
 

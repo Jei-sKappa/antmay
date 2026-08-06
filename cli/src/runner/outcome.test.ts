@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DONE_OUTCOME,
   formatTerminalOutcome,
   isTerminalOutcome,
   OUTCOME_PREFIX,
@@ -14,6 +15,10 @@ describe("the terminal-outcome vocabulary", () => {
   // test: a change to either has to be made deliberately, in two places.
   it("declares the three tokens in protocol order", () => {
     expect(TERMINAL_OUTCOMES).toEqual(["DONE", "BLOCKED", "REFUSED"]);
+  });
+
+  it("names the stage-advancing token from that vocabulary", () => {
+    expect(DONE_OUTCOME).toBe("DONE");
   });
 
   it("declares the exact line prefix, trailing space included", () => {

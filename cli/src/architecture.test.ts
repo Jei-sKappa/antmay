@@ -413,6 +413,7 @@ describe("the terminal-outcome protocol has one owner", () => {
   /** The protocol vocabulary, by exported name. */
   const VOCABULARY = [
     "TERMINAL_OUTCOMES",
+    "DONE_OUTCOME",
     "TerminalOutcome",
     "OUTCOME_PREFIX",
     "isTerminalOutcome",
@@ -445,6 +446,11 @@ describe("the terminal-outcome protocol has one owner", () => {
   /** Which of the tokens a literal spells out as a word. */
   function tokensNamed(literal: string): string[] {
     return TOKENS.filter((token) => new RegExp(`\\b${token}\\b`).test(literal));
+  }
+
+  /** Whether a literal embeds a token in prose rather than stating only it. */
+  function embedsToken(literal: string): boolean {
+    return tokensNamed(literal).some((token) => literal !== token);
   }
 
   /**
@@ -498,33 +504,31 @@ describe("the terminal-outcome protocol has one owner", () => {
     }
   });
 
-  it("repeats the token vocabulary in no string, type, or collection", async () => {
-    // A literal naming several tokens is the vocabulary itself, written down
-    // again: the diagnostic that lists what a recorded token may be drifts from
-    // what one may be the moment either end moves. So is a union redeclaring the
-    // tokens, and so is a runtime set or array of them — a `ReadonlySet<string>`
-    // most of all, since it accepts whatever the owner no longer recognizes.
+  it("embeds no token in prose and repeats the vocabulary in no type or collection", async () => {
+    // A token embedded in prose is another protocol statement: a rename leaves
+    // the sentence stale with nothing to fail the build. So is a union
+    // redeclaring the tokens, and so is a runtime set or array of them — a
+    // `ReadonlySet<string>` most of all, since it accepts whatever the owner no
+    // longer recognizes.
     //
     // Two forms are deliberately left outside the subject. A comparison against
     // an already-narrowed token needs no guard: TypeScript rejects a literal that
     // has left the union (TS2367), so the compiler is the guard, and the two
     // `display/execution.ts` labels are outside it for a different reason — they
     // name the `outcome-blocked` and `outcome-refused` event kinds rather than
-    // the protocol. And a sentence naming one verdict describes what an attempt
-    // reported; nothing matches it, so it cannot break silently, while the
-    // strings that can all carry the prefix the rule above holds.
+    // the protocol. Both forms use a literal that is exactly one token, which is
+    // why this clause rejects only a token embedded in a larger literal.
+    const embedded: string[] = [];
     for (const module of await productionModules()) {
       if (module.id === OWNER) continue;
       const source = withoutComments(module.source);
       for (const literal of stringLiterals(module.source)) {
-        expect(
-          tokensNamed(literal).length,
-          `${module.id} lists the tokens in "${literal}"`,
-        ).toBeLessThan(2);
+        if (embedsToken(literal)) embedded.push(`${module.id}: "${literal}"`);
       }
       expect(source, `${module.id} redeclares the token union`).not.toMatch(TOKEN_UNION);
       expect(source, `${module.id} collects the tokens`).not.toMatch(TOKEN_COLLECTION);
     }
+    expect(embedded, "embedded terminal-outcome tokens").toEqual([]);
   });
 
   it("leaves the owner a leaf", async () => {

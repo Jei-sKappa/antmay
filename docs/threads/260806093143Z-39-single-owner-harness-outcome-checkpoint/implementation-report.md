@@ -4,184 +4,136 @@ Source: plan.md
 
 ## Outcome
 
-All six plan tasks are complete, each landed as one commit on
-`refactor/architecture-and-code-quality-improvements` over the baseline `b498a93`.
-The three concepts the thread set out to give a single owner now have one:
-the terminal-outcome vocabulary lives in `cli/src/runner/outcome.ts`, harness
-identity in `cli/src/harness/id.ts`, and the checkpoint's three reasons to change
-are separated into `cli/src/state/checkpoint/types.ts`, `validate.ts`, and
-`read.ts`, with no `state/checkpoint.ts` and no barrel over the three. The
-protocol's bytes, the checkpoint's behavior, and every rendered terminal string
-are unchanged; the CLI gate and the full 42-scenario demo catalog pass against the
-final layout.
+All six plan tasks are complete on
+`refactor/architecture-and-code-quality-improvements` over the baseline
+`b498a93`, and the thread's closure pass is implemented in the current working
+tree. Terminal-outcome vocabulary has one production owner in
+`cli/src/runner/outcome.ts`, harness identity has one in `cli/src/harness/id.ts`,
+and checkpoint declarations, validation, and reading live in separate
+purpose-specific modules under `cli/src/state/checkpoint/`.
+
+The closure pass resolves the terminal-guard ambiguity in favor of treating
+user-facing prose that names a verdict as protocol text: `DONE_OUTCOME` now
+derives the single-token prose sites, and the architecture guard rejects any
+larger string literal that embeds a terminal token while continuing to permit an
+exact token literal. Validation regressions now pin both the field-shape and the
+cross-field aggregate passes, as well as the exact invalid-terminal-token
+diagnostic. Rendered terminal strings are unchanged, no demo scenario changed,
+and all 42 scenarios pass.
 
 ## Changes
 
-**Terminal-outcome vocabulary (`12bf5e2`).** `runner/outcome.ts` is the import-free
-owner of the ordered `TERMINAL_OUTCOMES` tuple, the `TerminalOutcome` type derived
-from it, `OUTCOME_PREFIX`, `isTerminalOutcome`, `formatTerminalOutcome`, and the
-parser regex derived from the tuple. A new `architecture.test.ts` section — written
-before any consumer changed, so its initial failure enumerated the copies to
-remove — holds every other production module to importing the protocol rather than
-restating it, and asserts the owner imports nothing, which is what lets four
-domains depend on it without a cycle. Sandcastle's completion signals, the
-checkpoint's terminal-token union and its validation, the classifier's
-expected-prefix sentence and reported-outcome fragment, and every valid scripted
-final message now derive from the owner. `classify.test.ts` pins the derived
-sentences whole.
+**Terminal-outcome vocabulary.** `runner/outcome.ts` is the import-free owner of
+the ordered `TERMINAL_OUTCOMES` tuple, the `TerminalOutcome` type derived from
+it, the derived stage-advancing `DONE_OUTCOME`, `OUTCOME_PREFIX`,
+`isTerminalOutcome`, `formatTerminalOutcome`, and the parser regex derived from
+the tuple. Sandcastle completion signals, checkpoint validation, classification,
+scripted final messages, and user-facing pause and checkpoint prose derive from
+that owner. The architecture test rejects another production module that embeds
+a token in prose, restates two or more vocabulary members in a literal, or names
+the prefix directly; exact token literals used for narrowed comparisons and
+display labels remain outside its subject. The strict guard's red proof named
+exactly the expected six pre-existing prose sites before they were replaced.
 
-**Harness identity (`2321b2c`).** `harness/id.ts` owns `HarnessId`, `HARNESS_IDS`
-typed `readonly HarnessId[]` in diagnostic order, and `isHarnessId`.
-`config/execution.ts` keeps only the diagnostic that maps the ids into prose; the
-settings validator and both untrusted checkpoint membership checks narrow through
-the one shared predicate while keeping their own site-specific diagnostics. Nineteen production and test consumers import
-identity from the harness domain. `harness/id.test.ts` pins the collection's order
-and contents and the rejection of non-string input.
+**Harness identity.** `harness/id.ts` owns `HarnessId`, `HARNESS_IDS` in
+diagnostic order, and `isHarnessId`. Configuration and both untrusted checkpoint
+membership checks narrow through that predicate while retaining their
+site-specific diagnostics. Production and test consumers import identity from
+the harness domain, and `harness/id.test.ts` pins the collection and rejection of
+non-string input.
 
-**Aggregate-validation regression (`689f919`).** `state/checkpoint.test.ts` gained
-a named regression test and a local `multiFaultCheckpoint()` helper that pairs a
-document carrying four independent faults with the diagnostics it owes. One
-`validateCheckpoint` call asserts each exact diagnostic individually and pins the
-error count, so the all-problems-at-once contract is mechanically observable rather
-than incidental. Test-only; no production file changed.
+**Aggregate checkpoint validation.** `state/checkpoint.test.ts` carries separate
+fixtures for four independent field-shape faults and four independent,
+shape-valid cross-field faults. Each case asserts the complete, ordered array of
+exact diagnostics from one `validateCheckpoint` call. A further regression pins
+the exact terminal-token diagnostic, including the vocabulary's order and
+wording. A future decomposition therefore cannot short-circuit within either
+validation pass without failing a focused test.
 
-**Checkpoint split (`00032cf`, `d254af2`, `55f2278`).** The sixteen checkpoint
-declarations moved into a declarations-only `state/checkpoint/types.ts` holding a
-header docblock, seven type-only imports, and the declarations, and all 37 type
-consumers import it directly — no barrel, forwarding module, or type re-export
-exists anywhere. The validation layer moved whole to
-`state/checkpoint/validate.ts`, narrowing untrusted input through the shared
-terminal-outcome and harness-id predicates, with `validateCheckpoint` intact as one
-coordinating validator. `readCheckpoint` moved to `state/checkpoint/read.ts` and
-`state/checkpoint.ts` was deleted, with all seven readers retargeted.
-`architecture.test.ts` gained a two-clause guard holding the vocabulary module to
-declarations only and to naming neither `execution/` nor `display/`, and all four
-of its checkpoint references now name a purpose-specific module; none was deleted
-and `PAUSE_LITERAL` is unchanged. `cli/AGENTS.md`'s `runner/`, `harness/`, and
-`state/` module-layout entries and its architecture-test contract summary describe
-the final ownership boundaries and the guards that hold them.
+**Checkpoint split.** Checkpoint declarations live in the declarations-only
+`state/checkpoint/types.ts`; validation lives in
+`state/checkpoint/validate.ts`; and `readCheckpoint` lives in
+`state/checkpoint/read.ts`. Consumers import the purpose-specific module
+directly, with no barrel, forwarding module, or type re-export. The architecture
+test holds the declarations module to declarations only and prevents it from
+naming the execution or display layers. `cli/AGENTS.md` describes these ownership
+boundaries and guards with its surrounding prose fill restored.
 
 ## Verification
 
-- Every task's own verification block passed.
-- `npm --prefix cli run check` (typecheck + 1169 vitest tests + build) exited `0` at
-  every commit boundary, run three times independently at each one.
-- `npm --prefix cli run demo:all` reported 42/42 scenarios at the terminal-outcome
-  change and again against the final module layout. No demo scenario, marker, or
-  file under `cli/scripts/` was added, removed, or edited.
-- Preservation was established mechanically rather than by inspection where it
-  mattered: the declaration move and the validation transplant each diff clean
-  against their original region, and `read.ts` differs from the module it replaced
-  only in its two import specifiers. Error order, wording, field validation,
-  cross-field invariants, and aggregate collection therefore hold by construction.
-- The aggregate regression's teeth were established twice: an early return
-  temporarily inserted after the first check made the new test fail on the second
-  expected diagnostic, and the same conclusion was re-derived by reading —
-  the four faults are pushed from four distinct sites, so a per-section
-  short-circuit fails the test as well as a first-problem one.
-- The two new declarations-only guard clauses were probed against injected
-  violations twice over, 26 synthetic lines in the second pass, confirming every
-  value form is rejected and that neither clause can pass vacuously.
-- Intentionally skipped: `demo:all` at the harness-identity, aggregate-regression,
-  declaration-extraction, and validation-extraction changes, whose verification
-  blocks do not prescribe it. Those diffs are import specifiers, byte-identical
-  moved code, and test-only text, with no literal, format string, or display path
-  touched; the full catalog then ran against the final layout.
+- Before production code changed, the widened architecture guard failed on
+  exactly six embedded-token literals: four in `execution/pause.ts` and two in
+  `state/checkpoint/validate.ts`.
+- Focused architecture, outcome, pause, and checkpoint tests passed after the
+  owner change. The checkpoint suite passes 92 tests, including the exact
+  terminal-token diagnostic and both four-fault aggregate cases.
+- Three unchanged runs of `npm --prefix cli run check` passed typechecking and
+  all 1,172 assertions, then exited `1` because the concurrent
+  `execution/engine.test.ts` suite's cleanup hook exceeded 30 seconds. The suite
+  passes all 71 tests in isolation. Because the failed test phase prevented the
+  composite command from reaching its build step, `npm --prefix cli run build`
+  was run separately and exited `0`. This is the repository's documented
+  Git-backed-suite contention pattern, but a clean composite `check` exit was
+  not obtained in this environment.
+- `npm --prefix cli run demo:all` reported 42/42 scenarios. No file under the
+  demo scenario directories changed.
+- `git diff --check` passed.
+- The original extraction preserved declarations and validation mechanically:
+  each moved region diffed cleanly against its source, and `read.ts` differed
+  from the replaced module only in import specifiers.
 
 ## Deviations and judgment calls
 
-1. **The terminal-outcome guard's subject is narrower than the plan's wording.** It
-   fires on any string literal carrying the `Outcome: ` prefix and on any literal
-   naming two or more tokens, so a larger literal naming exactly one token and no
-   prefix stays outside it; six such prose literals remain, four in
-   `execution/pause.ts` and two in what is now `state/checkpoint/validate.ts`. The
-   strict reading makes the task self-contradictory: `execution/pause.ts` is absent
-   from its own `Files modified` list, and the task exports no bare-token value from
-   which such prose could be rebuilt byte-identically. Under the implemented
-   reading the guard's initial failure set is exactly the four modules the task
-   changes. This is a fault in the plan text rather than in the code, reached
-   independently at implementation and at review; the plan was not patched.
-2. **`isHarnessId` carries zero widening casts** rather than the single one the plan
-   and its decision record name. `HARNESS_IDS.some((id) => id === value)` narrows
-   without a cast, because `===` against an `unknown` operand is legal, so the
-   property the criterion secures — the collection typed by its own members, with no
-   widening visible to a caller — holds more strongly with none. The form now
-   matches the sibling `isTerminalOutcome`.
-3. **The recovery-kind guard constant was renamed and its comment restated** while
-   its path deliberately stayed on the pre-split module for the following task, as
-   that task required. The comment named the module declaring the recorded union,
-   which the declaration move made false.
-4. **No workspace collaborator was imported into the extracted validator**, though
-   the plan step listed one. The moved code never had such an import: the
-   checkpoint's workspace section is validated against inline literals, and
-   `WorkspaceConfig` is named only by the declarations module. Adding one would
-   have stated a dependency the code does not have.
-5. **One clause left `readCheckpoint`'s doc comment** — that loading lives with the
-   document it validates — which stopped being true when validation moved out. The
-   surviving resume-preflight rationale still names a boundary the architecture test
-   enforces.
+1. **The strict terminal-outcome reading was implemented.** The original task's
+   file list omitted `execution/pause.ts` and exported no bare-token value, even
+   though its prose guard wording covered larger literals naming one token. The
+   closure pass resolves that contradiction by bringing the four pause literals
+   into scope and exporting `DONE_OUTCOME`; all six reconstructed strings remain
+   byte-identical. Historical plan and decision artifacts were not edited.
+2. **`isHarnessId` carries zero widening casts** rather than the single one the
+   plan names. `HARNESS_IDS.some((id) => id === value)` narrows without a cast,
+   so the intended property holds with no widening visible to callers and
+   matches `isTerminalOutcome`.
+3. **The recovery-kind guard constant and comment were restated** when the
+   declaration move made the old module-specific wording false; the guarded
+   behavior did not change.
+4. **No workspace collaborator was imported into the extracted validator.** The
+   moved code has no such dependency: workspace values are validated locally,
+   while `WorkspaceConfig` belongs to the declarations module.
+5. **One obsolete clause was removed from `readCheckpoint`'s doc comment.** The
+   remaining resume-preflight rationale describes the enforced boundary.
 
 ## Remaining concerns
 
-- `state/checkpoint/validate.ts` is the largest production module in the tree at 934
-  lines, with a roughly 285-line `validateCheckpoint`. This is the decomposition the
-  thread deliberately deferred; the module states one purpose, so the pressure is a
-  size heuristic rather than the one-reason-to-change bar.
-- The aggregate-validation regression pins the field-shape pass only.
-  `validateCheckpoint` returns as soon as that pass has any error, so no single
-  document can carry faults from both passes, and a decomposition that
-  short-circuited inside the cross-field section would keep the test green.
-- `OUTCOME_PREFIX` is interpolated into a `RegExp` constructor unescaped: inert for
-  the current metacharacter-free value, latent if a future prefix gains one.
-- The checkpoint terminal-token diagnostic derives from the owner but is pinned by no
-  test; its byte-identity rests on two independent hand comparisons.
-- Guard sharpness limits, each failing loudly rather than silently: the
-  terminal-outcome union and collection clauses are shape matchers needing two
-  adjacent token literals, so a one-element collection, or members split by an
-  intervening expression, would pass; the declarations-only guard's residual escape
-  is an indented top-level expression statement, which makes the column-zero
-  convention load-bearing; that guard also runs over string-literal contents, so a
-  future union member such as `"new-…"` or a field named `class` would trip it; and
-  it does not reject a type re-export, so the no-barrel property rests on review.
-- `harness/id.ts` has neither the leaf guard nor the single-declaration guard its
-  sibling `runner/outcome.ts` has. The thread's decisions asked for neither, but the
-  two modules now sit at the same architectural position with different protection.
-- One sentence added to `cli/AGENTS.md` states that loading sits apart from writing,
-  so a read-only consumer cannot reach a writer through the module it reads from.
-  That is true of today's imports and is carried from the module's own doc comment,
-  but no guard enforces it.
-- Cosmetic and unenforced: the re-flowed architecture-summary paragraph in
-  `cli/AGENTS.md` leaves a two-word orphan line, and one `state/` sentence runs to 84
-  columns against a roughly 79-column fill. The CLI package has no formatter or
-  linter, so nothing covers prose wrapping.
-- The four-domain enumeration in `cli/AGENTS.md`'s `runner/` entry is accurate today
-  but unchecked, so it can silently go stale; the leaf assertion in the same sentence
-  carries the argument without it.
-- Doc comments that enumerate current callers — the three narrowing sites named in
-  `harness/id.ts` — or restate rationale also present in code will drift as
-  consumers change.
-- Test-layout residue: coverage for the split still sits in
-  `state/checkpoint.test.ts`, named after a module that no longer exists, and
-  `readCheckpoint`'s coverage remains in `state/persist.test.ts` rather than beside
-  `checkpoint/read.ts`.
-- Environment noise rather than a code defect: two whole-suite runs hit intermittent
-  30-second timeouts in the `describe.concurrent` Git-backed suites under a load
-  average around 21. Those suites pass on their own, and every gate run at a commit
-  boundary was green.
+- `state/checkpoint/validate.ts` remains the largest production module at 934
+  lines, including a roughly 285-line coordinator. Decomposition is tracked in
+  issue #44; the cross-field aggregate prerequisite is now in place.
+- `OUTCOME_PREFIX` is interpolated into a `RegExp` constructor without escaping.
+  It is inert for the current metacharacter-free prefix but latent if that value
+  changes.
+- The architecture guards are deliberately blunt shape matchers. The
+  terminal-outcome union and collection clauses require adjacent token literals;
+  the declarations-only guard relies on column-zero top-level syntax, scans
+  string contents, and does not reject a type re-export. These limitations fail
+  loudly under likely drift but do not prove the architecture exhaustively.
+- `harness/id.ts` has neither the leaf guard nor the single-declaration guard of
+  its structural sibling `runner/outcome.ts`. Optional owner hardening is tracked
+  in issue #45.
+- The loading-versus-writing statement and four-domain enumeration in
+  `cli/AGENTS.md` are accurate but unenforced, and caller-enumerating doc comments
+  can drift as consumers change.
+- Test-layout residue remains: checkpoint coverage is still in
+  `state/checkpoint.test.ts`, named after a removed module, and `readCheckpoint`
+  coverage remains in `state/persist.test.ts` rather than beside `read.ts`.
+- Under current host contention the composite check repeatedly times out in the
+  concurrent engine suite's cleanup hook despite every assertion and the
+  isolated suite passing.
 
 ## Follow-ups
 
-- The deferred `validateCheckpoint` decomposition, which should also add a
-  field-shape-clean case carrying several independent cross-field faults so the
-  aggregate contract is pinned for both passes.
-- Corrected plan wording for the two plan faults above: the terminal-outcome guard's
-  subject stated as implemented, or `execution/pause.ts` brought into scope together
-  with a bare-token export; and the workspace collaborator dropped from the
-  validation-extraction step.
-- A leaf guard and a single-declaration guard for `harness/id.ts`, matching
-  `runner/outcome.ts`.
-- Pin the checkpoint terminal-token diagnostic in a test, and escape the interpolated
-  `OUTCOME_PREFIX`.
-- Issue #40 (decompose `runCommand`) is now easier, since `commands/run.ts` is among
-  the narrowed importers. Issue #21 (a named `HarnessBackend` interface) remains
-  explicitly out of scope.
+- Proceed with issue #40, the planned `runCommand` decomposition.
+- Take issue #44 after #40 to decompose checkpoint validation; its aggregate
+  diagnostic precondition is already covered by both validation passes.
+- Consider issue #45 afterward for optional terminal-outcome and harness-identity
+  owner hardening.
+- Issue #21, a named `HarnessBackend` interface, remains explicitly out of scope.

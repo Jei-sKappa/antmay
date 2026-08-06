@@ -415,6 +415,20 @@ describe("validateCheckpoint field errors", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /threadRelPath/.test(e))).toBe(true);
   });
+
+  it("derives the invalid terminal-token diagnostic from the outcome vocabulary", () => {
+    const doc = validCheckpoint();
+    (doc.attempts[0].terminalResult as { token: unknown }).token = "MAYBE";
+
+    const result = validateCheckpoint(doc);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual([
+        "attempts[0].terminalResult.token must be DONE, BLOCKED, REFUSED, or null.",
+      ]);
+    }
+  });
 });
 
 /**
@@ -425,7 +439,10 @@ describe("validateCheckpoint field errors", () => {
  * cross-field invariant, so all four are within reach of a single validation
  * call.
  */
-function multiFaultCheckpoint(): { doc: RunCheckpoint; diagnostics: string[] } {
+function fieldShapeMultiFaultCheckpoint(): {
+  doc: RunCheckpoint;
+  diagnostics: string[];
+} {
   const doc = validCheckpoint();
   doc.createdAt = "2026-07-23 12:15:00";
   doc.repoRoot = "repo/here";
@@ -442,9 +459,34 @@ function multiFaultCheckpoint(): { doc: RunCheckpoint; diagnostics: string[] } {
   };
 }
 
+/**
+ * A shape-valid checkpoint carrying four independent cross-field faults, paired
+ * with the exact diagnostic each one owes. None prevents the validator from
+ * reaching the cross-field pass, and none is a consequence of another.
+ */
+function crossFieldMultiFaultCheckpoint(): {
+  doc: RunCheckpoint;
+  diagnostics: string[];
+} {
+  const doc = validCheckpoint();
+  doc.stageIndex = doc.stages.length;
+  delete doc.observedHarnessVersions["claude-code"];
+  doc.workspace.execution.cwd = "/Users/dev/other";
+  doc.attempts[0].stageId = "plan-strict";
+  return {
+    doc,
+    diagnostics: [
+      'stageIndex 2 is out of range for a "waiting-for-user" run with 2 stages.',
+      'stages[1] selects harness "claude-code" but observedHarnessVersions has no entry for it.',
+      "workspace.path must equal workspace.execution.cwd for a current-checkout workspace.",
+      'attempts[0].stageId "plan-strict" does not match snapshotted stage 0 ("spec").',
+    ],
+  };
+}
+
 describe("validateCheckpoint aggregate reporting", () => {
-  it("reports a diagnostic for every independent fault from one validation call", () => {
-    const { doc, diagnostics } = multiFaultCheckpoint();
+  it("reports every independent field-shape fault from one validation call", () => {
+    const { doc, diagnostics } = fieldShapeMultiFaultCheckpoint();
 
     const result = validateCheckpoint(doc);
 
@@ -457,6 +499,17 @@ describe("validateCheckpoint aggregate reporting", () => {
       // four were reported on their own account rather than one of them
       // explaining the others.
       expect(result.errors).toHaveLength(diagnostics.length);
+    }
+  });
+
+  it("reports every independent cross-field fault from one validation call", () => {
+    const { doc, diagnostics } = crossFieldMultiFaultCheckpoint();
+
+    const result = validateCheckpoint(doc);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual(diagnostics);
     }
   });
 });

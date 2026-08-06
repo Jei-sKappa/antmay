@@ -8,7 +8,11 @@ import path from "node:path";
 
 import { isHarnessId } from "../../harness/id.js";
 import { isCatalogStageId } from "../../pipeline/catalog.js";
-import { isTerminalOutcome, TERMINAL_OUTCOMES } from "../../runner/outcome.js";
+import {
+  DONE_OUTCOME,
+  isTerminalOutcome,
+  TERMINAL_OUTCOMES,
+} from "../../runner/outcome.js";
 import { isPlainObject } from "../../shared/validation.js";
 import {
   validateSerializedArtifactMismatches,
@@ -843,7 +847,9 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
       attempt.result === "done" &&
       (attempt.terminalResult === null || attempt.terminalResult.token !== "DONE")
     ) {
-      errors.push(`attempts[${i}] is "done" but does not carry a parsed DONE outcome.`);
+      errors.push(
+        `attempts[${i}] is "done" but does not carry a parsed ${DONE_OUTCOME} outcome.`,
+      );
     }
   });
 
@@ -902,7 +908,7 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
         }
         if (referenced.terminalResult?.token !== "DONE") {
           errors.push(
-            `waiting.recovery.attempt must name an attempt whose terminal token is DONE.`,
+            `waiting.recovery.attempt must name an attempt whose terminal token is ${DONE_OUTCOME}.`,
           );
         }
         const requiredResult =

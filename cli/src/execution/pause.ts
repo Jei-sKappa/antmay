@@ -4,6 +4,7 @@ import {
   pendingQueuesMessage,
   queueReasons,
 } from "../runner/classify.js";
+import { DONE_OUTCOME } from "../runner/outcome.js";
 import type {
   AttemptReference,
   WaitingDiagnostics,
@@ -93,7 +94,7 @@ const DIRTY_WORKTREE_DETAIL =
 
 /** Why a still-unmet promise keeps its saved `DONE` rather than discarding it. */
 const PRESERVED_DONE_DETAIL =
-  "The saved DONE remains preserved until the promised artifact " +
+  `The saved ${DONE_OUTCOME} remains preserved until the promised artifact ` +
   "is repaired and its Git boundary can be retried.";
 
 /** The stage a prerequisite pause names, as the pause states it. */
@@ -163,7 +164,7 @@ function prerequisiteMessage(
 
 function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
   return (
-    "The stage reported DONE without leaving the artifact state it promises: " +
+    `The stage reported ${DONE_OUTCOME} without leaving the artifact state it promises: ` +
     `it promises ${describeContractSide(unmet, "expected")}, but the thread ` +
     `has ${describeContractSide(unmet, "observed")}.`
   );
@@ -171,7 +172,7 @@ function contractViolationMessage(unmet: readonly ArtifactMismatch[]): string {
 
 function stillUnmetContractMessage(unmet: readonly ArtifactMismatch[]): string {
   return (
-    "The stage reported DONE and the artifact state it promises is still " +
+    `The stage reported ${DONE_OUTCOME} and the artifact state it promises is still ` +
     `missing: it promises ${describeContractSide(unmet, "expected")}, but the ` +
     `thread has ${describeContractSide(unmet, "observed")}.`
   );
@@ -179,7 +180,7 @@ function stillUnmetContractMessage(unmet: readonly ArtifactMismatch[]): string {
 
 function uninspectablePromiseMessage(message: string): string {
   return (
-    "The stage reported DONE but its promised artifact state could not be " +
+    `The stage reported ${DONE_OUTCOME} but its promised artifact state could not be ` +
     `verified: ${message}`
   );
 }

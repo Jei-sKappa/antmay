@@ -294,9 +294,9 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   plus the atomic writer (`persist.ts`), logs, run records, and the exclusive
   workspace lock. No barrel spans the three: a consumer imports the one it
   needs, so its import list says whether it loads a checkpoint, validates one,
-  or only names the shape. Loading is deliberately apart from writing, which is what
-  leaves a read-only consumer unable to reach a writer through the module it
-  reads from.
+  or only names the shape. Loading is deliberately apart from writing, which is
+  what leaves a read-only consumer unable to reach a writer through the module
+  it reads from.
 - `thread/` — thread resolution, queue gates, and the artifact domain
   (`artifacts.ts`): the canonical owner of artifact-state vocabulary, the
   validators that accept it as untrusted serialized data, filesystem inspection,
@@ -367,10 +367,9 @@ bearing.
   durable state changed only by committing a named transition, one caller per
   execution phase and one module that ends an invocation, phase-specific display
   consumers, and adapter families loaded only through the runtime resolver. It
-  reads source
-  text, so a static, dynamic, re-export, or type-only import is judged for what
-  it is. When it fails, the boundary moved — argue the direction, do not relax
-  the guard to match the new import.
+  reads source text, so a static, dynamic, re-export, or type-only import is
+  judged for what it is. When it fails, the boundary moved — argue the direction,
+  do not relax the guard to match the new import.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
