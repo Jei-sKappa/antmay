@@ -47,6 +47,6 @@
 - All production and direct test consumers import harness identity from the harness domain.
 - The existing harness-id comparison guard is unchanged and the full CLI gate passes.
 
-**Consumes:** `cli/src/harness/backends/sandcastle.ts` with its Task 1 imports from `runner/outcome.ts`.
+**Consumes:** `TERMINAL_OUTCOMES` and `formatTerminalOutcome` from `cli/src/runner/outcome.ts`, as imported by `cli/src/harness/backends/sandcastle.ts` in Task 1.
 
 **Produces:** `HarnessId`, `HARNESS_IDS: readonly HarnessId[]`, and `isHarnessId(value: unknown): value is HarnessId` from `cli/src/harness/id.ts`.

@@ -23,6 +23,6 @@
 - The regression assertion checks the specific expected diagnostics and would fail if `validateCheckpoint` short-circuited after the first problem.
 - No production file changes, and the full CLI gate passes.
 
-**Consumes:** the `validateCheckpoint(doc: unknown): CheckpointResult` behavior present after Tasks 1 and 2.
+**Consumes:** none
 
 **Produces:** an aggregate-error regression test in `cli/src/state/checkpoint.test.ts` that Tasks 4 through 6 preserve.
