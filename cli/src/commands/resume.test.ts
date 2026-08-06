@@ -65,7 +65,7 @@ import {
 } from "../harness/scripted/scenario.js";
 import type { installSignalHandlers } from "../runner/signals.js";
 import { SignalInterruption } from "../runner/signals.js";
-import type { RunCheckpoint } from "../state/checkpoint.js";
+import type { RunCheckpoint } from "../state/checkpoint/types.js";
 import { acquireWorkspaceLock, locksDirectory } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { readCheckpoint } from "../state/checkpoint.js";

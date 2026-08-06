@@ -10,7 +10,7 @@ import {
 import type {
   AttemptRecord,
   RunCheckpoint,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { readCheckpoint } from "../state/checkpoint.js";
 import { runsDirectory } from "../state/runs.js";
 

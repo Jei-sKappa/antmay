@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import type { AttemptReference, WaitingRecovery } from "../state/checkpoint.js";
+import type { AttemptReference, WaitingRecovery } from "../state/checkpoint/types.js";
 
 import {
   DECIDED_FROM,
@@ -98,7 +98,7 @@ describe("recovery module — purity", () => {
       expect(statement.startsWith("import type ")).toBe(true);
     }
     expect(statements.map((s) => /from "([^"]+)"/.exec(s)?.[1])).toEqual([
-      "../state/checkpoint.js",
+      "../state/checkpoint/types.js",
       "../thread/artifacts.js",
     ]);
     expect(source).not.toMatch(/node:|Date\(|process\./);

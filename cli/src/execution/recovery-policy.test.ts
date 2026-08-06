@@ -7,7 +7,7 @@ import type {
   WaitingInfo,
   WaitingReasons,
   WaitingRecovery,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 
 import type {
@@ -415,7 +415,7 @@ describe("recovery-policy module — purity (AC-3.5)", () => {
       expect(statement.startsWith("import type ")).toBe(true);
     }
     expect(statements.map((s) => /from "([^"]+)"/.exec(s)?.[1])).toEqual([
-      "../state/checkpoint.js",
+      "../state/checkpoint/types.js",
       "../thread/artifacts.js",
       "./recovery.js",
     ]);

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import type { RunCheckpoint } from "./checkpoint.js";
+import type { RunCheckpoint } from "./checkpoint/types.js";
 
 /**
  * A minimal open file handle: enough to write, flush, and close. The default

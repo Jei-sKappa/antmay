@@ -1,4 +1,4 @@
-import type { AttemptReference, WaitingRecovery } from "../state/checkpoint.js";
+import type { AttemptReference, WaitingRecovery } from "../state/checkpoint/types.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 import type {
   FailedFinalization,

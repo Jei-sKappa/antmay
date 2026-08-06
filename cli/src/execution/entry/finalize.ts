@@ -1,5 +1,5 @@
 import type { GitBoundaryContext } from "../../gitops/boundary.js";
-import type { AttemptRecord } from "../../state/checkpoint.js";
+import type { AttemptRecord } from "../../state/checkpoint/types.js";
 import { attemptInterval } from "../attempts.js";
 import type { StageContext } from "../context.js";
 import type { FailedFinalization } from "../recovery.js";

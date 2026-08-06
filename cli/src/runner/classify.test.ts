@@ -7,7 +7,7 @@ import type {
   ClassificationInput,
 } from "./classify.js";
 import { classifyAttempt } from "./classify.js";
-import type { WaitingKind, WaitingReason } from "../state/checkpoint.js";
+import type { WaitingKind, WaitingReason } from "../state/checkpoint/types.js";
 import type { OutcomeParse } from "./outcome.js";
 
 const completed: AttemptOutcome = { kind: "completed", finalText: "Outcome: DONE" };

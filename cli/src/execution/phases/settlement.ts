@@ -8,7 +8,7 @@ import type {
   TerminalResult,
   WaitingDiagnostics,
   WaitingInfo,
-} from "../../state/checkpoint.js";
+} from "../../state/checkpoint/types.js";
 import { scanPendingQueues } from "../../thread/queues.js";
 import { withAgentSession } from "../attempts.js";
 import type { StageContext } from "../context.js";

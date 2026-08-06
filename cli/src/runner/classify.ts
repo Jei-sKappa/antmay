@@ -3,7 +3,7 @@ import type {
   WaitingKind,
   WaitingReason,
   WaitingReasons,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { formatTerminalOutcome, TERMINAL_OUTCOMES } from "./outcome.js";
 import type { OutcomeParse } from "./outcome.js";
 

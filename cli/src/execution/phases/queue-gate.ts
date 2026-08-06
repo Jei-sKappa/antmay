@@ -1,5 +1,5 @@
 import { scanPendingQueues } from "../../thread/queues.js";
-import type { WaitingInfo } from "../../state/checkpoint.js";
+import type { WaitingInfo } from "../../state/checkpoint/types.js";
 import type { RunContext } from "../context.js";
 import { Pause } from "../pause.js";
 

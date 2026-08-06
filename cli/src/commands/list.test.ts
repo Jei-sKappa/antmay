@@ -12,7 +12,7 @@ import type {
   RunCheckpoint,
   RunCondition,
   SnapshottedStage,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { validateCheckpoint } from "../state/checkpoint.js";
 import { writeCheckpoint } from "../state/persist.js";
 import { runsDirectory } from "../state/runs.js";

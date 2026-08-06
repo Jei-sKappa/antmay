@@ -1,4 +1,4 @@
-import type { AttemptRecord, WaitingInfo } from "../../state/checkpoint.js";
+import type { AttemptRecord, WaitingInfo } from "../../state/checkpoint/types.js";
 import { referencedAttempt } from "../attempts.js";
 import type { RunContext, StageContext } from "../context.js";
 import { stageContext } from "../context.js";

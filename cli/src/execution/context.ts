@@ -4,7 +4,7 @@ import type { ExecutionDisplay } from "../display/types.js";
 import { finalizeGitBoundary } from "../gitops/boundary.js";
 import { readHead } from "../gitops/status.js";
 import type { HarnessInvoker } from "../harness/types.js";
-import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint.js";
+import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint/types.js";
 import { inspectArtifactState } from "../thread/artifacts.js";
 import { RunState } from "./run-state.js";
 import type { CheckpointWriter } from "./run-state.js";

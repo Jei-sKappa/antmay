@@ -1,5 +1,5 @@
 import { SignalInterruption } from "../runner/signals.js";
-import type { AttemptRecord, WaitingDiagnostics } from "../state/checkpoint.js";
+import type { AttemptRecord, WaitingDiagnostics } from "../state/checkpoint/types.js";
 import { withAgentSession } from "./attempts.js";
 import type { RunContext } from "./context.js";
 import { Pause } from "./pause.js";

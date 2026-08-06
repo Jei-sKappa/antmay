@@ -5,7 +5,7 @@ import type {
   AttemptRecord,
   RunCheckpoint,
   WaitingRecovery,
-} from "./checkpoint.js";
+} from "./checkpoint/types.js";
 import { validateCheckpoint } from "./checkpoint.js";
 
 function validCheckpoint(): RunCheckpoint {

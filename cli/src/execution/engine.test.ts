@@ -22,7 +22,7 @@ import type {
   AttemptRecord,
   RunCheckpoint,
   SnapshottedStage,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { readCheckpoint } from "../state/checkpoint.js";
 import { writeCheckpoint } from "../state/persist.js";
 import {

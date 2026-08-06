@@ -1,4 +1,4 @@
-import type { AttemptReference, WaitingInfo } from "../../state/checkpoint.js";
+import type { AttemptReference, WaitingInfo } from "../../state/checkpoint/types.js";
 import type { ArtifactMismatch } from "../../thread/artifacts.js";
 import { evaluatePromisedState } from "../../thread/artifacts.js";
 import type { StageContext } from "../context.js";

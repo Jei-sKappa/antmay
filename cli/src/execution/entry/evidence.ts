@@ -1,4 +1,4 @@
-import type { WaitingRecovery } from "../../state/checkpoint.js";
+import type { WaitingRecovery } from "../../state/checkpoint/types.js";
 import { evaluatePromisedState } from "../../thread/artifacts.js";
 import type { QueueScan } from "../../thread/queues.js";
 import { scanPendingQueues } from "../../thread/queues.js";

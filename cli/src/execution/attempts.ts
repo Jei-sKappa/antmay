@@ -3,7 +3,7 @@ import type {
   AttemptRecord,
   AttemptReference,
   RunCheckpoint,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import type { InvariantResult } from "./result.js";
 
 /**

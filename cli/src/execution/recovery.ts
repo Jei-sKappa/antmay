@@ -1,7 +1,7 @@
 import type {
   AttemptReference,
   WaitingRecovery,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
 
 /**

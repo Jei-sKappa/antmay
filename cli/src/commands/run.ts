@@ -37,7 +37,7 @@ import type {
   ProfileSelection,
   RunCheckpoint,
   SnapshottedStage,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { readCheckpoint } from "../state/checkpoint.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";

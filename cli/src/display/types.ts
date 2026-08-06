@@ -1,5 +1,5 @@
 import type { HarnessEvent } from "../harness/types.js";
-import type { WaitingInfo } from "../state/checkpoint.js";
+import type { WaitingInfo } from "../state/checkpoint/types.js";
 
 /**
  * How a stage that did not finalize ended, as the stage itself reported it —

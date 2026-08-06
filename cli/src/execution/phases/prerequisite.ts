@@ -1,4 +1,4 @@
-import type { WaitingInfo } from "../../state/checkpoint.js";
+import type { WaitingInfo } from "../../state/checkpoint/types.js";
 import { evaluateArtifactPrerequisite } from "../../thread/artifacts.js";
 import type { StageContext } from "../context.js";
 import { Pause } from "../pause.js";

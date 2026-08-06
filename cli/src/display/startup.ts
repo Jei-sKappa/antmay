@@ -1,4 +1,4 @@
-import type { ProfileSelection } from "../state/checkpoint.js";
+import type { ProfileSelection } from "../state/checkpoint/types.js";
 import type { DisplayOptions } from "./format.js";
 import {
   KEY_STYLE,

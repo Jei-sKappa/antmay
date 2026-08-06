@@ -2,7 +2,7 @@ import type {
   WaitingInfo,
   WaitingReason,
   WaitingReasons,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 
 /**
  * A pause that stopped for one reason alone and expects nothing of an earlier

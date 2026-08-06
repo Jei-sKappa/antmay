@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { HARNESSES } from "../harness/providers/index.js";
-import type { AttemptRecord, WaitingInfo } from "../state/checkpoint.js";
+import type { AttemptRecord, WaitingInfo } from "../state/checkpoint/types.js";
 import type { RunContext } from "./context.js";
 import type { Transition } from "./run-state.js";
 

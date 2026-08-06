@@ -213,7 +213,7 @@ describe("one post-allocation checkpoint writer (AC-1.3, AC-1.5)", () => {
 
   it("leaves the writer a writer", async () => {
     const persist = await moduleNamed("state/persist.ts");
-    expect(targetsOf(persist)).toEqual(["state/checkpoint.ts"]);
+    expect(targetsOf(persist)).toEqual(["state/checkpoint/types.ts"]);
     expect(persist.source).not.toMatch(/\b(?:readCheckpoint|validateCheckpoint)\b/);
   });
 });
@@ -537,11 +537,58 @@ describe("the terminal-outcome protocol has one owner", () => {
   });
 });
 
+describe("the checkpoint vocabulary declares and does nothing", () => {
+  /** The one module that says what a durable checkpoint and its parts are. */
+  const VOCABULARY = "state/checkpoint/types.ts";
+
+  /** The three forms a declarations-only module is made of, and their closers. */
+  const DECLARATION =
+    /^(?:import\s+type\b|export\s+type\b|export\s+interface\b|[)\]}>])/;
+
+  /** Runtime code, in the forms a declaration cannot take. */
+  const EXECUTABLE = /\b(?:const|let|var|function|class|new)\b/;
+
+  it("is made of type imports and exported type declarations only", async () => {
+    // What is worth guarding here is whether the module can run anything at all,
+    // rather than which domains its types may name: an allow-list of importable
+    // domains needs an edit for every legitimate new type reference and still
+    // admits a validator that reaches only allow-listed modules. A module with no
+    // value import and no non-type declaration cannot hold one, whatever it names.
+    const source = withoutComments((await moduleNamed(VOCABULARY)).source);
+    expect(source, `${VOCABULARY} declares the document`).toMatch(
+      /^export type RunCheckpoint\b/m,
+    );
+    // Every statement opens at column zero and every continuation of one is
+    // indented, so a line starting there either opens a declaration or closes the
+    // one above it. Anything else is a statement this module may not hold — a
+    // value import, a constant, a function, or a bare call.
+    for (const line of source.split("\n")) {
+      if (line.trim() === "" || /^\s/.test(line)) continue;
+      expect(line, `${VOCABULARY} states more than a declaration`).toMatch(
+        DECLARATION,
+      );
+    }
+    expect(source, `${VOCABULARY} holds runtime code`).not.toMatch(EXECUTABLE);
+  });
+
+  it("reaches neither the execution nor the display domain", async () => {
+    // The document is what a phase and a renderer are written in terms of, so a
+    // reference in this direction is an inversion: the vocabulary would then
+    // depend on one consumer's reading of it.
+    for (const target of targetsOf(await moduleNamed(VOCABULARY))) {
+      expect(
+        /^(?:execution|display)\//.test(target),
+        `${VOCABULARY} imports ${target}`,
+      ).toBe(false);
+    }
+  });
+});
+
 describe("a pause is built in one module and compared field by field", () => {
   /** The one builder of every pause the executor can record. */
   const BUILDER = "execution/pause.ts";
   /** The module that declares the shape, and so states its keys once. */
-  const SCHEMA = "state/checkpoint.ts";
+  const SCHEMA = "state/checkpoint/types.ts";
 
   /**
    * An object literal led by the reason list: the shape of a pause. Only that
@@ -620,8 +667,8 @@ describe("every recovery declares the evidence it is decided from", () => {
   const VOCABULARY = "execution/recovery.ts";
   /** The one module that turns a recovery and its evidence into a directive. */
   const POLICY = "execution/recovery-policy.ts";
-  /** The module that declares the recorded union, and so states its kinds once. */
-  const SCHEMA = "state/checkpoint.ts";
+  /** The module that reads a recovery out of untrusted JSON, kind by kind. */
+  const VALIDATOR = "state/checkpoint.ts";
   /** The one module that observes what a pause is decided from. */
   const OBSERVER = "execution/entry/evidence.ts";
 
@@ -677,14 +724,17 @@ describe("every recovery declares the evidence it is decided from", () => {
     }
   });
 
-  it("tests a recovery kind by comparison nowhere outside the schema", async () => {
+  it("tests a recovery kind by comparison nowhere outside the validator", async () => {
     // Such a test is never exhaustive: a fifth recovery kind added later takes
     // whichever branch the comparison leaves it, so no evidence is gathered for
     // it or its attempt reference is never resolved — and it fails on a resume in
-    // production rather than in this gate. The vocabulary needs no exemption: it
-    // keys its table by the kind instead of comparing to one.
+    // production rather than in this gate. Validating a persisted document is the
+    // one place with nothing to be exhaustive over: it reads a raw value that may
+    // be any string at all, and has no narrowed union to switch on until it has
+    // accepted one. The vocabulary needs no exemption: it keys its table by the
+    // kind instead of comparing to one.
     for (const module of await productionModules()) {
-      if (module.id === SCHEMA) continue;
+      if (module.id === VALIDATOR) continue;
       expect(
         withoutComments(module.source),
         `${module.id} branches on a recovery kind`,
@@ -719,7 +769,7 @@ describe("durable state changes only by committing a named transition", () => {
   /** The one module that turns a transition into the next checkpoint. */
   const APPLIER = "execution/run-state.ts";
   /** The module that declares the document, and so states its fields once. */
-  const SCHEMA = "state/checkpoint.ts";
+  const SCHEMA = "state/checkpoint/types.ts";
   /** Writing the first checkpoint of a run is allocation, not a transition. */
   const ALLOCATION = "commands/run.ts";
 

@@ -3,7 +3,7 @@ import type {
   WaitingInfo,
   WaitingKind,
   WaitingReason,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import {
   describeArtifact,
   describeArtifactDimension,

@@ -1,6 +1,6 @@
 import { renderStagePrompt } from "../../harness/prompt.js";
 import type { AttemptOutcome } from "../../harness/types.js";
-import type { AttemptRecord } from "../../state/checkpoint.js";
+import type { AttemptRecord } from "../../state/checkpoint/types.js";
 import { attemptLogPaths, createAttemptLog } from "../../state/logs.js";
 import type { AttemptLogHeader } from "../../state/logs.js";
 import { withAgentSession } from "../attempts.js";

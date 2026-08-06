@@ -1,4 +1,4 @@
-import type { RunCondition } from "../state/checkpoint.js";
+import type { RunCondition } from "../state/checkpoint/types.js";
 import type { Ansi, DisplayOptions } from "./format.js";
 import { createPainter, emit, infoLine, keyWidth } from "./format.js";
 

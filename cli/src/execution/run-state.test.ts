@@ -6,7 +6,7 @@ import type {
   RunCheckpoint,
   SnapshottedStage,
   WaitingInfo,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { validateCheckpoint } from "../state/checkpoint.js";
 import { Pause } from "./pause.js";
 import type { CheckpointWriter, Transition } from "./run-state.js";

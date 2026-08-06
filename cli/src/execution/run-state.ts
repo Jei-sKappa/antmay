@@ -3,7 +3,7 @@ import type {
   RunCheckpoint,
   SnapshottedStage,
   WaitingInfo,
-} from "../state/checkpoint.js";
+} from "../state/checkpoint/types.js";
 import { writeCheckpoint } from "../state/persist.js";
 import { waitingEquals } from "./pause.js";
 
