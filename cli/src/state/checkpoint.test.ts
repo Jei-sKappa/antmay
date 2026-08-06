@@ -417,6 +417,50 @@ describe("validateCheckpoint field errors", () => {
   });
 });
 
+/**
+ * A checkpoint carrying four faults in four separate regions — the created
+ * timestamp, the repository root, one stage's binding, and one attempt record —
+ * paired with the exact diagnostic each one owes. No fault is a consequence of
+ * another, and every one is reported by the field-shape pass rather than by a
+ * cross-field invariant, so all four are within reach of a single validation
+ * call.
+ */
+function multiFaultCheckpoint(): { doc: RunCheckpoint; diagnostics: string[] } {
+  const doc = validCheckpoint();
+  doc.createdAt = "2026-07-23 12:15:00";
+  doc.repoRoot = "repo/here";
+  doc.stages[0].binding.heartbeatSeconds = 0;
+  doc.attempts[0].logPath = "/logs/00-spec-attempt-01.log";
+  return {
+    doc,
+    diagnostics: [
+      "createdAt must be an ISO-8601 UTC timestamp.",
+      "repoRoot must be a normalized absolute host path.",
+      "stages[0].binding.heartbeatSeconds must be a positive integer.",
+      "attempts[0].logPath must be a normalized run-relative POSIX path.",
+    ],
+  };
+}
+
+describe("validateCheckpoint aggregate reporting", () => {
+  it("reports a diagnostic for every independent fault from one validation call", () => {
+    const { doc, diagnostics } = multiFaultCheckpoint();
+
+    const result = validateCheckpoint(doc);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      for (const diagnostic of diagnostics) {
+        expect(result.errors).toContain(diagnostic);
+      }
+      // Each fault owes exactly one diagnostic, so the count is what says the
+      // four were reported on their own account rather than one of them
+      // explaining the others.
+      expect(result.errors).toHaveLength(diagnostics.length);
+    }
+  });
+});
+
 describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
   it("rejects waiting-for-user with null waiting", () => {
     const doc = validCheckpoint();
