@@ -1182,3 +1182,191 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
     }
   });
 });
+
+describe("commands are one sequence over named steps", () => {
+  /**
+   * Every production module under either command preflight tree, plus the run
+   * allocation transaction and the resume lock acquisition collaborator. Each
+   * value is the one module allowed to drive that step.
+   */
+  const COMMAND_STEP_CALLERS: Record<ModuleId, ModuleId> = {
+    "commands/run/preflight/resolve-roots.ts": "commands/run.ts",
+    "commands/run/preflight/load-pipeline.ts": "commands/run.ts",
+    "commands/run/preflight/load-profile.ts": "commands/run.ts",
+    "commands/run/preflight/load-settings.ts": "commands/run.ts",
+    "commands/run/preflight/resolve-thread.ts": "commands/run.ts",
+    "commands/run/preflight/inspect-artifacts.ts": "commands/run.ts",
+    "commands/run/preflight/compose-pipeline.ts": "commands/run.ts",
+    "commands/run/preflight/snapshot-stages.ts": "commands/run.ts",
+    "commands/run/preflight/resolve-runtime.ts": "commands/run.ts",
+    "commands/run/preflight/check-temporary-workspaces.ts": "commands/run.ts",
+    "commands/run/preflight/require-clean-worktree.ts": "commands/run.ts",
+    "commands/run/preflight/scan-pending-queues.ts": "commands/run.ts",
+    "commands/run/preflight/find-unfinished-run.ts": "commands/run.ts",
+    "commands/run/allocate.ts": "commands/run.ts",
+    "commands/resume/preflight/resolve-state-root.ts": "commands/resume.ts",
+    "commands/resume/preflight/locate-run.ts": "commands/resume.ts",
+    "commands/resume/preflight/load-checkpoint.ts": "commands/resume.ts",
+    "commands/resume/preflight/require-incomplete.ts": "commands/resume.ts",
+    "commands/resume/preflight/revalidate-thread.ts": "commands/resume.ts",
+    "commands/resume/preflight/resolve-runtime.ts": "commands/resume.ts",
+    "commands/resume/preflight/validate-workspace.ts": "commands/resume.ts",
+    "commands/resume/preflight/check-temporary-workspaces.ts": "commands/resume.ts",
+    "commands/resume/acquire-lock.ts": "commands/resume.ts",
+  };
+
+  const RUN_ORCHESTRATOR = "commands/run.ts";
+  const RESUME_ORCHESTRATOR = "commands/resume.ts";
+  const ORCHESTRATORS = [RUN_ORCHESTRATOR, RESUME_ORCHESTRATOR] as const;
+  const ALLOCATION = "commands/run/allocate.ts";
+  const RESUME_ACQUIRE = "commands/resume/acquire-lock.ts";
+  const RUNTIME_STEPS = [
+    "commands/run/preflight/resolve-runtime.ts",
+    "commands/resume/preflight/resolve-runtime.ts",
+  ] as const;
+
+  /** Lifecycle and presentation the orchestrators alone may reach. */
+  const COMMAND_OWNED_IMPORTS = new Set([
+    "cli/exit-codes.ts",
+    "display/execution.ts",
+    "display/format.ts",
+    "display/preflight.ts",
+    "display/startup.ts",
+    "execution/engine.ts",
+    "runner/signals.ts",
+  ]);
+
+  /** Modules a step must never load: exits, renderers, signals, or the engine. */
+  const STEP_FORBIDDEN_IMPORTS = [
+    "cli/exit-codes.ts",
+    "display/execution.ts",
+    "display/preflight.ts",
+    "display/startup.ts",
+    "display/list.ts",
+    "display/terminal.ts",
+    "runner/signals.ts",
+    "execution/engine.ts",
+    ...ORCHESTRATORS,
+  ];
+
+  /**
+   * A selected exit or an executable presentation callback on a refusal. Either
+   * would pull command control flow into the step that only returns facts.
+   */
+  const REFUSAL_CONTROL =
+    /\b(?:exitCode|EXIT_(?:OK|FAILURE|WAITING|SIGINT|SIGTERM|SIGHUP))\b|\b(?:render|print)[A-Z]\w*\s*[:=]|\bon(?:Print|Render|Refuse)\w*\s*[:=]/;
+
+  /** Value imports a module loads under `src/`, excluding type-only references. */
+  function loadedTargets(module: ProductionModule): ModuleId[] {
+    return module.references.flatMap((reference) =>
+      reference.target !== null && !reference.typeOnly ? [reference.target] : [],
+    );
+  }
+
+  it("declares every command step that exists", async () => {
+    // A preflight, allocation, or acquisition file the table does not name is a
+    // step of a command nothing above accounts for — orphaned, skipped, or driven
+    // from somewhere unexpected. A duplicate key is unrepresentable in the table;
+    // a removed row surfaces here as an undeclared file on disk.
+    const onDisk = (await productionModules())
+      .map((module) => module.id)
+      .filter(
+        (id) =>
+          /^commands\/(?:run|resume)\/preflight\//.test(id) ||
+          id === ALLOCATION ||
+          id === RESUME_ACQUIRE,
+      );
+    expect([...onDisk].sort()).toEqual(Object.keys(COMMAND_STEP_CALLERS).sort());
+  });
+
+  it("drives each step from exactly the one module that owns its place", async () => {
+    for (const [step, caller] of Object.entries(COMMAND_STEP_CALLERS)) {
+      expect(await driversOf(step), `drivers of ${step}`).toEqual([caller]);
+    }
+  });
+
+  it("keeps allocation and resume acquisition separate single-called collaborators", async () => {
+    expect(await driversOf(ALLOCATION)).toEqual([RUN_ORCHESTRATOR]);
+    expect(await driversOf(RESUME_ACQUIRE)).toEqual([RESUME_ORCHESTRATOR]);
+    expect(targetsOf(await moduleNamed(ALLOCATION))).not.toContain(RESUME_ACQUIRE);
+    expect(targetsOf(await moduleNamed(RESUME_ACQUIRE))).not.toContain(ALLOCATION);
+  });
+
+  it("lets no step invoke another step or reach back into an orchestrator", async () => {
+    const steps = new Set(Object.keys(COMMAND_STEP_CALLERS));
+    for (const step of steps) {
+      const targets = targetsOf(await moduleNamed(step));
+      for (const target of targets) {
+        expect(
+          steps.has(target),
+          `${step} imports another command step ${target}`,
+        ).toBe(false);
+        expect(
+          ORCHESTRATORS.includes(target as (typeof ORCHESTRATORS)[number]),
+          `${step} reaches the orchestrator ${target}`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("keeps steps free of exits, renderers, signals, and the engine", async () => {
+    for (const step of Object.keys(COMMAND_STEP_CALLERS)) {
+      const targets = loadedTargets(await moduleNamed(step));
+      for (const forbidden of STEP_FORBIDDEN_IMPORTS) {
+        expect(targets, `${step} imports ${forbidden}`).not.toContain(forbidden);
+      }
+    }
+  });
+
+  it("keeps refusals inert data with no selected exit or renderer callback", async () => {
+    // The command selects the exit and the renderer; a step that returned either
+    // would own presentation and stop being a fact producer.
+    for (const id of [
+      ...Object.keys(COMMAND_STEP_CALLERS),
+      "commands/run/types.ts",
+      "commands/resume/types.ts",
+    ]) {
+      expect(
+        withoutComments((await moduleNamed(id)).source),
+        `${id} embeds exit or renderer control in a refusal`,
+      ).not.toMatch(REFUSAL_CONTROL);
+    }
+  });
+
+  it("lets runtime steps accept only a pass-through scripted-prompt observer", async () => {
+    // The command owns the observer that prints; the step forwards it to the
+    // resolver and never defines or invokes presentation of its own.
+    for (const id of RUNTIME_STEPS) {
+      const source = withoutComments((await moduleNamed(id)).source);
+      expect(source, `${id} accepts the observer`).toMatch(/\bonScriptedPrompt\b/);
+      expect(source, `${id} invokes presentation`).not.toMatch(
+        /\b(?:print[A-Z]\w*|createTerminalExecutionDisplay)\s*\(/,
+      );
+    }
+  });
+
+  it("rejects orchestrator leakage of step-owned leaf collaborators", async () => {
+    // A leaf assigned to an extracted step must not reappear as a direct
+    // orchestrator import: that is how the step boundary dissolves one collaborator
+    // at a time. Command-owned lifecycle and presentation imports stay permitted.
+    for (const orchestratorId of ORCHESTRATORS) {
+      const ownedLeaves = new Set<ModuleId>();
+      for (const [step, caller] of Object.entries(COMMAND_STEP_CALLERS)) {
+        if (caller !== orchestratorId) continue;
+        for (const target of loadedTargets(await moduleNamed(step))) {
+          if (target.startsWith("commands/")) continue;
+          ownedLeaves.add(target);
+        }
+      }
+      const orchestrator = await moduleNamed(orchestratorId);
+      for (const target of loadedTargets(orchestrator)) {
+        if (COMMAND_OWNED_IMPORTS.has(target)) continue;
+        if (COMMAND_STEP_CALLERS[target] === orchestratorId) continue;
+        expect(
+          ownedLeaves.has(target),
+          `${orchestratorId} reaches step-owned leaf ${target}`,
+        ).toBe(false);
+      }
+    }
+  });
+});

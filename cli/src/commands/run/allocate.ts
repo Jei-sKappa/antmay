@@ -5,8 +5,8 @@ import type { RunCheckpoint } from "../../state/checkpoint/types.js";
 import { acquireWorkspaceLock } from "../../state/lock.js";
 import { writeCheckpoint } from "../../state/persist.js";
 import { createRunDirectory, generateRunId } from "../../state/runs.js";
+import { scanPendingQueues } from "../../thread/queues.js";
 import { resolveCurrentCheckoutWorkspace } from "../../workspace/current-checkout.js";
-import { scanRunPendingQueues } from "./preflight/scan-pending-queues.js";
 import type {
   RunAllocationInput,
   RunAllocationResult,
@@ -70,7 +70,7 @@ export async function allocateRun(
     }
     const lock = lockOutcome.handle;
 
-    const lockedScan = await scanRunPendingQueues(repoRoot, threadRelPath);
+    const lockedScan = await scanPendingQueues(repoRoot, threadRelPath);
     if (!lockedScan.ok || lockedScan.pendingFiles.length > 0) {
       await lock.release();
       if (!lockedScan.ok) {

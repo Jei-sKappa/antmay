@@ -129,19 +129,21 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   selected execution profile when it binds that stage and from `settings.json`
   otherwise. The whole binding comes from one document — fields never merge
   across the two — and only the intrinsic defaults fill an omitted timing.
-- **One engine owns every durable transition.** A command's own work ends at
-  allocation (`run`) or validated read-only preflight (`resume`); both then hand
+- **One engine owns every durable transition.** Each of `run` and `resume` is an
+  explicit orchestrator: it sequences command-specific preflight steps, owns
+  refusal presentation, signal-handler lifecycle, startup output, engine-result
+  mapping, and successful-lock cleanup, and returns structured inert refusals
+  from every extracted step rather than letting a step choose an exit or render.
+  `run` ends its own work at the allocation transaction; `resume` ends its
+  read-only preflight at a separate lock-acquisition collaborator. Both then hand
   their starting cursor to `executeEngine` (`src/execution/engine.ts`) through a
   typed entry. Under the held lock the engine alone recovers an abandoned
   attempt, gates on queues and prerequisites, launches and settles attempts,
   checks promised artifact state, finalizes Git, builds and refreshes waiting
   state, advances stages, completes the run, and writes every checkpoint after
-  the allocation write. Commands keep startup and preflight presentation, the
-  signal-handler lifecycle, lock release, and the mapping of the engine's
-  structured result to an exit code. The engine coordinates collaborators and
-  reimplements none of them: Git sequencing, artifact contracts, runtime
-  selection, terminal prose, and the pause decision table each stay with their
-  owner.
+  the allocation write. The engine coordinates collaborators and reimplements
+  none of them: Git sequencing, artifact contracts, runtime selection, terminal
+  prose, and the pause decision table each stay with their owner.
 - The engine rechecks the stage's prerequisite against fresh concrete state
   immediately before every attempt, and verifies the promised artifact state
   after a recognized `DONE`. That verification runs **before** the Git boundary,
@@ -216,7 +218,16 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   pre-dispatch import graph light (help/version/usage errors load nothing).
 - `cli/` — argument parsing (`parse.ts`), help text (`help.ts`), and the fixed
   exit codes (`exit-codes.ts`).
-- `commands/` — the three subcommand implementations (`run`, `resume`, `list`).
+- `commands/` — the three subcommand implementations. `run` and `resume` are thin
+  orchestrators whose source states each safety-sensitive operation in order;
+  each drives a command-specific preflight tree of single-called steps that
+  return typed facts or inert refusals and reach neither exits, concrete
+  renderers, signals, the engine, nor one another. New-run allocation is one
+  transactional collaborator under `run`; resume lock acquisition is a separate
+  single-called collaborator under `resume` — they share the lock primitive
+  beneath them and no orchestration path. Injected dependencies common to both
+  live in a neutral `CommandDeps` type, with run-only seams kept in a run
+  extension. `list` stays a self-contained read of durable state.
 - `config/` — root path resolution (`roots.ts`), syntax-directed pipeline/profile
   reference resolution (`references.ts`), and the local binding documents:
   settings and execution-profile loading plus per-stage binding resolution
@@ -365,11 +376,14 @@ bearing.
   assembled in one module and compared field by field, each recovery kind's
   declared evidence read from one table rather than tested for by comparison,
   durable state changed only by committing a named transition, one caller per
-  execution phase and one module that ends an invocation, phase-specific display
-  consumers, and adapter families loaded only through the runtime resolver. It
-  reads source text, so a static, dynamic, re-export, or type-only import is
-  judged for what it is. When it fails, the boundary moved — argue the direction,
-  do not relax the guard to match the new import.
+  execution phase and one module that ends an invocation, one caller per command
+  preflight step plus the run-allocation and resume-acquisition collaborators,
+  with steps forbidden from invoking one another or leaking their leaf
+  collaborators back into the orchestrator, phase-specific display consumers, and
+  adapter families loaded only through the runtime resolver. It reads source
+  text, so a static, dynamic, re-export, or type-only import is judged for what
+  it is. When it fails, the boundary moved — argue the direction, do not relax
+  the guard to match the new import.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
