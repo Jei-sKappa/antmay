@@ -1,8 +1,5 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
-
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
-import { resolveRoots, resolveStateRoot } from "../config/roots.js";
+import { resolveRoots } from "../config/roots.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
 import {
@@ -18,16 +15,15 @@ import { executeEngine } from "../execution/engine.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import { resolveHarnessRuntime } from "../harness/runtime.js";
 import { installSignalHandlers } from "../runner/signals.js";
-import { readCheckpoint } from "../state/checkpoint/read.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
-import { runDirectoryFor, runsDirectory } from "../state/runs.js";
-import { resolveThreadTarget } from "../thread/resolve.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
 import type { CommandDeps } from "./deps.js";
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+import { locateResumeRun } from "./resume/preflight/locate-run.js";
+import { loadResumeCheckpoint } from "./resume/preflight/load-checkpoint.js";
+import { requireIncompleteRun } from "./resume/preflight/require-incomplete.js";
+import { resolveResumeStateRoot } from "./resume/preflight/resolve-state-root.js";
+import { revalidateResumeThread } from "./resume/preflight/revalidate-thread.js";
+import type { ResumeArgs, ResumePreflightRefusal } from "./resume/types.js";
 
 /**
  * Resume an existing `antmay afk run` from its durable checkpoint.
@@ -47,7 +43,7 @@ function errorMessage(error: unknown): string {
  * ordinary return.
  */
 export async function resumeCommand(
-  args: { runId: string },
+  args: ResumeArgs,
   deps: CommandDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
@@ -63,6 +59,10 @@ export async function resumeCommand(
     return EXIT_FAILURE;
   };
 
+  const refuse = (refusal: ResumePreflightRefusal): number => {
+    return fail(refusal.message);
+  };
+
   const controller = (deps.createAbortController ?? (() => new AbortController()))();
   const signals = (deps.installSignals ?? installSignalHandlers)({
     abort: controller,
@@ -76,69 +76,48 @@ export async function resumeCommand(
   try {
     // Preflight resolves only the state root; a config-root problem never blocks
     // a state-only resume.
-    const stateRootResult = resolveStateRoot(deps.env, deps.homedir);
+    const stateRootResult = resolveResumeStateRoot(deps.env, deps.homedir);
     if (!stateRootResult.ok) {
-      return fail(stateRootResult.message);
+      return refuse(stateRootResult.refusal);
     }
-    const stateRoot = stateRootResult.root;
+    const { stateRoot } = stateRootResult;
 
     // Locate the run directory. An absent runs directory or run directory is an
     // unknown run, never a search for a replacement.
-    const runDir = runDirectoryFor(stateRoot, args.runId);
-    try {
-      const stat = await fs.stat(runDir);
-      if (!stat.isDirectory()) {
-        return fail(`Unknown run "${args.runId}": ${runDir} is not a directory.`);
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        return fail(
-          `Unknown run "${args.runId}": no run directory exists under ${runsDirectory(stateRoot)}.`,
-        );
-      }
-      return fail(`Cannot access the run directory ${runDir}: ${errorMessage(error)}`);
+    const located = await locateResumeRun(stateRoot, args.runId);
+    if (!located.ok) {
+      return refuse(located.refusal);
     }
+    const { runDir } = located;
     let sig = signalCode();
     if (sig !== null) return sig;
 
     // Load and validate the checkpoint.
-    const loaded = await readCheckpoint(runDir);
+    const loaded = await loadResumeCheckpoint(runDir, args.runId);
     if (!loaded.ok) {
-      return fail(
-        `The checkpoint for run "${args.runId}" is malformed or unreadable:\n${loaded.errors.join("\n")}`,
-      );
+      return refuse(loaded.refusal);
     }
-    const checkpoint = loaded.checkpoint;
+    const { checkpoint: loadedCheckpoint } = loaded;
     sig = signalCode();
     if (sig !== null) return sig;
 
     // A completed run reports that fact and exits 1.
-    if (checkpoint.condition === "completed") {
-      return fail(
-        `Run "${args.runId}" already completed the whole "${checkpoint.pipelineName}" pipeline; there is nothing to resume.`,
-      );
+    const incomplete = requireIncompleteRun(loadedCheckpoint, args.runId);
+    if (!incomplete.ok) {
+      return refuse(incomplete.refusal);
     }
-
-    const repoRoot = checkpoint.repoRoot;
-    const threadRelPath = checkpoint.threadRelPath;
+    const { checkpoint, repoRoot, threadRelPath } = incomplete;
 
     // Verify the recorded repository still resolves to the Git worktree top level
     // containing the recorded active thread, with non-empty seed/decisions.
-    const thread = await resolveThreadTarget(
-      path.join(repoRoot, threadRelPath),
+    const thread = await revalidateResumeThread(
+      repoRoot,
+      threadRelPath,
+      args.runId,
       deps.cwd,
     );
     if (!thread.ok) {
-      return fail(
-        `The recorded repository or thread for run "${args.runId}" could not be revalidated: ${thread.message}`,
-      );
-    }
-    if (thread.repoRoot !== repoRoot || thread.threadRelPath !== threadRelPath) {
-      return fail(
-        `The recorded thread no longer resolves to its recorded repository. ` +
-          `Recorded repository ${repoRoot} with thread ${threadRelPath}; ` +
-          `resolved repository ${thread.repoRoot} with thread ${thread.threadRelPath}.`,
-      );
+      return refuse(thread.refusal);
     }
     sig = signalCode();
     if (sig !== null) return sig;
