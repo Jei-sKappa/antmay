@@ -1821,6 +1821,58 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
   });
 });
 
+describe("resumeCommand — pre-lock signal observations", () => {
+  afterEach(() => {
+    engineStub = null;
+  });
+
+  const observations = [
+    { name: "after run location", fireAt: 1 },
+    { name: "after checkpoint load", fireAt: 2 },
+    { name: "after thread revalidation", fireAt: 3 },
+    { name: "after runtime resolution", fireAt: 4 },
+    { name: "after workspace validation", fireAt: 5 },
+    { name: "immediately before lock acquisition", fireAt: 6 },
+  ] as const;
+
+  for (const observation of observations) {
+    it(`returns the conventional signal code ${observation.name} with unchanged checkpoint, no lock, and no engine`, async () => {
+      const h = await setup();
+      await seed(h, [{ outcome: BLOCKED }]);
+      const runId = await soleRunId(h);
+      const file = path.join(runDirectoryFor(h.stateRoot, runId), "state.json");
+      const before = await fs.readFile(file, "utf8");
+      const writesBefore = checkpointWrites.filter(
+        (dir) => dir === runDirectoryFor(h.stateRoot, runId),
+      ).length;
+
+      let engineCalls = 0;
+      engineStub = async () => {
+        engineCalls += 1;
+        throw new Error("engine must not run on a pre-lock signal exit");
+      };
+
+      let calls = 0;
+      const result = await resume(h, runId, standardSteps(h.fixture), {
+        installSignals: fakeSignals(() =>
+          ++calls >= observation.fireAt ? "SIGINT" : null,
+        ),
+      });
+
+      expect(result.code).toBe(EXIT_SIGINT);
+      expect(await fs.readFile(file, "utf8")).toBe(before);
+      expect(
+        checkpointWrites.filter(
+          (dir) => dir === runDirectoryFor(h.stateRoot, runId),
+        ).length,
+      ).toBe(writesBefore);
+      expect(await lockNames(h.stateRoot)).toEqual([]);
+      expect(engineCalls).toBe(0);
+      expect(result.invoker.calls.length).toBe(0);
+    });
+  }
+});
+
 describe.concurrent("resumeCommand — signals during resumed execution (AC-17)", () => {
   it("persists interruption, releases the lock, and returns the conventional code", async () => {
     const h = await setup();

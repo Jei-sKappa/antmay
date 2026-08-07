@@ -1,5 +1,4 @@
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
-import { resolveRoots } from "../config/roots.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
 import {
@@ -12,29 +11,31 @@ import {
   printScriptedResolvedPrompt,
 } from "../display/startup.js";
 import { executeEngine } from "../execution/engine.js";
-import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
-import { resolveHarnessRuntime } from "../harness/runtime.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
-import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
 import type { CommandDeps } from "./deps.js";
+import { checkResumeTemporaryWorkspaces } from "./resume/preflight/check-temporary-workspaces.js";
 import { locateResumeRun } from "./resume/preflight/locate-run.js";
 import { loadResumeCheckpoint } from "./resume/preflight/load-checkpoint.js";
 import { requireIncompleteRun } from "./resume/preflight/require-incomplete.js";
+import { resolveResumeRuntime } from "./resume/preflight/resolve-runtime.js";
 import { resolveResumeStateRoot } from "./resume/preflight/resolve-state-root.js";
 import { revalidateResumeThread } from "./resume/preflight/revalidate-thread.js";
+import { validateResumeWorkspace } from "./resume/preflight/validate-workspace.js";
 import type { ResumeArgs, ResumePreflightRefusal } from "./resume/types.js";
 
 /**
  * Resume an existing `antmay afk run` from its durable checkpoint.
  *
- * The preflight is read-only with respect to the checkpoint and knows nothing
- * about what the run was paused for: it resolves only the state root — never a
- * config root, settings, or pipeline definitions — locates the run, validates and
- * rejects a completed checkpoint, revalidates the recorded thread, repository, and
- * workspace, resolves the run's immutable harness runtime, requires the thread's
- * temporary workspaces to be Git-safe, and acquires the recorded workspace lock.
- * Every refusal returns `1` with the checkpoint byte-for-byte unchanged.
+ * Read-only preparation, in order: resolve the state root; locate the run;
+ * load and validate the checkpoint; refuse a completed run; revalidate the
+ * recorded thread; resolve the immutable harness runtime; require the
+ * canonical current-checkout workspace to match the recorded identity; require
+ * the thread's temporary workspaces to be Git-safe; then acquire the recorded
+ * workspace lock. Signal observations sit after location, after load, after
+ * thread revalidation, after runtime resolution, after workspace validation,
+ * and immediately before lock acquisition. Every refusal returns `1` with the
+ * checkpoint byte-for-byte unchanged.
  *
  * Under that lock, the validated cursor goes to `executeEngine` exactly as it was
  * found. Recovering it, and every durable transition that follows, belongs to the
@@ -122,79 +123,49 @@ export async function resumeCommand(
     sig = signalCode();
     if (sig !== null) return sig;
 
-    const currentHarness =
-      checkpoint.stages[checkpoint.stageIndex]!.binding.agent.harness;
-
     // The run's harness runtime is fixed at allocation, so the developer toggle
     // may only agree with it. Both directions are fail-closed and refuse here —
     // before the probe, the lock, and any mutation. Only the current stage's
     // snapshotted harness is probed, and a scripted run's live scenario is
     // reread and revalidated against the complete snapshotted stage set.
-    const harnessRuntime = await resolveHarnessRuntime(
-      {
-        kind: "resume",
-        runId: args.runId,
-        runtime: checkpoint.runtime,
-        env: deps.env,
-        harnesses: [currentHarness],
-        repoRoot,
-        stageIds: checkpoint.stages.map((snapshotted) => snapshotted.id),
-        // Consulted in scripted mode only, so a config-root problem never blocks
-        // an otherwise state-only resume.
-        configRoot: () => {
-          const roots = resolveRoots(deps.env, deps.homedir);
-          return roots.ok
-            ? { ok: true, configRoot: roots.configRoot }
-            : { ok: false, message: roots.message };
-        },
-        onScriptedPrompt: (prompt) => {
-          printScriptedResolvedPrompt(displayOptions, prompt);
-        },
-      },
+    const harnessRuntime = await resolveResumeRuntime(
+      checkpoint,
+      args.runId,
+      deps.env,
+      deps.homedir,
+      repoRoot,
       deps.harnessRuntime,
+      (prompt) => {
+        printScriptedResolvedPrompt(displayOptions, prompt);
+      },
     );
     if (!harnessRuntime.ok) {
       printHarnessRuntimeRefusal(displayOptions, harnessRuntime.failure);
       return EXIT_FAILURE;
     }
-    // The process-local version map keeps every run-creation observation and
-    // overrides only the current harness with the fresh resume probe; the
-    // immutable stage snapshot and stored observations are never mutated.
-    const harnessVersions: Record<string, string> = {};
-    for (const [harness, version] of Object.entries(
-      checkpoint.observedHarnessVersions,
-    )) {
-      if (version !== undefined && version.length > 0) {
-        harnessVersions[harness] = version;
-      }
-    }
-    for (const [harness, version] of Object.entries(harnessRuntime.versions)) {
-      if (version !== undefined) {
-        harnessVersions[harness] = version;
-      }
-    }
+    const { invoker, harnessVersions } = harnessRuntime;
     sig = signalCode();
     if (sig !== null) return sig;
 
     // Resolve the current-checkout workspace and require its canonical path to
     // match the snapshotted workspace identity.
-    const workspace = await resolveCurrentCheckoutWorkspace(repoRoot);
-    if (workspace.path !== checkpoint.workspace.path) {
-      return fail(
-        `The recorded workspace no longer resolves to the same canonical path. ` +
-          `Recorded ${checkpoint.workspace.path}; resolved ${workspace.path}.`,
-      );
+    const workspace = await validateResumeWorkspace(
+      repoRoot,
+      checkpoint.workspace.path,
+    );
+    if (!workspace.ok) {
+      return refuse(workspace.refusal);
     }
     sig = signalCode();
     if (sig !== null) return sig;
 
     // The thread's temporary workspaces must be Git-safe, whatever the durable
-    // condition is: the worktree exemptions the engine applies do not extend here.
-    // Leftover files in an unignored workspace are themselves what makes the
-    // worktree dirty, and the commit-or-revert advice the engine's clean-worktree
-    // rule gives would commit work in progress into the repository. This runs
-    // before lock acquisition and every checkpoint mutation.
-    const workspaces = await checkTemporaryWorkspaces(repoRoot, threadRelPath);
+    // condition is. This runs before lock acquisition and every checkpoint
+    // mutation.
+    const workspaces = await checkResumeTemporaryWorkspaces(
+      repoRoot,
+      threadRelPath,
+    );
     if (!workspaces.ok) {
       if (workspaces.kind === "inspection-error") {
         return fail(workspaces.message);
@@ -269,7 +240,7 @@ export async function resumeCommand(
       const result = await executeEngine({
         entry: { kind: "resume", checkpoint },
         runDir,
-        invoker: harnessRuntime.invoker,
+        invoker,
         display,
         harnessVersions,
         signal: controller.signal,
