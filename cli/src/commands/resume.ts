@@ -12,8 +12,8 @@ import {
 } from "../display/startup.js";
 import { executeEngine } from "../execution/engine.js";
 import { installSignalHandlers } from "../runner/signals.js";
-import { acquireWorkspaceLock } from "../state/lock.js";
 import type { CommandDeps } from "./deps.js";
+import { acquireResumeLock } from "./resume/acquire-lock.js";
 import { checkResumeTemporaryWorkspaces } from "./resume/preflight/check-temporary-workspaces.js";
 import { locateResumeRun } from "./resume/preflight/locate-run.js";
 import { loadResumeCheckpoint } from "./resume/preflight/load-checkpoint.js";
@@ -34,8 +34,9 @@ import type { ResumeArgs, ResumePreflightRefusal } from "./resume/types.js";
  * the thread's temporary workspaces to be Git-safe; then acquire the recorded
  * workspace lock. Signal observations sit after location, after load, after
  * thread revalidation, after runtime resolution, after workspace validation,
- * and immediately before lock acquisition. Every refusal returns `1` with the
- * checkpoint byte-for-byte unchanged.
+ * immediately before lock acquisition, and immediately after a successful
+ * acquisition. Every refusal returns `1` with the checkpoint byte-for-byte
+ * unchanged.
  *
  * Under that lock, the validated cursor goes to `executeEngine` exactly as it was
  * found. Recovering it, and every durable transition that follows, belongs to the
@@ -187,22 +188,22 @@ export async function resumeCommand(
     if (sig !== null) return sig;
 
     // Acquire the recorded workspace lock before any checkpoint mutation.
-    const lockOutcome = await acquireWorkspaceLock(
+    const lockOutcome = await acquireResumeLock(
       stateRoot,
       checkpoint.workspace.path,
       checkpoint.runId,
-      clock(),
+      clock,
     );
     if (!lockOutcome.ok) {
-      const record = lockOutcome.existingRecord.trim();
+      const record = lockOutcome.refusal.existingRecord.trim();
       return fail(
         `The workspace is already locked by another antmay run.\n` +
-          `Lock file: ${lockOutcome.lockPath}\n` +
+          `Lock file: ${lockOutcome.refusal.lockPath}\n` +
           (record.length > 0 ? `Lock record:\n${record}\n` : "") +
           `antmay never removes a lock automatically. Verify the recorded process is no longer running, then delete the lock file manually if it is stale before resuming.`,
       );
     }
-    const lock = lockOutcome.handle;
+    const lock = lockOutcome.lock;
 
     try {
       // A signal that arrived before any mutation releases the lock (in finally)

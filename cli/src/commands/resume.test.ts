@@ -1821,7 +1821,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
   });
 });
 
-describe("resumeCommand — pre-lock signal observations", () => {
+describe("resumeCommand — signal observations through lock acquisition", () => {
   afterEach(() => {
     engineStub = null;
   });
@@ -1833,6 +1833,7 @@ describe("resumeCommand — pre-lock signal observations", () => {
     { name: "after runtime resolution", fireAt: 4 },
     { name: "after workspace validation", fireAt: 5 },
     { name: "immediately before lock acquisition", fireAt: 6 },
+    { name: "immediately after lock acquisition", fireAt: 7 },
   ] as const;
 
   for (const observation of observations) {
@@ -1849,7 +1850,7 @@ describe("resumeCommand — pre-lock signal observations", () => {
       let engineCalls = 0;
       engineStub = async () => {
         engineCalls += 1;
-        throw new Error("engine must not run on a pre-lock signal exit");
+        throw new Error("engine must not run on a pre-engine signal exit");
       };
 
       let calls = 0;
@@ -2280,4 +2281,31 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       expect(await lockNames(h.stateRoot)).toEqual([]);
     });
   }
+
+  it("releases the lock and uninstalls handlers when the engine throws", async () => {
+    const h = await setup();
+    await seed(h, [{ outcome: BLOCKED }]);
+    const runId = await soleRunId(h);
+    const before = await readCp(h, runId);
+    let uninstalled = false;
+    engineStub = async () => {
+      throw new Error("engine exploded");
+    };
+
+    await expect(
+      resume(h, runId, [], {
+        installSignals: () => ({
+          signaled: () => null,
+          exitCodeFor: () => EXIT_SIGINT,
+          uninstall: () => {
+            uninstalled = true;
+          },
+        }),
+      }),
+    ).rejects.toThrow("engine exploded");
+
+    expect((await readCp(h, runId)).updatedAt).toBe(before.updatedAt);
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+    expect(uninstalled).toBe(true);
+  });
 });
