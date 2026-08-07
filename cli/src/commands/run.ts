@@ -5,14 +5,7 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
 import { VERSION } from "../cli/help.js";
-import {
-  loadExecutionProfile,
-  loadStageSettings,
-  resolveStageBindings,
-} from "../config/execution.js";
-import type { StageBindingMap } from "../config/execution.js";
-import { resolveDocumentReference } from "../config/references.js";
-import { resolveRoots } from "../config/roots.js";
+import { resolveStageBindings } from "../config/execution.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
 import {
@@ -29,16 +22,10 @@ import { executeEngine } from "../execution/engine.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import { resolveHarnessRuntime } from "../harness/runtime.js";
-import type { HarnessRuntimeLoader } from "../harness/runtime.js";
 import { composePipeline } from "../pipeline/composition.js";
-import { loadPipelineDocument } from "../pipeline/documents.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
-import type {
-  ProfileSelection,
-  RunCheckpoint,
-  SnapshottedStage,
-} from "../state/checkpoint/types.js";
+import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint/types.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { writeCheckpoint } from "../state/persist.js";
@@ -47,35 +34,17 @@ import {
   generateRunId,
   runsDirectory,
 } from "../state/runs.js";
-import { inspectArtifactState } from "../thread/artifacts.js";
 import { scanPendingQueues } from "../thread/queues.js";
-import { resolveThreadTarget } from "../thread/resolve.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
+import { inspectRunArtifacts } from "./run/preflight/inspect-artifacts.js";
+import { loadRunPipeline } from "./run/preflight/load-pipeline.js";
+import { loadRunProfile } from "./run/preflight/load-profile.js";
+import { loadRunSettings } from "./run/preflight/load-settings.js";
+import { resolveRunRoots } from "./run/preflight/resolve-roots.js";
+import { resolveRunThread } from "./run/preflight/resolve-thread.js";
+import type { RunArgs, RunDeps, RunPreflightRefusal } from "./run/types.js";
 
-/**
- * The injected dependency bag `runCommand` runs against. `env`, `cwd`, and
- * `homedir` root every path and settings decision; `harnessRuntime` is the one
- * lazy adapter-family seam the end-to-end tests fake; the streams and the
- * resolved `color` drive the display. `createAbortController` and `installSignals` are
- * the signal-ownership seams: production defaults to a fresh controller and the
- * real handler installer, while tests inject controlled implementations without
- * emitting real process signals. `clock` overrides the wall clock in tests, and
- * `generateId` overrides run-ID generation so a test can force a queue race or
- * an ID collision deterministically.
- */
-export type RunDeps = {
-  env: NodeJS.ProcessEnv;
-  cwd: string;
-  homedir: string | undefined;
-  harnessRuntime: HarnessRuntimeLoader;
-  stdout: NodeJS.WritableStream;
-  stderr: NodeJS.WritableStream;
-  color: boolean;
-  clock?: () => Date;
-  createAbortController?: () => AbortController;
-  installSignals?: typeof installSignalHandlers;
-  generateId?: () => string;
-};
+export type { RunDeps } from "./run/types.js";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -103,13 +72,7 @@ type Allocated = {
  * uninstalled on every ordinary return path.
  */
 export async function runCommand(
-  args: {
-    pipeline: string;
-    thread: string;
-    from?: string;
-    profile?: string;
-    dangerouslySkipPermissions: boolean;
-  },
+  args: RunArgs,
   deps: RunDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
@@ -125,15 +88,18 @@ export async function runCommand(
   };
 
   /**
-   * Report a rejected loadable document. Field-level schema problems name no
+   * Present an inert preflight refusal. Field-level schema problems name no
    * file of their own, and three different documents can produce them, so the
-   * one place that knows every resolved source is where the source is named.
+   * refusal carries the label and resolved source the command names here.
    */
-  const failDocument = (
-    label: string,
-    sourcePath: string,
-    errors: string[],
-  ): number => fail(`The ${label} at ${sourcePath} was rejected:\n${bullets(errors)}`);
+  const refuse = (refusal: RunPreflightRefusal): number => {
+    if (refusal.kind === "message") {
+      return fail(refusal.message);
+    }
+    return fail(
+      `The ${refusal.label} at ${refusal.sourcePath} was rejected:\n${bullets(refusal.errors)}`,
+    );
+  };
 
   // Install the signal handlers before preflight so a Ctrl-C at any point drives
   // the graceful stop; uninstall them on every ordinary return path.
@@ -144,90 +110,43 @@ export async function runCommand(
   });
 
   try {
-    // Preflight 1: root resolution. Every reference below is resolved against
-    // the config root or the invocation working directory, so nothing can be
-    // read before the roots are known.
-    const roots = resolveRoots(deps.env, deps.homedir);
+    const roots = resolveRunRoots(deps.env, deps.homedir);
     if (!roots.ok) {
-      return fail(roots.message);
+      return refuse(roots.refusal);
     }
 
-    // Preflight 2: the required pipeline document. Its reference is resolved by
-    // syntax alone, then exactly that source is read and strictly validated —
-    // in full, before `--from` selects anything from it.
-    const pipelineRef = resolveDocumentReference(
-      args.pipeline,
-      "pipeline",
-      roots.configRoot,
-      deps.cwd,
-    );
-    if (!pipelineRef.ok) {
-      return fail(pipelineRef.message);
+    const pipeline = loadRunPipeline(args.pipeline, roots.configRoot, deps.cwd);
+    if (!pipeline.ok) {
+      return refuse(pipeline.refusal);
     }
-    const pipelineSourcePath = pipelineRef.reference.sourcePath;
-    const pipelineLoad = loadPipelineDocument(pipelineSourcePath);
-    if (!pipelineLoad.ok) {
-      return failDocument("pipeline document", pipelineSourcePath, pipelineLoad.errors);
-    }
-    const document = pipelineLoad.document;
+    const { document, pipelineSourcePath } = pipeline;
 
-    // Preflight 3: the optional execution profile. The declared name comes from
-    // the loaded document and the source provenance from the resolved
-    // reference, because the two are independent identities.
-    let profileStages: StageBindingMap | null = null;
-    let profileSelection: ProfileSelection = { kind: "settings-only" };
-    if (args.profile !== undefined) {
-      const profileRef = resolveDocumentReference(
-        args.profile,
-        "profile",
-        roots.configRoot,
-        deps.cwd,
-      );
-      if (!profileRef.ok) {
-        return fail(profileRef.message);
-      }
-      const profileLoad = loadExecutionProfile(profileRef.reference.sourcePath);
-      if (!profileLoad.ok) {
-        return failDocument(
-          "execution profile",
-          profileRef.reference.sourcePath,
-          profileLoad.errors,
-        );
-      }
-      profileStages = profileLoad.profile.stages;
-      profileSelection = {
-        kind: "profile",
-        name: profileLoad.profile.name,
-        sourcePath: profileRef.reference.sourcePath,
-      };
+    const profile = loadRunProfile(args.profile, roots.configRoot, deps.cwd);
+    if (!profile.ok) {
+      return refuse(profile.refusal);
     }
+    const { profileStages, profileSelection } = profile;
 
-    // Preflight 4: the optional settings file. A missing file is an empty stage
-    // map, so a complete profile runs without one.
-    const settings = loadStageSettings(roots.configRoot);
+    const settings = loadRunSettings(roots.configRoot);
     if (!settings.ok) {
-      return failDocument("settings document", settings.sourcePath, settings.errors);
+      return refuse(settings.refusal);
     }
 
-    // Preflight 5: thread resolution and validation (owning Git root, active
-    // location, seed, and decision log).
-    const thread = await resolveThreadTarget(args.thread, deps.cwd);
+    const thread = await resolveRunThread(args.thread, deps.cwd);
     if (!thread.ok) {
-      return fail(thread.message);
+      return refuse(thread.refusal);
     }
 
-    // Preflight 6: the thread's concrete artifact state, which is the only
-    // starting point composition simulates from.
-    const inspection = await inspectArtifactState(
+    const inspection = await inspectRunArtifacts(
       thread.repoRoot,
       thread.threadRelPath,
     );
     if (!inspection.ok) {
-      return fail(inspection.message);
+      return refuse(inspection.refusal);
     }
 
-    // Preflight 7: compose the selected suffix, proving every selected stage can
-    // run from the state at its position and resolving its concrete target.
+    // Compose the selected suffix, proving every selected stage can run from
+    // the state at its position and resolving its concrete target.
     const composition = composePipeline(
       document,
       inspection.state,

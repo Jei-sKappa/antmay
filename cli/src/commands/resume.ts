@@ -23,7 +23,7 @@ import { acquireWorkspaceLock } from "../state/lock.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
 import { resolveThreadTarget } from "../thread/resolve.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
-import type { RunDeps } from "./run.js";
+import type { CommandDeps } from "./deps.js";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -48,7 +48,7 @@ function errorMessage(error: unknown): string {
  */
 export async function resumeCommand(
   args: { runId: string },
-  deps: RunDeps,
+  deps: CommandDeps,
 ): Promise<number> {
   const clock = deps.clock ?? (() => new Date());
   const displayOptions: DisplayOptions = {

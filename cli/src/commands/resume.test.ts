@@ -81,8 +81,10 @@ import {
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
 import { governedBy } from "../test-helpers/waiting.js";
-import { runCommand, type RunDeps } from "./run.js";
+import type { CommandDeps } from "./deps.js";
 import { resumeCommand } from "./resume.js";
+import { runCommand } from "./run.js";
+import type { RunDeps } from "./run/types.js";
 
 class Capture extends Writable {
   chunks: string[] = [];
@@ -275,14 +277,14 @@ async function resume(
   overrides: Partial<{
     env: NodeJS.ProcessEnv;
     probe: HarnessExecutableProbe;
-    installSignals: RunDeps["installSignals"];
+    installSignals: CommandDeps["installSignals"];
     createAbortController: () => AbortController;
   }> = {},
 ): Promise<CmdResult> {
   const out = new Capture();
   const err = new Capture();
   const invoker = createFakeHarness(steps);
-  const deps: RunDeps = {
+  const deps: CommandDeps = {
     env: overrides.env ?? baseEnv(h),
     cwd: h.fixture.root,
     homedir: os.homedir(),

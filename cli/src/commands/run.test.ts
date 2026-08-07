@@ -64,7 +64,8 @@ import {
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
 import { governedBy } from "../test-helpers/waiting.js";
-import { runCommand, type RunDeps } from "./run.js";
+import { runCommand } from "./run.js";
+import type { RunDeps } from "./run/types.js";
 
 /** An in-memory writable stream that accumulates everything written to it. */
 class Capture extends Writable {
