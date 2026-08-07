@@ -5,7 +5,6 @@ import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
 import { VERSION } from "../cli/help.js";
-import { resolveStageBindings } from "../config/execution.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
 import {
@@ -21,11 +20,9 @@ import {
 import { executeEngine } from "../execution/engine.js";
 import { isWorktreeClean } from "../gitops/status.js";
 import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
-import { resolveHarnessRuntime } from "../harness/runtime.js";
-import { composePipeline } from "../pipeline/composition.js";
 import { installSignalHandlers } from "../runner/signals.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
-import type { RunCheckpoint, SnapshottedStage } from "../state/checkpoint/types.js";
+import type { RunCheckpoint } from "../state/checkpoint/types.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { writeCheckpoint } from "../state/persist.js";
@@ -36,14 +33,16 @@ import {
 } from "../state/runs.js";
 import { scanPendingQueues } from "../thread/queues.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
+import { composeRunPipeline } from "./run/preflight/compose-pipeline.js";
 import { inspectRunArtifacts } from "./run/preflight/inspect-artifacts.js";
 import { loadRunPipeline } from "./run/preflight/load-pipeline.js";
 import { loadRunProfile } from "./run/preflight/load-profile.js";
 import { loadRunSettings } from "./run/preflight/load-settings.js";
 import { resolveRunRoots } from "./run/preflight/resolve-roots.js";
+import { resolveRunRuntime } from "./run/preflight/resolve-runtime.js";
 import { resolveRunThread } from "./run/preflight/resolve-thread.js";
+import { snapshotRunStages } from "./run/preflight/snapshot-stages.js";
 import type { RunArgs, RunDeps, RunPreflightRefusal } from "./run/types.js";
-
 export type { RunDeps } from "./run/types.js";
 
 function errorMessage(error: unknown): string {
@@ -145,9 +144,7 @@ export async function runCommand(
       return refuse(inspection.refusal);
     }
 
-    // Compose the selected suffix, proving every selected stage can run from
-    // the state at its position and resolving its concrete target.
-    const composition = composePipeline(
+    const composition = composeRunPipeline(
       document,
       inspection.state,
       thread.threadRelPath,
@@ -161,60 +158,34 @@ export async function runCommand(
       });
       return EXIT_FAILURE;
     }
-    const prepared = composition.stages;
 
-    // Preflight 8: one complete local binding per selected stage, from the
-    // profile when it binds the stage and from settings otherwise.
-    const bindings = resolveStageBindings(
-      prepared.map((entry) => entry.stage.id),
+    const snapshot = snapshotRunStages(
+      composition.stages,
       settings.stages,
       profileStages,
+      profileSelection,
+      args.from,
     );
-    if (!bindings.ok) {
-      return fail(bindings.errors.join("\n"));
+    if (!snapshot.ok) {
+      return refuse(snapshot.refusal);
     }
+    const { stages, fromStage } = snapshot;
 
-    // Composition accepted the entry point, so the first selected stage is
-    // exactly the stage `--from` named.
-    const fromStage = args.from === undefined ? null : prepared[0]!.stage.id;
-
-    const stages: SnapshottedStage[] = prepared.map((entry, index) => ({
-      ...entry.stage,
-      resolvedTarget: entry.target,
-      ...(entry.instructions !== undefined
-        ? { instructions: entry.instructions }
-        : {}),
-      binding: bindings.bindings[index]!,
-    }));
-
-    // Preflight 9: the harness runtime. The developer toggle selects it, exactly
-    // one adapter family is loaded, its own probe covers the distinct selected
-    // harnesses, and a non-empty version is required for each.
-    const harnessRuntime = await resolveHarnessRuntime(
-      {
-        kind: "new-run",
-        env: deps.env,
-        harnesses: stages.map((stage) => stage.binding.agent.harness),
-        repoRoot: thread.repoRoot,
-        stageIds: stages.map((stage) => stage.id),
-        configRoot: () => ({ ok: true, configRoot: roots.configRoot }),
-        onScriptedPrompt: (prompt) => {
-          printScriptedResolvedPrompt(displayOptions, prompt);
-        },
-      },
+    const harnessRuntime = await resolveRunRuntime(
+      stages,
+      deps.env,
+      thread.repoRoot,
+      roots.configRoot,
       deps.harnessRuntime,
+      (prompt) => {
+        printScriptedResolvedPrompt(displayOptions, prompt);
+      },
     );
     if (!harnessRuntime.ok) {
       printHarnessRuntimeRefusal(displayOptions, harnessRuntime.failure);
       return EXIT_FAILURE;
     }
-    const observedHarnessVersions = harnessRuntime.versions;
-    const harnessVersions: Record<string, string> = {};
-    for (const [harness, version] of Object.entries(observedHarnessVersions)) {
-      if (version !== undefined) {
-        harnessVersions[harness] = version;
-      }
-    }
+    const { observedHarnessVersions, harnessVersions } = harnessRuntime;
 
     // Preflight 10: the thread's temporary workspaces must be Git-safe. It comes
     // before the clean-worktree gate on purpose: leftover files in an unignored
