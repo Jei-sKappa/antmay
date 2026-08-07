@@ -11,7 +11,7 @@
 3. Replace direct acquisition in `resume.ts` after the pre-lock signal with one collaborator call; preserve exact contention prose and mapping in the command.
 4. Transfer release ownership immediately on success. Keep the post-acquisition signal inside `try`/`finally`, then startup, snapshotted summary, one resume engine entry, result mapping, lock release, and signal uninstall.
 5. Extend task 6's signal matrix with the post-acquisition case, proving conventional exit, no engine, unchanged checkpoint, and released lock.
-6. Retain command-level contention and engine-result tables; add thrown-engine cleanup coverage if it is absent.
+6. Retain command-level contention and engine-result tables; add thrown-engine coverage if it is absent, proving both lock release and signal-handler uninstall.
 7. Run the focused resume suite and full gate.
 
 **Files modified:**

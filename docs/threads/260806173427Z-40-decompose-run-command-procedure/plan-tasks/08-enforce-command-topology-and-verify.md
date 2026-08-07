@@ -9,7 +9,7 @@
 1. Add an explicit caller registry covering every production module under both command preflight trees plus `commands/run/allocate.ts` and `commands/resume/acquire-lock.ts`, with the owning orchestrator as exact caller.
 2. Compare registry preflight entries to files discovered on disk so any undeclared, removed, skipped, or duplicate step fails.
 3. Assert every step has exactly one declared driver; no preflight step imports another step or either orchestrator; allocation and resume acquisition remain separate single-called collaborators.
-4. Assert preflight steps import no exit-code owner, concrete renderer, signal handler, or engine and declare no selected exit or executable renderer callback.
+4. Assert preflight steps import no exit-code owner, concrete renderer, signal handler, or engine and that refusal results declare no selected exit or executable renderer callback. The runtime steps may accept the command-owned scripted-prompt observer solely to pass it to the lower-level resolver; they neither define nor invoke presentation during preflight.
 5. Guard leaf ownership: reject direct orchestrator imports of collaborators assigned to extracted steps while permitting command-owned types, refusal/startup presentation, signals, engine, result mapping, and successful-lock cleanup.
 6. Preserve all execution-phase, checkpoint, transition, Git, display, outcome, and adapter guards at current force.
 7. Update `cli/AGENTS.md` command architecture and module map to describe current state: neutral dependencies, explicit orchestrators, command-specific preflight trees, run allocation, resume acquisition, structured refusals, and safety ordering/ownership. Avoid routine file inventory and history wording.

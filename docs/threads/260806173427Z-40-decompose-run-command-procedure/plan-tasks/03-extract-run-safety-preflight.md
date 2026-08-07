@@ -23,7 +23,7 @@
 - `cli/src/commands/run/preflight/find-unfinished-run.ts` (NEW)
 - `cli/src/commands/run.ts`
 
-**Verification:** `npm --prefix cli run test -- src/commands/run.test.ts` exits 0; `npm --prefix cli run check` exits 0; `rg -n 'checkTemporaryWorkspaces|isWorktreeClean|scanPendingQueues|readCheckpoint' cli/src/commands/run.ts` returns no matches.
+**Verification:** `npm --prefix cli run test -- src/commands/run.test.ts` exits 0; `npm --prefix cli run check` exits 0; `rg -n 'checkTemporaryWorkspaces|isWorktreeClean|scanPendingQueues|readCheckpoint' cli/src/commands/run.ts` and `rg -n 'Preflight [0-9]+' cli/src/commands/run.ts` return no matches.
 
 **Acceptance criteria:**
 

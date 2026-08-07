@@ -36,6 +36,6 @@
 - Every refusal through these steps preserves checkpoint bytes, acquires no lock, invokes no engine, and retains its diagnostic, stream, and failure code.
 - Focused and full gates pass with command-boundary assertions intact.
 
-**Consumes:** `CommandDeps` and the existing state-root, run-directory, checkpoint, and thread-resolution domains.
+**Consumes:** Task 1's `CommandDeps`.
 
 **Produces:** `resolveResumeStateRoot`, `locateResumeRun`, `loadResumeCheckpoint`, `requireIncompleteRun`, and `revalidateResumeThread`; validated unchanged checkpoint, state/run paths, and recorded/validated thread identities in `resume.ts`.

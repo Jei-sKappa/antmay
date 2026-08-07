@@ -13,7 +13,7 @@
 5. Release the lock on queue failure, pending files, collision, and checkpoint-write failure. Preserve the existing durable directory after a write failure; transfer lock ownership only on success.
 6. Add a narrowly run-specific injectable initial-checkpoint writer to `RunDeps` so the command suite can deterministically cover write failure while `allocateRun` still owns the call.
 7. Replace inline allocation in `run.ts` with one `allocateRun` call. Keep refusal prose, the signal checks on either side, startup, one allocated engine entry, result mapping, and successful-lock cleanup in `run.ts`.
-8. Add command regressions for a post-allocation signal, initial-checkpoint write failure, and thrown engine failure, proving exact checkpoint/directory, harness, diagnostic, and lock effects.
+8. Strengthen the command-level allocation coverage with cases that: turn the locked queue rescan into a scan error after read-only preflight; introduce a pending file after an identifier collision so the fresh candidate proves it repeats the locked rescan; observe a post-allocation signal; fail the initial-checkpoint write; and throw from the engine. Prove the exact run-directory/checkpoint, harness, diagnostic, lock, and signal-handler cleanup effects on each applicable path while retaining the successful collision case that persists only the fresh candidate.
 9. Update architecture assertions so `commands/run/allocate.ts` owns the allocation-time checkpoint write and `updatedAt`; retain `execution/run-state.ts` as the post-allocation owner.
 10. Run focused run/architecture tests and the full gate.
 
@@ -30,10 +30,10 @@
 **Acceptance criteria:**
 
 - `allocateRun` owns canonical workspace, candidate ID, lock, locked queue scan, directory creation, checkpoint construction, and initial persistence.
-- Collision releases the old lock and repeats lock plus queue checks for the fresh candidate.
-- Queue failures create no directory; all post-lock failures release; write failure preserves baseline directory state without a held lock.
+- Collision releases the old lock and repeats lock plus queue checks for the fresh candidate; command regressions prove both the successful fresh-candidate path and refusal when the repeated rescan finds a newly pending file.
+- Pending-file and locked scan-error failures create no directory; all post-lock failures release; write failure preserves baseline directory state without a held lock.
 - Success returns `runDir`, exact persisted `checkpoint`, and `lock` together; refusals contain neither exit nor executable presentation.
-- `run.ts` retains both signal checkpoints, one allocated engine handoff, identical result mapping, and cleanup on signals, results, and throws.
+- `run.ts` retains both signal checkpoints, one allocated engine handoff, identical result mapping, and lock plus signal-handler cleanup on signals, results, and throws.
 - Focused and full gates pass with the updated writer/timestamp ownership guard.
 
 **Consumes:** Task 3's fully prepared allocation facts and `RunDeps.generateId`.

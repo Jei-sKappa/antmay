@@ -6,7 +6,7 @@
 
 **Steps:**
 
-1. Create `cli/src/commands/resume/preflight/resolve-runtime.ts` exporting `resolveResumeRuntime`; enforce the checkpoint's immutable runtime, probe only the current stage's harness, resolve config only through the lazy scripted path, preserve scripted-prompt observation, and return invoker, optional scenario path, and merged version map without checkpoint mutation.
+1. Create `cli/src/commands/resume/preflight/resolve-runtime.ts` exporting `resolveResumeRuntime`; accept the command-owned scripted-prompt observer and pass it to the lower-level runtime resolver without invoking or defining presentation in the step, enforce the checkpoint's immutable runtime, probe only the current stage's harness, resolve config only through the lazy scripted path, and return invoker, optional scenario path, and merged version map without checkpoint mutation.
 2. Create `validate-workspace.ts` exporting `validateResumeWorkspace`; resolve the canonical current checkout and require its path to match the recorded workspace.
 3. Create `check-temporary-workspaces.ts` exporting `checkResumeTemporaryWorkspaces`; return inspection or structured safety failures and run before lock acquisition and every checkpoint mutation.
 4. Replace the inline blocks in `resume.ts` with this order after task 5's thread revalidation signal: runtime resolution, signal, workspace validation, signal, temporary-workspace safety, then the existing immediate pre-lock signal.
@@ -28,7 +28,7 @@
 **Acceptance criteria:**
 
 - `resume.ts` states the complete read-only preparation order and retains all six pre-lock signal observations at their specified boundaries.
-- Runtime probes only the current harness, enforces immutable runtime, resolves config only for scripted mode, and merges versions without checkpoint mutation.
+- Runtime probes only the current harness, enforces immutable runtime, resolves config only for scripted mode, and merges versions without checkpoint mutation; `resume.ts` defines the observer that presents scripted prompts, while the step imports no renderer and never invokes presentation during preflight.
 - Canonical workspace validation precedes temporary-workspace safety, which precedes lock acquisition and every checkpoint mutation.
 - All pre-lock refusals and signal exits leave checkpoint bytes unchanged and no newly held lock while preserving observable behavior.
 - The signal matrix, focused resume suite, and full gate pass.
