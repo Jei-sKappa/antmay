@@ -1,4 +1,5 @@
 import type { CommandDeps } from "../deps.js";
+import type { TemporaryWorkspaceProblems } from "../../gitops/temporary-workspaces.js";
 import type { HarnessId } from "../../harness/id.js";
 import type { HarnessRuntimeFailure } from "../../harness/runtime.js";
 import type { HarnessInvoker } from "../../harness/types.js";
@@ -10,6 +11,7 @@ import type { CatalogStageId } from "../../pipeline/types.js";
 import type {
   HarnessRuntimeIdentity,
   ProfileSelection,
+  RunCondition,
   SnapshottedStage,
 } from "../../state/checkpoint/types.js";
 
@@ -110,3 +112,61 @@ export type RunResolvedRuntime = {
 export type RunRuntimeResult =
   | ({ ok: true } & RunResolvedRuntime)
   | { ok: false; failure: HarnessRuntimeFailure };
+
+/**
+ * Temporary-workspace Git safety for a new run. Unsafe problems stay structured
+ * for the rich refusal renderer; an inspection error is a plain diagnostic.
+ */
+export type RunTemporaryWorkspaceResult =
+  | { ok: true }
+  | { ok: false; kind: "inspection-error"; message: string }
+  | { ok: false; kind: "unsafe"; problems: TemporaryWorkspaceProblems };
+
+/**
+ * Clean-worktree gate for a new run: success, or an inert refusal when
+ * inspection fails or the tree is dirty.
+ */
+export type RunCleanWorktreeResult =
+  | { ok: true }
+  | { ok: false; refusal: RunPreflightRefusal };
+
+/**
+ * Pending-queue scan for a new run: repository-relative pending paths on
+ * success, or a scan-failure diagnostic. Emptiness and exit selection stay
+ * with the command.
+ */
+export type RunPendingQueuesResult =
+  | { ok: true; pendingFiles: string[] }
+  | { ok: false; message: string };
+
+/**
+ * An unreadable sibling checkpoint the unfinished-run scan skipped. The
+ * command prints the warning and continues.
+ */
+export type RunUnreadableCheckpointWarning = {
+  runDir: string;
+  errors: string[];
+};
+
+/**
+ * A non-completed checkpoint for the same workspace and thread.
+ */
+export type RunUnfinishedRunMatch = {
+  runId: string;
+  condition: Exclude<RunCondition, "completed">;
+  runDir: string;
+};
+
+/**
+ * Sibling unfinished-run scan: warnings for unreadable checkpoints, a matching
+ * unfinished run, or a runs-directory scan failure.
+ */
+export type RunUnfinishedRunResult =
+  | { ok: true; warnings: RunUnreadableCheckpointWarning[] }
+  | { ok: false; kind: "scan-error"; message: string }
+  | {
+      ok: false;
+      kind: "unfinished";
+      match: RunUnfinishedRunMatch;
+      warnings: RunUnreadableCheckpointWarning[];
+    };

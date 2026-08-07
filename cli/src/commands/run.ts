@@ -1,6 +1,4 @@
 import { randomBytes } from "node:crypto";
-import type { Dirent } from "node:fs";
-import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
@@ -18,29 +16,25 @@ import {
   printScriptedResolvedPrompt,
 } from "../display/startup.js";
 import { executeEngine } from "../execution/engine.js";
-import { isWorktreeClean } from "../gitops/status.js";
-import { checkTemporaryWorkspaces } from "../gitops/temporary-workspaces.js";
 import { installSignalHandlers } from "../runner/signals.js";
-import { readCheckpoint } from "../state/checkpoint/read.js";
 import type { RunCheckpoint } from "../state/checkpoint/types.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import type { LockHandle } from "../state/lock.js";
 import { writeCheckpoint } from "../state/persist.js";
-import {
-  createRunDirectory,
-  generateRunId,
-  runsDirectory,
-} from "../state/runs.js";
-import { scanPendingQueues } from "../thread/queues.js";
+import { createRunDirectory, generateRunId } from "../state/runs.js";
 import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
+import { checkRunTemporaryWorkspaces } from "./run/preflight/check-temporary-workspaces.js";
 import { composeRunPipeline } from "./run/preflight/compose-pipeline.js";
+import { findUnfinishedThreadRun } from "./run/preflight/find-unfinished-run.js";
 import { inspectRunArtifacts } from "./run/preflight/inspect-artifacts.js";
 import { loadRunPipeline } from "./run/preflight/load-pipeline.js";
 import { loadRunProfile } from "./run/preflight/load-profile.js";
 import { loadRunSettings } from "./run/preflight/load-settings.js";
+import { requireCleanRunWorktree } from "./run/preflight/require-clean-worktree.js";
 import { resolveRunRoots } from "./run/preflight/resolve-roots.js";
 import { resolveRunRuntime } from "./run/preflight/resolve-runtime.js";
 import { resolveRunThread } from "./run/preflight/resolve-thread.js";
+import { scanRunPendingQueues } from "./run/preflight/scan-pending-queues.js";
 import { snapshotRunStages } from "./run/preflight/snapshot-stages.js";
 import type { RunArgs, RunDeps, RunPreflightRefusal } from "./run/types.js";
 export type { RunDeps } from "./run/types.js";
@@ -187,12 +181,7 @@ export async function runCommand(
     }
     const { observedHarnessVersions, harnessVersions } = harnessRuntime;
 
-    // Preflight 10: the thread's temporary workspaces must be Git-safe. It comes
-    // before the clean-worktree gate on purpose: leftover files in an unignored
-    // workspace are themselves what makes the worktree dirty, and the
-    // commit-or-revert advice that gate gives would commit work in progress into
-    // the repository.
-    const workspaces = await checkTemporaryWorkspaces(
+    const workspaces = await checkRunTemporaryWorkspaces(
       thread.repoRoot,
       thread.threadRelPath,
     );
@@ -210,24 +199,15 @@ export async function runCommand(
       return EXIT_FAILURE;
     }
 
-    // Preflight 11: clean-worktree requirement (boundary status set).
-    let clean: boolean;
-    try {
-      clean = await isWorktreeClean(thread.repoRoot);
-    } catch (error) {
-      return fail(
-        `Cannot inspect the Git worktree at ${thread.repoRoot}: ${errorMessage(error)}`,
-      );
-    }
-    if (!clean) {
-      return fail(
-        `The Git worktree at ${thread.repoRoot} is not clean. Commit what you want to keep or revert the rest before starting a run.`,
-      );
+    const cleanWorktree = await requireCleanRunWorktree(thread.repoRoot);
+    if (!cleanWorktree.ok) {
+      return refuse(cleanWorktree.refusal);
     }
 
-    // Preflight 12: both pending queues must be empty; a non-empty queue or a scan
-    // error both fail preflight with no run.
-    const preScan = await scanPendingQueues(thread.repoRoot, thread.threadRelPath);
+    const preScan = await scanRunPendingQueues(
+      thread.repoRoot,
+      thread.threadRelPath,
+    );
     if (!preScan.ok) {
       return fail(preScan.message);
     }
@@ -237,44 +217,28 @@ export async function runCommand(
       );
     }
 
-    // Preflight 13: unfinished same-thread-run guard. An absent runs directory
-    // means no runs and creates nothing; a corrupt sibling checkpoint warns
-    // without blocking; a non-completed run recording this workspace AND thread
-    // refuses.
-    const runsDir = runsDirectory(roots.stateRoot);
-    let entries: Dirent[] = [];
-    try {
-      entries = await fs.readdir(runsDir, { withFileTypes: true });
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT") {
-        return fail(`Cannot scan the runs directory ${runsDir}: ${errorMessage(error)}`);
+    const unfinished = await findUnfinishedThreadRun(
+      roots.stateRoot,
+      thread.repoRoot,
+      thread.threadRelPath,
+    );
+    if (!unfinished.ok) {
+      if (unfinished.kind === "scan-error") {
+        return fail(unfinished.message);
       }
     }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      const runDir = path.join(runsDir, entry.name);
-      const existing = await readCheckpoint(runDir);
-      if (!existing.ok) {
-        deps.stderr.write(
-          `warning: ignoring an unreadable run checkpoint at ${runDir}: ${existing.errors.join("; ")}\n`,
-        );
-        continue;
-      }
-      const cp = existing.checkpoint;
-      if (
-        cp.condition !== "completed" &&
-        cp.workspace.path === thread.repoRoot &&
-        cp.threadRelPath === thread.threadRelPath
-      ) {
-        return fail(
-          `An unfinished run for this thread already exists: ${cp.runId} (condition: ${cp.condition}).\n` +
-            `Resume it with:\n  antmay afk resume ${cp.runId}\n` +
-            `If it is abandoned, delete its run directory to start fresh:\n  ${runDir}`,
-        );
-      }
+    for (const warning of unfinished.warnings) {
+      deps.stderr.write(
+        `warning: ignoring an unreadable run checkpoint at ${warning.runDir}: ${warning.errors.join("; ")}\n`,
+      );
+    }
+    if (!unfinished.ok) {
+      const { match } = unfinished;
+      return fail(
+        `An unfinished run for this thread already exists: ${match.runId} (condition: ${match.condition}).\n` +
+          `Resume it with:\n  antmay afk resume ${match.runId}\n` +
+          `If it is abandoned, delete its run directory to start fresh:\n  ${match.runDir}`,
+      );
     }
 
     // A signal that arrived before the initial checkpoint exists exits with the
@@ -319,7 +283,10 @@ export async function runCommand(
 
         // Re-scan both queues under the lock. A file or scan error releases the
         // lock and exits 1 with no run.
-        const lockedScan = await scanPendingQueues(thread.repoRoot, thread.threadRelPath);
+        const lockedScan = await scanRunPendingQueues(
+          thread.repoRoot,
+          thread.threadRelPath,
+        );
         if (!lockedScan.ok || lockedScan.pendingFiles.length > 0) {
           await lock.release();
           if (!lockedScan.ok) {
