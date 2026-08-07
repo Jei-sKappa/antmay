@@ -175,16 +175,21 @@ describe("module graph", () => {
 describe("one post-allocation checkpoint writer (AC-1.3, AC-1.5)", () => {
   it("gives the atomic writer exactly two production importers", async () => {
     expect(await importersOf("state/persist.ts")).toEqual([
-      "commands/run.ts",
+      "commands/run/allocate.ts",
       "execution/run-state.ts",
     ]);
   });
 
-  it("keeps run's own write to the one allocation write", async () => {
+  it("keeps allocation's own write to the one initial checkpoint write", async () => {
     // Creating the initial `ready` checkpoint is allocation, not a transition of
     // existing state, so it is the one write outside the run's own cursor.
-    const run = await moduleNamed("commands/run.ts");
-    expect(occurrencesOf(run.source, /\bwriteCheckpoint\(/g)).toBe(1);
+    const allocate = await moduleNamed("commands/run/allocate.ts");
+    // The allocator calls its injectable boundary (defaulting to writeCheckpoint),
+    // never scattering additional writer calls.
+    expect(occurrencesOf(allocate.source, /\bwriteCheckpoint\(/g)).toBe(0);
+    expect(occurrencesOf(allocate.source, /\bpersistInitialCheckpoint\(/g)).toBe(
+      1,
+    );
   });
 
   it("routes every transition through the cursor's one persistence boundary", async () => {
@@ -775,7 +780,7 @@ describe("durable state changes only by committing a named transition", () => {
   /** The module that declares the document, and so states its fields once. */
   const SCHEMA = "state/checkpoint/types.ts";
   /** Writing the first checkpoint of a run is allocation, not a transition. */
-  const ALLOCATION = "commands/run.ts";
+  const ALLOCATION = "commands/run/allocate.ts";
 
   /**
    * An object literal that derives a checkpoint from an existing one: led by a

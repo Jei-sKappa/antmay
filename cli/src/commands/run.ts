@@ -1,8 +1,6 @@
-import { randomBytes } from "node:crypto";
 import path from "node:path";
 
 import { EXIT_FAILURE, EXIT_OK, EXIT_WAITING } from "../cli/exit-codes.js";
-import { VERSION } from "../cli/help.js";
 import { createTerminalExecutionDisplay } from "../display/execution.js";
 import type { DisplayOptions } from "../display/format.js";
 import {
@@ -17,12 +15,7 @@ import {
 } from "../display/startup.js";
 import { executeEngine } from "../execution/engine.js";
 import { installSignalHandlers } from "../runner/signals.js";
-import type { RunCheckpoint } from "../state/checkpoint/types.js";
-import { acquireWorkspaceLock } from "../state/lock.js";
-import type { LockHandle } from "../state/lock.js";
-import { writeCheckpoint } from "../state/persist.js";
-import { createRunDirectory, generateRunId } from "../state/runs.js";
-import { resolveCurrentCheckoutWorkspace } from "../workspace/current-checkout.js";
+import { allocateRun } from "./run/allocate.js";
 import { checkRunTemporaryWorkspaces } from "./run/preflight/check-temporary-workspaces.js";
 import { composeRunPipeline } from "./run/preflight/compose-pipeline.js";
 import { findUnfinishedThreadRun } from "./run/preflight/find-unfinished-run.js";
@@ -36,23 +29,17 @@ import { resolveRunRuntime } from "./run/preflight/resolve-runtime.js";
 import { resolveRunThread } from "./run/preflight/resolve-thread.js";
 import { scanRunPendingQueues } from "./run/preflight/scan-pending-queues.js";
 import { snapshotRunStages } from "./run/preflight/snapshot-stages.js";
-import type { RunArgs, RunDeps, RunPreflightRefusal } from "./run/types.js";
+import type {
+  RunAllocationRefusal,
+  RunArgs,
+  RunDeps,
+  RunPreflightRefusal,
+} from "./run/types.js";
 export type { RunDeps } from "./run/types.js";
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 function bullets(items: string[]): string {
   return items.map((item) => `  - ${item}`).join("\n");
 }
-
-type Allocated = {
-  runId: string;
-  runDir: string;
-  lock: LockHandle;
-  checkpoint: RunCheckpoint;
-};
 
 /**
  * Run a full `antmay afk run`: install the signal handlers, then the ordered
@@ -92,6 +79,30 @@ export async function runCommand(
     return fail(
       `The ${refusal.label} at ${refusal.sourcePath} was rejected:\n${bullets(refusal.errors)}`,
     );
+  };
+
+  const refuseAllocation = (refusal: RunAllocationRefusal): number => {
+    switch (refusal.kind) {
+      case "lock-contention": {
+        const record = refusal.existingRecord.trim();
+        return fail(
+          `The workspace is already locked by another antmay run.\n` +
+            `Lock file: ${refusal.lockPath}\n` +
+            (record.length > 0 ? `Lock record:\n${record}\n` : "") +
+            `antmay never removes a lock automatically. Verify the recorded process is no longer running, then delete the lock file manually if it is stale.`,
+        );
+      }
+      case "queue-scan-error":
+        return fail(refusal.message);
+      case "pending-files":
+        return fail(
+          `The thread has unresolved pending bundle files; resolve them before starting a run:\n${bullets(refusal.pendingFiles)}`,
+        );
+      case "checkpoint-write-failed":
+        return fail(
+          `Failed to write the initial checkpoint at ${path.join(refusal.runDir, "state.json")}: ${refusal.message}`,
+        );
+    }
   };
 
   // Install the signal handlers before preflight so a Ctrl-C at any point drives
@@ -248,113 +259,26 @@ export async function runCommand(
       return signals.exitCodeFor(preAllocSig);
     }
 
-    // Allocation: only after every preflight passes. Resolve the canonical
-    // workspace, then run one candidate-ID loop that keeps the lock, the durable
-    // paths, and the under-lock queue recheck consistent.
-    const workspace = await resolveCurrentCheckoutWorkspace(thread.repoRoot);
-    const generateId =
-      deps.generateId ?? (() => generateRunId(clock(), (n) => randomBytes(n)));
-
-    const allocate = async (): Promise<
-      { ok: true; allocated: Allocated } | { ok: false; code: number }
-    > => {
-      for (;;) {
-        const candidate = generateId();
-
-        const lockOutcome = await acquireWorkspaceLock(
-          roots.stateRoot,
-          workspace.path,
-          candidate,
-          clock(),
-        );
-        if (!lockOutcome.ok) {
-          const record = lockOutcome.existingRecord.trim();
-          return {
-            ok: false,
-            code: fail(
-              `The workspace is already locked by another antmay run.\n` +
-                `Lock file: ${lockOutcome.lockPath}\n` +
-                (record.length > 0 ? `Lock record:\n${record}\n` : "") +
-                `antmay never removes a lock automatically. Verify the recorded process is no longer running, then delete the lock file manually if it is stale.`,
-            ),
-          };
-        }
-        const lock = lockOutcome.handle;
-
-        // Re-scan both queues under the lock. A file or scan error releases the
-        // lock and exits 1 with no run.
-        const lockedScan = await scanRunPendingQueues(
-          thread.repoRoot,
-          thread.threadRelPath,
-        );
-        if (!lockedScan.ok || lockedScan.pendingFiles.length > 0) {
-          await lock.release();
-          if (!lockedScan.ok) {
-            return { ok: false, code: fail(lockedScan.message) };
-          }
-          return {
-            ok: false,
-            code: fail(
-              `The thread has unresolved pending bundle files; resolve them before starting a run:\n${bullets(lockedScan.pendingFiles)}`,
-            ),
-          };
-        }
-
-        const created = await createRunDirectory(roots.stateRoot, candidate);
-        if (created.kind === "collision") {
-          // Restart the loop with a fresh ID, re-acquiring the lock and
-          // rechecking the queues under it.
-          await lock.release();
-          continue;
-        }
-
-        const now = clock().toISOString();
-        const checkpoint: RunCheckpoint = {
-          schemaVersion: 0,
-          runId: candidate,
-          executor: { pid: process.pid, version: VERSION },
-          createdAt: now,
-          updatedAt: now,
-          repoRoot: thread.repoRoot,
-          threadRelPath: thread.threadRelPath,
-          workspace,
-          dangerouslySkipPermissions: args.dangerouslySkipPermissions,
-          pipelineName: document.name,
-          pipelineSourcePath,
-          profileSelection,
-          ...(fromStage !== null ? { fromStage } : {}),
-          stages,
-          observedHarnessVersions,
-          runtime: harnessRuntime.runtime,
-          stageIndex: 0,
-          condition: "ready",
-          attempts: [],
-          waiting: null,
-        };
-        try {
-          await writeCheckpoint(created.runDir, checkpoint);
-        } catch (error) {
-          await lock.release();
-          return {
-            ok: false,
-            code: fail(
-              `Failed to write the initial checkpoint at ${path.join(created.runDir, "state.json")}: ${errorMessage(error)}`,
-            ),
-          };
-        }
-
-        return {
-          ok: true,
-          allocated: { runId: candidate, runDir: created.runDir, lock, checkpoint },
-        };
-      }
-    };
-
-    const allocation = await allocate();
+    const allocation = await allocateRun({
+      stateRoot: roots.stateRoot,
+      repoRoot: thread.repoRoot,
+      threadRelPath: thread.threadRelPath,
+      dangerouslySkipPermissions: args.dangerouslySkipPermissions,
+      pipelineName: document.name,
+      pipelineSourcePath,
+      profileSelection,
+      fromStage,
+      stages,
+      observedHarnessVersions,
+      runtime: harnessRuntime.runtime,
+      clock,
+      generateId: deps.generateId,
+      writeInitialCheckpoint: deps.writeInitialCheckpoint,
+    });
     if (!allocation.ok) {
-      return allocation.code;
+      return refuseAllocation(allocation.refusal);
     }
-    const { runDir, lock, checkpoint } = allocation.allocated;
+    const { runDir, lock, checkpoint } = allocation;
 
     // A signal after allocation but before launch releases the owned lock and
     // exits with the conventional code, leaving the ready checkpoint for resume.
@@ -377,7 +301,7 @@ export async function runCommand(
       profileSelection,
       ...(fromStage !== null ? { fromStage } : {}),
       threadRelPath: thread.threadRelPath,
-      workspacePath: workspace.path,
+      workspacePath: checkpoint.workspace.path,
       dangerouslySkipPermissions: args.dangerouslySkipPermissions,
       stages: stages.map((stage) => ({
         id: stage.id,

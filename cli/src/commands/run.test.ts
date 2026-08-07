@@ -287,6 +287,7 @@ async function run(
     env: NodeJS.ProcessEnv;
     probe: HarnessExecutableProbe;
     generateId: () => string;
+    writeInitialCheckpoint: RunDeps["writeInitialCheckpoint"];
     createAbortController: () => AbortController;
     installSignals: RunDeps["installSignals"];
   }> = {},
@@ -310,6 +311,7 @@ async function run(
     // Default to a no-op installer so tests never register real process handlers.
     installSignals: overrides.installSignals ?? fakeSignals(),
     generateId: overrides.generateId,
+    writeInitialCheckpoint: overrides.writeInitialCheckpoint,
   };
   const code = await runCommand(
     {
@@ -1038,6 +1040,28 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
       },
     });
     expect(result.code).toBe(1);
+    expect(result.err).toContain("unresolved pending bundle files");
+    expect(await runDirNames(h.stateRoot)).toEqual([]);
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("turns a locked queue rescan into a scan error after read-only preflight", async () => {
+    const h = await setup();
+    // Preflight sees absent queues as empty. Replacing the path with a regular
+    // file after that scan makes the under-lock readdir fail with ENOTDIR.
+    const result = await run(h, standardSteps(h.fixture), {
+      generateId: () => {
+        writeFileSync(
+          path.join(h.fixture.threadPath as string, ".pending-decisions"),
+          "not a directory",
+          "utf8",
+        );
+        return "scanrace-000000000000";
+      },
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("Cannot scan ");
+    expect(result.err).toContain(".pending-decisions");
     expect(await runDirNames(h.stateRoot)).toEqual([]);
     expect(await lockNames(h.stateRoot)).toEqual([]);
   });
@@ -1064,6 +1088,69 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
     );
     expect(collide.ok).toBe(false);
     expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("repeats the locked queue rescan for the fresh candidate after a collision", async () => {
+    const h = await setup();
+    await createRunDirectory(h.stateRoot, "collide-000000000000");
+
+    let call = 0;
+    const result = await run(h, standardSteps(h.fixture), {
+      generateId: () => {
+        const id =
+          call === 0 ? "collide-000000000000" : "fresh-111111111111";
+        call += 1;
+        // After the colliding candidate releases, the fresh ID must still
+        // acquire its own lock and rescan — a pending file dropped here proves
+        // that second rescan runs.
+        if (call === 2) {
+          dropPendingDecisionSync(h.fixture, "after-collision.md");
+        }
+        return id;
+      },
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("unresolved pending bundle files");
+    expect(result.err).toContain("after-collision.md");
+    // Collision left the empty colliding directory; the fresh candidate never
+    // created one.
+    expect(await runDirNames(h.stateRoot)).toEqual(["collide-000000000000"]);
+    const collide = await readCheckpoint(
+      path.join(runsDirectory(h.stateRoot), "collide-000000000000"),
+    );
+    expect(collide.ok).toBe(false);
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("preserves the run directory and releases the lock when the initial checkpoint write fails", async () => {
+    const h = await setup();
+    let uninstalled = false;
+    const result = await run(h, standardSteps(h.fixture), {
+      generateId: () => "writefail-000000000000",
+      writeInitialCheckpoint: async () => {
+        throw new Error("disk full");
+      },
+      installSignals: () => ({
+        signaled: () => null,
+        exitCodeFor: (sig) => SIGNAL_EXIT[sig] ?? EXIT_SIGINT,
+        uninstall: () => {
+          uninstalled = true;
+        },
+      }),
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("Failed to write the initial checkpoint");
+    expect(result.err).toContain("writefail-000000000000");
+    expect(result.err).toContain("disk full");
+    expect(await runDirNames(h.stateRoot)).toEqual(["writefail-000000000000"]);
+    const cp = await readCheckpoint(
+      path.join(runsDirectory(h.stateRoot), "writefail-000000000000"),
+    );
+    expect(cp.ok).toBe(false);
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+    expect(uninstalled).toBe(true);
   });
 });
 
@@ -1142,6 +1229,38 @@ describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () 
     expect(result.code).toBe(EXIT_SIGINT);
     expect(await runDirNames(h.stateRoot)).toEqual([]);
     expect(await lockNames(h.stateRoot)).toEqual([]);
+  });
+
+  it("releases the lock and leaves the ready checkpoint when interrupted after allocation", async () => {
+    const h = await setup();
+    let phase: "pre" | "post" = "pre";
+    let uninstalled = false;
+    const result = await run(h, standardSteps(h.fixture), {
+      generateId: () => {
+        // Allocation itself never observes signals; flipping here makes the
+        // post-allocation checkpoint see SIGINT before launch.
+        phase = "post";
+        return "postalloc-sig-000000";
+      },
+      installSignals: () => ({
+        signaled: () => (phase === "post" ? "SIGINT" : null),
+        exitCodeFor: (sig) => SIGNAL_EXIT[sig] ?? EXIT_SIGINT,
+        uninstall: () => {
+          uninstalled = true;
+        },
+      }),
+    });
+
+    expect(result.code).toBe(EXIT_SIGINT);
+    const runDir = path.join(runsDirectory(h.stateRoot), "postalloc-sig-000000");
+    const cp = await readCheckpoint(runDir);
+    expect(cp.ok).toBe(true);
+    if (cp.ok) {
+      expect(cp.checkpoint.condition).toBe("ready");
+      expect(cp.checkpoint.runId).toBe("postalloc-sig-000000");
+    }
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+    expect(uninstalled).toBe(true);
   });
 
   it("maps an active interruption to the signal exit code, not the durable-pause code", async () => {
@@ -1445,4 +1564,32 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
       expect(await lockNames(h.stateRoot)).toEqual([]);
     });
   }
+
+  it("releases the lock and uninstalls handlers when the engine throws", async () => {
+    const h = await setup();
+    let uninstalled = false;
+    engineStub = async () => {
+      throw new Error("engine exploded");
+    };
+
+    await expect(
+      run(h, [], {
+        generateId: () => "enginethrow-00000000",
+        installSignals: () => ({
+          signaled: () => null,
+          exitCodeFor: (sig) => SIGNAL_EXIT[sig] ?? EXIT_SIGINT,
+          uninstall: () => {
+            uninstalled = true;
+          },
+        }),
+      }),
+    ).rejects.toThrow("engine exploded");
+
+    const runDir = path.join(runsDirectory(h.stateRoot), "enginethrow-00000000");
+    const cp = await readCheckpoint(runDir);
+    expect(cp.ok).toBe(true);
+    if (cp.ok) expect(cp.checkpoint.condition).toBe("ready");
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+    expect(uninstalled).toBe(true);
+  });
 });

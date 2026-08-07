@@ -11,9 +11,11 @@ import type { CatalogStageId } from "../../pipeline/types.js";
 import type {
   HarnessRuntimeIdentity,
   ProfileSelection,
+  RunCheckpoint,
   RunCondition,
   SnapshottedStage,
 } from "../../state/checkpoint/types.js";
+import type { LockHandle } from "../../state/lock.js";
 
 /**
  * Arguments for `antmay afk run` after CLI parsing.
@@ -27,12 +29,24 @@ export type RunArgs = {
 };
 
 /**
+ * How allocation persists the initial `ready` checkpoint. Production uses the
+ * atomic writer; tests inject a failing writer without reaching the filesystem
+ * seam under it. Absent from `CommandDeps`.
+ */
+export type RunInitialCheckpointWriter = (
+  runDir: string,
+  checkpoint: RunCheckpoint,
+) => Promise<void>;
+
+/**
  * Run-command dependencies: every shared command seam plus the optional
- * candidate-ID generator so a test can force a queue race or ID collision.
- * Identifier generation is absent from `CommandDeps`.
+ * candidate-ID generator so a test can force a queue race or ID collision, and
+ * the optional initial-checkpoint writer so a test can force a write failure.
+ * Both seams are absent from `CommandDeps`.
  */
 export type RunDeps = CommandDeps & {
   generateId?: () => string;
+  writeInitialCheckpoint?: RunInitialCheckpointWriter;
 };
 
 /**
@@ -170,3 +184,61 @@ export type RunUnfinishedRunResult =
       match: RunUnfinishedRunMatch;
       warnings: RunUnreadableCheckpointWarning[];
     };
+
+/**
+ * Prepared facts the allocation transaction needs after every preflight gate
+ * has passed. Clock and ID generation carry production defaults inside
+ * `allocateRun` when omitted from `RunDeps`.
+ */
+export type RunAllocationInput = {
+  stateRoot: string;
+  repoRoot: string;
+  threadRelPath: string;
+  dangerouslySkipPermissions: boolean;
+  pipelineName: string;
+  pipelineSourcePath: string;
+  profileSelection: ProfileSelection;
+  fromStage: CatalogStageId | null;
+  stages: SnapshottedStage[];
+  observedHarnessVersions: Partial<Record<HarnessId, string>>;
+  runtime: HarnessRuntimeIdentity;
+  clock: () => Date;
+  generateId?: () => string;
+  writeInitialCheckpoint?: RunInitialCheckpointWriter;
+};
+
+/**
+ * Successful allocation: the durable run directory, the exact persisted initial
+ * checkpoint, and the still-held workspace lock whose release ownership
+ * transfers to `runCommand`.
+ */
+export type RunAllocationSuccess = {
+  runDir: string;
+  checkpoint: RunCheckpoint;
+  lock: LockHandle;
+};
+
+/**
+ * Structured allocation refusal. No exit code or renderer — presentation and
+ * exit selection stay in `runCommand`.
+ */
+export type RunAllocationRefusal =
+  | {
+      kind: "lock-contention";
+      lockPath: string;
+      existingRecord: string;
+    }
+  | { kind: "queue-scan-error"; message: string }
+  | { kind: "pending-files"; pendingFiles: string[] }
+  | {
+      kind: "checkpoint-write-failed";
+      runDir: string;
+      message: string;
+    };
+
+/**
+ * Allocation transaction result: success with held lock, or an inert refusal.
+ */
+export type RunAllocationResult =
+  | ({ ok: true } & RunAllocationSuccess)
+  | { ok: false; refusal: RunAllocationRefusal };
