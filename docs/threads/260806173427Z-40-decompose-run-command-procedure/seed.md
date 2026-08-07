@@ -1,0 +1,5 @@
+# Decompose runCommand’s safety-critical procedure
+
+GitHub ticket #40 identifies `runCommand` as the CLI’s last large undecomposed procedure: a 465-line function that combines thirteen preflight concerns, candidate allocation, engine handoff, signal handling, lock release, and exit mapping. Several ordering constraints are safety-critical but expressed only through comments, including checking temporary-workspace Git safety before requiring a clean worktree and rescanning queues under the acquired lock. The intended outcome is to make those constraints structural by extracting named preflight steps and the candidate-allocation loop, reducing `run.ts` to an explicit orchestration sequence and command-owned lifecycle concerns, and extending the architecture guard so each preflight step has one permitted caller. Preserve behavior and the terminal-outcome protocol, keep architecture boundaries at least as strict, leave further `execution/` splitting out of scope, and treat the analogous `resumeCommand` decomposition as optional follow-up scope to be settled before implementation.
+
+External: https://github.com/Jei-sKappa/antmay/issues/40
