@@ -43,18 +43,22 @@ import { executeEngine } from "./engine.js";
  * Temporary resources are collected for the whole file and released once every
  * case has finished. The cases here run concurrently, so nothing may be torn
  * down between tests: a per-test hook would reach into a repository or run
- * directory another in-flight case is still using.
+ * directory another in-flight case is still using. Once every case has finished,
+ * the independent resources are released concurrently so teardown stays within
+ * the hook budget under full-suite filesystem load.
  */
 const fixtures: RepoFixture[] = [];
 const runDirs: string[] = [];
 
 afterAll(async () => {
-  for (const fixture of fixtures) await fixture.cleanup().catch(() => undefined);
-  for (const dir of runDirs) {
-    await fs.chmod(dir, 0o700).catch(() => undefined);
-    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
-  }
-});
+  await Promise.all([
+    ...fixtures.map((fixture) => fixture.cleanup().catch(() => undefined)),
+    ...runDirs.map(async (dir) => {
+      await fs.chmod(dir, 0o700).catch(() => undefined);
+      await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    }),
+  ]);
+}, 120_000);
 
 async function newFixture(): Promise<RepoFixture> {
   const fixture = await createRepoFixture({ thread: {} });

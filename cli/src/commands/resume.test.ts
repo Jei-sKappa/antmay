@@ -641,7 +641,7 @@ const PREFLIGHT_REFUSALS: {
 
 describe.concurrent("resumeCommand — read-only preflight (AC-1.2)", () => {
   for (const refusal of PREFLIGHT_REFUSALS) {
-    it(`leaves the checkpoint byte-for-byte unchanged on ${refusal.name}`, async () => {
+    it(`leaves the checkpoint and lock set unchanged on ${refusal.name}`, async () => {
       const h = await setup();
       await seed(h, [{ outcome: BLOCKED }]);
       const runId = await soleRunId(h);
@@ -652,6 +652,7 @@ describe.concurrent("resumeCommand — read-only preflight (AC-1.2)", () => {
       const writesBefore = checkpointWrites.filter(
         (dir) => dir === runDirectoryFor(h.stateRoot, runId),
       ).length;
+      const locksBefore = (await lockNames(h.stateRoot)).sort();
 
       const result = await resume(h, runId, standardSteps(h.fixture), overrides);
 
@@ -663,6 +664,7 @@ describe.concurrent("resumeCommand — read-only preflight (AC-1.2)", () => {
           (dir) => dir === runDirectoryFor(h.stateRoot, runId),
         ).length,
       ).toBe(writesBefore);
+      expect((await lockNames(h.stateRoot)).sort()).toEqual(locksBefore);
     });
   }
 });

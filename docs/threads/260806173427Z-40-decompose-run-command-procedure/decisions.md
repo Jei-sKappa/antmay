@@ -67,3 +67,23 @@ Context: Resume validates the state root, run directory, checkpoint, recorded th
 Decision: Keep resume preflight read-only and have it produce a fully prepared resume context. Use a distinct command-specific collaborator to acquire the existing run's recorded workspace lock and return either a structured contention refusal or the still-held lock. `resume.ts` retains the visible signal checks immediately before acquisition and immediately after success, then owns unconditional release through its `finally`. Do not combine resume lock acquisition with run allocation.
 
 Rationale: The boundary makes it explicit that validation completes before the command claims mutable process state, while keeping low-level lock mechanics out of the orchestration body. Separate run and resume acquisition collaborators reflect their different invariants without obscuring the shared lock primitive beneath them.
+
+## DR8: Require the stock CLI gate before acceptance
+
+Scope: CLI verification and thread acceptance
+
+Context: The implementation report records that `npm --prefix cli run check` repeatedly timed out in the `engine.test.ts` teardown under default file parallelism, while an equivalent serial test invocation passed. DR4 and `spec.md` AC-8.1 require the stock command itself to pass.
+
+Decision: Stabilize the `engine.test.ts` teardown within this thread and require `npm --prefix cli run check` to exit successfully before accepting the implementation. A serial Vitest invocation is supporting diagnostic evidence, not a substitute for the stock gate.
+
+Rationale: The exact stock command is the repository-wide typecheck, test, and build contract, and this thread explicitly made it part of completion. Treating the baseline nature of the timeout as an explanation preserves useful diagnosis, but waiving the gate after it failed would weaken the acceptance contract. The repair may broaden the implementation slightly into test-harness cleanup, which is preferable to handing off a known red mandatory gate.
+
+## DR9: Prove lock non-acquisition across resume refusals
+
+Scope: Resume command verification
+
+Context: The resume refusal matrix proves byte-for-byte checkpoint preservation and no harness invocation across the pre-lock refusal paths, but it does not inspect workspace locks. One matrix row deliberately begins with an existing lock to exercise contention, so the correct invariant is preservation of the arranged lock set rather than universal emptiness.
+
+Decision: At the `resumeCommand` boundary, snapshot the workspace lock entries after arranging each refusal case and assert that the same entries remain after the command returns. Keep the correction in the shared refusal matrix; do not add production changes or per-module tests solely for this coverage gap.
+
+Rationale: Comparing the before-and-after lock set proves that no refusal path acquires or leaks a new lock while remaining valid for the contention case. The command boundary is the behavioral oracle established by DR4, and one matrix assertion covers the promised invariant without coupling tests to the extracted module layout.
