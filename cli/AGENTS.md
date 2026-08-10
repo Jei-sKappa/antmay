@@ -588,6 +588,9 @@ four paths.
 
 ## Engineering philosophy
 
+> Less "let me write tests to catch the next time that error happens"
+> More "let me make that class of error impossible with a better design"
+
 ### Principles
 
 These principles guide all implementation decisions in this project:
