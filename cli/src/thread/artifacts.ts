@@ -299,7 +299,7 @@ export function describeArtifact<Dimension extends keyof ArtifactState>(
   // The signature pairs each dimension with its own value type, so the row this
   // reads always exists even though the lookup erases the correlation.
   const phrases = ARTIFACT_DESCRIPTIONS[dimension] as Record<string, string>;
-  return phrases[`${value}`];
+  return phrases[`${value}`]!;
 }
 
 /** The short terminal heading for one artifact-state dimension. */
@@ -431,11 +431,13 @@ export async function inspectArtifactState(
 
   try {
     const threadStat = await lstatOrNull(threadAbs);
-    const [seed, decisions] = await Promise.all(
+    const genesis = await Promise.all(
       GENESIS_FILES.map((name) => isNonEmptyRegularFile(path.join(threadAbs, name))),
     );
     const validThread =
-      threadStat !== null && threadStat.isDirectory() && seed && decisions;
+      threadStat !== null &&
+      threadStat.isDirectory() &&
+      genesis.every((present) => present);
 
     return {
       ok: true,

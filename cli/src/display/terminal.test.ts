@@ -659,8 +659,9 @@ describe("runPaused", () => {
     // Every blank line is a block opener: the line after it introduces a
     // section, never a bare `key: value` continuation of the block above.
     lines.forEach((line, index) => {
-      if (line.length > 0 || index === lines.length - 1) return;
+      if (line.length > 0) return;
       const next = lines[index + 1];
+      if (next === undefined) return;
       expect(next.startsWith("  ")).toBe(false);
       expect(next.length).toBeGreaterThan(0);
     });

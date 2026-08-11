@@ -118,7 +118,9 @@ function buildRequest(
       overrides.logFilePath ??
       path.join(fixture.root, ".antmay-runs", "01-spec-attempt-01.log"),
     onEvent: overrides.onEvent ?? (() => {}),
-    onSessionCaptured: overrides.onSessionCaptured,
+    ...(overrides.onSessionCaptured !== undefined
+      ? { onSessionCaptured: overrides.onSessionCaptured }
+      : {}),
     signal: overrides.signal ?? new AbortController().signal,
   };
 }

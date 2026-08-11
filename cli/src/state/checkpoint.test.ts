@@ -120,6 +120,17 @@ function doneAttempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
   };
 }
 
+/**
+ * The same attempt while it is still live: executing, carrying neither an ending
+ * nor a post-attempt observation because it has reached neither. Both keys are
+ * absent rather than present and undefined, which is what a live attempt looks
+ * like once serialized.
+ */
+function liveAttempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
+  const { endedAt: _ending, headAfterAttempt: _observed, ...live } = doneAttempt();
+  return { ...live, result: "executing", terminalResult: null, ...overrides };
+}
+
 /** A newer current-stage failure that makes any reference to attempt 1 stale. */
 function laterBlockedAttempt(): AttemptRecord {
   return doneAttempt({
@@ -195,8 +206,8 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
     const result = validateCheckpoint(validCheckpoint());
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.attempts[0].headAtStart).toBe("abc123");
-      expect(result.checkpoint.attempts[0].headAfterAttempt).toBe("abc123");
+      expect(result.checkpoint.attempts[0]!.headAtStart).toBe("abc123");
+      expect(result.checkpoint.attempts[0]!.headAfterAttempt).toBe("abc123");
       expect(result.checkpoint.observedHarnessVersions).toEqual({
         codex: "codex 1.0.0",
         "claude-code": "claude 2.0.0",
@@ -207,8 +218,8 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
   it("retains a tokenless terminal candidate line", () => {
     const doc = validCheckpoint();
     doc.condition = "waiting-for-user";
-    doc.attempts[0].result = "waiting";
-    doc.attempts[0].terminalResult = {
+    doc.attempts[0]!.result = "waiting";
+    doc.attempts[0]!.terminalResult = {
       token: null,
       candidateLine: "outcome: maybe done?",
       detail: "no token parsed",
@@ -220,7 +231,7 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.attempts[0].terminalResult).toEqual({
+      expect(result.checkpoint.attempts[0]!.terminalResult).toEqual({
         token: null,
         candidateLine: "outcome: maybe done?",
         detail: "no token parsed",
@@ -254,7 +265,8 @@ describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const [spec, plan] = result.checkpoint.stages;
+    const spec = result.checkpoint.stages[0]!;
+    const plan = result.checkpoint.stages[1]!;
     expect(spec.prerequisite).toEqual({ validThread: true });
     expect(spec.promises).toEqual({ spec: true });
     expect(spec.targetRule).toEqual({
@@ -315,7 +327,7 @@ describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
 
   it("rejects a stage id that names no catalog stage", () => {
     const doc = validCheckpoint();
-    doc.stages[0].id = "propose" as never;
+    doc.stages[0]!.id = "propose" as never;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -325,9 +337,9 @@ describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
 
   it("rejects an artifact contract naming an unknown dimension or value", () => {
     const doc = validCheckpoint();
-    (doc.stages[0].prerequisite as Record<string, unknown>).roadmap = true;
-    (doc.stages[0].promises as Record<string, unknown>).spec = "present";
-    doc.stages[1].promises.plan = "partial" as never;
+    (doc.stages[0]!.prerequisite as Record<string, unknown>).roadmap = true;
+    (doc.stages[0]!.promises as Record<string, unknown>).spec = "present";
+    doc.stages[1]!.promises.plan = "partial" as never;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -349,7 +361,7 @@ describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
 
   it("rejects an empty instructions string", () => {
     const doc = validCheckpoint();
-    doc.stages[0].instructions = "";
+    doc.stages[0]!.instructions = "";
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -361,7 +373,7 @@ describe("validateCheckpoint — resolved execution snapshot (AC-6.2)", () => {
 
   it("rejects a resolved target that escapes its repository-relative form", () => {
     const doc = validCheckpoint();
-    doc.stages[0].resolvedTarget = "/Users/dev/repo/docs/threads/x";
+    doc.stages[0]!.resolvedTarget = "/Users/dev/repo/docs/threads/x";
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -418,7 +430,7 @@ describe("validateCheckpoint field errors", () => {
 
   it("derives the invalid terminal-token diagnostic from the outcome vocabulary", () => {
     const doc = validCheckpoint();
-    (doc.attempts[0].terminalResult as { token: unknown }).token = "MAYBE";
+    (doc.attempts[0]!.terminalResult as { token: unknown }).token = "MAYBE";
 
     const result = validateCheckpoint(doc);
 
@@ -446,8 +458,8 @@ function fieldShapeMultiFaultCheckpoint(): {
   const doc = validCheckpoint();
   doc.createdAt = "2026-07-23 12:15:00";
   doc.repoRoot = "repo/here";
-  doc.stages[0].binding.heartbeatSeconds = 0;
-  doc.attempts[0].logPath = "/logs/00-spec-attempt-01.log";
+  doc.stages[0]!.binding.heartbeatSeconds = 0;
+  doc.attempts[0]!.logPath = "/logs/00-spec-attempt-01.log";
   return {
     doc,
     diagnostics: [
@@ -472,7 +484,7 @@ function crossFieldMultiFaultCheckpoint(): {
   doc.stageIndex = doc.stages.length;
   delete doc.observedHarnessVersions["claude-code"];
   doc.workspace.execution.cwd = "/Users/dev/other";
-  doc.attempts[0].stageId = "plan-strict";
+  doc.attempts[0]!.stageId = "plan-strict";
   return {
     doc,
     diagnostics: [
@@ -534,7 +546,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("rejects a stage binding that carries no heartbeat interval", () => {
     const doc = validCheckpoint();
-    delete (doc.stages[0].binding as Record<string, unknown>).heartbeatSeconds;
+    delete (doc.stages[0]!.binding as Record<string, unknown>).heartbeatSeconds;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -544,7 +556,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("rejects a non-positive heartbeat interval", () => {
     const doc = validCheckpoint();
-    doc.stages[0].binding.heartbeatSeconds = 0;
+    doc.stages[0]!.binding.heartbeatSeconds = 0;
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -639,8 +651,8 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     doc.condition = "completed";
     doc.waiting = null;
     doc.stageIndex = 2;
-    doc.attempts[0].result = "done";
-    doc.attempts[0].terminalResult = {
+    doc.attempts[0]!.result = "done";
+    doc.attempts[0]!.terminalResult = {
       token: "DONE",
       candidateLine: "Outcome: DONE",
       detail: "ok",
@@ -651,7 +663,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("rejects an attempt stageId that does not match the snapshot", () => {
     const doc = validCheckpoint();
-    doc.attempts[0].stageId = "plan";
+    doc.attempts[0]!.stageId = "plan";
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /does not match snapshotted stage/.test(e))).toBe(true);
@@ -659,7 +671,7 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 
   it("rejects colliding attempt numbers for the same stage", () => {
     const doc = validCheckpoint();
-    doc.attempts.push({ ...doc.attempts[0] });
+    doc.attempts.push({ ...doc.attempts[0]! });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /reuses attempt number/.test(e))).toBe(true);
@@ -670,8 +682,8 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     doc.condition = "ready";
     doc.waiting = null;
     doc.stageIndex = 1;
-    doc.attempts[0].result = "done";
-    doc.attempts[0].terminalResult = {
+    doc.attempts[0]!.result = "done";
+    doc.attempts[0]!.terminalResult = {
       token: "BLOCKED",
       candidateLine: "Outcome: BLOCKED",
       detail: "no",
@@ -685,9 +697,9 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     const doc = validCheckpoint();
     doc.condition = "executing";
     doc.waiting = null;
-    doc.attempts[0].result = "executing";
-    doc.attempts[0].terminalResult = null;
-    delete doc.attempts[0].headAfterAttempt;
+    doc.attempts[0]!.result = "executing";
+    doc.attempts[0]!.terminalResult = null;
+    delete doc.attempts[0]!.headAfterAttempt;
     const ok = validateCheckpoint(doc);
     expect(ok.ok).toBe(true);
 
@@ -695,9 +707,9 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     bad.condition = "ready";
     bad.waiting = null;
     bad.stageIndex = 1;
-    bad.attempts[0].result = "executing";
-    bad.attempts[0].terminalResult = null;
-    delete bad.attempts[0].headAfterAttempt;
+    bad.attempts[0]!.result = "executing";
+    bad.attempts[0]!.terminalResult = null;
+    delete bad.attempts[0]!.headAfterAttempt;
     const result = validateCheckpoint(bad);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /no attempt with result "executing"/.test(e))).toBe(true);
@@ -724,22 +736,22 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
 describe("validateCheckpoint — attempt agentSession (AC-2.1)", () => {
   it("accepts an attempt with no agentSession", () => {
     const doc = validCheckpoint();
-    expect(doc.attempts[0].agentSession).toBeUndefined();
+    expect(doc.attempts[0]!.agentSession).toBeUndefined();
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.attempts[0].agentSession).toBeUndefined();
+      expect(result.checkpoint.attempts[0]!.agentSession).toBeUndefined();
     }
   });
 
   it("round-trips a valid ID-only agentSession", () => {
     const doc = validCheckpoint();
-    doc.attempts[0].agentSession = { id: "S" };
+    doc.attempts[0]!.agentSession = { id: "S" };
     const roundTripped = JSON.parse(JSON.stringify(doc));
     const result = validateCheckpoint(roundTripped);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.attempts[0].agentSession).toEqual({ id: "S" });
+      expect(result.checkpoint.attempts[0]!.agentSession).toEqual({ id: "S" });
       expect(result.checkpoint.schemaVersion).toBe(0);
     }
   });
@@ -794,7 +806,7 @@ describe("validateCheckpoint — attempt agentSession (AC-2.1)", () => {
 
   it("rejects an empty agentSession.id", () => {
     const doc = validCheckpoint();
-    doc.attempts[0].agentSession = { id: "" };
+    doc.attempts[0]!.agentSession = { id: "" };
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -953,12 +965,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
         condition: "executing",
         waiting: null,
         attempts: [
-          doneAttempt({
-            result: "executing",
-            terminalResult: null,
-            endedAt: undefined,
-            headAfterAttempt: undefined,
-          }),
+          liveAttempt(),
         ],
       },
       {
@@ -1322,12 +1329,7 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       condition: "executing",
       waiting: null,
       attempts: [
-        doneAttempt({
-          result: "executing",
-          terminalResult: null,
-          endedAt: undefined,
-          headAfterAttempt: undefined,
-        }),
+        liveAttempt(),
       ],
     };
     expect(validateCheckpoint(JSON.parse(JSON.stringify(executing))).ok).toBe(true);
@@ -1337,11 +1339,7 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
         JSON.stringify({
           ...executing,
           attempts: [
-            doneAttempt({
-              result: "executing",
-              terminalResult: null,
-              endedAt: undefined,
-            }),
+            liveAttempt({ headAfterAttempt: "bbb222" }),
           ],
         }),
       ),

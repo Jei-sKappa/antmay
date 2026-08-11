@@ -142,6 +142,15 @@ function gateErrorReason(scanMessage: string): WaitingReason {
   };
 }
 
+/**
+ * The candidate line a reason carries, as the fragment it contributes to that
+ * reason. An attempt that reported no final line contributes no key at all,
+ * which is what a reason without one says on disk.
+ */
+function candidate(line: string | undefined): { candidateLine?: string } {
+  return line === undefined ? {} : { candidateLine: line };
+}
+
 /** The reason a set of still-present bundle files carries. */
 function pendingQueuesReason(pendingFiles: string[]): WaitingReason {
   return {
@@ -356,7 +365,13 @@ function attemptStopped(args: {
 }): WaitingInfo {
   const reasons: WaitingReasons = args.aborted
     ? [
-        { kind: "interrupted", message: INTERRUPTED_MESSAGE, diagnostics: args.diagnostics },
+        {
+          kind: "interrupted",
+          message: INTERRUPTED_MESSAGE,
+          ...(args.diagnostics !== undefined
+            ? { diagnostics: args.diagnostics }
+            : {}),
+        },
         ...args.classified.filter(
           (reason) =>
             reason.kind === "pending-queues" || reason.kind === "gate-error",
@@ -444,9 +459,9 @@ function refreshQueueUnreadable(args: {
   scanMessage: string;
 }): WaitingInfo {
   return {
+    ...args.paused,
     reasons: [gateErrorReason(args.scanMessage)],
     recovery: args.recovery,
-    nextAction: args.paused.nextAction,
   };
 }
 
@@ -487,7 +502,7 @@ function refreshPromiseUninspectable(args: {
         kind: "stage-contract-violation",
         message: uninspectablePromiseMessage(args.message),
         diagnostics: { errorMessage: args.message },
-        candidateLine: args.candidateLine,
+        ...candidate(args.candidateLine),
       },
       ...withoutGateErrors(rest),
     ],
@@ -517,7 +532,7 @@ function refreshPromiseUnmet(args: {
         contract: args.unmet,
         detail:
           args.worktree === "dirty" ? DIRTY_WORKTREE_DETAIL : PRESERVED_DONE_DETAIL,
-        candidateLine: args.candidateLine,
+        ...candidate(args.candidateLine),
       },
       ...withoutGateErrors(rest),
     ],
@@ -547,7 +562,7 @@ function refreshBoundaryRefused(args: {
             ? "git-policy-violation"
             : "commit-error",
         message: args.message,
-        candidateLine: args.candidateLine,
+        ...candidate(args.candidateLine),
       },
     ],
     recovery: args.recovery,

@@ -272,8 +272,10 @@ export async function runCommand(
       observedHarnessVersions,
       runtime: harnessRuntime.runtime,
       clock,
-      generateId: deps.generateId,
-      writeInitialCheckpoint: deps.writeInitialCheckpoint,
+      ...(deps.generateId !== undefined ? { generateId: deps.generateId } : {}),
+      ...(deps.writeInitialCheckpoint !== undefined
+        ? { writeInitialCheckpoint: deps.writeInitialCheckpoint }
+        : {}),
     });
     if (!allocation.ok) {
       return refuseAllocation(allocation.refusal);
@@ -320,7 +322,7 @@ export async function runCommand(
         display,
         harnessVersions,
         signal: controller.signal,
-        clock: deps.clock,
+        clock,
       });
       switch (result.kind) {
         case "completed":

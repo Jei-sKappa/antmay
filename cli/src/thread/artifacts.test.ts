@@ -767,7 +767,7 @@ describe("thread-artifact domain dependencies (AC-6.5)", () => {
       "utf8",
     );
     const specifiers = [...source.matchAll(/ from "([^"]+)"/g)].map(
-      (match) => match[1],
+      (match) => match[1]!,
     );
     expect(specifiers.length).toBeGreaterThan(0);
     for (const specifier of specifiers) {

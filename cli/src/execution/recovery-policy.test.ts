@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type {
   AttemptReference,
   WaitingInfo,
-  WaitingReasons,
+  WaitingReason,
   WaitingRecovery,
 } from "../state/checkpoint/types.js";
 import type { ArtifactMismatch } from "../thread/artifacts.js";
@@ -343,18 +343,22 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
   // observed the same two in the other precedence order, and one that observed a
   // third as well. Their recovery is identical, which is the whole of what the
   // policy reads about a pause.
-  const boundaryFirst: WaitingReasons = [
-    { kind: "git-policy-violation", message: "changes outside the allowed paths." },
-    { kind: "pending-queues", message: "One bundle awaits attention." },
-  ];
+  const boundary: WaitingReason = {
+    kind: "git-policy-violation",
+    message: "changes outside the allowed paths.",
+  };
+  const queue: WaitingReason = {
+    kind: "pending-queues",
+    message: "One bundle awaits attention.",
+  };
   const pauses: WaitingInfo[] = [
-    { reasons: boundaryFirst, recovery: GIT_RETRY },
-    { reasons: [boundaryFirst[1], boundaryFirst[0]], recovery: GIT_RETRY },
+    { reasons: [boundary, queue], recovery: GIT_RETRY },
+    { reasons: [queue, boundary], recovery: GIT_RETRY },
     {
       reasons: [
-        boundaryFirst[1],
+        queue,
         { kind: "gate-error", message: "The pending-queue scan failed." },
-        boundaryFirst[0],
+        boundary,
       ],
       recovery: GIT_RETRY,
     },

@@ -307,11 +307,17 @@ async function run(
     stdout: out,
     stderr: err,
     color: false,
-    createAbortController: overrides.createAbortController,
+    ...(overrides.createAbortController !== undefined
+      ? { createAbortController: overrides.createAbortController }
+      : {}),
     // Default to a no-op installer so tests never register real process handlers.
     installSignals: overrides.installSignals ?? fakeSignals(),
-    generateId: overrides.generateId,
-    writeInitialCheckpoint: overrides.writeInitialCheckpoint,
+    ...(overrides.generateId !== undefined
+      ? { generateId: overrides.generateId }
+      : {}),
+    ...(overrides.writeInitialCheckpoint !== undefined
+      ? { writeInitialCheckpoint: overrides.writeInitialCheckpoint }
+      : {}),
   };
   const code = await runCommand(
     {

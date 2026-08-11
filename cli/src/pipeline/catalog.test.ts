@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { renderStagePrompt } from "../harness/prompt.js";
 import { CATALOG_STAGE_IDS, STAGE_CATALOG, isCatalogStageId } from "./catalog.js";
 import type { CatalogStage } from "./catalog.js";
+import type { CatalogStageId } from "./types.js";
 import type {
   ArtifactPrerequisite,
   ArtifactTransition,
@@ -286,7 +287,7 @@ describe("STAGE_CATALOG — serializability (AC-3.4)", () => {
   });
 
   it("keeps every stage's own shape complete after a round-trip", () => {
-    const clone: Record<string, CatalogStage> = JSON.parse(
+    const clone: Record<CatalogStageId, CatalogStage> = JSON.parse(
       JSON.stringify(STAGE_CATALOG),
     );
     for (const id of CATALOG_STAGE_IDS) {

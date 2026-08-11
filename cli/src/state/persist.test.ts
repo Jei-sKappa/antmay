@@ -104,7 +104,8 @@ describe("writeCheckpoint serialization (AC-13.2)", () => {
 
 describe("writeCheckpoint atomic temp file", () => {
   it("exclusively creates the temp file with flag wx and mode 0600", async () => {
-    const opens: Array<{ path: string; flags: string; mode?: number }> = [];
+    const opens: Array<{ path: string; flags: string; mode?: number | undefined }> =
+      [];
     let renamed = false;
     const fsOps: FsOps = {
       open: async (p, flags, mode) => {

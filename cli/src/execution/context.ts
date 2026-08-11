@@ -119,7 +119,9 @@ export function createRunContext(execution: ExecutionContext): RunContext {
       checkpoint,
       runDir: execution.runDir,
       clock,
-      persistCheckpoint: execution.persistCheckpoint,
+      ...(execution.persistCheckpoint !== undefined
+        ? { persistCheckpoint: execution.persistCheckpoint }
+        : {}),
     }),
     display: execution.display,
     invoker: execution.invoker,

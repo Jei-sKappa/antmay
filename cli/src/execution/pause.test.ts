@@ -28,6 +28,7 @@ const QUEUE_REASON: WaitingReason = {
 const CLASSIFIED: WaitingReasons = [
   { kind: "outcome-blocked", message: "The stage reported Outcome: BLOCKED." },
 ];
+const NEXT_ACTION = "Dispose of the unvalidated changes.";
 
 /**
  * The pause every refresh builder is handed: what a resume found persisted. Its
@@ -41,7 +42,7 @@ const PERSISTED: WaitingInfo = {
     QUEUE_REASON,
   ],
   recovery: { kind: "retry-git-finalization", attempt: ATTEMPT, pausedAtHead: HEAD },
-  nextAction: "Dispose of the unvalidated changes.",
+  nextAction: NEXT_ACTION,
 };
 
 const kindsOf = (waiting: WaitingInfo): WaitingKind[] =>
@@ -439,7 +440,7 @@ describe("waitingEquals — whether two pauses say the same thing", () => {
     // answers "were these built the same way" and would report these unequal, so
     // an unchanged refresh would rewrite the checkpoint and restamp `updatedAt`.
     const rebuilt: WaitingInfo = {
-      nextAction: PERSISTED.nextAction,
+      nextAction: NEXT_ACTION,
       recovery: {
         pausedAtHead: HEAD,
         attempt: { attempt: 2, stageIndex: 1 },
@@ -460,7 +461,11 @@ describe("waitingEquals — whether two pauses say the same thing", () => {
       reasons: [{ kind: "gate-error", message: "The scan failed." }],
       recovery: { kind: "retry-stage" },
     };
-    const undefinedFields: WaitingInfo = {
+    // Every optional key present and holding `undefined`, which is a shape the
+    // type system no longer admits and only a cast can build. The property under
+    // test is what `waitingEquals` promises regardless: it compares field by
+    // field, so it reads such a pause as saying what an absent-key one says.
+    const undefinedFields = {
       reasons: [
         {
           kind: "gate-error",
@@ -474,7 +479,7 @@ describe("waitingEquals — whether two pauses say the same thing", () => {
       ],
       recovery: { kind: "retry-stage" },
       nextAction: undefined,
-    };
+    } as unknown as WaitingInfo;
     expect(waitingEquals(absent, undefinedFields)).toBe(true);
   });
 
@@ -483,9 +488,10 @@ describe("waitingEquals — whether two pauses say the same thing", () => {
   });
 
   it("separates two pauses that differ in anything a reader would see", () => {
+    const { nextAction: _carried, ...withoutNextAction } = PERSISTED;
     const differing: WaitingInfo[] = [
       { ...PERSISTED, nextAction: "Something else." },
-      { ...PERSISTED, nextAction: undefined },
+      withoutNextAction,
       { ...PERSISTED, reasons: [PERSISTED.reasons[0]] },
       {
         ...PERSISTED,

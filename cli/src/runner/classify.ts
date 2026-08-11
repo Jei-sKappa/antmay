@@ -171,17 +171,19 @@ function stageReason(
   }
   if (parse !== null && (parse.token === "BLOCKED" || parse.token === "REFUSED")) {
     const blocked = parse.token === "BLOCKED";
+    const detail = detailOf(parse.detail);
     return {
       kind: blocked ? "outcome-blocked" : "outcome-refused",
       message: `The stage reported ${formatTerminalOutcome(parse.token)} and paused for human attention.`,
-      detail: detailOf(parse.detail),
+      ...(detail !== undefined ? { detail } : {}),
       candidateLine: parse.candidateLine,
     };
   }
+  const candidateLine = candidateLineOf(parse);
   return {
     kind: "malformed-outcome",
     message: malformedMessage(parse === null ? null : parse.candidateLine),
-    candidateLine: candidateLineOf(parse),
+    ...(candidateLine !== undefined ? { candidateLine } : {}),
   };
 }
 

@@ -47,12 +47,11 @@ export async function settleInterrupted(
     executingAttempt: AttemptRecord;
     headAfterAttempt: string;
     pendingFiles: string[];
-    failure?: { errorClass: string; errorMessage: string };
-    agentSession?: { id: string };
+    failure?: { errorClass: string; errorMessage: string } | undefined;
+    agentSession?: { id: string } | undefined;
   },
 ): Promise<ExecutionResult> {
   const endedAt = ctx.clock().toISOString();
-  const pending = args.pendingFiles.length > 0 ? args.pendingFiles : undefined;
   const diagnostics: WaitingDiagnostics = args.failure
     ? {
         errorClass: args.failure.errorClass,
@@ -73,7 +72,9 @@ export async function settleInterrupted(
       result: "interrupted",
       endedAt,
       terminalResult: null,
-      pendingFiles: pending,
+      ...(args.pendingFiles.length > 0
+        ? { pendingFiles: args.pendingFiles }
+        : {}),
       failure: { kind: governing.kind, message: governing.message },
       headAfterAttempt: args.headAfterAttempt,
     },

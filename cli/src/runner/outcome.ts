@@ -80,14 +80,8 @@ export function parseTerminalOutcome(finalText: string): OutcomeParse {
   const normalized = finalText.replace(/\r\n?/g, "\n");
   const lines = normalized.split("\n");
 
-  let candidateLine: string | null = null;
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const trimmed = lines[i].trim();
-    if (trimmed.length > 0) {
-      candidateLine = trimmed;
-      break;
-    }
-  }
+  const trimmed = lines.map((line) => line.trim());
+  const candidateLine = trimmed.reverse().find((line) => line.length > 0) ?? null;
 
   if (candidateLine === null) {
     return { token: null, candidateLine: null };

@@ -72,7 +72,12 @@ function lexicalThreadPath(absPath: string): LexicalResult {
   }
 
   const threadFolder = parts[n - 1];
-  if (threadFolder === "" || threadFolder === "." || threadFolder === "..") {
+  if (
+    threadFolder === undefined ||
+    threadFolder === "" ||
+    threadFolder === "." ||
+    threadFolder === ".."
+  ) {
     return {
       ok: false,
       message: `--thread does not name a thread folder: ${absPath}`,

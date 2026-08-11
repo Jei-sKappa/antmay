@@ -256,7 +256,9 @@ async function seed(
     stderr: err,
     color: false,
     installSignals: overrides.installSignals ?? fakeSignals(),
-    createAbortController: overrides.createAbortController,
+    ...(overrides.createAbortController !== undefined
+      ? { createAbortController: overrides.createAbortController }
+      : {}),
   };
   const code = await runCommand(
     {
@@ -293,7 +295,9 @@ async function resume(
     stderr: err,
     color: false,
     installSignals: overrides.installSignals ?? fakeSignals(),
-    createAbortController: overrides.createAbortController,
+    ...(overrides.createAbortController !== undefined
+      ? { createAbortController: overrides.createAbortController }
+      : {}),
   };
   const code = await resumeCommand({ runId }, deps);
   return { code, out: out.text, err: err.text, invoker };

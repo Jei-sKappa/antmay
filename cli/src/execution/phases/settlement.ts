@@ -103,8 +103,9 @@ async function settleIntoPause(
       result: args.aborted ? "interrupted" : "waiting",
       endedAt: settling.endedAt,
       terminalResult: settling.terminalResult,
-      pendingFiles:
-        settling.pendingFiles.length > 0 ? settling.pendingFiles : undefined,
+      ...(settling.pendingFiles.length > 0
+        ? { pendingFiles: settling.pendingFiles }
+        : {}),
       failure: { kind: governing.kind, message: governing.message },
       headAfterAttempt: settling.observedHead,
     },

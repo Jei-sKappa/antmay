@@ -822,13 +822,14 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
   // Attempt-level cross-field invariants.
   const perStageNumbers = new Map<number, Set<number>>();
   checkpoint.attempts.forEach((attempt, i) => {
-    if (attempt.stageIndex >= stageCount) {
+    const snapshotted = checkpoint.stages[attempt.stageIndex];
+    if (snapshotted === undefined) {
       errors.push(
         `attempts[${i}].stageIndex ${attempt.stageIndex} is out of range for ${stageCount} stages.`,
       );
-    } else if (checkpoint.stages[attempt.stageIndex].id !== attempt.stageId) {
+    } else if (snapshotted.id !== attempt.stageId) {
       errors.push(
-        `attempts[${i}].stageId "${attempt.stageId}" does not match snapshotted stage ${attempt.stageIndex} ("${checkpoint.stages[attempt.stageIndex].id}").`,
+        `attempts[${i}].stageId "${attempt.stageId}" does not match snapshotted stage ${attempt.stageIndex} ("${snapshotted.id}").`,
       );
     }
     let seen = perStageNumbers.get(attempt.stageIndex);

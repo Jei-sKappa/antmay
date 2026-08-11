@@ -245,7 +245,7 @@ export async function resumeCommand(
         display,
         harnessVersions,
         signal: controller.signal,
-        clock: deps.clock,
+        clock,
       });
       switch (result.kind) {
         case "completed":

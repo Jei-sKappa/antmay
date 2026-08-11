@@ -144,7 +144,7 @@ export function renderPause(
     pipelineName: ctx.pipelineName,
     totalElapsedMs: elapsedMs(ctx),
     logAbsPath,
-    continuationCommand,
+    ...(continuationCommand !== undefined ? { continuationCommand } : {}),
     resumeCommand: ctx.resumeCommand,
     checkpointPath: ctx.checkpointPath,
   });
