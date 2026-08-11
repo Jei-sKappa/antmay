@@ -104,17 +104,15 @@ const PAUSE: WaitingInfo = Pause.queueBlocked([
 ]);
 
 describe("RunState — the cursor it reads as", () => {
-  it("reports the stage it sits on and whether the snapshot is exhausted", async () => {
+  it("reads as the stage it sits on until the snapshot is exhausted", async () => {
     const { run } = cursor();
-    expect(run.stage.id).toBe(STAGE_IDS[0]);
-    expect(run.isExhausted).toBe(false);
+    expect(run.cursor).toEqual({ kind: "at-stage", stage: snapshotted(0) });
 
     await run.commit({ kind: "advance" });
-    expect(run.stage.id).toBe(STAGE_IDS[1]);
-    expect(run.isExhausted).toBe(false);
+    expect(run.cursor).toEqual({ kind: "at-stage", stage: snapshotted(1) });
 
     await run.commit({ kind: "advance" });
-    expect(run.isExhausted).toBe(true);
+    expect(run.cursor).toEqual({ kind: "exhausted" });
   });
 });
 

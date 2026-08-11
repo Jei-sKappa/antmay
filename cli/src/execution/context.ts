@@ -142,10 +142,14 @@ export function createRunContext(execution: ExecutionContext): RunContext {
 }
 
 /**
- * The context of the stage the cursor sits on. Read only while the run is not
- * exhausted: past the final stage there is no stage to describe.
+ * The context of the stage the cursor sits on. The stage arrives as a value the
+ * caller already read off the cursor, so a context for a stage the snapshot does
+ * not hold cannot be built here at all.
  */
-export function stageContext(ctx: RunContext): StageContext {
+export function stageContext(
+  ctx: RunContext,
+  stage: SnapshottedStage,
+): StageContext {
   const stageIndex = ctx.run.checkpoint.stageIndex;
   const ordinal = stageIndex + 1;
   return {
@@ -153,6 +157,6 @@ export function stageContext(ctx: RunContext): StageContext {
     stageIndex,
     ordinal,
     stagePosition: `${ordinal}/${ctx.stageCount}`,
-    stage: ctx.run.stage,
+    stage,
   };
 }

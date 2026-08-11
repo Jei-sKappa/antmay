@@ -41,11 +41,15 @@ export async function executeEngine(
     if (entered !== null) return entered;
   }
 
-  while (!ctx.run.isExhausted) {
+  for (
+    let cursor = ctx.run.cursor;
+    cursor.kind === "at-stage";
+    cursor = ctx.run.cursor
+  ) {
     const sig = signalReason(ctx.signal);
     if (sig !== null) return interruptedAtRest(ctx, sig);
 
-    const stage = stageContext(ctx);
+    const stage = stageContext(ctx, cursor.stage);
 
     const queue = await checkQueueGate(stage);
     if (queue.kind === "blocked") return pauseRun(stage, queue.waiting);

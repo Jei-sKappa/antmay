@@ -147,6 +147,15 @@ function applyTransition(
   }
 }
 
+/**
+ * Where a run's cursor sits: on the stage the snapshot holds there, or past the
+ * final one. One read answers both questions, so a caller cannot conclude the
+ * run has a stage left without also holding that stage.
+ */
+export type RunCursor =
+  | { kind: "at-stage"; stage: SnapshottedStage }
+  | { kind: "exhausted" };
+
 export class RunState {
   private current: RunCheckpoint;
   private readonly runDir: string;
@@ -170,14 +179,15 @@ export class RunState {
     return this.current;
   }
 
-  /** The stage the cursor sits on. Read only while the run is not exhausted. */
-  get stage(): SnapshottedStage {
-    return this.current.stages[this.current.stageIndex];
-  }
-
-  /** Whether the cursor sits past the final stage of the snapshot. */
-  get isExhausted(): boolean {
-    return this.current.stageIndex >= this.current.stages.length;
+  /**
+   * The cursor as a position: the stage it is on, or the exhaustion the run's
+   * loop ends at. Checkpoint validation keeps `stageIndex` within the snapshot
+   * and one past its end only once the run is completed, so an absent stage and
+   * an exhausted snapshot are the same fact.
+   */
+  get cursor(): RunCursor {
+    const stage = this.current.stages[this.current.stageIndex];
+    return stage === undefined ? { kind: "exhausted" } : { kind: "at-stage", stage };
   }
 
   /**

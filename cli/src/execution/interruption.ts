@@ -1,7 +1,7 @@
 import { SignalInterruption } from "../runner/signals.js";
 import type { AttemptRecord, WaitingDiagnostics } from "../state/checkpoint/types.js";
 import { withAgentSession } from "./attempts.js";
-import type { RunContext } from "./context.js";
+import type { StageContext } from "./context.js";
 import { Pause } from "./pause.js";
 import type { ExecutionResult } from "./result.js";
 import { commitCursor, interrupted, renderPause } from "./result.js";
@@ -41,7 +41,7 @@ export function abortOrigin(signal: AbortSignal): string {
  * `interrupted`.
  */
 export async function settleInterrupted(
-  ctx: RunContext,
+  ctx: StageContext,
   args: {
     sig: NodeJS.Signals;
     executingAttempt: AttemptRecord;

@@ -167,7 +167,19 @@ export async function recoverFromDurableCursor(
     recoveryAttempt,
     describedAttempt,
   };
-  const stage = stageContext(ctx);
+  // A recorded pause sits on a stage: validation pins a cursor past the final
+  // one to a `completed` run, which records no pause and never reaches the
+  // engine. An exhausted cursor here is an invalid checkpoint rather than a
+  // situation to recover — the same species as the unresolvable attempt
+  // reference above.
+  const stageCursor = run.cursor;
+  if (stageCursor.kind === "exhausted") {
+    return fatal(
+      ctx,
+      `The validated checkpoint pauses at stage ${run.checkpoint.stageIndex}, past the final stage of its ${run.checkpoint.stages.length}-stage snapshot.`,
+    );
+  }
+  const stage = stageContext(ctx, stageCursor.stage);
 
   const gathered = await gatherRecoveryEvidence(stage, pausedRecovery);
   if (gathered.kind === "interrupted") {

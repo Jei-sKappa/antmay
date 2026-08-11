@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { HARNESSES } from "../harness/providers/index.js";
 import type { AttemptRecord, WaitingInfo } from "../state/checkpoint/types.js";
-import type { RunContext } from "./context.js";
+import type { RunContext, StageContext } from "./context.js";
 import type { Transition } from "./run-state.js";
 
 /**
@@ -117,10 +117,11 @@ export function interrupted(signal: NodeJS.Signals): ExecutionResult {
  * already sitting in is not a change to the run.
  *
  * Log and Continue both come from the persisted attempt this pause is about; a
- * pre-attempt pause passes none.
+ * pre-attempt pause passes none. The stage a pause is at is the one its context
+ * was built for, which is what states in the type that a pause has one.
  */
 export function renderPause(
-  ctx: RunContext,
+  ctx: StageContext,
   waiting: WaitingInfo,
   attempt: AttemptRecord | undefined = undefined,
 ): ExecutionResult {
@@ -135,9 +136,9 @@ export function renderPause(
   ctx.display.runPaused({
     waiting,
     currentStage: {
-      id: ctx.run.stage.id,
-      position: ctx.run.checkpoint.stageIndex + 1,
-      count: ctx.run.checkpoint.stages.length,
+      id: ctx.stage.id,
+      position: ctx.ordinal,
+      count: ctx.stageCount,
     },
     runId: ctx.runId,
     pipelineName: ctx.pipelineName,
@@ -156,7 +157,7 @@ export function renderPause(
  * could act on.
  */
 export async function pauseRun(
-  ctx: RunContext,
+  ctx: StageContext,
   waiting: WaitingInfo,
   attempt: AttemptRecord | undefined = undefined,
 ): Promise<ExecutionResult> {
