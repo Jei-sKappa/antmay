@@ -1,10 +1,12 @@
 name: Issue classification
 
-# Enforces the issue title classification documented in CONTRIBUTING.md.
+# Enforces the issue classification documented in CONTRIBUTING.md.
 # Recognized `[scope] [type]` prefixes become `scope: *` and `type: *` labels;
 # a missing or unrecognized value gets the corresponding `needs-*` label and
 # one explanatory comment. Editing the title reconciles every managed label.
 # Manually adding or removing a managed label also reconciles it from the title.
+# The `effort: *` family runs the other way: the estimate is a human input, so
+# this workflow only supplies `effort: unset` and flags an ambiguous set.
 # Nothing here depends on how the issue was filed, so `gh issue create` and the
 # web UI behave identically.
 
@@ -34,11 +36,26 @@ jobs:
               improvement: { name: 'type: improvement', color: '6fae8c', description: 'Makes an existing capability work better' },
               task:        { name: 'type: task',        color: '9c7b57', description: 'Maintenance, refactoring, migration, tooling, or investigation' },
             };
+            // Set by a person or an agent, never derived from the title. The bands
+            // these numbers name are published in CONTRIBUTING.md.
+            const EFFORTS = {
+              1: { name: 'effort: 1', color: 'bfe5bf', description: 'Localized; the change is already known' },
+              2: { name: 'effort: 2', color: 'd9e88c', description: 'One decision, then a bounded or mechanical edit' },
+              3: { name: 'effort: 3', color: 'f5e08c', description: 'Design plus implementation, tests and docs following' },
+              4: { name: 'effort: 4', color: 'f7c297', description: 'Multi-artifact work whose shape must be worked out first' },
+              5: { name: 'effort: 5', color: 'f0a3a3', description: 'Dedicated effort crossing several subsystems' },
+            };
             const NEEDS_SCOPE = {
               name: 'needs-scope', color: 'e51c23', description: 'Title is missing a [suite|cli|contract|repo] prefix',
             };
             const NEEDS_TYPE = {
               name: 'needs-type', color: 'e51c23', description: 'Title is missing one valid [bug|feature|improvement|task] prefix',
+            };
+            const NEEDS_EFFORT = {
+              name: 'needs-effort', color: 'e51c23', description: 'More than one effort: * label is applied; exactly one is expected',
+            };
+            const EFFORT_UNSET = {
+              name: 'effort: unset', color: 'ededed', description: 'Carries no effort estimate yet',
             };
             const MARKER = '<!-- antmay:issue-classification -->';
 
@@ -91,8 +108,27 @@ jobs:
               }
             };
 
+            const setLabel = async (label, wanted) => {
+              if (wanted === current.includes(label.name)) return;
+              if (!wanted) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: label.name });
+                return;
+              }
+              await ensureLabel(label);
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [label.name] });
+            };
+
             await reconcileFamily(SCOPES, NEEDS_SCOPE, wantedScope);
             await reconcileFamily(TYPES, NEEDS_TYPE, wantedType);
+
+            // The scale has to be pickable before anyone can apply it, and this
+            // workflow only ever applies the two labels below, so the numbered
+            // bands are created here rather than by a manual setup step.
+            for (const effort of Object.values(EFFORTS)) await ensureLabel(effort);
+            const efforts = current.filter((name) =>
+              Object.values(EFFORTS).some((effort) => effort.name === name));
+            await setLabel(EFFORT_UNSET, efforts.length === 0);
+            await setLabel(NEEDS_EFFORT, efforts.length > 1);
 
             if (wantedScope !== NEEDS_SCOPE && wantedType !== NEEDS_TYPE) {
               core.info(`Issue classified as ${wantedScope.name}, ${wantedType.name}`);

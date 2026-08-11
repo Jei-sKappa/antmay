@@ -60,6 +60,30 @@ and make valid issues filterable by either dimension. The title is authoritative
 manually adding or removing a managed classification label causes the workflow
 to restore the labels derived from the title.
 
+## Issues carry an effort estimate
+
+Scope and type say what an issue is about. Effort says how much work closing it
+is, on a five-point scale applied as a label:
+
+| Label | Effort |
+| --- | --- |
+| `effort: 1` | Localized. The change is already known; write it and verify. |
+| `effort: 2` | One decision to settle, then a bounded edit or a wide but mechanical sweep. |
+| `effort: 3` | Design plus implementation, with tests and documentation following. |
+| `effort: 4` | Multi-artifact work whose shape has to be worked out first. |
+| `effort: 5` | A dedicated design-and-implementation effort crossing several subsystems. |
+
+The scale is deliberately coarse. It is there to separate a `1` from a `4` —
+genuinely different kinds of work, planned differently — and not to separate two
+neighbouring bands. No estimate needs defending to that precision.
+
+Effort is a label rather than a title prefix because it changes: an estimate is
+revised as an issue comes to be understood, while its scope and type are
+intrinsic to it. So the label is the input here, and applying or replacing one is
+how the estimate is set. An issue carrying no estimate gets `effort: unset`,
+which clears as soon as one is applied; an issue carrying two gets
+`needs-effort` until one remains.
+
 ## Commits
 
 This repository follows [Conventional Commits](https://www.conventionalcommits.org/).

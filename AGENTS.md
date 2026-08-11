@@ -106,14 +106,23 @@ so the convention holds identically for the web UI and for `gh issue create`.
 and `type: *` labels. A missing, unrecognized, or duplicate classification gets
 the corresponding `needs-scope` or `needs-type` label plus one explanatory
 comment. Editing the title reconciles all managed labels. The workflow never
-closes or rejects an issue. The title is authoritative, so manually adding or
-removing a managed classification label triggers the same reconciliation.
-GitHub offers no server-side gate at creation time, so detect-and-flag is the
-enforcement ceiling.
+closes or rejects an issue. The title is authoritative for those two families,
+so manually adding or removing one of their labels triggers the same
+reconciliation. GitHub offers no server-side gate at creation time, so
+detect-and-flag is the enforcement ceiling.
 
-`CONTRIBUTING.md` is where this is documented for contributors; the prefix
-tables there and the workflow's `SCOPES` and `TYPES` maps must be edited
-together.
+A third managed family carries an issue's effort estimate on a five-point scale,
+and it inverts the direction of authority: `effort: 1` through `effort: 5` are
+applied by a person or an agent, and the workflow only supplies the default. An
+issue carrying no estimate gets `effort: unset`; one carrying more than one gets
+`needs-effort`. Both clear once exactly one estimate is applied, and a valid
+estimate is never removed. The estimate is an input rather than something
+derived, because it is revised as an issue comes to be understood while scope
+and type are intrinsic to it — so do not reach for a title prefix to carry it.
+
+`CONTRIBUTING.md` is where this is documented for contributors, and it publishes
+the one definition of what each effort band means; the tables there and the
+workflow's `SCOPES`, `TYPES`, and `EFFORTS` maps must be edited together.
 
 ## Describe the current state, never the diff
 
