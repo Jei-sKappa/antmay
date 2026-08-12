@@ -14,6 +14,7 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "lint": "oxlint src",
     "check": "npm run typecheck && npm run test && npm run build",
     "demo": "node scripts/demo.mjs",
     "demo:all": "node scripts/demo-all.mjs",
@@ -21,6 +22,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "oxlint": "^1.78.0",
+    "oxlint-tsgolint": "^7.0.2001",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -107,11 +107,12 @@ default branch.
 points at `suite/AGENTS.md` and `cli/AGENTS.md` for the rules that apply inside
 each. The method itself is documented under [`docs/`](./docs/README.md).
 
-The CLI has a build and test gate; run it from `cli/` before proposing a change
-there:
+The CLI has a build and test gate, and a lint pass beside it; run both from
+`cli/` before proposing a change there:
 
 ```sh
 npm run check
+npm run lint
 ```
 
 The skill suite has no build. Its one mechanical gate guards the distribution

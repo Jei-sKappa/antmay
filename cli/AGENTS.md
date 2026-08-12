@@ -77,6 +77,15 @@ behavior stay stable.
   unique disposable repository under `/tmp`; `npm run demo:all` runs the whole
   scenario catalog and reports it as one verdict.
   The binary is `dist/main.js`, exposed as `antmay` via the `bin` field.
+- `npm run lint` is type-aware promise safety and nothing else — `oxlint` with
+  the `oxlint-tsgolint` backend, running `await-thenable`,
+  `no-floating-promises`, and `no-misused-promises` over `src/`. Every rule
+  category is off, so a rule joins it only by naming a failure mode nothing else
+  here reaches: a dropped `await` on a lock release, a checkpoint write, or a
+  boundary finalization is silent under `strict` and invisible to
+  `architecture.test.ts`. A rule the compiler already proves, or one that judges
+  a function's internals rather than a failure mode, does not belong. Lint is a
+  sibling of `check` rather than a step inside it, and CI runs it as its own job.
 
 ### Command surface
 
