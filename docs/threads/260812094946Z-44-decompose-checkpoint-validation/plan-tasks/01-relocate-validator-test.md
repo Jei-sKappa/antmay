@@ -30,7 +30,7 @@ specifier must change to keep resolving.
 - `test -f cli/src/state/checkpoint/validate.test.ts && ! test -f cli/src/state/checkpoint.test.ts` succeeds.
 - `git status --porcelain` shows the change as a rename (`R`) of that path pair, not a deletion plus an addition.
 - `grep -n "test-helpers/waiting.js\|\./types.js\|\./validate.js" cli/src/state/checkpoint/validate.test.ts` shows exactly the three corrected specifiers, and `grep -c "checkpoint/types.js\|checkpoint/validate.js" cli/src/state/checkpoint/validate.test.ts` returns `0`.
-- `grep -c "readCheckpoint" cli/src/state/persist.test.ts` returns `5`, and `test -e cli/src/state/checkpoint/read.test.ts` fails.
+- `grep -c "await readCheckpoint(" cli/src/state/persist.test.ts` returns `5` — its five call sites, which the bare identifier over-counts because the file also names it in an import, a `describe` title, and an `it` title. `test -e cli/src/state/checkpoint/read.test.ts` fails.
 - `npm --prefix cli run test -- src/state/checkpoint/validate.test.ts` exits `0`.
 - `npm --prefix cli run check` exits `0`.
 - `npm --prefix cli run lint` exits `0`.

@@ -80,6 +80,7 @@ test edit.
 - The queue-resolution check runs whether or not the reference resolved, and a `resume-finalized-done` recovery that both names no recorded attempt and disagrees on queue resolution reports two diagnostics, the reference one first. (AC-5.4)
 - Every case in the validator test file passes, unmodified except for the one extended document and the one added case from task 2. (AC-4.1)
 - `cli/src/state/checkpoint/types.ts` is byte-identical to its pre-change state, `schemaVersion` is still `0`, and no migration, compatibility shim, barrel, or re-export is introduced. (AC-4.4)
+- No diagnostic string in the module changes its wording or interpolations, and no message spells a terminal-outcome token inside a larger literal — the rewritten invariant and its helper included. (AC-4.5)
 - The thread's change touches exactly two files: `cli/src/state/checkpoint/validate.ts` and the renamed `cli/src/state/checkpoint/validate.test.ts`. (AC-7.1)
 - `cli/AGENTS.md`, `cli/README.md`, `cli/vitest.config.ts`, `cli/src/architecture.test.ts`, and everything under `cli/scripts/scenarios/` are unchanged. (AC-7.2)
 - `npm --prefix cli run check` passes. (AC-7.3)

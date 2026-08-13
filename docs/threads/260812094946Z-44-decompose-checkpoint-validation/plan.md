@@ -39,19 +39,19 @@ and the relocated `cli/src/state/checkpoint/validate.test.ts`.
 
 ## Global Constraints
 
-- `cli/src/architecture.test.ts` must pass with no edit. Two of its guards bear on this change directly:
-- The recovery-kind guard bans comparing a recovery kind to a string literal everywhere except the single path `state/checkpoint/validate.ts`. That exemption list must remain a single path — DR3's switch satisfies the guard because it deliberately does not match `case` clauses.
-- The terminal-outcome guard bans a protocol token embedded in a larger string literal. Diagnostic messages must keep interpolating `DONE_OUTCOME` rather than spelling `DONE` inside the message text. A bare `=== "DONE"` comparison against an already-narrowed token stays permitted, because the compiler guards it.
-- `cli/src/state/checkpoint/validate.ts` must not import `cli/src/execution/`. In particular, do not reach for `AttemptReferencingRecovery` or any other name from `execution/recovery.ts`; the architecture guard would then require the import, and the dependency direction is wrong. Switch over the union declared in `state/checkpoint/types.ts` (per `decisions.md` DR3).
-- `cli/src/state/checkpoint/types.ts` is unchanged. It is guarded to hold nothing but type declarations.
-- No new runtime dependency. The CLI has exactly one and keeps it.
-- `npm --prefix cli run check` (typecheck + test + build) is the gate, and `npm --prefix cli run lint` runs beside it in CI.
-- `vitest.config.ts` is unchanged; it already includes `src/**/*.test.ts`, so a test file inside `state/checkpoint/` is collected without configuration.
+- **`cli/src/architecture.test.ts` must pass with no edit.** Two of its guards bear on this change directly:
+  - The recovery-kind guard bans comparing a recovery kind to a string literal everywhere except the single path `state/checkpoint/validate.ts`. That exemption list must remain a single path — DR3's switch satisfies the guard because it deliberately does not match `case` clauses.
+  - The terminal-outcome guard bans a protocol token embedded in a larger string literal. Diagnostic messages must keep interpolating `DONE_OUTCOME` rather than spelling `DONE` inside the message text. A bare `=== "DONE"` comparison against an already-narrowed token stays permitted, because the compiler guards it.
+- **`cli/src/state/checkpoint/validate.ts` must not import `cli/src/execution/`.** In particular, do not reach for `AttemptReferencingRecovery` or any other name from `execution/recovery.ts`; the architecture guard would then require the import, and the dependency direction is wrong. Switch over the union declared in `state/checkpoint/types.ts` (per `decisions.md` DR3).
+- **`cli/src/state/checkpoint/types.ts` is unchanged.** It is guarded to hold nothing but type declarations.
+- **No new runtime dependency.** The CLI has exactly one and keeps it.
+- **`npm --prefix cli run check`** (typecheck + test + build) is the gate, and `npm --prefix cli run lint` runs beside it in CI.
+- **`vitest.config.ts` is unchanged**; it already includes `src/**/*.test.ts`, so a test file inside `state/checkpoint/` is collected without configuration.
 - The relocated test file is not one of the three `describe.concurrent` suites, so the no-teardown-between-cases convention does not apply to it.
 
 ## Tasks
 
 1. **Relocate the validator test beside the validator** — `git mv` `cli/src/state/checkpoint.test.ts` to `cli/src/state/checkpoint/validate.test.ts` and correct its three import specifiers, changing nothing else. → `plan-tasks/01-relocate-validator-test.md`
 2. **Extend aggregate cross-field coverage to every invariant** — add the fifth independent fault to the existing shape-valid aggregate document and add the two-diagnostic recovery-resolution case, both passing against the current implementation. → `plan-tasks/02-extend-aggregate-cross-field-coverage.md`
-3. **Drive the cross-field pass from a declared table of pure invariants** — delete the five shared intermediates and replace the cross-field block with six pure functions run from one readonly table. → `plan-tasks/03-table-driven-cross-field-invariants.md`
+3. **Drive the cross-field pass from a declared table of pure invariants** — delete the four locals that exist only for the second pass, stop that pass reading the sweep's `condition`, and replace the cross-field block with six pure functions run from one readonly table. → `plan-tasks/03-table-driven-cross-field-invariants.md`
 4. **Make recovery resolution exhaustive over the recovery kind** — rewrite the sixth invariant as a `switch` total over `WaitingRecovery`, keeping the queue-resolution check outside the reference lookup, and confirm the change's whole footprint. → `plan-tasks/04-exhaustive-recovery-resolution-switch.md`

@@ -2,15 +2,19 @@
 
 **Objective:** Replace the cross-field block inside `validateCheckpoint` with six
 named pure functions of the narrowed checkpoint, run from one declared readonly
-table, and delete the five mutable intermediates the two passes exchange — so the
-invariant set is enumerable from the table and no edit can short-circuit it.
+table, and sever the five mutable intermediates the two passes exchange — the four
+that exist only for the second pass are deleted outright and the sweep's
+`condition` stops being read past the pass boundary — so the invariant set is
+enumerable from the table and no edit can short-circuit it.
 
 **Input / context:** `plan-tasks/02-extend-aggregate-cross-field-coverage.md` has
 put the five-diagnostic and two-diagnostic aggregate regressions in place; they
 are what proves this restructure preserved behavior, so the whole of this task is
 verified by the suite passing with no test edit. `decisions.md` DR1 settles that
-the five intermediates go and that the field-shape sweep and its twenty helpers
-are otherwise untouched; DR2 settles the pure `(checkpoint: RunCheckpoint) => string[]`
+the cross-field pass takes only the narrowed checkpoint and that the field-shape
+sweep and its twenty helpers are otherwise untouched — which is why four of the
+five intermediates are deleted and `condition`, the one the sweep itself needs,
+merely stops being read after the boundary; DR2 settles the pure `(checkpoint: RunCheckpoint) => string[]`
 signature and the flat-mapped table; DR4 settles that the invariants and the table
 stay inside `cli/src/state/checkpoint/validate.ts` with no new module or directory
 under `cli/src/state/checkpoint/`; DR8 settles that the no-short-circuit
