@@ -1,0 +1,17 @@
+# Decompose checkpoint validation without weakening aggregate diagnostics
+
+`cli/src/state/checkpoint/validate.ts` is the CLI's largest production module at roughly 934 lines. It holds one coherent responsibility — validating an untrusted checkpoint — but its exported `validateCheckpoint` coordinator runs about 285 lines and mixes the top-level field sweep with the cross-field invariants relating stages, attempts, recoveries, workspace state, and observed harness versions. This is maintainability work, not an active defect: the validator is exhaustive within each of its two passes and its observable behavior must stay stable.
+
+The behavioral contract to preserve: report every discoverable field-shape problem from one validation call; run cross-field invariants only after the document's shapes are safe to inspect; report every discoverable cross-field problem from that pass rather than returning after the first; preserve diagnostic order and wording; preserve all accepted and rejected checkpoint shapes; and keep `validateCheckpoint(doc: unknown): CheckpointResult` as the public validation entry point in `state/checkpoint/validate.ts`.
+
+Test coverage gap that gates the refactor: the existing aggregate regression pins multiple independent field-shape faults, but it does not protect the cross-field pass, because the validator returns as soon as field-shape errors exist. A separate shape-valid document carrying several independent cross-field faults must exist before the coordinator is decomposed.
+
+Intended outcome: (1) add a shape-valid aggregate regression introducing several independent cross-field faults and asserting every owed diagnostic from one `validateCheckpoint` call; (2) identify purpose-shaped private collaborators for the top-level field sweep and the cross-field sections, especially the attempt-history and recovery-reference invariants; (3) decompose the coordinator without changing validation order, diagnostics, schema, or the public import path; (4) align test layout with the split while those files are already moving — validator coverage beside `checkpoint/validate.ts`, `readCheckpoint` coverage beside `checkpoint/read.ts`; (5) run focused validator, reader, persistence, recovery, command, and architecture tests, then `npm --prefix cli run check`.
+
+Acceptance criteria: a regression proves several independent cross-field faults are all reported in one call; `validateCheckpoint` remains the single public checkpoint-validation entry point; the coordinator and each extracted collaborator state a clear validation purpose; error order, wording, accepted shapes, rejected shapes, and cross-field invariants are unchanged; no checkpoint schema change, migration, compatibility shim, barrel, or re-export is introduced; validator and reader tests follow the modules they cover; `npm --prefix cli run check` passes.
+
+Out of scope: changing `schemaVersion` or any persisted checkpoint shape; weakening aggregate diagnostics to simplify control flow; revisiting terminal-outcome or harness identity ownership; further decomposition motivated only by a line-count target rather than a distinct reason to change.
+
+Origin and priority: this is the deferred checkpoint-validation follow-up identified while implementing issue #39. It is lower priority than the safety-critical `runCommand` decomposition in issue #40.
+
+External: https://github.com/Jei-sKappa/antmay/issues/44
