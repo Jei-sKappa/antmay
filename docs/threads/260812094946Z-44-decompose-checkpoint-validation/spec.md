@@ -61,9 +61,11 @@ roughly its current length. That is an accepted outcome, not a shortfall
 
 ### Out of scope
 
-- **The field-shape sweep and all twenty existing private helpers.** They are left
-  unchanged. Grouping them would invent divisions the document's schema does not have
-  (per `decisions.md` DR1).
+- **The structure of the field-shape sweep and its twenty existing private helpers.** No
+  helper is grouped, split, renamed, or has any of its checks changed; grouping them would
+  invent divisions the document's schema does not have (per `decisions.md` DR1). The single
+  edit any helper takes is `validateStage` ceasing to return the stage info it fed the
+  second pass, which follows from deleting that intermediate (AC-1.3).
 - **Any new module or directory under `cli/src/state/checkpoint/`.** The invariants and
   their table stay inside `validate.ts` (per `decisions.md` DR4).
 - **A declarative schema library.** No new runtime dependency
@@ -123,8 +125,9 @@ The table's order is the diagnostic order, and it is:
 6. **Recovery resolution** — the pause's recovery must resolve against the recorded
    attempt history. May report several diagnostics.
 
-The field-shape helpers keep their existing `(value, label, errors)` push signature; this
-governs the cross-field collaborators only (per `decisions.md` DR2).
+The field-shape helpers keep their existing signatures, accumulating diagnostics by pushing
+into a caller-supplied `errors` array; the pure signature governs the cross-field
+collaborators only (per `decisions.md` DR2).
 
 ### The recovery-resolution invariant is exhaustive
 
@@ -216,9 +219,9 @@ while that 1423-line file covers exactly one of the directory's three modules.
 
 ### FR-1 — The two passes exchange only the narrowed checkpoint
 
-- **AC-1.1** `stageInfos`, the `observedHarnesses` map, `stageCount`, and
-  `stageIndexValid` do not appear anywhere in `cli/src/state/checkpoint/validate.ts`.
-  (DR1)
+- **AC-1.1** The field sweep declares no `stageInfos`, no `observedHarnesses` map, no
+  `stageCount`, and no `stageIndexValid`. What an invariant derives for itself from the
+  narrowed checkpoint is not one of these. (DR1)
 - **AC-1.2** Every cross-field invariant's parameter list is exactly one parameter typed
   `RunCheckpoint`. No invariant accepts an error array, a count, a condition, or a
   precomputed map. (DR1, DR2)
@@ -241,6 +244,10 @@ while that 1423-line file covers exactly one of the directory's three modules.
 - **AC-2.4** The table sits between the invariant declarations and `validateCheckpoint`,
   all inside `cli/src/state/checkpoint/validate.ts`. No file is added under
   `cli/src/state/checkpoint/` other than the relocated test. (DR4)
+- **AC-2.5** Each invariant's name states the validation purpose it carries, and the
+  coordinator keeps a doc comment stating that one call reports every field-shape and
+  cross-field problem — so the invariant set is enumerable from the table rather than
+  inferred from a procedure. (DR1)
 
 ### FR-3 — Recovery resolution is exhaustive over the recovery kind
 
@@ -258,14 +265,14 @@ while that 1423-line file covers exactly one of the directory's three modules.
 ### FR-4 — Validation behavior is unchanged
 
 - **AC-4.1** Every case in the relocated validator test file passes, unmodified except
-  for the one extended document and the one added case FR-5 specifies. (DR1)
+  for the one extended document and the one added case FR-5 specifies. (DR5)
 - **AC-4.2** `validateCheckpoint(doc: unknown): CheckpointResult` is the only export of
-  `cli/src/state/checkpoint/validate.ts`. (DR1)
+  `cli/src/state/checkpoint/validate.ts`.
 - **AC-4.3** A document carrying one field-shape fault and one cross-field fault reports
   only the field-shape diagnostic — the pass boundary still returns early.
 - **AC-4.4** `cli/src/state/checkpoint/types.ts` is byte-identical to its pre-change
   state, `schemaVersion` is still `0`, and no migration, compatibility shim, barrel, or
-  re-export is introduced. (DR1)
+  re-export is introduced.
 - **AC-4.5** No diagnostic string in the module changes its wording or interpolations, and
   no message spells a terminal-outcome token inside a larger literal.
 
@@ -307,16 +314,17 @@ while that 1423-line file covers exactly one of the directory's three modules.
 - **AC-7.2** `cli/AGENTS.md`, `cli/README.md`, `cli/vitest.config.ts`,
   `cli/src/architecture.test.ts`, and everything under `cli/scripts/scenarios/` are
   unchanged. (DR7)
-- **AC-7.3** `npm --prefix cli run check` passes. (DR1)
-- **AC-7.4** `npm --prefix cli run lint` passes. (DR1)
+- **AC-7.3** `npm --prefix cli run check` passes.
+- **AC-7.4** `npm --prefix cli run lint` passes.
 
 ## Degrees of freedom
 
 Left to the implementer, because every admissible choice satisfies the criteria above
 unchanged, none is user-visible, and each is reversible without revising this spec:
 
-- **The identifiers** of the six invariant functions and of the table constant, and
-  whether the function type is spelled as a named alias or inline on the table.
+- **The exact identifiers** of the six invariant functions and of the table constant,
+  within AC-2.5, and whether the function type is spelled as a named alias or inline on the
+  table.
 - **How each invariant assembles its diagnostics** — an array literal, a local array
   pushed to and returned, `flatMap` over attempts, or anything else — provided the
   resulting order and content are identical to today's.
