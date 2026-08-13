@@ -63,3 +63,13 @@ Context: The thread changes one production module and its test file. Whether it 
 Decision: The thread edits no documentation and adds or extends no demo scenario; it delivers code and tests only. `cli/AGENTS.md` and `cli/README.md` are both left unchanged. The queue-resolution independence constraint DR3 establishes is recorded as a comment on the test DR6 adds to enforce it, rather than as module memory.
 
 Rationale: Every diagnostic's wording and order is preserved, so no rendering changes and the scenario requirement is never engaged. The published coupling between the CLI's stages and the skill suite is untouched — no skill, catalog entry, target rule, artifact-state interpretation, or stage prerequisite moves — so the stage-support table stays correct without an edit. And an invariant table declared above the coordinator is structure apparent from reading the code, which the repository's documentation rules keep out of AGENTS.md; module memory is for non-obvious constraints, and the one non-obvious constraint this thread produces is enforced and explained at the place it applies.
+
+## DR8: The no-short-circuit boundary begins after field-shape validation
+
+Scope: `spec.md` and `cli/src/state/checkpoint/validate.ts`
+
+Context: DR2 requires the six cross-field invariants to be invoked together from a declared readonly table, while DR4 places that table at module level before `validateCheckpoint`. The field-shape sweep inside `validateCheckpoint` remains unchanged under DR1 and necessarily contains conditionals and early returns before the checkpoint is narrowed. The planning-readiness review identified that `spec.md` AC-2.3's phrase “between the table's declaration and that expression” would literally include this sweep and conflict with those settled constraints.
+
+Decision: Keep DR2's table-driven invariant design and DR4's module-level table placement unchanged. The no-short-circuit constraint begins only after the field-shape error guard has passed and the document has been narrowed to `RunCheckpoint`: from that boundary through the table's single flat-mapping invocation, the coordinator contains no conditional, no `return`, and no per-invariant call site. The corresponding acceptance criterion in `spec.md` is to state this boundary explicitly.
+
+Rationale: Field-shape validation must retain its control flow so untrusted shapes are rejected before cross-field invariants inspect them. Once narrowing succeeds, invoking the full table as one expression is the point that guarantees no invariant can be skipped or short-circuited. Clarifying that interval resolves the textual contradiction without changing implementation scope, table placement, or aggregate diagnostic behavior.

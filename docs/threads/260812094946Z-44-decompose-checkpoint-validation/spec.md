@@ -238,9 +238,11 @@ while that 1423-line file covers exactly one of the directory's three modules.
   executing-attempt position, recovery resolution. (DR2)
 - **AC-2.2** Every entry's type is a function from `RunCheckpoint` to `string[]`. No entry
   mutates a parameter or reads module-level mutable state. (DR2)
-- **AC-2.3** The coordinator runs the table in one flat-mapping expression appended to its
-  accumulated errors. Between the table's declaration and that expression there is no
-  conditional, no `return`, and no per-entry call site. (DR2)
+- **AC-2.3** After the field-shape error guard has passed and the document has been
+  narrowed to `RunCheckpoint`, the coordinator runs the table in one flat-mapping
+  expression appended to its accumulated errors. Between that narrowing and the
+  expression there is no conditional, no `return`, and no per-entry call site. (DR2,
+  DR8)
 - **AC-2.4** The table sits between the invariant declarations and `validateCheckpoint`,
   all inside `cli/src/state/checkpoint/validate.ts`. No file is added under
   `cli/src/state/checkpoint/` other than the relocated test. (DR4)
