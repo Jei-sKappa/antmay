@@ -937,6 +937,8 @@ describe("the engine is one loop over named phases", () => {
     "execution/phases/queue-gate.ts": "execution/engine.ts",
     "execution/phases/prerequisite.ts": "execution/engine.ts",
     "execution/phases/attempt.ts": "execution/engine.ts",
+    "execution/phases/reserve-attempt.ts": "execution/phases/attempt.ts",
+    "execution/phases/invoke-harness.ts": "execution/phases/attempt.ts",
     "execution/phases/settlement.ts": "execution/engine.ts",
     "execution/phases/verify-promise.ts": "execution/phases/settlement.ts",
     "execution/phases/boundary.ts": "execution/phases/settlement.ts",
