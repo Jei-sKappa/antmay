@@ -472,7 +472,7 @@ function fieldShapeMultiFaultCheckpoint(): {
 }
 
 /**
- * A shape-valid checkpoint carrying four independent cross-field faults, paired
+ * A shape-valid checkpoint carrying five independent cross-field faults, paired
  * with the exact diagnostic each one owes. None prevents the validator from
  * reaching the cross-field pass, and none is a consequence of another.
  */
@@ -485,6 +485,7 @@ function crossFieldMultiFaultCheckpoint(): {
   delete doc.observedHarnessVersions["claude-code"];
   doc.workspace.execution.cwd = "/Users/dev/other";
   doc.attempts[0]!.stageId = "plan-strict";
+  doc.attempts.push(liveAttempt({ attempt: 2, logPath: "logs/00-spec-attempt-02.log" }));
   return {
     doc,
     diagnostics: [
@@ -492,6 +493,33 @@ function crossFieldMultiFaultCheckpoint(): {
       'stages[1] selects harness "claude-code" but observedHarnessVersions has no entry for it.',
       "workspace.path must equal workspace.execution.cwd for a current-checkout workspace.",
       'attempts[0].stageId "plan-strict" does not match snapshotted stage 0 ("spec").',
+      `a "waiting-for-user" run must have no attempt with result "executing".`,
+    ],
+  };
+}
+
+/**
+ * A shape-valid checkpoint whose recovery reference resolves to no recorded
+ * attempt while its queue resolution independently disagrees with the current
+ * stage's. The document owes two diagnostics from the recovery-resolution
+ * invariant alone and reaches no other invariant.
+ */
+function recoveryMultiFaultCheckpoint(): {
+  doc: RunCheckpoint;
+  diagnostics: string[];
+} {
+  return {
+    doc: withRecovery(
+      {
+        kind: "resume-finalized-done",
+        attempt: { stageIndex: 0, attempt: 2 },
+        queueResolution: "advance",
+      },
+      [doneAttempt({ result: "done" })],
+    ),
+    diagnostics: [
+      "waiting.recovery.attempt names no recorded attempt (stage 0, attempt 2).",
+      `waiting.recovery.queueResolution "advance" does not match the current stage's snapshotted resolution "rerun".`,
     ],
   };
 }
@@ -521,6 +549,23 @@ describe("validateCheckpoint aggregate reporting", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
+      expect(result.errors).toEqual(diagnostics);
+    }
+  });
+
+  it("reports both recovery-resolution faults from one validation call", () => {
+    const { doc, diagnostics } = recoveryMultiFaultCheckpoint();
+
+    const result = validateCheckpoint(doc);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      // The queue-resolution agreement check is independent of the attempt
+      // reference lookup, so it runs whether or not that reference resolved.
+      // Nesting it inside the successful-lookup branch is the natural rewrite
+      // and would silently drop the second diagnostic; this case is the only
+      // test that fails when that happens, which is why it asserts the exact
+      // ordered array rather than containment.
       expect(result.errors).toEqual(diagnostics);
     }
   });
