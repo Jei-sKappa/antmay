@@ -4,7 +4,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { STAGE_CATALOG } from "../pipeline/catalog.js";
-import type { CatalogStageId, GitPolicy } from "../pipeline/types.js";
+import type { CatalogStageId } from "../pipeline/stage-id.js";
+import type { GitPolicy } from "../pipeline/types.js";
 import {
   createRepoFixture,
   type RepoFixture,

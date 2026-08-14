@@ -23,9 +23,10 @@ This is maintainability work behind no active defect. The external tracking issu
 In scope, all within `cli/`:
 
 - Replacing `src/config/execution.ts` with seven modules across three folders, and splitting `src/config/execution.test.ts` to follow them.
+- Extracting catalog-stage identity into import-free `src/pipeline/stage-id.ts` and the shared document-name grammar into import-free `src/config/document-name.ts`, so document validation reaches neither filesystem nor path dependencies transitively.
 - Updating the five modules that import `config/execution.js` today: `src/state/checkpoint/types.ts`, the three run preflight steps (`load-settings.ts`, `load-profile.ts`, `snapshot-stages.ts`), and `src/pipeline/documentation.test.ts`.
 - Generalizing the declarations-only guard in `src/architecture.test.ts` to cover the new vocabulary module as well as the checkpoint's.
-- Two edits to `cli/AGENTS.md`.
+- Updating the local-binding, `config/`, `pipeline/`, and architecture-guard descriptions in `cli/AGENTS.md`.
 
 Out of scope:
 
@@ -55,13 +56,15 @@ Seven modules replace `config/execution.ts`, which ceases to exist (per `decisio
 
 No barrel, index, or re-export spans the split; every consumer imports the one module it needs.
 
+Two supporting identity leaves keep the validators' complete source dependency graphs pure (per DR9). `pipeline/stage-id.ts` owns the ordered catalog-stage ID tuple, derives `CatalogStageId` from it, and owns `isCatalogStageId`; it imports nothing. `config/document-name.ts` owns `DOCUMENT_NAME_PATTERN` and `isValidDocumentName`; it also imports nothing. The catalog is exhaustive over the tuple-derived stage-ID union, while `config/references.ts` retains only reference types, diagnostics, and path resolution. Moved symbols are not re-exported from their previous modules.
+
 `binding/types.ts` declares `AgentBinding`, `StageBinding`, `StageBindingMap`, `ExecutionProfile`, `ResolvedStageBinding`, the three existing result types, and the outcome unions the two document validators return (per DR1 and DR7). It contains type imports and exported type declarations only — no constant, function, class, or value import — matching the form `state/checkpoint/types.ts` takes. `DEFAULT_IDLE_TIMEOUT_SECONDS` and `DEFAULT_HEARTBEAT_SECONDS` are not in it; they live in `binding/resolve.ts`, next to the fallbacks that apply them (per DR1).
 
 `binding/schema.ts` holds the four validators that today are private to `config/execution.ts` — the agent pair, the optional timing fields, one binding, and a map of bindings — as one module, not split by function or depth (per DR3). It holds no opinion about whether a stage map may be empty, and takes no `requireNonEmpty` flag: each document applies its own emptiness rule at its own call site (per DR2).
 
 ### Document validation and loading
 
-Each document validator takes an already-parsed root and returns a discriminated union — no `errors: string[]` out-parameter, no partial value returned alongside a separate error list (per DR7). Neither validator touches the filesystem.
+Each document validator takes an already-parsed root and returns a discriminated union — no `errors: string[]` out-parameter, no partial value returned alongside a separate error list (per DR7). Neither validator reaches `node:fs` or `node:path` anywhere in its production source dependency graph, including through type-only imports (per DR9).
 
 Each loader reads its path, parses JSON, delegates to its validator, and applies its own disk semantics and failure shape:
 
@@ -83,22 +86,28 @@ Across all three entry points, the following are unchanged in every respect a ca
 
 `state/checkpoint/types.ts` imports `ResolvedStageBinding` from `config/binding/types.js`, so the checkpoint vocabulary reaches no module that performs I/O. Each preflight step imports the one module whose function it calls — `settings/load.js`, `execution-profile/load.js`, `binding/resolve.js` respectively — plus `binding/types.js` for the map type it names. `pipeline/documentation.test.ts` imports each loader from its own module.
 
+The binding schema, pipeline document validator, and checkpoint validator import `isCatalogStageId` from `pipeline/stage-id.js`. Catalog consumers take `STAGE_CATALOG` from `pipeline/catalog.js` and the ID tuple or predicate from `pipeline/stage-id.js`. The execution-profile validator, pipeline document validator, and reference resolver import the shared name grammar from `config/document-name.js`.
+
 ### Guard
 
 The declarations-only block in `src/architecture.test.ts` is generalized to run over a set of vocabulary modules holding both `state/checkpoint/types.ts` and `config/binding/types.ts`, rather than gaining a second block (per DR5). Each module keeps an anchor assertion naming a type it must declare, so the guard still proves which file it read, and the execution/display inversion check applies to both.
+
+The same architecture suite traverses production source imports transitively from both document validators, follows static, dynamic, re-export, side-effect, and type-only edges, and fails with the dependency chain if either graph reaches a `node:fs` or `node:path` specifier (per DR9).
 
 ### Tests
 
 `config/execution.test.ts` divides to follow the modules (per DR6). The fifteen-case schema table runs once, directly against the shared validator with no filesystem, and absorbs both of today's catalog-stage-coverage cases. Each document's validator test covers its envelope plus a small number of cases asserting the field path its diagnostics carry, proving it delegates to the shared schema at the right base path. Each document's loader test covers missing-file semantics, JSON syntax errors, and the failure shape loading produces. Resolution is tested beside `binding/resolve.ts`.
 
+`pipeline/stage-id.test.ts` owns the exact ordered ID set and narrowing cases; `pipeline/catalog.test.ts` keeps the catalog-to-ID equality assertion. `config/document-name.test.ts` owns the raw shared name grammar cases, while `config/references.test.ts` retains reference-resolution behavior (per DR9).
+
 ### Documentation
 
-Two edits to `cli/AGENTS.md` (per DR8):
+`cli/AGENTS.md` carries these durable descriptions (per DR5, DR8, and DR9):
 
 - The "Local bindings" bullet under "Execution model" points at `config/binding/resolve.ts`.
-- The `config/` entry in the module layout names the three folders rather than the seven files, and carries the two facts a directory listing cannot give: that the binding vocabulary declares and does nothing, so the checkpoint can name a resolved binding without reaching a document loader, and that both documents validate their stage maps through one shared schema, which is what keeps their diagnostics from drifting apart.
-
-The guard's contract line in the same file is reworded from the singular to describe the generalized guard (per DR5).
+- The `config/` entry in the module layout names the import-free document-name grammar and the three binding folders, and states that the binding vocabulary declares and does nothing and that both documents share one stage-binding schema.
+- The `pipeline/` entry names the import-free catalog-stage identity vocabulary beside the catalog and declarative types.
+- The architecture-guard contract describes both the generalized declarations-only guard and the transitive validator dependency boundary.
 
 ## Constraints
 
@@ -107,6 +116,7 @@ The guard's contract line in the same file is reworded from the singular to desc
 - **`config/binding/types.ts` must remain executable-free**, since the generalized guard reads its source text and rejects a value import, a constant, a function, a class, or a `new`.
 - **`architecture.test.ts` reads source text and judges static, dynamic, re-export, and type-only imports for what they are.** When it fails, the boundary moved — argue the direction rather than relaxing the guard.
 - **No barrel, index, or re-export may span the split**, including as a convenience for the preflight steps.
+- **Validator purity is judged over the full source graph**, including type-only edges; a runtime-erased route to `node:fs` or `node:path` still violates AC-4.1 (DR9).
 - **The CLI is pre-release with no backward-compatibility obligation**, but that licenses redesign, not disrepair: `npm --prefix cli run check` must pass — no failing tests, no type errors, no half-migrated code.
 - **Do not stage, commit, or push** as part of this spec's implementation beyond what the repository's own workflow directs.
 
@@ -139,6 +149,9 @@ The guard's contract line in the same file is reworded from the singular to desc
 - **AC-4.3** The profile validator and `loadExecutionProfile` return the same profile result union (DR7).
 - **AC-4.4** The settings validator returns a union carrying the stage map or the errors, and `loadStageSettings` returns that outcome with `sourcePath` attached on failure (DR7).
 - **AC-4.5** The unions both validators return are declared in `config/binding/types.ts` (DR7).
+- **AC-4.6** `pipeline/stage-id.ts` imports nothing and owns the catalog-stage ID tuple, the `CatalogStageId` type derived from that tuple, and `isCatalogStageId`; the binding schema imports the predicate from that module, and the catalog's ordered keys equal the tuple (DR9).
+- **AC-4.7** `config/document-name.ts` imports nothing and owns `DOCUMENT_NAME_PATTERN` and `isValidDocumentName`; the reference resolver, pipeline document validator, and execution-profile validator import the grammar from that module (DR9).
+- **AC-4.8** `architecture.test.ts` follows every production source import transitively from both document validators, including type-only edges, and rejects any path reaching a `node:fs` or `node:path` specifier with the dependency chain in its failure (DR9).
 
 ### FR-5 — Loader disk semantics are unchanged
 
@@ -177,6 +190,7 @@ The guard's contract line in the same file is reworded from the singular to desc
 - **AC-9.3** Both of today's catalog-stage-coverage cases live in the schema test (DR6).
 - **AC-9.4** Each document validator test asserts the base path its diagnostics carry — `afk.stages.<stage>.…` for settings, `stages.<stage>.…` for a profile (DR6).
 - **AC-9.5** Every case in today's `config/execution.test.ts` has a counterpart in the split tests, or its removal is accounted for by DR6's retirement of the twin-run.
+- **AC-9.6** The catalog-stage identity and document-name grammar each have a co-located test; raw name grammar cases no longer live in `config/references.test.ts`, and catalog-stage predicate cases no longer live in `pipeline/catalog.test.ts` (DR9).
 
 ### FR-10 — Documentation matches the code
 
@@ -185,6 +199,7 @@ The guard's contract line in the same file is reworded from the singular to desc
 - **AC-10.3** The `config/` module-layout entry names the three folders, states that the binding vocabulary declares and does nothing, and states that both documents share one stage-binding schema — and does not enumerate the seven files (DR8).
 - **AC-10.4** The guard contract line in `cli/AGENTS.md` describes the generalized declarations-only guard (DR5).
 - **AC-10.5** `cli/README.md` is unmodified, and no demo scenario is added or edited (DR8).
+- **AC-10.6** The `config/` and `pipeline/` layout entries in `cli/AGENTS.md` name the two import-free identity leaves, and the guard contract line describes the transitive validator dependency boundary (DR9).
 
 ### FR-11 — The gate passes
 

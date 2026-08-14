@@ -7,8 +7,9 @@ import { renderStagePrompt } from "../prompt.js";
 import type { AttemptRequest } from "../types.js";
 import { STAGE_CATALOG } from "../../pipeline/catalog.js";
 import type { CatalogStage } from "../../pipeline/catalog.js";
+import type { CatalogStageId } from "../../pipeline/stage-id.js";
 import { resolveStageTarget } from "../../pipeline/targets.js";
-import type { CatalogStageId, StageTarget } from "../../pipeline/types.js";
+import type { StageTarget } from "../../pipeline/types.js";
 import { createAttemptLog, type AttemptLogHeader } from "../../state/logs.js";
 import {
   createRepoFixture,

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { renderStagePrompt } from "../harness/prompt.js";
-import { CATALOG_STAGE_IDS, STAGE_CATALOG, isCatalogStageId } from "./catalog.js";
+import { STAGE_CATALOG } from "./catalog.js";
 import type { CatalogStage } from "./catalog.js";
-import type { CatalogStageId } from "./types.js";
+import { CATALOG_STAGE_IDS } from "./stage-id.js";
+import type { CatalogStageId } from "./stage-id.js";
 import type {
   ArtifactPrerequisite,
   ArtifactTransition,
@@ -39,18 +40,7 @@ const implementationPolicy: GitPolicy = {
 };
 
 describe("STAGE_CATALOG — release stage set (AC-2.2)", () => {
-  it("exports exactly the nine catalog stages in order", () => {
-    expect(CATALOG_STAGE_IDS).toEqual([
-      "spec",
-      "reconcile-spec",
-      "review-spec",
-      "plan-brief",
-      "plan-strict",
-      "reconcile-plan",
-      "implement",
-      "implement-plan",
-      "implement-plan-with-subagents",
-    ]);
+  it("keys the catalog in catalog-stage identity order", () => {
     expect(Object.keys(STAGE_CATALOG)).toEqual([...CATALOG_STAGE_IDS]);
   });
 
@@ -62,18 +52,8 @@ describe("STAGE_CATALOG — release stage set (AC-2.2)", () => {
       "reconcile-roadmap",
       "review-roadmap",
     ]) {
-      expect(isCatalogStageId(deferred)).toBe(false);
       expect(Object.hasOwn(STAGE_CATALOG, deferred)).toBe(false);
     }
-  });
-
-  it("recognizes every catalog id and rejects unknown strings", () => {
-    for (const id of CATALOG_STAGE_IDS) {
-      expect(isCatalogStageId(id)).toBe(true);
-    }
-    expect(isCatalogStageId("")).toBe(false);
-    expect(isCatalogStageId("Spec")).toBe(false);
-    expect(isCatalogStageId("toString")).toBe(false);
   });
 
   it("keys every entry by its own id and drives its trigger from its skill", () => {

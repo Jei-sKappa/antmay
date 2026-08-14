@@ -3,12 +3,12 @@ import type {
   ArtifactTransition,
 } from "../thread/artifacts.js";
 import type {
-  CatalogStageId,
   GitPolicy,
   PathSelector,
   QueueResolution,
   StageTargetRule,
 } from "./types.js";
+import type { CatalogStageId } from "./stage-id.js";
 
 /**
  * One trusted catalog entry: the unattended adapter around a single
@@ -201,18 +201,3 @@ export const STAGE_CATALOG: Readonly<Record<CatalogStageId, CatalogStage>> = {
     ...strictPlanImplementation,
   },
 };
-
-/**
- * Every catalog stage ID, in catalog order.
- */
-export const CATALOG_STAGE_IDS: readonly CatalogStageId[] = Object.keys(
-  STAGE_CATALOG,
-) as CatalogStageId[];
-
-/**
- * Whether `value` names a catalog stage. Narrows an untrusted string from a
- * pipeline, profile, or settings document to a `CatalogStageId`.
- */
-export function isCatalogStageId(value: string): value is CatalogStageId {
-  return Object.hasOwn(STAGE_CATALOG, value);
-}

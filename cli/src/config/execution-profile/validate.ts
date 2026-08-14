@@ -8,12 +8,15 @@
  */
 
 import { isPlainObject } from "../../shared/validation.js";
+import {
+  DOCUMENT_NAME_PATTERN,
+  isValidDocumentName,
+} from "../document-name.js";
 import { validateStageMap } from "../binding/schema.js";
 import type {
   ExecutionProfileResult,
   StageBindingMap,
 } from "../binding/types.js";
-import { DOCUMENT_NAME_PATTERN, isValidDocumentName } from "../references.js";
 
 export function validateProfileDocument(root: unknown): ExecutionProfileResult {
   if (!isPlainObject(root)) {

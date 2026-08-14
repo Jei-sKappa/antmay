@@ -11,7 +11,7 @@
  */
 
 import type { HarnessId } from "../../harness/id.js";
-import type { CatalogStageId } from "../../pipeline/types.js";
+import type { CatalogStageId } from "../../pipeline/stage-id.js";
 
 /**
  * The external agent a stage runs on. Harness and model are one indivisible

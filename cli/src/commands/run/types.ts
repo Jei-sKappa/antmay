@@ -7,7 +7,7 @@ import type {
   CompositionFailure,
   PreparedStage,
 } from "../../pipeline/composition.js";
-import type { CatalogStageId } from "../../pipeline/types.js";
+import type { CatalogStageId } from "../../pipeline/stage-id.js";
 import type {
   HarnessRuntimeIdentity,
   ProfileSelection,

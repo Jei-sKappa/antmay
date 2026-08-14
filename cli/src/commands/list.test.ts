@@ -6,7 +6,7 @@ import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../harness/id.js";
-import type { CatalogStageId } from "../pipeline/types.js";
+import type { CatalogStageId } from "../pipeline/stage-id.js";
 import type {
   AttemptRecord,
   RunCheckpoint,

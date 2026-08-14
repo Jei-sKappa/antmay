@@ -1,3 +1,5 @@
+import type { CatalogStageId } from "./stage-id.js";
+
 /**
  * A declarative stage target. Either the thread root itself, or a single file
  * addressed by a thread-relative path. Targets are plain JSON so a descriptor
@@ -6,21 +8,6 @@
 export type StageTarget =
   | { kind: "thread-root" }
   | { kind: "thread-file"; path: string };
-
-/**
- * The identifier of one trusted catalog stage. The catalog is closed: a pipeline
- * document may select and order these entries but may not define new ones.
- */
-export type CatalogStageId =
-  | "spec"
-  | "reconcile-spec"
-  | "review-spec"
-  | "plan-brief"
-  | "plan-strict"
-  | "reconcile-plan"
-  | "implement"
-  | "implement-plan"
-  | "implement-plan-with-subagents";
 
 /**
  * A declarative rule producing a stage's target from the artifact state.

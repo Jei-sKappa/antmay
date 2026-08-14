@@ -7,9 +7,9 @@ import {
 } from "../thread/artifacts.js";
 import { STAGE_CATALOG } from "./catalog.js";
 import type { CatalogStage } from "./catalog.js";
+import type { CatalogStageId } from "./stage-id.js";
 import { resolveStageTargetRule } from "./targets.js";
 import type {
-  CatalogStageId,
   PipelineDocument,
   PipelineStageEntry,
 } from "./types.js";

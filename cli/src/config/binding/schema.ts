@@ -13,7 +13,7 @@
 
 import { HARNESS_IDS, isHarnessId } from "../../harness/id.js";
 import type { HarnessId } from "../../harness/id.js";
-import { isCatalogStageId } from "../../pipeline/catalog.js";
+import { isCatalogStageId } from "../../pipeline/stage-id.js";
 import { isPlainObject } from "../../shared/validation.js";
 
 import type {

@@ -3,11 +3,11 @@ import fs from "node:fs";
 import {
   DOCUMENT_NAME_PATTERN,
   isValidDocumentName,
-} from "../config/references.js";
+} from "../config/document-name.js";
 import { isPlainObject } from "../shared/validation.js";
-import { isCatalogStageId } from "./catalog.js";
+import { isCatalogStageId } from "./stage-id.js";
+import type { CatalogStageId } from "./stage-id.js";
 import type {
-  CatalogStageId,
   PipelineDocument,
   PipelineStageEntry,
 } from "./types.js";

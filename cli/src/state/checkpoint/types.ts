@@ -12,7 +12,7 @@
 import type { ResolvedStageBinding } from "../../config/binding/types.js";
 import type { HarnessId } from "../../harness/id.js";
 import type { CatalogStage } from "../../pipeline/catalog.js";
-import type { CatalogStageId } from "../../pipeline/types.js";
+import type { CatalogStageId } from "../../pipeline/stage-id.js";
 import type { TerminalOutcome } from "../../runner/outcome.js";
 import type { ArtifactMismatch } from "../../thread/artifacts.js";
 import type { WorkspaceConfig } from "../../workspace/types.js";

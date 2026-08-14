@@ -154,6 +154,36 @@ function occurrencesOf(source: string, pattern: RegExp): number {
   return [...source.matchAll(pattern)].length;
 }
 
+/**
+ * Every source-import path from `start` to a specifier matching `forbidden`.
+ * Paths follow all relative references, including type-only edges, and stop a
+ * branch when it would revisit a module already on that branch.
+ */
+async function importPathsMatching(
+  start: ModuleId,
+  forbidden: RegExp,
+): Promise<string[][]> {
+  const modules = new Map(
+    (await productionModules()).map((module) => [module.id, module] as const),
+  );
+  const matches: string[][] = [];
+
+  function visit(id: ModuleId, path: ModuleId[]): void {
+    const module = modules.get(id);
+    expect(module, `no production module ${id}`).toBeDefined();
+    for (const reference of module!.references) {
+      if (forbidden.test(reference.specifier)) {
+        matches.push([...path, reference.specifier]);
+      }
+      if (reference.target === null || path.includes(reference.target)) continue;
+      visit(reference.target, [...path, reference.target]);
+    }
+  }
+
+  visit(start, [start]);
+  return matches;
+}
+
 /** Line and block comments removed, so a guard reads declarations only. */
 function withoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
@@ -603,6 +633,30 @@ describe("a vocabulary module declares and does nothing", () => {
       }
     },
   );
+});
+
+describe("document validators are transitively filesystem- and path-free", () => {
+  const VALIDATORS: readonly ModuleId[] = [
+    "config/settings/validate.ts",
+    "config/execution-profile/validate.ts",
+  ];
+  const IDENTITY_LEAVES: readonly ModuleId[] = [
+    "config/document-name.ts",
+    "pipeline/stage-id.ts",
+  ];
+  const FILESYSTEM_OR_PATH = /^node:(?:fs|path)(?:\/|$)/;
+
+  it.each(IDENTITY_LEAVES)("$id imports nothing", async (id) => {
+    expect((await moduleNamed(id)).references).toEqual([]);
+  });
+
+  it.each(VALIDATORS)("$id reaches no filesystem or path builtin", async (id) => {
+    const paths = await importPathsMatching(id, FILESYSTEM_OR_PATH);
+    expect(
+      paths,
+      paths.map((path) => path.join(" -> ")).join("\n"),
+    ).toEqual([]);
+  });
 });
 
 describe("a pause is built in one module and compared field by field", () => {

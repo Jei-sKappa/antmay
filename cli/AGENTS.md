@@ -237,7 +237,8 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   beneath them and no orchestration path. Injected dependencies common to both
   live in a neutral `CommandDeps` type, with run-only seams kept in a run
   extension. `list` stays a self-contained read of durable state.
-- `config/` — root path resolution (`roots.ts`), syntax-directed pipeline/profile
+- `config/` — root path resolution (`roots.ts`), the import-free shared
+  document-name grammar (`document-name.ts`), syntax-directed pipeline/profile
   reference resolution (`references.ts`), and the local execution bindings, as
   three folders: `binding/` (the vocabulary, the stage-binding schema, and
   per-stage resolution), `settings/`, and `execution-profile/` (one document
@@ -246,10 +247,11 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   reaching a document loader; both documents validate their stage maps through
   the one shared schema, which is what keeps their diagnostics from drifting
   apart.
-- `pipeline/` — the shared declarative types (`types.ts`), the trusted stage
-  catalog (`catalog.ts`), pipeline-document loading and validation
-  (`documents.ts`), suffix selection and artifact-state composition
-  (`composition.ts`), and target-rule resolution (`targets.ts`).
+- `pipeline/` — the import-free catalog-stage identity (`stage-id.ts`), the
+  shared declarative types (`types.ts`), the trusted stage catalog (`catalog.ts`),
+  pipeline-document loading and validation (`documents.ts`), suffix selection
+  and artifact-state composition (`composition.ts`), and target-rule resolution
+  (`targets.ts`).
 - `execution/` — the run, as a loop over named phases.
   `engine.ts` is that loop and only that loop: it states the order — recover a
   resumed cursor, then per stage a signal at rest, the queue gate, the artifact
@@ -383,10 +385,12 @@ bearing.
   version, and grammar errors stay cheap.
 - **`src/architecture.test.ts` enforces the dependency directions** the modules
   above are built on: one checkpoint writer outside allocation, each vocabulary
-  module holding nothing but type declarations, a resume preflight that
-  reaches no transition collaborator, the terminal-outcome protocol spelled out
-  nowhere but the leaf module that declares it, the Git protocol behind its one
-  operation, artifact contracts declared only in the thread domain, pauses
+  module holding nothing but type declarations, both document validators
+  transitively reaching neither filesystem nor path builtins through any source
+  import, a resume preflight that reaches no transition collaborator, the
+  terminal-outcome protocol spelled out nowhere but the leaf module that declares
+  it, the Git protocol behind its one operation, artifact contracts declared only
+  in the thread domain, pauses
   assembled in one module and compared field by field, each recovery kind's
   declared evidence read from one table rather than tested for by comparison,
   durable state changed only by committing a named transition, one caller per

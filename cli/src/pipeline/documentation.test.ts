@@ -8,10 +8,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadExecutionProfile } from "../config/execution-profile/load.js";
 import { loadStageSettings } from "../config/settings/load.js";
 import { resolveDocumentReference } from "../config/references.js";
-import { CATALOG_STAGE_IDS, STAGE_CATALOG } from "./catalog.js";
+import { STAGE_CATALOG } from "./catalog.js";
 import { loadPipelineDocument } from "./documents.js";
+import { CATALOG_STAGE_IDS } from "./stage-id.js";
+import type { CatalogStageId } from "./stage-id.js";
 import type { ArtifactPrerequisite } from "../thread/artifacts.js";
-import type { CatalogStageId } from "./types.js";
 
 /**
  * The published documentation is a contract surface of its own: `cli/README.md`

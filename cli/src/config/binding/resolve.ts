@@ -5,7 +5,7 @@
  * this is the one place a fallback happens.
  */
 
-import type { CatalogStageId } from "../../pipeline/types.js";
+import type { CatalogStageId } from "../../pipeline/stage-id.js";
 
 import type {
   ResolvedStageBinding,

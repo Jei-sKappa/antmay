@@ -7,7 +7,7 @@
 import path from "node:path";
 
 import { isHarnessId } from "../../harness/id.js";
-import { isCatalogStageId } from "../../pipeline/catalog.js";
+import { isCatalogStageId } from "../../pipeline/stage-id.js";
 import {
   DONE_OUTCOME,
   isTerminalOutcome,

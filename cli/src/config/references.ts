@@ -1,31 +1,16 @@
 import path from "node:path";
 
+import {
+  DOCUMENT_NAME_PATTERN,
+  isValidDocumentName,
+} from "./document-name.js";
+
 /**
  * Which kind of document a reference names. The role selects the config-root
  * directory a bare name resolves below and the wording of diagnostics; it
  * changes nothing else about resolution.
  */
 export type DocumentRole = "pipeline" | "profile";
-
-/**
- * The one grammar shared by bare pipeline and profile references and by the
- * declared `name` inside both document types: lowercase ASCII letters and
- * digits in non-empty segments joined by single hyphens.
- *
- * The predicate is applied to the raw string. Uppercase and non-ASCII
- * characters, whitespace, underscores, dots, path separators, and leading,
- * trailing, or repeated hyphens are all invalid.
- */
-export const DOCUMENT_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/**
- * Whether `value` is a valid pipeline or execution-profile name. The raw string
- * is tested as given: nothing is trimmed, case-folded, Unicode-normalized, or
- * otherwise rewritten before or after the test.
- */
-export function isValidDocumentName(value: string): boolean {
-  return DOCUMENT_NAME_PATTERN.test(value);
-}
 
 /**
  * A reference resolved to one absolute source path.
