@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { governedBy } from "../test-helpers/waiting.js";
+import { governedBy } from "../../test-helpers/waiting.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
   WaitingRecovery,
-} from "./checkpoint/types.js";
-import { validateCheckpoint } from "./checkpoint/validate.js";
+} from "./types.js";
+import { validateCheckpoint } from "./validate.js";
 
 function validCheckpoint(): RunCheckpoint {
   return {
