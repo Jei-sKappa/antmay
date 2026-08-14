@@ -199,9 +199,10 @@ a top-level declaration produce.
 - **One checkpoint document per settlement.** A settled attempt and the pause it
   settled into are written by one `commitCursor` call carrying both transitions.
   After this change there is exactly one call site in the settlement path.
-- **Exactly one clock read per settlement.** Today each path through `settleAttempt`
-  calls `ctx.clock()` once — the violated-promise branch reads it and returns, and
-  every other path reads it after the boundary. Preserve that: no path may read the
+- **Exactly one clock read per settlement.** Today every settlement reads
+  `ctx.clock()` exactly once: the violated-promise branch reads it and returns, the
+  signal-abort path reads it inside the interruption collaborator, and every
+  remaining path reads it after the boundary. Preserve that: no path may read the
   clock twice, which would put a different `endedAt` on the record than the duration
   was computed from.
 - **`cli/src/architecture.test.ts` is a guard, not a formality.** Its phase-caller
@@ -274,7 +275,8 @@ a top-level declaration produce.
   `cli/src/execution/engine.test.ts` asserts the key's absence
   *(traces to `decisions.md` DR2, DR6)*.
 - **AC-3.2** A done-pending-queues settlement's serialized attempt record has
-  `result` `done` and carries the observed `pendingFiles`.
+  `result` `done` and carries the observed `pendingFiles`, pinned by an assertion
+  in `cli/src/execution/engine.test.ts` *(traces to `decisions.md` DR2, DR6)*.
 - **AC-3.3** A stopped settlement's serialized attempt record has `result`
   `interrupted` when a signal-caused abort ended the attempt and `waiting`
   otherwise, carries `pendingFiles` only when non-empty, and carries a `failure`
@@ -350,8 +352,12 @@ a top-level declaration produce.
 
 - **AC-9.1** `npm --prefix cli run check` exits successfully.
 - **AC-9.2** `npm --prefix cli run lint` exits successfully.
-- **AC-9.3** Focused runs of the settlement, engine, recovery, boundary, and
-  architecture tests pass.
+- **AC-9.3** Focused runs of the tests that cover this change pass:
+  `cli/src/execution/engine.test.ts`, which is where settlement itself is proven
+  (per `decisions.md` DR6), `cli/src/execution/pause.test.ts`,
+  `cli/src/execution/recovery.test.ts`,
+  `cli/src/execution/recovery-policy.test.ts`,
+  `cli/src/gitops/boundary.test.ts`, and `cli/src/architecture.test.ts`.
 
 ## Degrees of freedom
 
