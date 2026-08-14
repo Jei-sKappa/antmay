@@ -20,6 +20,7 @@ import {
 } from "../../thread/artifacts.js";
 
 import type {
+  AttemptReference,
   AttemptResult,
   CheckpointResult,
   RunCheckpoint,
@@ -734,6 +735,51 @@ function executingAttemptIsFinal(checkpoint: RunCheckpoint): string[] {
 }
 
 /**
+ * Resolve one recovery's attempt reference against the recorded history and
+ * report every way it fails to name the attempt that recovery kind can act on.
+ */
+function attemptReferenceDiagnostics(
+  checkpoint: RunCheckpoint,
+  reference: AttemptReference,
+  requiredResult: "done" | "waiting",
+  kind: string,
+): string[] {
+  if (reference.stageIndex !== checkpoint.stageIndex) {
+    return [
+      `waiting.recovery.attempt.stageIndex (${reference.stageIndex}) must name the current stage (${checkpoint.stageIndex}).`,
+    ];
+  }
+  const referenced = checkpoint.attempts.find(
+    (attempt) =>
+      attempt.stageIndex === reference.stageIndex &&
+      attempt.attempt === reference.attempt,
+  );
+  if (referenced === undefined) {
+    return [
+      `waiting.recovery.attempt names no recorded attempt (stage ${reference.stageIndex}, attempt ${reference.attempt}).`,
+    ];
+  }
+  const errors: string[] = [];
+  const finalAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
+  if (referenced !== finalAttempt) {
+    errors.push(
+      `waiting.recovery.attempt must name the final attempt in the ordered history; stage ${reference.stageIndex}, attempt ${reference.attempt} is stale.`,
+    );
+  }
+  if (referenced.terminalResult?.token !== "DONE") {
+    errors.push(
+      `waiting.recovery.attempt must name an attempt whose terminal token is ${DONE_OUTCOME}.`,
+    );
+  }
+  if (referenced.result !== requiredResult) {
+    errors.push(
+      `waiting.recovery.attempt must name an attempt with result "${requiredResult}" on a "${kind}" recovery, not "${referenced.result}".`,
+    );
+  }
+  return errors;
+}
+
+/**
  * The pause's recovery must resolve to the final attempt in the ordered
  * history, in the exact state that action requires. An older matching record
  * is stale once another attempt follows it: recovering the older DONE could
@@ -744,55 +790,25 @@ function executingAttemptIsFinal(checkpoint: RunCheckpoint): string[] {
  */
 function recoveryResolvesAgainstAttemptHistory(checkpoint: RunCheckpoint): string[] {
   const recovery = checkpoint.waiting?.recovery;
-  if (recovery === undefined || recovery.kind === "retry-stage") {
-    return [];
-  }
-  const errors: string[] = [];
-  const reference = recovery.attempt;
-  if (reference.stageIndex !== checkpoint.stageIndex) {
-    errors.push(
-      `waiting.recovery.attempt.stageIndex (${reference.stageIndex}) must name the current stage (${checkpoint.stageIndex}).`,
-    );
-  } else {
-    const referenced = checkpoint.attempts.find(
-      (attempt) =>
-        attempt.stageIndex === reference.stageIndex &&
-        attempt.attempt === reference.attempt,
-    );
-    if (referenced === undefined) {
-      errors.push(
-        `waiting.recovery.attempt names no recorded attempt (stage ${reference.stageIndex}, attempt ${reference.attempt}).`,
-      );
-    } else {
-      const finalAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
-      if (referenced !== finalAttempt) {
-        errors.push(
-          `waiting.recovery.attempt must name the final attempt in the ordered history; stage ${reference.stageIndex}, attempt ${reference.attempt} is stale.`,
-        );
-      }
-      if (referenced.terminalResult?.token !== "DONE") {
-        errors.push(
-          `waiting.recovery.attempt must name an attempt whose terminal token is ${DONE_OUTCOME}.`,
-        );
-      }
-      const requiredResult =
-        recovery.kind === "resume-finalized-done" ? "done" : "waiting";
-      if (referenced.result !== requiredResult) {
-        errors.push(
-          `waiting.recovery.attempt must name an attempt with result "${requiredResult}" on a "${recovery.kind}" recovery, not "${referenced.result}".`,
-        );
-      }
+  if (recovery === undefined) return [];
+  switch (recovery.kind) {
+    case "retry-stage":
+      return [];
+    case "resume-finalized-done": {
+      const current = checkpoint.stages[checkpoint.stageIndex];
+      return [
+        ...attemptReferenceDiagnostics(checkpoint, recovery.attempt, "done", recovery.kind),
+        ...(current !== undefined && recovery.queueResolution !== current.queueResolution
+          ? [
+              `waiting.recovery.queueResolution "${recovery.queueResolution}" does not match the current stage's snapshotted resolution "${current.queueResolution}".`,
+            ]
+          : []),
+      ];
     }
+    case "recheck-stage-contract":
+    case "retry-git-finalization":
+      return attemptReferenceDiagnostics(checkpoint, recovery.attempt, "waiting", recovery.kind);
   }
-  if (recovery.kind === "resume-finalized-done") {
-    const current = checkpoint.stages[checkpoint.stageIndex];
-    if (current !== undefined && recovery.queueResolution !== current.queueResolution) {
-      errors.push(
-        `waiting.recovery.queueResolution "${recovery.queueResolution}" does not match the current stage's snapshotted resolution "${current.queueResolution}".`,
-      );
-    }
-  }
-  return errors;
 }
 
 const CROSS_FIELD_INVARIANTS: readonly CrossFieldInvariant[] = [
