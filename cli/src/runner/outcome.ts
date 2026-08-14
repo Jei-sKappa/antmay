@@ -63,18 +63,27 @@ export type OutcomeParse =
   | { token: null; candidateLine: string | null };
 
 /**
- * The prefix, one recognized token, and a word boundary — so a token a longer
- * word merely opens with is not one.
+ * The token a line opens with once its prefix is stripped, or `undefined` when
+ * the remainder opens with none of them.
+ *
+ * A token ends where a word ends, so a longer word one of them merely opens with
+ * is not that token: the character after it must not be a word character, and at
+ * the end of the line there is no character to be one.
  */
-const OUTCOME_RE = new RegExp(
-  `^${OUTCOME_PREFIX}(${TERMINAL_OUTCOMES.join("|")})\\b`,
-);
+function openingToken(rest: string): TerminalOutcome | undefined {
+  return TERMINAL_OUTCOMES.find(
+    (token) => rest.startsWith(token) && !/\w/.test(rest.charAt(token.length)),
+  );
+}
 
 /**
  * Parse the terminal outcome of a single captured iteration. Line endings are
- * normalized (`\r\n`/`\r` → `\n`); the trimmed final non-empty line is matched
- * from its start against the recognized vocabulary. Earlier outcome lines in the
- * transcript never match — only the final line counts.
+ * normalized (`\r\n`/`\r` → `\n`); the trimmed final non-empty line is read from
+ * its start against the recognized vocabulary. Earlier outcome lines in the
+ * transcript are never read — only the final line counts.
+ *
+ * The vocabulary is compared as text rather than compiled into a pattern, so no
+ * character in the protocol can ever mean something other than itself here.
  */
 export function parseTerminalOutcome(finalText: string): OutcomeParse {
   const normalized = finalText.replace(/\r\n?/g, "\n");
@@ -87,13 +96,16 @@ export function parseTerminalOutcome(finalText: string): OutcomeParse {
     return { token: null, candidateLine: null };
   }
 
-  const match = OUTCOME_RE.exec(candidateLine);
-  if (match === null) {
+  if (!candidateLine.startsWith(OUTCOME_PREFIX)) {
     return { token: null, candidateLine };
   }
 
-  // The alternation is the vocabulary itself, so a capture is one of its tokens.
-  const token = match[1] as TerminalOutcome;
-  const detail = candidateLine.slice(match[0].length).trim();
+  const rest = candidateLine.slice(OUTCOME_PREFIX.length);
+  const token = openingToken(rest);
+  if (token === undefined) {
+    return { token: null, candidateLine };
+  }
+
+  const detail = rest.slice(token.length).trim();
   return { token, candidateLine, detail };
 }
