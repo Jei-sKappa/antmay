@@ -51,7 +51,8 @@ architecture guard's phase table.
 
 ### Out of scope
 
-Each exclusion is settled (DR6):
+DR6 fences the thread to launch's internal shape; each exclusion below is that
+fence, or the decision cited beside it:
 
 - **Renaming `attempt.ts` or the `launchAttempt` entry point.** It pairs with
   `settlement.ts` as the loop's two attempt phases; a rename would move the
@@ -97,7 +98,9 @@ as `headAfterAttempt` and an empty `pendingFiles` evidence list.
 
 `attempt.ts` declares both `LaunchOutcome` and `LaunchedAttempt` (DR5). The
 engine and `settlement.ts` keep naming `attempt.ts` and learn nothing about
-launch having internal parts.
+launch having internal parts. That the invocation step is what produces a
+`LaunchedAttempt` is stated in the type's doc comment rather than carried by
+file placement (DR5).
 
 ### Reservation
 
@@ -208,8 +211,9 @@ already pinned by a named case in `cli/src/execution/engine.test.ts`.
   commit unless explicitly asked, which overrides any default per-task commit
   cadence.
 - **Follow the existing `phases/` conventions**: one purpose per file, plain data
-  passed between modules, doc comments that state contracts and rationale rather
-  than narrating sections.
+  passed between modules, pure helpers private to the module that branches on
+  them (DR1), and doc comments that state contracts and rationale rather than
+  narrating sections.
 
 ## Acceptance criteria
 
@@ -289,7 +293,8 @@ already pinned by a named case in `cli/src/execution/engine.test.ts`.
 
 ### FR-6 — The phase's outward types stay at its front door
 
-- **AC-6.1** `attempt.ts` declares `LaunchOutcome` and `LaunchedAttempt`;
+- **AC-6.1** `attempt.ts` declares `LaunchOutcome` and `LaunchedAttempt`, and
+  `LaunchedAttempt`'s doc comment names the invocation step as its producer;
   `engine.ts` and `settlement.ts` import them from `attempt.ts` and from no
   sub-step. (DR5)
 - **AC-6.2** The invocation module's reference to `LaunchedAttempt` is type-only,
@@ -304,7 +309,7 @@ already pinned by a named case in `cli/src/execution/engine.test.ts`.
 - **AC-7.2** `npm --prefix cli run check` exits 0, `npm run lint` exits 0, and
   the engine and architecture suites pass when run focused.
 - **AC-7.3** `npm run demo:all` reports every scenario green, with no scenario
-  added or edited. (DR6)
+  added or edited. (DR4)
 - **AC-7.4** A baseline trace is generated freshly from this thread's pre-change
   `HEAD`, the change is traced over the same scenarios, and
   `npm run trace:compare <baseline> <after> --ignore-call renderStagePrompt`
@@ -313,10 +318,11 @@ already pinned by a named case in `cli/src/execution/engine.test.ts`.
   implementation report as a pure call whose evaluation point moved behind the
   pre-launch signal guard. (DR4)
 - **AC-7.5** The comparison reports no instrumented name the baseline carried as
-  absent afterwards; the names it reports as relocated are the pure helpers this
-  change moves between modules, and the names it reports as newly visible are the
-  two extracted steps and the helpers this change introduces, with nothing else
-  in either set. (DR4)
+  absent afterwards; the names it reports as relocated are exactly the pure
+  helpers this change moves between modules — `nextAttemptNumber`,
+  `errorMessage`, and `resolveAttemptSession` — and the names it reports as newly
+  visible are the two extracted steps and the private capture helper's own
+  functions, with nothing else in either set. (DR4)
 
 ## Degrees of freedom
 
@@ -333,8 +339,9 @@ unchanged and visible to no user:
 - **The field name for the log path inside `ReservedAttempt`**, and whether the
   type is declared above or below the function that produces it.
 - **The wording of every doc comment**, including how `attempt.ts`'s module
-  comment phrases the launch order, so long as it states that order once and
-  names the reservation step as `ReservedAttempt`'s only producer.
+  comment phrases the launch order, so long as it states that order once, names
+  the reservation step as `ReservedAttempt`'s only producer, and names the
+  invocation step as `LaunchedAttempt`'s producer.
 - **Import grouping and ordering** within each file.
 - **The order in which the two extractions are performed**, and whether the trace
   baseline is captured in a git worktree or a separate snapshot checkout.
