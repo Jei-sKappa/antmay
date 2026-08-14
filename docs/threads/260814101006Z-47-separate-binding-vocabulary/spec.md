@@ -172,7 +172,7 @@ The guard's contract line in the same file is reworded from the singular to desc
 
 ### FR-9 — Tests follow the modules
 
-- **AC-9.1** Each of the seven modules has its test co-located beside it, and no test file spans two of them.
+- **AC-9.1** Each of the six modules that hold behavior — the shared schema, both document validators, both loaders, and resolution — has its test co-located beside it, and no test file spans two of them. `config/binding/types.ts` declares no behavior to test; `architecture.test.ts` is what holds it to its contract (DR5, DR6).
 - **AC-9.2** The shared schema case table runs once, against the schema validator, and writes no file to disk (DR6).
 - **AC-9.3** Both of today's catalog-stage-coverage cases live in the schema test (DR6).
 - **AC-9.4** Each document validator test asserts the base path its diagnostics carry — `afk.stages.<stage>.…` for settings, `stages.<stage>.…` for a profile (DR6).
