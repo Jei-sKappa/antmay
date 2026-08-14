@@ -219,19 +219,13 @@ function validateTargetRule(value: unknown, label: string, errors: string[]): vo
 /**
  * Validate one snapshotted stage: its catalog descriptor and artifact contract,
  * the concrete resolved target, the optional portable instructions, and the
- * resolved local binding. Returns the stage id and bound harness when
- * structurally sound enough for cross-field checks, else `undefined`.
+ * resolved local binding.
  */
-function validateStage(
-  value: unknown,
-  label: string,
-  errors: string[],
-): { id: string; harness: string } | undefined {
+function validateStage(value: unknown, label: string, errors: string[]): void {
   if (!isPlainObject(value)) {
     errors.push(`${label} must be an object.`);
-    return undefined;
+    return;
   }
-  let id: string | undefined;
   // Naming a catalog stage is the whole of what the id has to do: the rest of
   // the snapshotted descriptor is validated for shape alone and never compared
   // with the catalog's current entry for that id. Deliberately so — it is what
@@ -242,8 +236,6 @@ function validateStage(
   // and take that coverage with it.
   if (typeof value.id !== "string" || !isCatalogStageId(value.id)) {
     errors.push(`${label}.id must name a catalog stage.`);
-  } else {
-    id = value.id;
   }
   if (!isNonEmptyString(value.skill)) {
     errors.push(`${label}.skill must be a non-empty string.`);
@@ -269,14 +261,6 @@ function validateStage(
     errors.push(`${label}.instructions must be a non-empty string when present.`);
   }
   validateStageBinding(value.binding, `${label}.binding`, errors);
-  const harness =
-    isPlainObject(value.binding) &&
-    isPlainObject(value.binding.agent) &&
-    typeof value.binding.agent.harness === "string"
-      ? value.binding.agent.harness
-      : undefined;
-  if (id === undefined || harness === undefined) return undefined;
-  return { id, harness };
 }
 
 function validateTerminalResult(value: unknown, label: string, errors: string[]): void {
@@ -640,6 +624,186 @@ function validateWorkspace(value: unknown, errors: string[]): void {
   }
 }
 
+/** One cross-field invariant: a pure question asked of an accepted checkpoint. */
+type CrossFieldInvariant = (checkpoint: RunCheckpoint) => string[];
+
+function stageIndexWithinConditionBounds(checkpoint: RunCheckpoint): string[] {
+  const stageCount = checkpoint.stages.length;
+  if (checkpoint.condition === "completed") {
+    if (checkpoint.stageIndex !== stageCount) {
+      return [
+        `stageIndex must equal the stage count (${stageCount}) when the run is completed.`,
+      ];
+    }
+    return [];
+  }
+  if (checkpoint.stageIndex >= stageCount) {
+    return [
+      `stageIndex ${checkpoint.stageIndex} is out of range for a "${checkpoint.condition}" run with ${stageCount} stages.`,
+    ];
+  }
+  return [];
+}
+
+function everyStageHarnessObserved(checkpoint: RunCheckpoint): string[] {
+  const errors: string[] = [];
+  checkpoint.stages.forEach((stage, i) => {
+    const harness = stage.binding.agent.harness;
+    if (checkpoint.observedHarnessVersions[harness] === undefined) {
+      errors.push(
+        `stages[${i}] selects harness "${harness}" but observedHarnessVersions has no entry for it.`,
+      );
+    }
+  });
+  return errors;
+}
+
+function workspacePathMatchesExecutionCwd(checkpoint: RunCheckpoint): string[] {
+  if (checkpoint.workspace.path !== checkpoint.workspace.execution.cwd) {
+    return [
+      `workspace.path must equal workspace.execution.cwd for a current-checkout workspace.`,
+    ];
+  }
+  return [];
+}
+
+function attemptsAgreeWithSnapshottedStages(checkpoint: RunCheckpoint): string[] {
+  const errors: string[] = [];
+  const stageCount = checkpoint.stages.length;
+  const perStageNumbers = new Map<number, Set<number>>();
+  checkpoint.attempts.forEach((attempt, i) => {
+    const snapshotted = checkpoint.stages[attempt.stageIndex];
+    if (snapshotted === undefined) {
+      errors.push(
+        `attempts[${i}].stageIndex ${attempt.stageIndex} is out of range for ${stageCount} stages.`,
+      );
+    } else if (snapshotted.id !== attempt.stageId) {
+      errors.push(
+        `attempts[${i}].stageId "${attempt.stageId}" does not match snapshotted stage ${attempt.stageIndex} ("${snapshotted.id}").`,
+      );
+    }
+    let seen = perStageNumbers.get(attempt.stageIndex);
+    if (!seen) {
+      seen = new Set<number>();
+      perStageNumbers.set(attempt.stageIndex, seen);
+    }
+    if (seen.has(attempt.attempt)) {
+      errors.push(
+        `attempts[${i}] reuses attempt number ${attempt.attempt} for stage ${attempt.stageIndex}.`,
+      );
+    } else {
+      seen.add(attempt.attempt);
+    }
+    if (
+      attempt.result === "done" &&
+      (attempt.terminalResult === null || attempt.terminalResult.token !== "DONE")
+    ) {
+      errors.push(
+        `attempts[${i}] is "done" but does not carry a parsed ${DONE_OUTCOME} outcome.`,
+      );
+    }
+  });
+  return errors;
+}
+
+function executingAttemptIsFinal(checkpoint: RunCheckpoint): string[] {
+  const executingIdx = checkpoint.attempts
+    .map((a, i) => ({ a, i }))
+    .filter(({ a }) => a.result === "executing")
+    .map(({ i }) => i);
+  if (checkpoint.condition === "executing") {
+    if (checkpoint.attempts.length === 0) {
+      return [`an "executing" run must have at least one attempt.`];
+    }
+    if (
+      executingIdx.length !== 1 ||
+      executingIdx[0] !== checkpoint.attempts.length - 1
+    ) {
+      return [
+        `an "executing" run requires exactly the final attempt to be "executing".`,
+      ];
+    }
+    return [];
+  }
+  if (executingIdx.length > 0) {
+    return [
+      `a "${checkpoint.condition}" run must have no attempt with result "executing".`,
+    ];
+  }
+  return [];
+}
+
+/**
+ * The pause's recovery must resolve to the final attempt in the ordered
+ * history, in the exact state that action requires. An older matching record
+ * is stale once another attempt follows it: recovering the older DONE could
+ * otherwise advance past the newer attempt. A reference that names no recorded
+ * attempt, an attempt of another stage, a stale attempt, a non-DONE verdict, or
+ * a result the action cannot start from all make the document unrecoverable
+ * rather than approximately recoverable.
+ */
+function recoveryResolvesAgainstAttemptHistory(checkpoint: RunCheckpoint): string[] {
+  const recovery = checkpoint.waiting?.recovery;
+  if (recovery === undefined || recovery.kind === "retry-stage") {
+    return [];
+  }
+  const errors: string[] = [];
+  const reference = recovery.attempt;
+  if (reference.stageIndex !== checkpoint.stageIndex) {
+    errors.push(
+      `waiting.recovery.attempt.stageIndex (${reference.stageIndex}) must name the current stage (${checkpoint.stageIndex}).`,
+    );
+  } else {
+    const referenced = checkpoint.attempts.find(
+      (attempt) =>
+        attempt.stageIndex === reference.stageIndex &&
+        attempt.attempt === reference.attempt,
+    );
+    if (referenced === undefined) {
+      errors.push(
+        `waiting.recovery.attempt names no recorded attempt (stage ${reference.stageIndex}, attempt ${reference.attempt}).`,
+      );
+    } else {
+      const finalAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
+      if (referenced !== finalAttempt) {
+        errors.push(
+          `waiting.recovery.attempt must name the final attempt in the ordered history; stage ${reference.stageIndex}, attempt ${reference.attempt} is stale.`,
+        );
+      }
+      if (referenced.terminalResult?.token !== "DONE") {
+        errors.push(
+          `waiting.recovery.attempt must name an attempt whose terminal token is ${DONE_OUTCOME}.`,
+        );
+      }
+      const requiredResult =
+        recovery.kind === "resume-finalized-done" ? "done" : "waiting";
+      if (referenced.result !== requiredResult) {
+        errors.push(
+          `waiting.recovery.attempt must name an attempt with result "${requiredResult}" on a "${recovery.kind}" recovery, not "${referenced.result}".`,
+        );
+      }
+    }
+  }
+  if (recovery.kind === "resume-finalized-done") {
+    const current = checkpoint.stages[checkpoint.stageIndex];
+    if (current !== undefined && recovery.queueResolution !== current.queueResolution) {
+      errors.push(
+        `waiting.recovery.queueResolution "${recovery.queueResolution}" does not match the current stage's snapshotted resolution "${current.queueResolution}".`,
+      );
+    }
+  }
+  return errors;
+}
+
+const CROSS_FIELD_INVARIANTS: readonly CrossFieldInvariant[] = [
+  stageIndexWithinConditionBounds,
+  everyStageHarnessObserved,
+  workspacePathMatchesExecutionCwd,
+  attemptsAgreeWithSnapshottedStages,
+  executingAttemptIsFinal,
+  recoveryResolvesAgainstAttemptHistory,
+];
+
 /**
  * Validate an untrusted document against the `schemaVersion: 0` checkpoint
  * schema. Reports every field-shape and cross-field invariant problem at once.
@@ -711,19 +875,14 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
     errors.push(`fromStage must name a catalog stage when present.`);
   }
 
-  const stageInfos: Array<{ id: string; harness: string } | undefined> = [];
   if (!Array.isArray(doc.stages)) {
     errors.push(`stages must be an array.`);
   } else if (doc.stages.length === 0) {
     errors.push(`stages must contain at least one stage.`);
   } else {
-    doc.stages.forEach((stage, i) => {
-      stageInfos.push(validateStage(stage, `stages[${i}]`, errors));
-    });
+    doc.stages.forEach((stage, i) => validateStage(stage, `stages[${i}]`, errors));
   }
-  const stageCount = Array.isArray(doc.stages) ? doc.stages.length : 0;
 
-  const observedHarnesses = new Map<string, string>();
   if (!isPlainObject(doc.observedHarnessVersions)) {
     errors.push(`observedHarnessVersions must be an object.`);
   } else {
@@ -732,23 +891,18 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
         errors.push(`observedHarnessVersions.${key} is not a known harness id.`);
       } else if (!isNonEmptyString(val)) {
         errors.push(`observedHarnessVersions.${key} must be a non-empty string.`);
-      } else {
-        observedHarnesses.set(key, val);
       }
     }
   }
 
   validateRuntime(doc.runtime, errors);
 
-  let stageIndexValid = false;
   if (
     typeof doc.stageIndex !== "number" ||
     !Number.isInteger(doc.stageIndex) ||
     doc.stageIndex < 0
   ) {
     errors.push(`stageIndex must be a non-negative integer.`);
-  } else {
-    stageIndexValid = true;
   }
 
   let condition: RunCondition | undefined;
@@ -787,152 +941,7 @@ export function validateCheckpoint(doc: unknown): CheckpointResult {
 
   const checkpoint = doc as unknown as RunCheckpoint;
 
-  // stageIndex bounds by condition.
-  if (stageIndexValid && condition !== undefined) {
-    if (condition === "completed") {
-      if (checkpoint.stageIndex !== stageCount) {
-        errors.push(
-          `stageIndex must equal the stage count (${stageCount}) when the run is completed.`,
-        );
-      }
-    } else if (checkpoint.stageIndex >= stageCount) {
-      errors.push(
-        `stageIndex ${checkpoint.stageIndex} is out of range for a "${condition}" run with ${stageCount} stages.`,
-      );
-    }
-  }
-
-  // observed-harness-version coverage for every snapshotted stage.
-  for (let i = 0; i < stageInfos.length; i += 1) {
-    const info = stageInfos[i];
-    if (info && !observedHarnesses.has(info.harness)) {
-      errors.push(
-        `stages[${i}] selects harness "${info.harness}" but observedHarnessVersions has no entry for it.`,
-      );
-    }
-  }
-
-  // workspace.path == execution.cwd for current-checkout.
-  if (checkpoint.workspace.path !== checkpoint.workspace.execution.cwd) {
-    errors.push(
-      `workspace.path must equal workspace.execution.cwd for a current-checkout workspace.`,
-    );
-  }
-
-  // Attempt-level cross-field invariants.
-  const perStageNumbers = new Map<number, Set<number>>();
-  checkpoint.attempts.forEach((attempt, i) => {
-    const snapshotted = checkpoint.stages[attempt.stageIndex];
-    if (snapshotted === undefined) {
-      errors.push(
-        `attempts[${i}].stageIndex ${attempt.stageIndex} is out of range for ${stageCount} stages.`,
-      );
-    } else if (snapshotted.id !== attempt.stageId) {
-      errors.push(
-        `attempts[${i}].stageId "${attempt.stageId}" does not match snapshotted stage ${attempt.stageIndex} ("${snapshotted.id}").`,
-      );
-    }
-    let seen = perStageNumbers.get(attempt.stageIndex);
-    if (!seen) {
-      seen = new Set<number>();
-      perStageNumbers.set(attempt.stageIndex, seen);
-    }
-    if (seen.has(attempt.attempt)) {
-      errors.push(
-        `attempts[${i}] reuses attempt number ${attempt.attempt} for stage ${attempt.stageIndex}.`,
-      );
-    } else {
-      seen.add(attempt.attempt);
-    }
-    if (
-      attempt.result === "done" &&
-      (attempt.terminalResult === null || attempt.terminalResult.token !== "DONE")
-    ) {
-      errors.push(
-        `attempts[${i}] is "done" but does not carry a parsed ${DONE_OUTCOME} outcome.`,
-      );
-    }
-  });
-
-  // Exactly the final attempt is executing iff the run is executing.
-  const executingIdx = checkpoint.attempts
-    .map((a, i) => ({ a, i }))
-    .filter(({ a }) => a.result === "executing")
-    .map(({ i }) => i);
-  if (condition === "executing") {
-    if (checkpoint.attempts.length === 0) {
-      errors.push(`an "executing" run must have at least one attempt.`);
-    } else if (
-      executingIdx.length !== 1 ||
-      executingIdx[0] !== checkpoint.attempts.length - 1
-    ) {
-      errors.push(
-        `an "executing" run requires exactly the final attempt to be "executing".`,
-      );
-    }
-  } else if (executingIdx.length > 0) {
-    errors.push(
-      `a "${condition}" run must have no attempt with result "executing".`,
-    );
-  }
-
-  // The pause's recovery must resolve to the final attempt in the ordered
-  // history, in the exact state that action requires. An older matching record
-  // is stale once another attempt follows it: recovering the older DONE could
-  // otherwise advance past the newer attempt. A reference that names no recorded
-  // attempt, an attempt of another stage, a stale attempt, a non-DONE verdict, or
-  // a result the action cannot start from all make the document unrecoverable
-  // rather than approximately recoverable.
-  const recovery = checkpoint.waiting?.recovery;
-  if (recovery !== undefined && recovery.kind !== "retry-stage") {
-    const reference = recovery.attempt;
-    if (reference.stageIndex !== checkpoint.stageIndex) {
-      errors.push(
-        `waiting.recovery.attempt.stageIndex (${reference.stageIndex}) must name the current stage (${checkpoint.stageIndex}).`,
-      );
-    } else {
-      const referenced = checkpoint.attempts.find(
-        (attempt) =>
-          attempt.stageIndex === reference.stageIndex &&
-          attempt.attempt === reference.attempt,
-      );
-      if (referenced === undefined) {
-        errors.push(
-          `waiting.recovery.attempt names no recorded attempt (stage ${reference.stageIndex}, attempt ${reference.attempt}).`,
-        );
-      } else {
-        const finalAttempt = checkpoint.attempts[checkpoint.attempts.length - 1];
-        if (referenced !== finalAttempt) {
-          errors.push(
-            `waiting.recovery.attempt must name the final attempt in the ordered history; stage ${reference.stageIndex}, attempt ${reference.attempt} is stale.`,
-          );
-        }
-        if (referenced.terminalResult?.token !== "DONE") {
-          errors.push(
-            `waiting.recovery.attempt must name an attempt whose terminal token is ${DONE_OUTCOME}.`,
-          );
-        }
-        const requiredResult =
-          recovery.kind === "resume-finalized-done" ? "done" : "waiting";
-        if (referenced.result !== requiredResult) {
-          errors.push(
-            `waiting.recovery.attempt must name an attempt with result "${requiredResult}" on a "${recovery.kind}" recovery, not "${referenced.result}".`,
-          );
-        }
-      }
-    }
-    if (recovery.kind === "resume-finalized-done") {
-      const current = checkpoint.stages[checkpoint.stageIndex];
-      if (
-        current !== undefined &&
-        recovery.queueResolution !== current.queueResolution
-      ) {
-        errors.push(
-          `waiting.recovery.queueResolution "${recovery.queueResolution}" does not match the current stage's snapshotted resolution "${current.queueResolution}".`,
-        );
-      }
-    }
-  }
+  errors.push(...CROSS_FIELD_INVARIANTS.flatMap((invariant) => invariant(checkpoint)));
 
   if (errors.length > 0) {
     return { ok: false, errors };
