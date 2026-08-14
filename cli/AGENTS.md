@@ -133,8 +133,8 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   transitions, projected value, and requirement — which the terminal renderer
   explains without exposing the internal simulated-state vocabulary. A `--from`
   suffix credits nothing a skipped stage would have promised.
-- **Local bindings** (`config/execution.ts`) supply the agent and timings the
-  pipeline deliberately does not: one binding per selected stage, from the
+- **Local bindings** (`config/binding/resolve.ts`) supply the agent and timings
+  the pipeline deliberately does not: one binding per selected stage, from the
   selected execution profile when it binds that stage and from `settings.json`
   otherwise. The whole binding comes from one document — fields never merge
   across the two — and only the intrinsic defaults fill an omitted timing.
@@ -238,9 +238,14 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   live in a neutral `CommandDeps` type, with run-only seams kept in a run
   extension. `list` stays a self-contained read of durable state.
 - `config/` — root path resolution (`roots.ts`), syntax-directed pipeline/profile
-  reference resolution (`references.ts`), and the local binding documents:
-  settings and execution-profile loading plus per-stage binding resolution
-  (`execution.ts`).
+  reference resolution (`references.ts`), and the local execution bindings, as
+  three folders: `binding/` (the vocabulary, the stage-binding schema, and
+  per-stage resolution), `settings/`, and `execution-profile/` (one document
+  each, validated apart from being read). The binding vocabulary declares and
+  does nothing, which is what lets the checkpoint name a resolved binding without
+  reaching a document loader; both documents validate their stage maps through
+  the one shared schema, which is what keeps their diagnostics from drifting
+  apart.
 - `pipeline/` — the shared declarative types (`types.ts`), the trusted stage
   catalog (`catalog.ts`), pipeline-document loading and validation
   (`documents.ts`), suffix selection and artifact-state composition
@@ -377,8 +382,8 @@ bearing.
   Node guard, dispatch, and per-command dependency loading lazy so help,
   version, and grammar errors stay cheap.
 - **`src/architecture.test.ts` enforces the dependency directions** the modules
-  above are built on: one checkpoint writer outside allocation, a checkpoint
-  vocabulary holding nothing but type declarations, a resume preflight that
+  above are built on: one checkpoint writer outside allocation, each vocabulary
+  module holding nothing but type declarations, a resume preflight that
   reaches no transition collaborator, the terminal-outcome protocol spelled out
   nowhere but the leaf module that declares it, the Git protocol behind its one
   operation, artifact contracts declared only in the thread domain, pauses
