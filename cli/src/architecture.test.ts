@@ -546,9 +546,19 @@ describe("the terminal-outcome protocol has one owner", () => {
   });
 });
 
-describe("the checkpoint vocabulary declares and does nothing", () => {
-  /** The one module that says what a durable checkpoint and its parts are. */
-  const VOCABULARY = "state/checkpoint/types.ts";
+describe("a vocabulary module declares and does nothing", () => {
+  /**
+   * Each module that exists to say what a shape is, with a type it must declare.
+   * The anchor is what proves the guard read the file it names rather than an
+   * empty or renamed one.
+   */
+  const VOCABULARIES: readonly { id: ModuleId; anchor: RegExp }[] = [
+    { id: "state/checkpoint/types.ts", anchor: /^export type RunCheckpoint\b/m },
+    {
+      id: "config/binding/types.ts",
+      anchor: /^export type ResolvedStageBinding\b/m,
+    },
+  ];
 
   /** The three forms a declarations-only module is made of, and their closers. */
   const DECLARATION =
@@ -557,40 +567,42 @@ describe("the checkpoint vocabulary declares and does nothing", () => {
   /** Runtime code, in the forms a declaration cannot take. */
   const EXECUTABLE = /\b(?:const|let|var|function|class|new)\b/;
 
-  it("is made of type imports and exported type declarations only", async () => {
-    // What is worth guarding here is whether the module can run anything at all,
-    // rather than which domains its types may name: an allow-list of importable
-    // domains needs an edit for every legitimate new type reference and still
-    // admits a validator that reaches only allow-listed modules. A module with no
-    // value import and no non-type declaration cannot hold one, whatever it names.
-    const source = withoutComments((await moduleNamed(VOCABULARY)).source);
-    expect(source, `${VOCABULARY} declares the document`).toMatch(
-      /^export type RunCheckpoint\b/m,
-    );
-    // Every statement opens at column zero and every continuation of one is
-    // indented, so a line starting there either opens a declaration or closes the
-    // one above it. Anything else is a statement this module may not hold — a
-    // value import, a constant, a function, or a bare call.
-    for (const line of source.split("\n")) {
-      if (line.trim() === "" || /^\s/.test(line)) continue;
-      expect(line, `${VOCABULARY} states more than a declaration`).toMatch(
-        DECLARATION,
-      );
-    }
-    expect(source, `${VOCABULARY} holds runtime code`).not.toMatch(EXECUTABLE);
-  });
+  it.each(VOCABULARIES)(
+    "$id is made of type imports and exported type declarations only",
+    async ({ id, anchor }) => {
+      // What is worth guarding here is whether the module can run anything at all,
+      // rather than which domains its types may name: an allow-list of importable
+      // domains needs an edit for every legitimate new type reference and still
+      // admits a validator that reaches only allow-listed modules. A module with no
+      // value import and no non-type declaration cannot hold one, whatever it names.
+      const source = withoutComments((await moduleNamed(id)).source);
+      expect(source, `${id} declares the shape it exists for`).toMatch(anchor);
+      // Every statement opens at column zero and every continuation of one is
+      // indented, so a line starting there either opens a declaration or closes the
+      // one above it. Anything else is a statement this module may not hold — a
+      // value import, a constant, a function, or a bare call.
+      for (const line of source.split("\n")) {
+        if (line.trim() === "" || /^\s/.test(line)) continue;
+        expect(line, `${id} states more than a declaration`).toMatch(DECLARATION);
+      }
+      expect(source, `${id} holds runtime code`).not.toMatch(EXECUTABLE);
+    },
+  );
 
-  it("reaches neither the execution nor the display domain", async () => {
-    // The document is what a phase and a renderer are written in terms of, so a
-    // reference in this direction is an inversion: the vocabulary would then
-    // depend on one consumer's reading of it.
-    for (const target of targetsOf(await moduleNamed(VOCABULARY))) {
-      expect(
-        /^(?:execution|display)\//.test(target),
-        `${VOCABULARY} imports ${target}`,
-      ).toBe(false);
-    }
-  });
+  it.each(VOCABULARIES)(
+    "$id reaches neither the execution nor the display domain",
+    async ({ id }) => {
+      // The shape is what a phase and a renderer are written in terms of, so a
+      // reference in this direction is an inversion: the vocabulary would then
+      // depend on one consumer's reading of it.
+      for (const target of targetsOf(await moduleNamed(id))) {
+        expect(
+          /^(?:execution|display)\//.test(target),
+          `${id} imports ${target}`,
+        ).toBe(false);
+      }
+    },
+  );
 });
 
 describe("a pause is built in one module and compared field by field", () => {
