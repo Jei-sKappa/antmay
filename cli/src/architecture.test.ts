@@ -1098,6 +1098,72 @@ describe("display consumers are phase-specific (AC-7.1, AC-7.2)", () => {
   });
 });
 
+describe("harness identity has one owner", () => {
+  /** The one module that declares which harnesses exist. */
+  const OWNER = "harness/id.ts";
+
+  /** The identity vocabulary, by exported name. */
+  const VOCABULARY = ["HarnessId", "HARNESS_IDS", "isHarnessId"];
+
+  /** The ids themselves, in the order the owner declares them in. */
+  const IDS = ["codex", "claude-code"];
+
+  /**
+   * Two id literals side by side: joined by `|` they are the union stated a
+   * second time, and separated by `,` they are a second runtime collection.
+   */
+  const idsJoinedBy = (separator: string): RegExp => {
+    const id = `["'](?:${IDS.join("|")})["']`;
+    return new RegExp(`${id}\\s*${separator}\\s*${id}`);
+  };
+  const ID_UNION = idsJoinedBy("\\|");
+  const ID_COLLECTION = idsJoinedBy(",");
+
+  it("declares the vocabulary in the owner, and makes every consumer depend on it", async () => {
+    const modules = await productionModules();
+    for (const name of VOCABULARY) {
+      const declaration = new RegExp(
+        `^export\\s+(?:type|const|function)\\s+${name}\\b`,
+        "m",
+      );
+      const owners = modules
+        .filter((module) => declaration.test(module.source))
+        .map((module) => module.id);
+      expect(owners, `declarations of ${name}`).toEqual([OWNER]);
+    }
+    const vocabulary = new RegExp(`\\b(?:${VOCABULARY.join("|")})\\b`);
+    for (const module of modules) {
+      if (module.id === OWNER || !vocabulary.test(module.source)) continue;
+      expect(targetsOf(module), `${module.id} names the vocabulary`).toContain(OWNER);
+    }
+  });
+
+  it("repeats the ids in no second union or collection", async () => {
+    // A hand-written union or list of the ids is another statement of which
+    // harnesses exist, and a third harness leaves it stale with nothing to fail
+    // the build — the diagnostic that names the supported ids keeps naming two.
+    //
+    // Only declaration forms are the subject here. A comparison against an id is
+    // the neighbouring rule's, and whether the provider registry covers every id
+    // is `harness/providers/index.test.ts`'s; both leave a second declaration
+    // undetected, which is what this clause is for.
+    for (const module of await productionModules()) {
+      if (module.id === OWNER) continue;
+      const source = withoutComments(module.source);
+      expect(source, `${module.id} redeclares the id union`).not.toMatch(ID_UNION);
+      expect(source, `${module.id} collects the ids`).not.toMatch(ID_COLLECTION);
+    }
+  });
+
+  it("leaves the owner a leaf", async () => {
+    // `harness/provider.ts` names the id union, so an import in the other
+    // direction is a cycle between what a harness is and which ones exist. A
+    // module the build holds to importing nothing can be depended on from the
+    // settings parser, the checkpoint validator, and the harness domain alike.
+    expect((await moduleNamed(OWNER)).references).toEqual([]);
+  });
+});
+
 describe("a harness is a provider object, never a literal", () => {
   /** The one declaration of what a harness is. */
   const FACE = "harness/provider.ts";

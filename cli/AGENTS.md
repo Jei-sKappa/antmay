@@ -389,7 +389,8 @@ bearing.
   transitively reaching neither filesystem nor path builtins through any source
   import, a resume preflight that reaches no transition collaborator, the
   terminal-outcome protocol spelled out nowhere but the leaf module that declares
-  it, the Git protocol behind its one operation, artifact contracts declared only
+  it, harness identity declared and collected nowhere but its own leaf module,
+  the Git protocol behind its one operation, artifact contracts declared only
   in the thread domain, pauses
   assembled in one module and compared field by field, each recovery kind's
   declared evidence read from one table rather than tested for by comparison,
