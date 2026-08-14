@@ -1,5 +1,5 @@
-import type { StageBindingMap } from "../../../config/execution.js";
-import { loadExecutionProfile } from "../../../config/execution.js";
+import type { StageBindingMap } from "../../../config/binding/types.js";
+import { loadExecutionProfile } from "../../../config/execution-profile/load.js";
 import { resolveDocumentReference } from "../../../config/references.js";
 import type { ProfileSelection } from "../../../state/checkpoint/types.js";
 import type { RunPreflightResult } from "../types.js";

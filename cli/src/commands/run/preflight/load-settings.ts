@@ -1,5 +1,5 @@
-import type { StageBindingMap } from "../../../config/execution.js";
-import { loadStageSettings } from "../../../config/execution.js";
+import type { StageBindingMap } from "../../../config/binding/types.js";
+import { loadStageSettings } from "../../../config/settings/load.js";
 import type { RunPreflightResult } from "../types.js";
 
 /**

@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { loadExecutionProfile, loadStageSettings } from "../config/execution.js";
+import { loadExecutionProfile } from "../config/execution-profile/load.js";
+import { loadStageSettings } from "../config/settings/load.js";
 import { resolveDocumentReference } from "../config/references.js";
 import { CATALOG_STAGE_IDS, STAGE_CATALOG } from "./catalog.js";
 import { loadPipelineDocument } from "./documents.js";

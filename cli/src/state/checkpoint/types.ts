@@ -9,7 +9,7 @@
  * is what they are written in terms of, not the other way round.
  */
 
-import type { ResolvedStageBinding } from "../../config/execution.js";
+import type { ResolvedStageBinding } from "../../config/binding/types.js";
 import type { HarnessId } from "../../harness/id.js";
 import type { CatalogStage } from "../../pipeline/catalog.js";
 import type { CatalogStageId } from "../../pipeline/types.js";

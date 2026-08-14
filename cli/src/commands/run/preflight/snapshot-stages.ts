@@ -1,5 +1,5 @@
-import type { StageBindingMap } from "../../../config/execution.js";
-import { resolveStageBindings } from "../../../config/execution.js";
+import { resolveStageBindings } from "../../../config/binding/resolve.js";
+import type { StageBindingMap } from "../../../config/binding/types.js";
 import type { PreparedStage } from "../../../pipeline/composition.js";
 import type {
   ProfileSelection,
