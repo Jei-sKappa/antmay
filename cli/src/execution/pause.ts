@@ -118,7 +118,7 @@ type PreservedDone = {
  * rather than a stage retry, and only a refusal can be advisory — so the
  * advisory flag and the tip it is measured from cannot be stated without one.
  */
-type BoundaryOutcome =
+export type BoundaryOutcome =
   | { refused: false }
   | { refused: true; advisoryHeadMovement: boolean; observedHead: string };
 

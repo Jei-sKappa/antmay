@@ -18,7 +18,8 @@
     "check": "npm run typecheck && npm run test && npm run build",
     "demo": "node scripts/demo.mjs",
     "demo:all": "node scripts/demo-all.mjs",
-    "trace": "node scripts/trace.mjs"
+    "trace": "node scripts/trace.mjs",
+    "trace:compare": "node scripts/trace/compare.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

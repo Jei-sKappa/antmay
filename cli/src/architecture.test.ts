@@ -940,6 +940,7 @@ describe("the engine is one loop over named phases", () => {
     "execution/phases/settlement.ts": "execution/engine.ts",
     "execution/phases/verify-promise.ts": "execution/phases/settlement.ts",
     "execution/phases/boundary.ts": "execution/phases/settlement.ts",
+    "execution/phases/commit-settlement.ts": "execution/phases/settlement.ts",
     "execution/entry/recover.ts": "execution/engine.ts",
     "execution/entry/evidence.ts": "execution/entry/recover.ts",
     "execution/entry/refresh.ts": "execution/entry/recover.ts",

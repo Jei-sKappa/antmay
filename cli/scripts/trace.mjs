@@ -37,7 +37,9 @@
  * The pieces: `trace/instrument.mjs` builds the traced binary, `trace/runtime.ts`
  * is what it records with, `trace/report.mjs` renders a trace directory (and
  * runs standalone over one), and `trace/sources.mjs` is how all three read
- * `src/`.
+ * `src/`. Beside them, `trace/compare.mjs` — `npm run trace:compare` — compares
+ * two trace directories for the ordered call sequence a refactor that moved code
+ * must leave unchanged.
  */
 
 import { spawnSync } from "node:child_process";

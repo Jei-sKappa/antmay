@@ -1315,6 +1315,27 @@ describe.concurrent("executeEngine — full completion (AC-6.3, AC-13.3)", () =>
     expect(await commitCount(fixture)).toBe(before + 3);
   });
 
+  it("records an advanced attempt with no pendingFiles key at all", async () => {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+
+    const result = await executeEngine(
+      makeContext(
+        buildCheckpoint(fixture, [cleanStage]),
+        runDir,
+        createFakeHarness([{}]),
+      ),
+    );
+
+    expect(result).toEqual({ kind: "completed" });
+    // An advanced attempt observed no pending queue, so it records no such key.
+    // That is not the same as recording an empty list, and it is the one place
+    // the three settled shapes differ in what they leave out.
+    const settled = (await loadCheckpoint(runDir)).attempts[0]!;
+    expect(settled.result).toBe("done");
+    expect(Object.hasOwn(settled, "pendingFiles")).toBe(false);
+  });
+
   it("drives a resume entry through the same loop from its stored cursor", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
@@ -1368,6 +1389,8 @@ describe.concurrent("executeEngine — DONE with a pending-queue pause (AC-11.3,
     expect(cp.waiting?.reasons[0]!.pendingFiles).toEqual([pendingRel]);
     expect(cp.attempts[0]!.result).toBe("done");
     expect(cp.attempts[0]!.terminalResult?.token).toBe("DONE");
+    // The queue that held the run is what this settled attempt records.
+    expect(cp.attempts[0]!.pendingFiles).toEqual([pendingRel]);
     // The executor commit's HEAD is the attempt's post-attempt observation, and
     // the finalized DONE is what releasing the queue resolves against.
     expect(cp.attempts[0]!.headAfterAttempt).toBe(commitHead);
@@ -1468,6 +1491,13 @@ describe.concurrent("executeEngine — non-DONE pauses (AC-11.3, AC-12.6, AC-12.
       expect(cp.waiting?.nextAction).toContain("unvalidated");
       expect(cp.attempts[0]!.result).toBe("waiting");
       expect(cp.attempts[0]!.headAfterAttempt).toBe(headBefore);
+      // Nothing was queued, so the stopped attempt records no queue; its failure
+      // telemetry is the reason its pause leads with.
+      expect(Object.hasOwn(cp.attempts[0]!, "pendingFiles")).toBe(false);
+      expect(cp.attempts[0]!.failure).toEqual({
+        kind: testCase.kind,
+        message: cp.waiting?.reasons[0]!.message,
+      });
       // No boundary was reached, so there is nothing to finalize: the stage runs
       // again once the human has dealt with the attempt's changes.
       expect(cp.waiting?.recovery).toEqual({ kind: "retry-stage" });

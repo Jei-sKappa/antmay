@@ -57,7 +57,11 @@ In scope:
 - One new module, `cli/src/execution/phases/commit-settlement.ts`, and its row in the
   architecture guard's phase-caller table.
 - Promoting the trace comparator into `cli/scripts/trace/compare.mjs` with an
-  `npm run trace:compare` script.
+  `npm run trace:compare` script, explicit audited call-name exclusions, and
+  normalization of nondeterministic transcript process IDs and supplied-binary
+  locations.
+- Making the trace runtime persist each event immediately, so the two scenarios
+  that deliberately end a child with `SIGKILL` retain every completed trace event.
 - Engine-boundary test additions in `cli/src/execution/engine.test.ts` that pin the
   three settled record shapes.
 
@@ -73,8 +77,8 @@ Out of scope:
 - Decomposition motivated only by a line-count target rather than a distinct reason
   to change. The orchestrator is expected to land around ninety-five lines and that
   is acceptable (per `decisions.md` DR3); do not extract further to shrink it.
-- Any change to `cli/scripts/trace/compare.mjs`'s comparison logic. Its promotion is
-  a move, a script entry, and a documentation line.
+- General trace-analysis features beyond what is required to compare this
+  refactor's effectful descendants reproducibly.
 
 ## Expected behavior
 
@@ -181,13 +185,24 @@ the one reading the stage's disposition — stay private to the orchestrator (pe
 
 `cli/temp/compare-traces.mjs` is promoted to `cli/scripts/trace/compare.mjs`, exposed
 as `npm run trace:compare`, and named in the list of trace pieces that
-`cli/scripts/trace.mjs` already carries in its doc comment (per `decisions.md` DR5).
-It stays outside `npm run check`, alongside the tracing and demo tools. Its
-comparison logic is unchanged: it reads the ordered call sequence from the raw
-per-call records, compares by function name filtered to the names the baseline
-already carried, and reports newly visible names and re-attributed modules separately
-rather than as differences — which is what a moved function and a closure promoted to
-a top-level declaration produce.
+`cli/scripts/trace.mjs` already carries in its doc comment (per `decisions.md` DR5
+as superseded by DR7). It stays outside `npm run check`, alongside the tracing and
+demo tools. It reads the ordered call sequence from the raw per-call records,
+compares by function name filtered to the names the baseline already carried, and
+reports newly visible names and re-attributed modules separately rather than as
+differences — which is what a moved function and a closure promoted to a top-level
+declaration produce.
+
+A repeated `--ignore-call <function-name>` option removes an explicitly named frame
+from both compared sequences and reports its before/after count. This refactor uses
+that option for the removed `settleIntoPause` orchestration frame and the two pure
+value builders whose evaluation moved, while their effectful descendant calls remain
+in the comparison. Transcript normalization removes the Node process ID from the
+runtime's `NO_COLOR`/`FORCE_COLOR` warning and the trace driver's absolute supplied-
+binary path, allowing the baseline revision to be built in an isolated checkout.
+The trace runtime writes every event immediately: a child ended by `SIGKILL` has no
+exit hook, so an in-memory buffer would make its recorded prefix depend on a flush
+threshold rather than on the calls that actually completed before the kill.
 
 ## Constraints
 
@@ -223,6 +238,12 @@ a top-level declaration produce.
   count and length decide nothing (per `decisions.md` DR4).
 - **No phase-level test files.** No module under `cli/src/execution/phases/` has one,
   and none is introduced (per `decisions.md` DR6).
+- **Trace exclusions are explicit and narrow.** The comparator may omit a named
+  orchestration frame or proven-pure call only through `--ignore-call`, removes that
+  name from both sequences, and reports its counts. It continues to compare the
+  effectful descendants of an ignored orchestration frame.
+- **Every emitted trace event is written immediately.** The trace runtime does not
+  hold an event buffer that a deliberate `SIGKILL` can discard.
 - **The repository's existing lint gate applies.** `npm run lint` is type-aware
   promise safety and runs as its own CI job beside `check`. This change relocates
   `await`ed calls to the checkpoint write and the boundary finalization, which is
@@ -332,21 +353,28 @@ a top-level declaration produce.
   `npm run check` does not invoke it.
 - **AC-7.3** `cli/scripts/trace.mjs`'s doc comment names `trace/compare.mjs` in its
   list of trace pieces.
-- **AC-7.4** The comparator's comparison logic is byte-identical to the promoted
-  script apart from changes forced by its new path.
+- **AC-7.4** The comparator accepts repeated `--ignore-call <function-name>` options,
+  removes each named call from both sequences, reports each ignored name's
+  before/after count, and refuses an ignored name absent from both traces.
+- **AC-7.5** Transcript comparison normalizes the Node process ID and the trace
+  driver's absolute supplied-binary path, and the trace runtime writes each event
+  without an in-memory batch that can be lost to `SIGKILL` *(traces to
+  `decisions.md` DR7)*.
 
 ### FR-8 — No cross-module side-effect sequence moved
 
 - **AC-8.1** A baseline trace is generated with `npm run trace` from this thread's
   pre-change `HEAD` — not reused from any pre-existing local trace directory
   *(traces to `decisions.md` DR5)*.
-- **AC-8.2** After the change, `npm run trace` is re-run over the same scenario set
-  and `npm run trace:compare` over the two directories reports no reordering of the
-  call sequence for any scenario.
-- **AC-8.3** Names the comparator reports as newly visible, and modules it reports as
-  re-attributed, are accounted for in the implementation report by naming the
-  extraction that produced each — they are expected outputs of moving code, not
-  differences.
+- **AC-8.2** After the change, `npm run trace` is re-run over the same scenario set,
+  and this comparison exits successfully with zero order, transcript, and structure
+  findings:
+  `npm run trace:compare -- <baseline-dir> <after-dir> --ignore-call settleIntoPause
+  --ignore-call stageDisposition --ignore-call donePendingQueues`.
+- **AC-8.3** The implementation report accounts for every ignored call name and
+  every name the comparator reports as newly visible or re-attributed. Ignoring
+  `settleIntoPause` omits its orchestration frame only; its checkpoint, display, and
+  pause-rendering descendants remain in the compared sequence.
 
 ### FR-9 — The full gate passes
 

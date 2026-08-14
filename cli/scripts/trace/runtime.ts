@@ -21,12 +21,9 @@ type Wrapped = (...args: unknown[]) => unknown;
 
 const traceDir = process.env.ANTMAY_TRACE_DIR;
 const frames = new AsyncLocalStorage<number>();
-const pending: string[] = [];
 const startedAt = Date.now();
 let handle = -1;
 let sequence = 0;
-
-const FLUSH_AT = 1024;
 
 function open(): number {
   if (handle < 0) {
@@ -36,20 +33,18 @@ function open(): number {
   return handle;
 }
 
-function flush(): void {
-  if (pending.length === 0) return;
-  const payload = `${pending.join("\n")}\n`;
-  pending.length = 0;
+/**
+ * Write one event before returning. Two demo scenarios deliberately end a
+ * child with SIGKILL, which offers no exit hook; buffering would make the
+ * recorded prefix depend on how close the process was to an arbitrary flush
+ * boundary rather than on which calls actually ran before the kill.
+ */
+function emit(event: Record<string, unknown>): void {
   try {
-    writeSync(open(), payload);
+    writeSync(open(), `${JSON.stringify(event)}\n`);
   } catch {
     // A tracer must never take the process down with it.
   }
-}
-
-function emit(event: Record<string, unknown>): void {
-  pending.push(JSON.stringify(event));
-  if (pending.length >= FLUSH_AT) flush();
 }
 
 function isThenable(value: unknown): boolean {
@@ -110,5 +105,4 @@ if (traceDir !== undefined && traceDir !== "") {
     argv: process.argv.slice(2),
     at: new Date().toISOString(),
   });
-  process.on("exit", flush);
 }
