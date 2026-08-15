@@ -83,6 +83,29 @@ function fakeHandle(overrides: Partial<FileHandleLike> = {}): FileHandleLike {
   };
 }
 
+/**
+ * Wrap the real open so the temp file is genuinely created on disk, then apply
+ * `overrides`: cleanup must unlink that exact path.
+ */
+function realOpen(
+  overrides: Partial<FileHandleLike> = {},
+): FsOps["open"] {
+  return async (filePath, flags, mode) => {
+    const handle = await fs.open(filePath, flags, mode);
+    return {
+      write: (data) => handle.write(data),
+      sync: () => handle.sync(),
+      close: () => handle.close(),
+      ...overrides,
+    };
+  };
+}
+
+async function tempFiles(dir: string): Promise<string[]> {
+  const names = await fs.readdir(dir);
+  return names.filter((n) => n.startsWith(".state.json.") && n.endsWith(".tmp"));
+}
+
 describe("writeCheckpoint serialization (AC-13.2)", () => {
   it("writes deterministic two-space JSON with a trailing newline", async () => {
     const dir = await tempDir();
@@ -160,6 +183,51 @@ describe("writeCheckpoint failure atomicity (AC-13.2)", () => {
     const result = await readCheckpoint(dir);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.checkpoint).toEqual(first);
+  });
+
+  it("leaves no temp file behind when the write fails", async () => {
+    const dir = await tempDir();
+    await writeCheckpoint(dir, checkpoint());
+
+    const failing: FsOps = {
+      open: realOpen({ write: () => Promise.reject(new Error("disk full")) }),
+      rename: async () => {
+        throw new Error("rename must not be reached");
+      },
+    };
+    await expect(writeCheckpoint(dir, checkpoint(), failing)).rejects.toThrow(
+      "disk full",
+    );
+    expect(await tempFiles(dir)).toEqual([]);
+  });
+
+  it("leaves no temp file behind when the rename fails", async () => {
+    const dir = await tempDir();
+    await writeCheckpoint(dir, checkpoint());
+
+    const failing: FsOps = {
+      open: realOpen(),
+      rename: () => Promise.reject(new Error("rename failed")),
+    };
+    await expect(writeCheckpoint(dir, checkpoint(), failing)).rejects.toThrow(
+      "rename failed",
+    );
+    expect(await tempFiles(dir)).toEqual([]);
+  });
+
+  it("propagates the original failure when cleanup also fails", async () => {
+    const dir = await tempDir();
+    const failing: FsOps = {
+      open: async () =>
+        fakeHandle({
+          write: () => Promise.reject(new Error("disk full")),
+          close: () => Promise.reject(new Error("close failed")),
+        }),
+      rename: async () => undefined,
+    };
+    await expect(writeCheckpoint(dir, checkpoint(), failing)).rejects.toThrow(
+      "disk full",
+    );
   });
 });
 
