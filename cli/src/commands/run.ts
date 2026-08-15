@@ -282,39 +282,41 @@ export async function runCommand(
     }
     const { runDir, lock, checkpoint } = allocation;
 
-    // A signal after allocation but before launch releases the owned lock and
-    // exits with the conventional code, leaving the ready checkpoint for resume.
-    const preLaunchSig = signals.signaled();
-    if (preLaunchSig !== null) {
-      await lock.release();
-      return signals.exitCodeFor(preLaunchSig);
-    }
-
-    // The initial checkpoint exists. Print the startup summary (with the
-    // unrestricted warning when applicable), drive the run, map the engine
-    // result to an exit code, and release the lock unconditionally.
-    if (harnessRuntime.scenarioPath !== undefined) {
-      printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
-    }
-    printRunSummary(displayOptions, {
-      runId: checkpoint.runId,
-      pipelineName: document.name,
-      pipelineSourcePath,
-      profileSelection,
-      ...(fromStage !== null ? { fromStage } : {}),
-      threadRelPath: thread.threadRelPath,
-      workspacePath: checkpoint.workspace.path,
-      dangerouslySkipPermissions: args.dangerouslySkipPermissions,
-      stages: stages.map((stage) => ({
-        id: stage.id,
-        harness: stage.binding.agent.harness,
-        model: stage.binding.agent.model,
-        target: stage.resolvedTarget,
-      })),
-    });
-
-    const display = createTerminalExecutionDisplay(displayOptions);
+    // The lock is held from here on, so every path out of this block — including
+    // a throw from the startup output on a closed stdout — releases it.
     try {
+      // A signal after allocation but before launch releases the owned lock and
+      // exits with the conventional code, leaving the ready checkpoint for resume.
+      const preLaunchSig = signals.signaled();
+      if (preLaunchSig !== null) {
+        await lock.release();
+        return signals.exitCodeFor(preLaunchSig);
+      }
+
+      // The initial checkpoint exists. Print the startup summary (with the
+      // unrestricted warning when applicable), drive the run, and map the engine
+      // result to an exit code.
+      if (harnessRuntime.scenarioPath !== undefined) {
+        printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
+      }
+      printRunSummary(displayOptions, {
+        runId: checkpoint.runId,
+        pipelineName: document.name,
+        pipelineSourcePath,
+        profileSelection,
+        ...(fromStage !== null ? { fromStage } : {}),
+        threadRelPath: thread.threadRelPath,
+        workspacePath: checkpoint.workspace.path,
+        dangerouslySkipPermissions: args.dangerouslySkipPermissions,
+        stages: stages.map((stage) => ({
+          id: stage.id,
+          harness: stage.binding.agent.harness,
+          model: stage.binding.agent.model,
+          target: stage.resolvedTarget,
+        })),
+      });
+
+      const display = createTerminalExecutionDisplay(displayOptions);
       const result = await executeEngine({
         entry: { kind: "allocated", checkpoint },
         runDir,

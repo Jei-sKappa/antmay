@@ -84,6 +84,17 @@ class Capture extends Writable {
 }
 
 /**
+ * A stream that fails every write the way a closed pipe does. `write` itself
+ * throws, which is what a caller reading the stream through the display's `emit`
+ * sees; a `_write` failure would be stream machinery and surface as an event.
+ */
+class ClosedPipe extends Capture {
+  override write(): never {
+    throw Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+  }
+}
+
+/**
  * Temporary resources are collected for the whole file and released once every
  * case has finished. The cases here run concurrently, so nothing may be torn
  * down between tests: a per-test hook would reach into a repository or state
@@ -290,9 +301,10 @@ async function run(
     writeInitialCheckpoint: RunDeps["writeInitialCheckpoint"];
     createAbortController: () => AbortController;
     installSignals: RunDeps["installSignals"];
+    stdout: Capture;
   }> = {},
 ): Promise<RunResult> {
-  const out = new Capture();
+  const out = overrides.stdout ?? new Capture();
   const err = new Capture();
   const invoker = createFakeHarness(steps);
   const deps: RunDeps = {
@@ -1570,6 +1582,34 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
       expect(await lockNames(h.stateRoot)).toEqual([]);
     });
   }
+
+  it("releases the lock when the startup summary throws before the handoff", async () => {
+    const h = await setup();
+    let uninstalled = false;
+    // The lock is held from allocation onward, so the startup output writes with
+    // it held. A closed stdout is the realistic way that write fails.
+    await expect(
+      run(h, [], {
+        stdout: new ClosedPipe(),
+        generateId: () => "startupthrow-00000000",
+        installSignals: () => ({
+          signaled: () => null,
+          exitCodeFor: (sig) => SIGNAL_EXIT[sig] ?? EXIT_SIGINT,
+          uninstall: () => {
+            uninstalled = true;
+          },
+        }),
+      }),
+    ).rejects.toThrow("EPIPE");
+
+    const runDir = path.join(runsDirectory(h.stateRoot), "startupthrow-00000000");
+    const cp = await readCheckpoint(runDir);
+    expect(cp.ok).toBe(true);
+    if (cp.ok) expect(cp.checkpoint.condition).toBe("ready");
+    // The run survives for a resume; only the lock is given up.
+    expect(await lockNames(h.stateRoot)).toEqual([]);
+    expect(uninstalled).toBe(true);
+  });
 
   it("releases the lock and uninstalls handlers when the engine throws", async () => {
     const h = await setup();
