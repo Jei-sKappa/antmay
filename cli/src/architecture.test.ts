@@ -1039,6 +1039,28 @@ describe("the engine is one loop over named phases", () => {
   });
 });
 
+describe("the bootstrap loads nothing ahead of the Node guard", () => {
+  it("reaches exactly its two modules, and reaches both lazily", async () => {
+    // The guard is only genuinely first if every application module the
+    // bootstrap names loads after it, which a static import would defeat. The
+    // second assertion is what keeps that true as the file grows: reaching for
+    // one more constant here fails the build instead of quietly moving a module
+    // ahead of the version check it exists to run before.
+    const bootstrap = await moduleNamed("main.ts");
+    for (const reference of bootstrap.references) {
+      if (reference.target === null || reference.typeOnly) continue;
+      expect(
+        reference.dynamic,
+        `main.ts statically imports ${reference.target}`,
+      ).toBe(true);
+    }
+    expect(targetsOf(bootstrap).sort()).toEqual([
+      "display/crash.ts",
+      "program.ts",
+    ]);
+  });
+});
+
 describe("display consumers are phase-specific (AC-7.1, AC-7.2)", () => {
   /** The execution lifecycle renderer and the interface it implements. */
   const EXECUTION_PHASE = ["display/execution.ts", "display/types.ts"];
