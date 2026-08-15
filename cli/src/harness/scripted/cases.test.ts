@@ -25,6 +25,7 @@ import {
   RECONCILE_SPEC_PENDING_DECISION_PATH,
   resolveScriptedThreadRoot,
   SCRIPTED_CASE_HANDLER_NAMES,
+  SCRIPTED_CRASH_MESSAGE,
   SPEC_CORRECT_CONTENT,
   SPEC_CORRECT_DELAY_MS,
   type ScriptedCaseContext,
@@ -132,6 +133,21 @@ describe("the scripted case catalog", () => {
       expect(finalText.split("\n").at(-1)!.startsWith(token)).toBe(true);
       expect(executed.ok && executed.transcript.at(-1)).toBe(finalText);
     });
+  });
+
+  it("lets harness-crash throw out of the catalog, changing nothing", async () => {
+    // The one case that reports no ending at all. The rejection is the point:
+    // it is what carries the throw past the adapter, which awaits the catalog
+    // outside every `try` it has, and out to the bootstrap's crash renderer.
+    const fixture = await newFixture();
+    const seedPath = path.join(fixture.threadPath!, "seed.md");
+
+    const before = await readFile(seedPath, "utf8");
+    await expect(runCase(fixture, "harness-crash")).rejects.toThrow(
+      SCRIPTED_CRASH_MESSAGE,
+    );
+
+    expect(await readFile(seedPath, "utf8")).toBe(before);
   });
 
   it("writes the exact spec-correct bytes", async () => {

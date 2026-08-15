@@ -70,6 +70,11 @@ export const LONG_DETAIL_TEXT =
 export const MALFORMED_FINAL_TEXT =
   "I think that covers it — let me know if you want anything adjusted.";
 
+/** The message `harness-crash` throws, named here so the test that expects it
+ * and the scenario that reads it off the screen agree by construction. */
+export const SCRIPTED_CRASH_MESSAGE =
+  'scripted harness case "harness-crash": deliberate unhandled throw';
+
 /** Fixed `plan.md` body for `plan-strict-correct`. */
 export const PLAN_STRICT_PLAN_CONTENT = "# Plan: Fake\n\nPlaceholder plan.\n";
 
@@ -659,6 +664,14 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
     progress: ["Making no changes."],
     ending: { kind: "await-abort" },
   }),
+  // The one case that returns nothing at all. Every other case reports how the
+  // attempt ended, including the ways it failed; this one throws instead, which
+  // is what nothing the executor supports does. It exists to drive antmay's own
+  // unhandled-throw rendering, and it reaches it because the adapter awaits this
+  // catalog outside every `try` it has.
+  "harness-crash": () => {
+    throw new Error(SCRIPTED_CRASH_MESSAGE);
+  },
   "spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
     const result = await writeOwnedFile(
       threadRelPath,

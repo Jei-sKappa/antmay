@@ -26,6 +26,7 @@ export const SCRIPTED_CASE_NAMES = [
   "harness-provider-error",
   "harness-idle-timeout",
   "harness-hang",
+  "harness-crash",
   "spec-correct",
   "spec-correct-delayed",
   "reconcile-spec-correct",
@@ -65,6 +66,7 @@ const GENERIC_CASES: ReadonlySet<ScriptedCaseName> = new Set([
   "harness-provider-error",
   "harness-idle-timeout",
   "harness-hang",
+  "harness-crash",
 ]);
 
 export type ScriptedHarnessToggleMode =
