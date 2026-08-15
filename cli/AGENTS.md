@@ -221,7 +221,9 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
 ### Module layout (`src/`)
 
 - `main.ts` — minimal bootstrap: enforces the Node `>=22` guard, then
-  dynamically imports `program.js` so nothing heavy loads before the guard.
+  dynamically imports `program.js` so nothing heavy loads before the guard. It is
+  also where a throw that escaped every handler is reported, through a renderer
+  loaded the same lazy way so the guard still precedes it.
 - `program.ts` — parses argv and dispatches; each real subcommand handler
   dynamically imports its own dependencies on selection, keeping the
   pre-dispatch import graph light (help/version/usage errors load nothing).
@@ -336,9 +338,11 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
 - `display/` — the curated terminal stream, one module per phase: shared
   painting and formatting primitives (`format.ts`), run listing (`list.ts`),
   structured preflight refusals (`preflight.ts`), startup and developer
-  diagnostics (`startup.ts`), and execution lifecycle output (`execution.ts`)
-  behind the narrow `ExecutionDisplay` interface (`types.ts`) the engine sees.
-  `terminal.ts` re-exports all of them for a reader or test that spans phases.
+  diagnostics (`startup.ts`), execution lifecycle output (`execution.ts`) behind
+  the narrow `ExecutionDisplay` interface (`types.ts`) the engine sees, and the
+  escaped-throw report (`crash.ts`), which belongs to no phase because a defect
+  answers to none. `terminal.ts` re-exports all of them for a reader or test that
+  spans phases.
 - `shared/` — low-level validation primitives with no domain knowledge, used by
   more than one module: `validation.ts` holds the plain-object guard every
   document validator narrows parsed JSON with. Only a primitive that answers a
@@ -473,6 +477,14 @@ attempt is aborted — the seam that lets a signal land mid-attempt. That wait
 holds a referenced timer open, because an abort listener alone keeps nothing
 alive and the process would otherwise drain its event loop and exit before any
 signal arrived.
+
+One case reports nothing at all, because it throws instead of returning. It is
+the only member of the catalog that exists to exercise antmay's own failure
+handling rather than to imitate an agent, and the widening is deliberate: the
+executor's unhandled-throw rendering is reachable no other way, since every
+failure the code anticipates is caught and turned into a structured refusal. It
+reaches that rendering because the adapter awaits the catalog outside every `try`
+it has, so keep that call unguarded.
 
 Every launched scripted attempt reports a deterministic synthetic session ID on
 every path a real capture would take. Its shape is deliberately
