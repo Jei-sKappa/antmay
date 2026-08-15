@@ -1,13 +1,35 @@
 /**
  * The stream and rendering context every terminal renderer and standalone
  * render helper shares. `color` decides whether ANSI color codes are emitted,
- * as one answer the caller has already resolved from the stream and the
- * environment.
+ * as one settled answer rather than the inputs to recombine; the rule that
+ * produces it is `resolveDisplayColor` below, so both the question and its
+ * answer live here.
  */
 export interface DisplayOptions {
   stdout: NodeJS.WritableStream;
   stderr: NodeJS.WritableStream;
   color: boolean;
+}
+
+/**
+ * Whether the display emits ANSI color, resolved from the environment and the
+ * stream a caller reads them from.
+ *
+ * `NO_COLOR` outranks everything: any non-empty value keeps color off, so an
+ * explicit off never loses to an on switch a wrapper exported. Otherwise
+ * `FORCE_COLOR` turns color on — any value but empty or `0` — which is what
+ * makes a piped stdout render in color for a pager, a CI log, or a driver
+ * capturing the stream. With neither set, a terminal stdout decides. No
+ * color-level value is interpreted: color is on or off.
+ */
+export function resolveDisplayColor(
+  env: NodeJS.ProcessEnv,
+  isTTY: boolean,
+): boolean {
+  if ((env.NO_COLOR ?? "") !== "") return false;
+  const forced = env.FORCE_COLOR ?? "";
+  if (forced !== "" && forced !== "0") return true;
+  return isTTY;
 }
 
 const ANSI = {
@@ -38,7 +60,7 @@ export const VALUE_STYLE: readonly Ansi[] = ["white"];
  * off. Every renderer gets its painter from here. */
 export type Painter = (text: string, ...codes: Ansi[]) => string;
 
-export function createPainter(options: DisplayOptions): Painter {
+export function createPainter(options: Pick<DisplayOptions, "color">): Painter {
   return (text, ...codes) =>
     options.color
       ? `${codes.map((code) => ANSI[code]).join("")}${text}${ANSI.reset}`

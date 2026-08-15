@@ -15,6 +15,7 @@ import { nullDisplay } from "./types.js";
 import {
   createTerminalExecutionDisplay,
   printCompositionRefusal,
+  printCrash,
   printHarnessRuntimeRefusal,
   printRunList,
   printRunSummary,
@@ -22,6 +23,8 @@ import {
   printScriptedResolvedPrompt,
   printTemporaryWorkspaceRefusal,
   printUnrestrictedWarning,
+  resolveDisplayColor,
+  type CrashProcess,
   type DisplayOptions,
   type RunListSummary,
 } from "./terminal.js";
@@ -1161,6 +1164,187 @@ describe("printScriptedResolvedPrompt", () => {
     ]);
     expect(out.text).not.toContain("\\n");
     expect(err.text).toBe("");
+  });
+});
+
+describe("resolveDisplayColor", () => {
+  it("lets a terminal stdout decide when neither variable is set", () => {
+    expect(resolveDisplayColor({}, true)).toBe(true);
+    expect(resolveDisplayColor({}, false)).toBe(false);
+  });
+
+  it("turns color on for a non-terminal stdout under FORCE_COLOR", () => {
+    for (const value of ["1", "true", "3", " "]) {
+      expect(resolveDisplayColor({ FORCE_COLOR: value }, false), value).toBe(true);
+    }
+  });
+
+  it("treats an empty or zero FORCE_COLOR as no switch at all", () => {
+    for (const value of ["", "0"]) {
+      expect(resolveDisplayColor({ FORCE_COLOR: value }, false), value).toBe(false);
+      expect(resolveDisplayColor({ FORCE_COLOR: value }, true), value).toBe(true);
+    }
+  });
+
+  it("keeps color off under NO_COLOR, including against FORCE_COLOR", () => {
+    expect(resolveDisplayColor({ NO_COLOR: "1" }, true)).toBe(false);
+    expect(resolveDisplayColor({ NO_COLOR: "1", FORCE_COLOR: "1" }, false)).toBe(
+      false,
+    );
+    // Empty is unset, so it decides nothing on its own.
+    expect(resolveDisplayColor({ NO_COLOR: "" }, true)).toBe(true);
+  });
+});
+
+describe("printCrash", () => {
+  function makeCrashIo(
+    overrides: Partial<Omit<CrashProcess, "stderr">> = {},
+  ): { io: CrashProcess; out: Capture; err: Capture } {
+    const out = new Capture();
+    const err = new Capture();
+    return {
+      io: {
+        stderr: err,
+        env: {},
+        isTTY: false,
+        argv: ["afk", "run", "standard", "--thread", "docs/threads/demo"],
+        nodeVersion: "v22.14.0",
+        ...overrides,
+      },
+      out,
+      err,
+    };
+  }
+
+  /** The zero-based index of the first line containing `needle`. */
+  function lineIndexOf(capture: Capture, needle: string): number {
+    const index = capture.lines.findIndex((line) => line.includes(needle));
+    expect(index, `no line containing "${needle}"`).toBeGreaterThanOrEqual(0);
+    return index;
+  }
+
+  it("reports the defect to stderr and leaves stdout alone", () => {
+    const { io, out, err } = makeCrashIo();
+    printCrash(io, new Error("boom"));
+
+    expect(out.text).toBe("");
+    expect(err.lines[0]).toBe("antmay stopped unexpectedly ❌");
+    expect(err.text).toContain("An internal error escaped every handler");
+    expect(err.text).toContain(
+      "This is a defect in antmay, not a problem with your pipeline",
+    );
+    expect(err.text).toContain("antmay 0.1.0 · Node.js v22.14.0");
+    expect(err.text).toContain("https://github.com/Jei-sKappa/antmay/issues");
+  });
+
+  it("subordinates the trace below everything a reader acts on", () => {
+    // The summary is the rendering; the trace is evidence attached to it. A
+    // reorder that puts the stack first restores exactly what this replaced.
+    const { io, err } = makeCrashIo();
+    printCrash(io, new Error("boom"));
+
+    const trace = lineIndexOf(err, "Stack trace");
+    expect(trace).toBeGreaterThan(lineIndexOf(err, "Problem:"));
+    expect(trace).toBeGreaterThan(lineIndexOf(err, "Why:"));
+    expect(trace).toBeGreaterThan(lineIndexOf(err, "State:"));
+    expect(trace).toBeGreaterThan(lineIndexOf(err, "Report:"));
+    expect(trace).toBeGreaterThan(lineIndexOf(err, "Result:"));
+  });
+
+  it("quotes the invocation so a reader can paste it back", () => {
+    const { io, err } = makeCrashIo({
+      argv: ["afk", "run", "my pipeline", "--thread", "docs/threads/demo"],
+    });
+    printCrash(io, new Error("boom"));
+
+    expect(err.text).toContain(
+      "antmay afk run 'my pipeline' --thread docs/threads/demo",
+    );
+  });
+
+  it("carries every frame of the stack behind the quoting gutter", () => {
+    const { io, err } = makeCrashIo();
+    const error = new Error("boom");
+    printCrash(io, error);
+
+    const quoted = err.lines.filter((line) => line.startsWith("  │ "));
+    for (const frame of error.stack!.split("\n")) {
+      expect(quoted).toContain(`  │ ${frame}`);
+    }
+  });
+
+  it("follows a cause chain the way the raw output would have", () => {
+    const { io, err } = makeCrashIo();
+    printCrash(
+      io,
+      new Error("outer", { cause: new Error("inner", { cause: "root" }) }),
+    );
+
+    expect(err.text).toContain("Error: outer");
+    expect(err.text).toContain("Caused by: Error: inner");
+    expect(err.text).toContain("Caused by: root");
+  });
+
+  it("reports every error an AggregateError collected", () => {
+    const { io, err } = makeCrashIo();
+    printCrash(
+      io,
+      new AggregateError([new Error("first"), new Error("second")], "both"),
+    );
+
+    expect(err.text).toContain("Aggregated error: Error: first");
+    expect(err.text).toContain("Aggregated error: Error: second");
+  });
+
+  it("terminates on a self-referential cause", () => {
+    const { io, err } = makeCrashIo();
+    const error = new Error("loop");
+    error.cause = error;
+    printCrash(io, error);
+
+    expect(err.text).toContain("Caused by: (already reported above)");
+  });
+
+  it("caps a chain deep enough to bury the summary", () => {
+    const { io, err } = makeCrashIo();
+    let error = new Error("depth-0");
+    for (let depth = 1; depth <= 20; depth += 1) {
+      error = new Error(`depth-${depth}`, { cause: error });
+    }
+    printCrash(io, error);
+
+    expect(err.text).toContain("(further causes omitted)");
+    expect(err.text).not.toContain("depth-0:");
+  });
+
+  it.each([
+    ["a string", "boom"],
+    ["a number", 42],
+    ["null", null],
+    ["undefined", undefined],
+    ["a plain object", { code: 5 }],
+    ["a symbol", Symbol("x")],
+  ])("renders %s as a thrown value rather than a stack", (_label, thrown) => {
+    const { io, err } = makeCrashIo();
+    printCrash(io, thrown);
+
+    expect(err.text).toContain("a non-Error value was thrown");
+    expect(err.text).toContain("Thrown value");
+    expect(err.text).not.toContain("Stack trace");
+  });
+
+  it("resolves color from the environment it was handed", () => {
+    const painted = makeCrashIo({ isTTY: true });
+    printCrash(painted.io, new Error("boom"));
+    expect(painted.err.lines[0]).toContain("\x1b[1m\x1b[31m");
+
+    const suppressed = makeCrashIo({ isTTY: true, env: { NO_COLOR: "1" } });
+    printCrash(suppressed.io, new Error("boom"));
+    expect(suppressed.err.text).not.toMatch(ANSI_PATTERN);
+
+    const forced = makeCrashIo({ isTTY: false, env: { FORCE_COLOR: "1" } });
+    printCrash(forced.io, new Error("boom"));
+    expect(forced.err.text).toMatch(ANSI_PATTERN);
   });
 });
 

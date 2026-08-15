@@ -1,10 +1,11 @@
 /**
  * One import point over the phase-specific terminal renderers, for a reader or
  * test that works across phases. Each renderer is defined in the module that
- * owns its phase — `list`, `preflight`, `startup`, `execution` — over the shared
- * primitives in `format`; nothing is declared here.
+ * owns its phase — `list`, `preflight`, `startup`, `execution`, `crash` — over
+ * the shared primitives in `format`; nothing is declared here.
  */
-export type { DisplayOptions } from "./format.js";
+export { resolveDisplayColor, type DisplayOptions } from "./format.js";
+export { printCrash, type CrashProcess } from "./crash.js";
 export { printRunList, type RunListSummary } from "./list.js";
 export {
   printCompositionRefusal,

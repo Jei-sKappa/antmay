@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { EXIT_FAILURE, EXIT_OK } from "./cli/exit-codes.js";
 import { VERSION_LINE } from "./cli/help.js";
-import { resolveDisplayColor, runMain } from "./program.js";
+import { runMain } from "./program.js";
 
 describe("runMain dispatch (AC-1.1, FR-8)", () => {
   it("handles help and version without invoking command handlers", async () => {
@@ -108,35 +108,6 @@ describe("runMain dispatch (AC-1.1, FR-8)", () => {
   });
 });
 
-describe("resolveDisplayColor", () => {
-  it("lets a terminal stdout decide when neither variable is set", () => {
-    expect(resolveDisplayColor({}, true)).toBe(true);
-    expect(resolveDisplayColor({}, false)).toBe(false);
-  });
-
-  it("turns color on for a non-terminal stdout under FORCE_COLOR", () => {
-    for (const value of ["1", "true", "3", " "]) {
-      expect(resolveDisplayColor({ FORCE_COLOR: value }, false), value).toBe(true);
-    }
-  });
-
-  it("treats an empty or zero FORCE_COLOR as no switch at all", () => {
-    for (const value of ["", "0"]) {
-      expect(resolveDisplayColor({ FORCE_COLOR: value }, false), value).toBe(false);
-      expect(resolveDisplayColor({ FORCE_COLOR: value }, true), value).toBe(true);
-    }
-  });
-
-  it("keeps color off under NO_COLOR, including against FORCE_COLOR", () => {
-    expect(resolveDisplayColor({ NO_COLOR: "1" }, true)).toBe(false);
-    expect(resolveDisplayColor({ NO_COLOR: "1", FORCE_COLOR: "1" }, false)).toBe(
-      false,
-    );
-    // Empty is unset, so it decides nothing on its own.
-    expect(resolveDisplayColor({ NO_COLOR: "" }, true)).toBe(true);
-  });
-});
-
 describe("dispatch import boundaries (AC-5.5, FR-8)", () => {
   const readProgramSource = (): Promise<string> =>
     fs.readFile(new URL("./program.ts", import.meta.url), "utf8");
@@ -162,6 +133,7 @@ describe("dispatch import boundaries (AC-5.5, FR-8)", () => {
       "./commands/list.js",
       "./commands/resume.js",
       "./commands/run.js",
+      "./display/format.js",
       "./harness/runtime.js",
       "node:os",
     ]);
