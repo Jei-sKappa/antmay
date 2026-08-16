@@ -39,6 +39,56 @@ type LexicalResult =
   | { ok: false; message: string };
 
 /**
+ * The top level of the worktree owning `canonicalTarget`, or why it has none.
+ *
+ * A run only ever proceeds from an ordinary worktree, and `rev-parse` answers
+ * both halves of that — that the repository is not bare, and where its top
+ * level is — in one invocation. Since it stops at the first option it cannot
+ * answer, a combined invocation that fails says only that something was wrong;
+ * so anything short of a complete affirmative answer is re-asked one option at
+ * a time, and a bare repository, a target outside any repository, and a
+ * worktree without a top level each keep the diagnostic that names it.
+ */
+async function worktreeRootOf(
+  canonicalTarget: string,
+): Promise<{ ok: true; root: string } | { ok: false; message: string }> {
+  const combined = await runGit(canonicalTarget, [
+    "rev-parse",
+    "--is-bare-repository",
+    "--show-toplevel",
+  ]);
+  if (combined.code === 0) {
+    const [isBare = "", topLevel = ""] = combined.stdout
+      .split("\n")
+      .map((line) => line.trim());
+    if (isBare === "false" && topLevel !== "") {
+      return { ok: true, root: topLevel };
+    }
+  }
+
+  const bare = await runGit(canonicalTarget, [
+    "rev-parse",
+    "--is-bare-repository",
+  ]);
+  if (bare.code !== 0) {
+    return {
+      ok: false,
+      message: `The thread is not inside a Git worktree: ${canonicalTarget}`,
+    };
+  }
+  if (bare.stdout.trim() === "true") {
+    return {
+      ok: false,
+      message: `Cannot run against a bare repository (the thread has no worktree): ${canonicalTarget}`,
+    };
+  }
+  return {
+    ok: false,
+    message: `The thread has no Git worktree top level: ${canonicalTarget}`,
+  };
+}
+
+/**
  * Validate, purely lexically, that `absPath` names a single thread folder
  * directly inside a repository's `docs/threads/`. Enforces the exact
  * `…/docs/threads/<single-thread-folder>` tail, rejects archived-thread paths
@@ -195,34 +245,11 @@ export async function resolveThreadTarget(
       canonicalLexical;
 
     // Establish the owning worktree from the target itself.
-    const bare = await runGit(canonicalTarget, [
-      "rev-parse",
-      "--is-bare-repository",
-    ]);
-    if (bare.code !== 0) {
-      return {
-        ok: false,
-        message: `The thread is not inside a Git worktree: ${canonicalTarget}`,
-      };
+    const worktree = await worktreeRootOf(canonicalTarget);
+    if (!worktree.ok) {
+      return worktree;
     }
-    if (bare.stdout.trim() === "true") {
-      return {
-        ok: false,
-        message: `Cannot run against a bare repository (the thread has no worktree): ${canonicalTarget}`,
-      };
-    }
-
-    const topLevel = await runGit(canonicalTarget, [
-      "rev-parse",
-      "--show-toplevel",
-    ]);
-    if (topLevel.code !== 0 || topLevel.stdout.trim() === "") {
-      return {
-        ok: false,
-        message: `The thread has no Git worktree top level: ${canonicalTarget}`,
-      };
-    }
-    const canonicalRoot = await fs.realpath(topLevel.stdout.trim());
+    const canonicalRoot = await fs.realpath(worktree.root);
 
     // The canonical Git root must equal the path preceding docs/threads, which
     // also guarantees the target is exactly one direct child of the root's

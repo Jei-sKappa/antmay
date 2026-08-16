@@ -361,7 +361,8 @@ as any other.
   document validator narrows parsed JSON with. Only a primitive that answers a
   question about a raw value belongs here; anything that knows about stages,
   threads, checkpoints, or configuration lives in the module that owns it.
-- `test-helpers/` — a fake harness and Git fixtures for the co-located `*.test.ts`.
+- `test-helpers/` — a fake harness, Git fixtures, and one command harness per
+  command whose suites span several files, for the co-located `*.test.ts`.
 - `scripts/demo.mjs` + `scripts/demo/` + `scripts/scenarios/` —
   dependency-free developer demo: a generic driver, its step/fixture/pipeline
   helpers, and one self-contained file per scenario, driving a selected scripted
@@ -369,23 +370,40 @@ as any other.
 
 ### Test suite shape
 
-The suite drives real `git` subprocesses and real fsynced checkpoints, which
-dominates its runtime on macOS. Two conventions keep it fast; both are load
-bearing.
+**How many `git` processes the suite launches is how long it takes.** It drives
+real `git` subprocesses and real fsynced checkpoints, and while doing so it sits
+near-idle on CPU: the processes queue behind one saturated resource, so wall
+clock tracks their count almost linearly and neither the worker count nor the
+in-file concurrency moves it far from what `vitest.config.ts` already settles
+on. Every convention below exists to hold that count down, and raising it is the
+one change that reliably makes this suite slower.
 
 - `createRepoFixture` returns a **filesystem copy of a cached template
   repository**, built once per distinct set of fixture options. Do not
   reintroduce a per-test `init`/`config`/`add`/`commit` path — that was ~400 ms
   of subprocess time per test case.
-- `commands/resume.test.ts`, `commands/run.test.ts`, and
-  `execution/engine.test.ts` declare their suites with **`describe.concurrent`**,
-  so their cases overlap. Each case owns an independent repository, config root,
-  and state root, and every temporary resource is collected in a module-level
-  array released by a single `afterAll`. In these files, teardown must never run
-  between cases: an `afterEach` hook would delete a repository a still-running
-  case is using, and `onTestFinished` is unusable because Vitest 2 attributes it
-  to the wrong test when cases run concurrently. Any new case in these files
-  allocates through the existing helpers and registers no teardown of its own.
+- **A case selects the shortest pipeline that can show what it is about.** A
+  stage boundary is the most expensive thing a case can ask for — a status, an
+  add, a diff, a commit, and two tip reads — so the command suites default to
+  the Standard prefix through `review-spec`, which carries every stage shape
+  they are judged against: an advancing stage whose boundary must commit, a
+  rerun stage whose boundary may, and a rerun stage whose boundary must not,
+  over a real prerequisite chain. Selecting the whole Standard set to prove
+  something about one stage buys no coverage and three more boundaries. A case
+  about the whole Standard sequence, about a `--from` suffix, or about a stage
+  past `review-spec` names its selection explicitly.
+- The `run` and `resume` suites are **split by phase across several files**,
+  over one shared harness each in `test-helpers/`. A module mock is hoisted per
+  test file, so each file declares only the mocks its own cases need.
+- The command suites, `execution/engine.test.ts`, and `gitops/boundary.test.ts`
+  declare their suites with **`describe.concurrent`**, so their cases overlap.
+  Each case owns an independent repository, config root, and state root, and
+  every temporary resource is collected in a module-level array released by a
+  single `afterAll`. In these files, teardown must never run between cases: an
+  `afterEach` hook would delete a repository a still-running case is using, and
+  `onTestFinished` is unusable because Vitest 2 attributes it to the wrong test
+  when cases run concurrently. Any new case in these files allocates through the
+  existing helpers and registers no teardown of its own.
 - `testTimeout`/`hookTimeout` in `vitest.config.ts` are deliberately generous.
   A Git-backed case needs seconds of wall clock under concurrent load; the
   budget exists so contention alone never fails a test.

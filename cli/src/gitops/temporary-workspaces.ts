@@ -30,7 +30,11 @@ export type TemporaryWorkspaceProblems = {
  * injectable only so a focused test can drive the completed-error and
  * spawn-error paths deterministically.
  */
-export type GitRunner = (cwd: string, args: string[]) => Promise<GitResult>;
+export type GitRunner = (
+  cwd: string,
+  args: string[],
+  stdin?: string,
+) => Promise<GitResult>;
 
 /**
  * The outcome of the check. An unsafe repository carries facts and correction
@@ -55,11 +59,11 @@ export type TemporaryWorkspaceCheckResult =
  * corrections, and each failing directory appears under every group whose probe
  * it failed.
  *
- * Ignore coverage is asked of the directory itself, with the trailing slash that
- * makes a trailing-slash ignore rule match and a filename-restricted rule (say
- * one ending `/*.md`) correctly report as uncovered, and with `--no-index` so
- * the answer describes pattern coverage alone. Tracked content is a separate
- * single probe over the three paths.
+ * Ignore coverage is asked of all three directories in one NUL-delimited probe.
+ * Each path carries the trailing slash that makes a trailing-slash ignore rule
+ * match and a filename-restricted rule (say one ending `/*.md`) correctly report
+ * as uncovered, and `--no-index` keeps the answer about pattern coverage alone.
+ * Tracked content is a separate single probe over the three paths.
  *
  * The check reads and never writes. Every probe that completes is finished
  * before anything is reported, so one refusal names every failing directory. A
@@ -79,25 +83,39 @@ export async function checkTemporaryWorkspaces(
   let trackedPaths: string[] = [];
 
   try {
+    const coveragePaths = WORKSPACE_NAMES.map(
+      (name) => `${relPathOf(name)}/`,
+    );
+    const coverageArgs = [
+      "check-ignore",
+      "--no-index",
+      "-z",
+      "--stdin",
+    ];
+    const coverage = await gitRunner(
+      repoRoot,
+      coverageArgs,
+      coveragePaths.map((workspacePath) => `${workspacePath}\0`).join(""),
+    );
+    if (coverage.code !== 0 && coverage.code !== 1) {
+      return gitFailure(repoRoot, coverageArgs, coverage);
+    }
+    const covered = new Set(splitNul(coverage.stdout));
+    const requested = new Set(coveragePaths);
+    const inconsistentCoverage =
+      [...covered].some((workspacePath) => !requested.has(workspacePath)) ||
+      (coverage.code === 0) !== (covered.size > 0);
+    if (inconsistentCoverage) {
+      return {
+        ok: false,
+        kind: "inspection-error",
+        message: `Cannot inspect the Git state of ${repoRoot}: git check-ignore returned inconsistent coverage output`,
+      };
+    }
     for (const name of WORKSPACE_NAMES) {
-      // The trailing slash asks about the directory; `--no-index` keeps the
-      // answer about ignore patterns rather than index membership.
-      const args = [
-        "check-ignore",
-        "-q",
-        "--no-index",
-        "--",
-        `${relPathOf(name)}/`,
-      ];
-      const result = await gitRunner(repoRoot, args);
-      if (result.code === 0) {
-        continue;
-      }
-      if (result.code === 1) {
+      if (!covered.has(`${relPathOf(name)}/`)) {
         uncovered.push(name);
-        continue;
       }
-      return gitFailure(repoRoot, args, result);
     }
 
     const args = [

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { STAGE_CATALOG } from "../pipeline/catalog.js";
 import type { CatalogStageId } from "../pipeline/stage-id.js";
@@ -19,13 +19,18 @@ import type {
 import { runGit } from "./git.js";
 import { collectBoundaryStatus, readHead } from "./status.js";
 
+/**
+ * Temporary repositories are collected for the whole file and released once
+ * every case has finished. The cases here run concurrently, so nothing may be
+ * torn down between tests: a per-test hook would delete a repository another
+ * in-flight case is still committing into.
+ */
 const fixtures: RepoFixture[] = [];
 
-afterEach(async () => {
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
+afterAll(async () => {
+  await Promise.all(
+    fixtures.map((fixture) => fixture.cleanup().catch(() => undefined)),
+  );
 });
 
 async function newFixture(): Promise<RepoFixture> {
@@ -115,7 +120,7 @@ async function steadyAttempt(
   };
 }
 
-describe("finalizeGitBoundary — a normal attempt", () => {
+describe.concurrent("finalizeGitBoundary — a normal attempt", () => {
   it("commits a required spec.md change with the exact subject", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
@@ -418,7 +423,7 @@ describe("finalizeGitBoundary — a normal attempt", () => {
   });
 });
 
-describe("finalizeGitBoundary — first finalization after a contract repair", () => {
+describe.concurrent("finalizeGitBoundary — first finalization after a contract repair", () => {
   it("judges the preserved attempt's own interval, not the movement across the pause", async () => {
     const fixture = await newFixture();
     // The attempt itself committed, which the `spec` stage forbids; the human
@@ -474,7 +479,7 @@ describe("finalizeGitBoundary — first finalization after a contract repair", (
   });
 });
 
-describe("finalizeGitBoundary — retry after a refused boundary", () => {
+describe.concurrent("finalizeGitBoundary — retry after a refused boundary", () => {
   it("commits the corrected diff without judging the attempt interval again", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;
@@ -567,7 +572,7 @@ describe("finalizeGitBoundary — retry after a refused boundary", () => {
   });
 });
 
-describe("finalizeGitBoundary — commit failures", () => {
+describe.concurrent("finalizeGitBoundary — commit failures", () => {
   it("returns commit-error when a pre-commit hook rejects the boundary", async () => {
     const fixture = await newFixture();
     const hookDir = path.join(fixture.root, ".git", "hooks");
@@ -633,7 +638,7 @@ describe("finalizeGitBoundary — commit failures", () => {
   });
 });
 
-describe("finalizeGitBoundary — Git invocation failures", () => {
+describe.concurrent("finalizeGitBoundary — Git invocation failures", () => {
   function fail(operation: string): never {
     throw new Error(`${operation} unavailable`);
   }
@@ -740,7 +745,7 @@ describe("finalizeGitBoundary — Git invocation failures", () => {
   });
 });
 
-describe("finalizeGitBoundary — policy data only (no stage-name branching)", () => {
+describe.concurrent("finalizeGitBoundary — policy data only (no stage-name branching)", () => {
   it("performs no executor commit for a policy with a null subject template", async () => {
     const fixture = await newFixture();
     const rel = fixture.threadRelPath as string;

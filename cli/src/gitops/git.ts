@@ -50,20 +50,30 @@ export class GitCommandError extends Error {
 }
 
 /**
- * Run the user's `git` executable with `args` in `cwd` and resolve with its
- * exit code, stdout, and stderr. The executable is looked up on the inherited
- * `PATH` and invoked directly — never through a shell — so arguments are never
- * word-split or glob-expanded. A completed process that exits non-zero resolves
- * normally; only a genuine failure to run the process rejects with a
+ * Run the user's `git` executable with `args` in `cwd`, optionally write the
+ * supplied bytes to its standard input, and resolve with its exit code, stdout,
+ * and stderr. The executable is looked up on the inherited `PATH` and invoked
+ * directly — never through a shell — so arguments are never word-split or
+ * glob-expanded. A completed process that exits non-zero resolves normally;
+ * only a genuine failure to run or feed the process rejects with a
  * `GitSpawnError`. This is the single Git access point for the package.
  */
-export function runGit(cwd: string, args: string[]): Promise<GitResult> {
+export function runGit(
+  cwd: string,
+  args: string[],
+  stdin?: string,
+): Promise<GitResult> {
   return new Promise((resolve, reject) => {
-    execFile(
+    let stdinError: unknown;
+    const child = execFile(
       "git",
       args,
       { cwd, encoding: "utf8", maxBuffer: MAX_BUFFER },
       (error, stdout, stderr) => {
+        if (stdinError !== undefined) {
+          reject(new GitSpawnError(args, stdinError));
+          return;
+        }
         if (error !== null) {
           const code = (error as { code?: unknown }).code;
           if (typeof code === "number") {
@@ -76,6 +86,17 @@ export function runGit(cwd: string, args: string[]): Promise<GitResult> {
         resolve({ code: 0, stdout, stderr });
       },
     );
+    if (stdin !== undefined) {
+      if (child.stdin === null) {
+        stdinError = new Error("Git process has no writable stdin");
+        child.kill();
+        return;
+      }
+      child.stdin.once("error", (error) => {
+        stdinError = error;
+      });
+      child.stdin.end(stdin);
+    }
   });
 }
 

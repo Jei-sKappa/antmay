@@ -29,6 +29,16 @@ describe("runGit — success surface", () => {
     expect(result.stdout).toContain("git version");
     expect(result.stderr).toBe("");
   });
+
+  it("writes optional stdin to the Git process", async () => {
+    const dir = await tempDir();
+    const result = await runGit(dir, ["hash-object", "--stdin"], "hello\n");
+    expect(result).toEqual({
+      code: 0,
+      stdout: "ce013625030ba8dba906f756967f9e9ca394464a\n",
+      stderr: "",
+    });
+  });
 });
 
 describe("runGit — failure surface", () => {

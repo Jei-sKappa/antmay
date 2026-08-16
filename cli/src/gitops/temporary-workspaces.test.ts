@@ -7,7 +7,7 @@ import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
-import { GitSpawnError } from "./git.js";
+import { GitSpawnError, splitNul } from "./git.js";
 import {
   checkTemporaryWorkspaces,
   type GitRunner,
@@ -31,7 +31,7 @@ async function newFixture(): Promise<RepoFixture> {
 const REPO = "/repo";
 const THREAD = "docs/threads/260728000000Z-thread";
 
-type Call = { cwd: string; args: string[] };
+type Call = { cwd: string; args: string[]; stdin?: string };
 
 type StubOptions = {
   /** Exit code `git check-ignore` reports per workspace name; `0` by default. */
@@ -52,15 +52,31 @@ type StubOptions = {
  */
 function stub(options: StubOptions): { runner: GitRunner; calls: Call[] } {
   const calls: Call[] = [];
-  const runner: GitRunner = (cwd, args) => {
-    calls.push({ cwd, args: [...args] });
+  const runner: GitRunner = (cwd, args, stdin) => {
+    calls.push({
+      cwd,
+      args: [...args],
+      ...(stdin !== undefined ? { stdin } : {}),
+    });
     if (args[0] === "check-ignore") {
-      const target = args[args.length - 1] ?? "";
-      const name = path.posix.basename(target);
-      const code = options.coverage?.[name] ?? 0;
+      const targets = splitNul(stdin ?? "");
+      const exceptionalCode = targets
+        .map((target) => options.coverage?.[path.posix.basename(target)] ?? 0)
+        .find((code) => code !== 0 && code !== 1);
+      if (exceptionalCode !== undefined) {
+        return Promise.resolve({
+          code: exceptionalCode,
+          stdout: "",
+          stderr: options.coverageStderr ?? "",
+        });
+      }
+      const covered = targets.filter(
+        (target) =>
+          (options.coverage?.[path.posix.basename(target)] ?? 0) === 0,
+      );
       return Promise.resolve({
-        code,
-        stdout: "",
+        code: covered.length > 0 ? 0 : 1,
+        stdout: nul(...covered),
         stderr: options.coverageStderr ?? "",
       });
     }
@@ -174,31 +190,15 @@ describe("checkTemporaryWorkspaces probes", () => {
         cwd: REPO,
         args: [
           "check-ignore",
-          "-q",
           "--no-index",
-          "--",
+          "-z",
+          "--stdin",
+        ],
+        stdin: nul(
           `${THREAD}/.pending-decisions/`,
-        ],
-      },
-      {
-        cwd: REPO,
-        args: [
-          "check-ignore",
-          "-q",
-          "--no-index",
-          "--",
           `${THREAD}/.pending-reviews/`,
-        ],
-      },
-      {
-        cwd: REPO,
-        args: [
-          "check-ignore",
-          "-q",
-          "--no-index",
-          "--",
           `${THREAD}/.implementation-runs/`,
-        ],
+        ),
       },
       {
         cwd: REPO,
@@ -262,6 +262,23 @@ describe("checkTemporaryWorkspaces probes", () => {
     expect(message).toContain("fatal: not a git repository");
   });
 
+  it("fails closed when check-ignore reports an unrequested path", async () => {
+    const runner: GitRunner = (_cwd, args) =>
+      Promise.resolve({
+        code: 0,
+        stdout:
+          args[0] === "check-ignore"
+            ? nul("docs/threads/other/.pending-decisions/")
+            : "",
+        stderr: "",
+      });
+    const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
+
+    expect(inspectionError(result)).toContain(
+      "git check-ignore returned inconsistent coverage output",
+    );
+  });
+
   it("returns a non-zero ls-files result as a Git error", async () => {
     const { runner } = stub({ lsCode: 128, lsStderr: "fatal: bad pathspec\n" });
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
@@ -273,7 +290,7 @@ describe("checkTemporaryWorkspaces probes", () => {
   });
 
   it("returns a spawn failure as a Git error", async () => {
-    const args = ["check-ignore", "-q", "--no-index", "--", "x/"];
+    const args = ["check-ignore", "--no-index", "-z", "--stdin"];
     const runner: GitRunner = () =>
       Promise.reject(new GitSpawnError(args, new Error("spawn ENOENT")));
     const result = await checkTemporaryWorkspaces(REPO, THREAD, runner);
