@@ -220,6 +220,13 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
 
 ### Module layout (`src/`)
 
+`src/` is the typechecked, guarded module graph, not the boundary of what ships.
+What ships is whatever `main.ts` reaches, which is why `test-helpers/` sits here
+and never appears in `dist/`. So a tree earns its place by needing the
+typecheck, the tests, and `architecture.test.ts` — never by being production
+code, and a developer tree the running process must reach belongs here as much
+as any other.
+
 - `main.ts` — minimal bootstrap: enforces the Node `>=22` guard, then
   dynamically imports `program.js` so nothing heavy loads before the guard. It is
   also where a throw that escaped every handler is reported, through a renderer
@@ -309,7 +316,13 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   real one under `backends/` (the Sandcastle adapter and the executable probe)
   and the developer scripted one under `scripted/` — which the resolver pairs
   and loads one of. Availability belongs to the family rather than the harness,
-  because the scripted family establishes it without contacting anything. Across
+  because the scripted family establishes it without contacting anything. Both
+  families are ordinary modules here, the developer one included: a toggle picks
+  it while the process is running, so the resolver must be able to load it and
+  the bundle carries it. That is also what typechecks it against
+  `HarnessInvoker`, builds it for the demo, and holds it to the guards, so a
+  change to the request, outcome, or stage-context shape breaks the fake in the
+  same compile as the real adapter. Across
   both axes, **which harnesses exist** is `id.ts`: the id union, the ids
   themselves, and the one predicate that narrows an untrusted value into the
   union. The settings parser and checkpoint validation reach it rather than
