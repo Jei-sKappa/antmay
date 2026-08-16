@@ -3,12 +3,6 @@ import path from "node:path";
 
 import { isPlainObject } from "../../shared/validation.js";
 
-/**
- * The sole environment variable that enables scripted harness mode for `run` and
- * `resume`. No other test-mode toggle exists.
- */
-export const SCRIPTED_HARNESS_TOGGLE_VAR = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
-
 /** Fixed scenario filename under the resolved config root. */
 export const SCRIPTED_SCENARIO_FILENAME = "scripted-harness.json";
 
@@ -69,11 +63,6 @@ const GENERIC_CASES: ReadonlySet<ScriptedCaseName> = new Set([
   "harness-crash",
 ]);
 
-export type ScriptedHarnessToggleMode =
-  | { mode: "real" }
-  | { mode: "scripted" }
-  | { mode: "error"; message: string };
-
 /**
  * A validated scripted scenario. Stage case arrays preserve the order from the
  * source file.
@@ -92,35 +81,6 @@ export type LoadScriptedScenarioResult =
   | { ok: false; scenarioPath: string; errors: string[] };
 
 export type ReadScenarioFile = (scenarioPath: string) => Promise<string>;
-
-function readToggleValue(env: NodeJS.ProcessEnv): string | undefined {
-  const value = env[SCRIPTED_HARNESS_TOGGLE_VAR];
-  if (value === undefined || value === "") {
-    return undefined;
-  }
-  return value;
-}
-
-/**
- * Interpret `ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS`. Unset or empty selects real
- * mode; the exact string `1` selects scripted mode; every other non-empty value
- * is a configuration error naming the variable and accepted value.
- */
-export function interpretScriptedHarnessToggle(
-  env: NodeJS.ProcessEnv,
-): ScriptedHarnessToggleMode {
-  const value = readToggleValue(env);
-  if (value === undefined) {
-    return { mode: "real" };
-  }
-  if (value === "1") {
-    return { mode: "scripted" };
-  }
-  return {
-    mode: "error",
-    message: `${SCRIPTED_HARNESS_TOGGLE_VAR} must be exactly "1" to enable scripted harness mode, got: ${JSON.stringify(value)}`,
-  };
-}
 
 /**
  * Resolve `<config-root>/scripted-harness.json`. Pure: no filesystem access and

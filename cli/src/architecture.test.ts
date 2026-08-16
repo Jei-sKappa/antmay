@@ -1267,12 +1267,17 @@ describe("a harness is a provider object, never a literal", () => {
 });
 
 describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => {
-  /** What resolving a runtime loads: one family's invoker paired with its probe. */
+  /**
+   * What resolving a runtime loads: one family's entry points — its invoker
+   * paired with its probe, and, for the scripted family, the read of the live
+   * scenario its invoker is built over.
+   */
   const ENTRY_ADAPTERS = [
     "harness/backends/sandcastle.ts",
     "harness/backends/probe.ts",
     "harness/scripted/invoker.ts",
     "harness/scripted/probe.ts",
+    "harness/scripted/scenario.ts",
   ];
   /** The fixed case and effect catalog, internal to the scripted family. */
   const SCRIPTED_CASES = "harness/scripted/cases.ts";
@@ -1302,7 +1307,7 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
       );
       expect(outside, `importers of ${adapter}`).toEqual([RESOLVER]);
       // Each family sits behind its own thunk, so resolving one runtime
-      // evaluates neither the other family's invoker nor its probe.
+      // evaluates no entry point of the other.
       const deferred = resolver.references.some(
         (reference) => reference.target === adapter && reference.dynamic,
       );

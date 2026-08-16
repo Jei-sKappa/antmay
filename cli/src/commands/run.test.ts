@@ -37,9 +37,10 @@ import { createScriptedInvoker } from "../harness/scripted/invoker.js";
 import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import {
-  SCRIPTED_HARNESS_TOGGLE_VAR,
   SCRIPTED_SCENARIO_FILENAME,
+  loadScriptedScenario,
 } from "../harness/scripted/scenario.js";
+import { SCRIPTED_HARNESS_TOGGLE_VAR } from "../harness/scripted/toggle.js";
 import {
   EXIT_FAILURE,
   EXIT_OK,
@@ -202,7 +203,8 @@ const failingProbe: HarnessExecutableProbe = async (harnesses): Promise<ProbeRes
  * The one lazy runtime seam the command reads its adapters through. The real
  * family hands back the case-driven fake harness under test with whichever probe
  * the case injected; the scripted family is the genuine developer adapter, so a
- * scripted case exercises the same invoker, catalog, and probe production loads.
+ * scripted case exercises the same invoker, catalog, probe, and scenario reader
+ * production loads.
  */
 function testRuntimeLoader(
   invoker: HarnessInvoker,
@@ -213,6 +215,7 @@ function testRuntimeLoader(
     scripted: async () => ({
       createInvoker: createScriptedInvoker,
       probe: probeScriptedHarnessExecutables,
+      loadScenario: loadScriptedScenario,
     }),
   };
 }

@@ -1,12 +1,14 @@
 import type { HarnessRuntimeIdentity } from "../state/checkpoint/types.js";
 import type { ProbeFailure, ProbeResult } from "./backends/probe.js";
 import type { HarnessId } from "./id.js";
-import type { ScriptedScenario } from "./scripted/scenario.js";
+import type {
+  LoadScriptedScenarioResult,
+  ScriptedScenario,
+} from "./scripted/scenario.js";
 import {
   SCRIPTED_HARNESS_TOGGLE_VAR,
   interpretScriptedHarnessToggle,
-  loadScriptedScenario,
-} from "./scripted/scenario.js";
+} from "./scripted/toggle.js";
 import type { HarnessInvoker } from "./types.js";
 
 /**
@@ -27,7 +29,11 @@ export type RealHarnessAdapters = {
 
 /**
  * The developer scripted adapter family: the scripted invoker, which drives a
- * validated scenario and observes each resolved prompt, and its own probe.
+ * validated scenario and observes each resolved prompt, its own probe, and the
+ * read of the live scenario the invoker is built over. The scenario schema, the
+ * case catalog it names, and the validator that enforces both belong to the
+ * family rather than to the resolver, so selecting the real runtime loads none
+ * of them.
  */
 export type ScriptedHarnessAdapters = {
   createInvoker: (
@@ -35,6 +41,10 @@ export type ScriptedHarnessAdapters = {
     onResolvedPrompt: (prompt: string) => void,
   ) => HarnessInvoker;
   probe: HarnessExecutableProbe;
+  loadScenario: (
+    configRoot: string,
+    stageIds: readonly string[],
+  ) => Promise<LoadScriptedScenarioResult>;
 };
 
 /**
@@ -180,10 +190,11 @@ function selectRuntime(
 }
 
 /**
- * Load the scripted adapter family over a freshly read live scenario. The
- * scenario is read and validated against the request's exact stage IDs on every
- * resolution, so a developer edits one file between invocations and the next one
- * sees it; nothing about it is carried in durable state.
+ * Load the scripted adapter family and build its invoker over the live scenario
+ * the family itself reads. That read and its validation against the request's
+ * exact stage IDs happen on every resolution, so a developer edits one file
+ * between invocations and the next one sees it; nothing about it is carried in
+ * durable state.
  */
 async function resolveScripted(
   request: HarnessRuntimeRequest,
@@ -199,11 +210,11 @@ async function resolveScripted(
       failure: { kind: "config-root-unresolved", message: configRoot.message },
     };
   }
-  const loaded = await loadScriptedScenario(configRoot.configRoot, request.stageIds);
+  const adapters = await loader.scripted();
+  const loaded = await adapters.loadScenario(configRoot.configRoot, request.stageIds);
   if (!loaded.ok) {
     return { ok: false, failure: { kind: "scenario-rejected", errors: loaded.errors } };
   }
-  const adapters = await loader.scripted();
   return {
     ok: true,
     invoker: adapters.createInvoker(loaded.scenario, request.onScriptedPrompt),
@@ -304,14 +315,19 @@ export const productionHarnessRuntimeLoader: HarnessRuntimeLoader = {
     };
   },
   scripted: async () => {
-    const [{ createScriptedInvoker }, { probeScriptedHarnessExecutables }] =
-      await Promise.all([
-        import("./scripted/invoker.js"),
-        import("./scripted/probe.js"),
-      ]);
+    const [
+      { createScriptedInvoker },
+      { probeScriptedHarnessExecutables },
+      { loadScriptedScenario },
+    ] = await Promise.all([
+      import("./scripted/invoker.js"),
+      import("./scripted/probe.js"),
+      import("./scripted/scenario.js"),
+    ]);
     return {
       createInvoker: createScriptedInvoker,
       probe: probeScriptedHarnessExecutables,
+      loadScenario: loadScriptedScenario,
     };
   },
 };

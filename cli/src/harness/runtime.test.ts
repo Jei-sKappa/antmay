@@ -15,9 +15,10 @@ import {
 } from "./runtime.js";
 import type { ScriptedScenario } from "./scripted/scenario.js";
 import {
-  SCRIPTED_HARNESS_TOGGLE_VAR,
   SCRIPTED_SCENARIO_FILENAME,
+  loadScriptedScenario,
 } from "./scripted/scenario.js";
+import { SCRIPTED_HARNESS_TOGGLE_VAR } from "./scripted/toggle.js";
 import type { AttemptOutcome, HarnessInvoker } from "./types.js";
 
 const tempDirs: string[] = [];
@@ -118,6 +119,9 @@ function createLoaderSpy(
             spy.scriptedProbeCalls.push([...harnesses]);
             return scriptedProbe(harnesses, repoRoot);
           },
+          // The family reads the live scenario, so the spy delegates to the real
+          // reader over the config root each case actually wrote.
+          loadScenario: loadScriptedScenario,
         };
       },
     },
@@ -390,8 +394,9 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
         "stages.review-spec must be present.",
       ]);
     }
-    // A rejected scenario stops before either family is loaded.
-    expect(spy.scriptedLoads).toBe(0);
+    // Reading the scenario is the scripted family's own work, so a rejected one
+    // still leaves the real family unloaded.
+    expect(spy.realLoads).toBe(0);
   });
 
   it("reports an unresolvable config root only in scripted mode", async () => {
@@ -518,5 +523,16 @@ describe("productionHarnessRuntimeLoader", () => {
     if (scriptedProbe.ok) {
       expect(scriptedProbe.versions.codex).toContain("scripted-harness");
     }
+  });
+
+  it("reads the live scenario through the scripted family", async () => {
+    const configRoot = await makeConfigRoot(
+      scenarioDocument({ spec: ["spec-correct"] }),
+    );
+    const scripted = await productionHarnessRuntimeLoader.scripted();
+    const loaded = await scripted.loadScenario(configRoot, ["spec"]);
+
+    expect(loaded.ok).toBe(true);
+    if (loaded.ok) expect(loaded.scenario.stages).toEqual({ spec: ["spec-correct"] });
   });
 });
