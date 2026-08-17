@@ -8,7 +8,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   createRepoFixture,
@@ -37,19 +37,8 @@ import {
   type ScriptedCaseName,
 } from "./scenario.js";
 
-const fixtures: RepoFixture[] = [];
-
-afterEach(async () => {
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
-});
-
 async function newFixture(): Promise<RepoFixture> {
-  const fixture = await createRepoFixture({ thread: {} });
-  fixtures.push(fixture);
-  return fixture;
+  return createRepoFixture({ thread: {} });
 }
 
 /** The effect context the adapter hands the catalog for the fixture's thread. */

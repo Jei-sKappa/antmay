@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   createRepoFixture,
@@ -13,19 +13,8 @@ import {
   type GitRunner,
 } from "./temporary-workspaces.js";
 
-const fixtures: RepoFixture[] = [];
-
-afterEach(async () => {
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
-});
-
 async function newFixture(): Promise<RepoFixture> {
-  const fixture = await createRepoFixture({ thread: {} });
-  fixtures.push(fixture);
-  return fixture;
+  return createRepoFixture({ thread: {} });
 }
 
 const REPO = "/repo";

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { renderStagePrompt } from "../prompt.js";
 import type { AttemptRequest } from "../types.js";
@@ -22,19 +22,8 @@ import {
 } from "./invoker.js";
 import type { ScriptedCaseName, ScriptedScenario } from "./scenario.js";
 
-const fixtures: RepoFixture[] = [];
-
-afterEach(async () => {
-  while (fixtures.length > 0) {
-    const fixture = fixtures.pop();
-    if (fixture) await fixture.cleanup();
-  }
-});
-
 async function newFixture(): Promise<RepoFixture> {
-  const fixture = await createRepoFixture({ thread: {} });
-  fixtures.push(fixture);
-  return fixture;
+  return createRepoFixture({ thread: {} });
 }
 
 function makeScenario(

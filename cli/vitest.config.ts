@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import path from "node:path";
 
 import { defineConfig } from "vitest/config";
+
+import { TEMP_ROOT_ENV } from "./src/test-helpers/temp-root.js";
 
 /**
  * A directory whose `git` is the executable the platform's `git` would hand the
@@ -51,6 +53,16 @@ function directGitDirectory(): string | null {
 
 const directGit = directGitDirectory();
 
+/**
+ * The one directory every temporary tree in this run is allocated under. It is
+ * created here rather than in the global setup so it can be handed to the
+ * workers through `env` at the moment they are forked, and it is canonical from
+ * the start so no allocation below it needs its own `realpath`. The global
+ * teardown removes it once the last file has finished.
+ */
+const tempRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "antmay-test-")));
+process.env[TEMP_ROOT_ENV] = tempRoot;
+
 // Git subprocess throughput, not CPU, is what this suite is bound by: it sits
 // near-idle on cores while waiting on `git`. Workers past this point buy
 // nothing measurable and only deepen the queue in front of that one resource.
@@ -62,13 +74,13 @@ export default defineConfig({
     environment: "node",
     maxWorkers: workerCount,
     minWorkers: workerCount,
-    ...(directGit === null
-      ? {}
-      : {
-          env: {
-            PATH: `${directGit}${path.delimiter}${process.env.PATH ?? ""}`,
-          },
-        }),
+    globalSetup: "./src/test-helpers/global-setup.ts",
+    env: {
+      [TEMP_ROOT_ENV]: tempRoot,
+      ...(directGit === null
+        ? {}
+        : { PATH: `${directGit}${path.delimiter}${process.env.PATH ?? ""}` }),
+    },
     // The Git-backed cases drive whole runs through real `git` subprocesses and
     // fsynced checkpoints, and they run concurrently with the rest of the suite.
     // A single case can legitimately need several seconds of wall clock under

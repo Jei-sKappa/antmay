@@ -1,8 +1,7 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { ExecutionDisplay, StageDisposition } from "../display/types.js";
 import { nullDisplay } from "../display/types.js";
@@ -35,41 +34,17 @@ import {
   createRepoFixture,
   type RepoFixture,
 } from "../test-helpers/git-fixture.js";
+import { tempDir } from "../test-helpers/temp-root.js";
 import { SignalInterruption } from "../runner/signals.js";
 import type { ExecutionContext, ExecutionResult } from "./engine.js";
 import { executeEngine } from "./engine.js";
 
-/**
- * Temporary resources are collected for the whole file and released once every
- * case has finished. The cases here run concurrently, so nothing may be torn
- * down between tests: a per-test hook would reach into a repository or run
- * directory another in-flight case is still using. Once every case has finished,
- * the independent resources are released concurrently so teardown stays within
- * the hook budget under full-suite filesystem load.
- */
-const fixtures: RepoFixture[] = [];
-const runDirs: string[] = [];
-
-afterAll(async () => {
-  await Promise.all([
-    ...fixtures.map((fixture) => fixture.cleanup().catch(() => undefined)),
-    ...runDirs.map(async (dir) => {
-      await fs.chmod(dir, 0o700).catch(() => undefined);
-      await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
-    }),
-  ]);
-}, 120_000);
-
 async function newFixture(): Promise<RepoFixture> {
-  const fixture = await createRepoFixture({ thread: {} });
-  fixtures.push(fixture);
-  return fixture;
+  return createRepoFixture({ thread: {} });
 }
 
 async function makeRunDir(): Promise<string> {
-  const raw = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-engine-"));
-  runDirs.push(raw);
-  return raw;
+  return tempDir("antmay-engine-");
 }
 
 /**

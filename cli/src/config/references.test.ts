@@ -1,10 +1,10 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { resolveDocumentReference, type DocumentRole } from "./references.js";
+import { tempDirSync } from "../test-helpers/temp-root.js";
 
 const CONFIG_ROOT = "/tmp/antmay-config";
 const CWD = "/work/repo";
@@ -128,11 +128,7 @@ describe("syntax-directed routing does not consult the filesystem", () => {
   let dir: string;
 
   beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), "antmay-references-"));
-  });
-
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
+    dir = tempDirSync("antmay-references-");
   });
 
   it("keeps a bare name in the config root even when a same-named file sits in the cwd", () => {

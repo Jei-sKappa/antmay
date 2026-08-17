@@ -1,19 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { loadStageSettings } from "./load.js";
+import { tempDirSync } from "../../test-helpers/temp-root.js";
 
 let dir: string;
 
 beforeEach(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "antmay-settings-"));
-});
-
-afterEach(() => {
-  fs.rmSync(dir, { recursive: true, force: true });
+  dir = tempDirSync("antmay-settings-");
 });
 
 function write(contents: string): string {

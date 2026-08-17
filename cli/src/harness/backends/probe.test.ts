@@ -1,5 +1,4 @@
-import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync, chmodSync } from "node:fs";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,14 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HarnessId } from "../id.js";
 import type { ProbeExec } from "./probe.js";
 import { probeHarnessExecutables } from "./probe.js";
+import { tempDirSync } from "../../test-helpers/temp-root.js";
 
 let binDir: string;
 let repoRoot: string;
 let savedPath: string | undefined;
 
 beforeEach(() => {
-  binDir = mkdtempSync(path.join(tmpdir(), "antmay-bin-"));
-  repoRoot = mkdtempSync(path.join(tmpdir(), "antmay-repo-"));
+  binDir = tempDirSync("antmay-bin-");
+  repoRoot = tempDirSync("antmay-repo-");
   savedPath = process.env.PATH;
   // Replace PATH so only the fakes we create are discoverable — nothing leaks
   // in from the developer's real environment.

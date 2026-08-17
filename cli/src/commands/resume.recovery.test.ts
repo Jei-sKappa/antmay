@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { RunCheckpoint } from "../state/checkpoint/types.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
@@ -17,11 +17,9 @@ import {
   dropPendingSync,
   fakeSignals,
   headOf,
-  heldLocks,
   lockNames,
   okProbe,
   readCp,
-  releaseTestResources,
   removePending,
   resume,
   seed,
@@ -39,8 +37,6 @@ import {
  * harness-free Git-boundary finalization, artifact-contract repair, and abandoned
  * cursors.
  */
-
-afterAll(releaseTestResources, 120_000);
 
 describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, AC-11.6)", () => {
   it("leaves a waiting run with non-empty queues byte-for-byte unchanged, prints files, exits 2", async () => {
@@ -762,7 +758,6 @@ describe.concurrent("resumeCommand — unrecoverable recovery documents (AC-2.3)
         new Date(),
       );
       if (!held.ok) throw new Error("expected to acquire the lock");
-      heldLocks.push(held.handle);
 
       let probeCalled = false;
       const result = await resume(h, runId, standardSteps(h.fixture), {
@@ -857,7 +852,6 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
       new Date(),
     );
     if (!held.ok) throw new Error("expected to acquire the lock");
-    heldLocks.push(held.handle);
     const refused = await resume(h, runId, standardSteps(h.fixture));
     expect(refused.code).toBe(1);
     expect(refused.err).toContain("already locked");

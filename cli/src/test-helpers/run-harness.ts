@@ -26,7 +26,6 @@ import {
 } from "../cli/exit-codes.js";
 import type { installSignalHandlers } from "../runner/signals.js";
 import { locksDirectory } from "../state/lock.js";
-import type { LockHandle } from "../state/lock.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
 import { runsDirectory } from "../state/runs.js";
 import {
@@ -35,6 +34,7 @@ import {
   type FakeHarnessStep,
 } from "./fake-harness.js";
 import { createRepoFixture, type RepoFixture } from "./git-fixture.js";
+import { tempDir } from "./temp-root.js";
 import { runCommand } from "../commands/run.js";
 import type { RunDeps } from "../commands/run/types.js";
 
@@ -75,38 +75,7 @@ export class ClosedPipe extends Capture {
   }
 }
 
-/**
- * Temporary resources are collected for the whole file and released once every
- * case has finished. The cases here run concurrently, so nothing may be torn
- * down between tests: a per-test hook would reach into a repository or state
- * root another in-flight case is still using.
- */
-export const fixtures: RepoFixture[] = [];
-export const tempDirs: string[] = [];
-export const heldLocks: LockHandle[] = [];
-
-/**
- * Release every temporary resource this module handed out. Each suite file
- * calls it from one `afterAll`: the cases run concurrently, so nothing may be
- * torn down between them.
- */
-export async function releaseTestResources(): Promise<void> {
-  // Locks first: releasing one only unlinks a file inside a state root that is
-  // about to be removed. The rest are independent trees, so they go together.
-  await Promise.all(heldLocks.map((lock) => lock.release().catch(() => undefined)));
-  await Promise.all([
-    ...fixtures.map((fixture) => fixture.cleanup().catch(() => undefined)),
-    ...tempDirs.map((dir) =>
-      fs.rm(dir, { recursive: true, force: true }).catch(() => undefined),
-    ),
-  ]);
-}
-
-export async function tempDir(prefix: string): Promise<string> {
-  const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), prefix)));
-  tempDirs.push(dir);
-  return dir;
-}
+export { tempDir };
 
 /** The stage IDs the fixture's `standard` pipeline document selects, in order. */
 export const STANDARD_STAGE_IDS = [
@@ -248,7 +217,6 @@ export async function setup(
   } = {},
 ): Promise<Harness> {
   const fixture = await createRepoFixture({ thread: {} });
-  fixtures.push(fixture);
   const configRoot = await tempDir("antmay-cfg-");
   const stateRoot = await tempDir("antmay-state-");
   const stages = options.stages ?? DEFAULT_STAGE_IDS;

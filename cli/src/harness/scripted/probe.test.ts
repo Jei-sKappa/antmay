@@ -1,7 +1,3 @@
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../id.js";
@@ -9,9 +5,10 @@ import {
   probeScriptedHarnessExecutables,
   SCRIPTED_PROBE_VERSION,
 } from "./probe.js";
+import { tempDirSync } from "../../test-helpers/temp-root.js";
 
 describe("probeScriptedHarnessExecutables", () => {
-  const repoRoot = mkdtempSync(path.join(tmpdir(), "antmay-scripted-probe-"));
+  const repoRoot = tempDirSync("antmay-scripted-probe-");
 
   it("returns a deterministic non-empty version for each distinct harness", async () => {
     const result = await probeScriptedHarnessExecutables(

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
 import type { HarnessId } from "../harness/id.js";
@@ -21,7 +21,6 @@ import {
   lockNames,
   okProbe,
   readCp,
-  releaseTestResources,
   resume,
   scriptedEnv,
   seed,
@@ -39,8 +38,6 @@ import {
  * What a resume renders and reports — snapshot fidelity, signals during resumed
  * execution, scripted-harness mode, and the persisted-attempt `Continue` line.
  */
-
-afterAll(releaseTestResources, 120_000);
 
 describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1)", () => {
   it("probes only the current stage's harness and keeps retained versions for later stages", async () => {

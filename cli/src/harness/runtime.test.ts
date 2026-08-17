@@ -1,8 +1,7 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { ProbeResult } from "./backends/probe.js";
 import type { HarnessId } from "./id.js";
@@ -20,19 +19,11 @@ import {
 } from "./scripted/scenario.js";
 import { SCRIPTED_HARNESS_TOGGLE_VAR } from "./scripted/toggle.js";
 import type { AttemptOutcome, HarnessInvoker } from "./types.js";
-
-const tempDirs: string[] = [];
-
-afterAll(async () => {
-  await Promise.all(
-    tempDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })),
-  );
-});
+import { tempDir as allocate } from "../test-helpers/temp-root.js";
 
 /** A config root holding the live scripted scenario, or none at all. */
 async function makeConfigRoot(scenario?: unknown): Promise<string> {
-  const configRoot = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-runtime-"));
-  tempDirs.push(configRoot);
+  const configRoot = await allocate("antmay-runtime-");
   if (scenario !== undefined) {
     await writeScenario(configRoot, scenario);
   }

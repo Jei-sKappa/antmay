@@ -1,8 +1,8 @@
-import { promises as fs, rmSync } from "node:fs";
-import os from "node:os";
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { gitOrThrow, runGit } from "../gitops/git.js";
+import { tempDir } from "./temp-root.js";
 
 /**
  * Operational thread directories that live inside a thread and must never
@@ -37,9 +37,9 @@ export type RepoFixtureOptions = {
 };
 
 /**
- * A disposable Git repository for tests. `root` is the canonical (realpath)
- * worktree root; thread fields are present only when a thread was created.
- * `git` runs `git` inside the repo; `cleanup` removes the temp directory.
+ * A disposable Git repository for tests. `root` is the canonical worktree root;
+ * thread fields are present only when a thread was created. `git` runs `git`
+ * inside the repo.
  */
 export type RepoFixture = {
   root: string;
@@ -47,7 +47,6 @@ export type RepoFixture = {
   threadPath?: string;
   threadRelPath?: string;
   git: (args: string[]) => ReturnType<typeof runGit>;
-  cleanup: () => Promise<void>;
 };
 
 /**
@@ -93,22 +92,9 @@ const templates = new Map<string, Promise<string>>();
 
 let templatesDir: Promise<string> | undefined;
 
-/**
- * The one directory holding this worker's templates, created on first use and
- * removed when the process exits. Templates outlive individual fixtures, so
- * they are deliberately not owned by any test's cleanup.
- */
+/** The one directory holding this worker's templates, created on first use. */
 function templatesDirectory(): Promise<string> {
-  if (templatesDir === undefined) {
-    templatesDir = fs
-      .mkdtemp(path.join(os.tmpdir(), "antmay-git-template-"))
-      .then((dir) => {
-        process.once("exit", () => {
-          rmSync(dir, { recursive: true, force: true });
-        });
-        return dir;
-      });
-  }
+  templatesDir ??= tempDir("antmay-git-template-");
   return templatesDir;
 }
 
@@ -158,9 +144,9 @@ async function buildTemplate(spec: TemplateSpec): Promise<string> {
 }
 
 /**
- * Create a disposable Git repository under the OS temp directory holding the
- * thread's operational ignore rules and, unless `thread` is omitted, one
- * thread with seed/decision content — all already committed as genesis.
+ * Create a disposable Git repository holding the thread's operational ignore
+ * rules and, unless `thread` is omitted, one thread with seed/decision
+ * content — all already committed as genesis.
  *
  * The repository is a filesystem copy of a cached template built once per
  * distinct set of options, which keeps a suite of Git-backed tests off the
@@ -179,16 +165,12 @@ export async function createRepoFixture(
     templates.set(key, template);
   }
 
-  const rawDir = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-git-"));
-  const root = await fs.realpath(rawDir);
+  const root = await tempDir("antmay-git-");
   await fs.cp(await template, root, { recursive: true });
 
   const fixture: RepoFixture = {
     root,
     git: (args: string[]) => runGit(root, args),
-    cleanup: async () => {
-      await fs.rm(rawDir, { recursive: true, force: true });
-    },
   };
 
   if (spec.thread !== null) {

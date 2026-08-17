@@ -1,26 +1,15 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { LockFsOps } from "./lock.js";
 import { acquireWorkspaceLock, lockPathFor, locksDirectory } from "./lock.js";
-
-const cleanups: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  while (cleanups.length > 0) {
-    const cleanup = cleanups.pop();
-    if (cleanup) await cleanup();
-  }
-});
+import { tempDir as allocate } from "../test-helpers/temp-root.js";
 
 async function stateRootDir(): Promise<string> {
-  const raw = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-lock-"));
-  cleanups.push(() => fs.rm(raw, { recursive: true, force: true }));
-  return path.join(await fs.realpath(raw), "state");
+  return path.join(await allocate("antmay-lock-"), "state");
 }
 
 const WORKSPACE = "/canonical/workspace/root";

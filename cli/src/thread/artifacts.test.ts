@@ -1,5 +1,4 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -24,6 +23,7 @@ import {
   validateSerializedArtifactMismatches,
   validateSerializedArtifactPattern,
 } from "./artifacts.js";
+import { tempDir as allocate } from "../test-helpers/temp-root.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 
@@ -41,9 +41,7 @@ const THREAD_REL = path.posix.join("docs", "threads", "260727135009Z-t");
  * every case starts from a valid thread and varies only what it means to.
  */
 async function threadFixture(): Promise<{ repoRoot: string; threadAbs: string }> {
-  const raw = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-artifacts-"));
-  cleanups.push(() => fs.rm(raw, { recursive: true, force: true }));
-  const repoRoot = await fs.realpath(raw);
+  const repoRoot = await allocate("antmay-artifacts-");
   const threadAbs = path.join(repoRoot, THREAD_REL);
   await fs.mkdir(threadAbs, { recursive: true });
   await fs.writeFile(path.join(threadAbs, "seed.md"), "# Seed\n");

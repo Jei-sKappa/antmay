@@ -1,7 +1,7 @@
 import { promises as fs, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   EXIT_FAILURE,
@@ -24,11 +24,9 @@ import {
   DONE,
   commitSubjects,
   fakeSignals,
-  heldLocks,
   lockNames,
   makeWorkspacesUnsafe,
   readCp,
-  releaseTestResources,
   resume,
   scriptedEnv,
   seed,
@@ -80,8 +78,6 @@ vi.mock("../state/persist.js", async (importOriginal) => {
   };
   return { ...actual, writeCheckpoint: spy };
 });
-
-afterAll(releaseTestResources, 120_000);
 
 describe.concurrent("resumeCommand — preflight rejections (AC-15.2)", () => {
   it("rejects an unknown run with exit 1", async () => {
@@ -228,7 +224,6 @@ const PREFLIGHT_REFUSALS: {
         new Date(),
       );
       if (!held.ok) throw new Error("expected to acquire the lock");
-      heldLocks.push(held.handle);
       return {};
     },
   },

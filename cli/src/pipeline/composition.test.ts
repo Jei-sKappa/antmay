@@ -1,8 +1,7 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { composePipeline } from "./composition.js";
 import type {
@@ -12,6 +11,7 @@ import type {
 import { loadPipelineDocument } from "./documents.js";
 import type { ArtifactState } from "../thread/artifacts.js";
 import type { PipelineDocument, PipelineStageEntry } from "./types.js";
+import { tempDirSync } from "../test-helpers/temp-root.js";
 
 const THREAD = "docs/threads/260101000000Z-example";
 
@@ -72,11 +72,7 @@ describe("composePipeline — suffix selection (AC-4.1, AC-4.2, AC-4.3)", () => 
   let dir: string;
 
   beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), "antmay-composition-"));
-  });
-
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
+    dir = tempDirSync("antmay-composition-");
   });
 
   it("validates the complete source document even where --from would skip the fault", () => {

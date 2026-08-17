@@ -1,8 +1,7 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   createRunDirectory,
@@ -10,20 +9,10 @@ import {
   runDirectoryFor,
   runsDirectory,
 } from "./runs.js";
-
-const cleanups: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  while (cleanups.length > 0) {
-    const cleanup = cleanups.pop();
-    if (cleanup) await cleanup();
-  }
-});
+import { tempDir as allocate } from "../test-helpers/temp-root.js";
 
 async function tempDir(): Promise<string> {
-  const raw = await fs.mkdtemp(path.join(os.tmpdir(), "antmay-runs-"));
-  cleanups.push(() => fs.rm(raw, { recursive: true, force: true }));
-  return raw;
+  return allocate("antmay-runs-");
 }
 
 async function mode(p: string): Promise<number> {

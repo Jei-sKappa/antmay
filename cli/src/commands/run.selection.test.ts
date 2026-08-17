@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../harness/id.js";
 import type { HarnessExecutableProbe } from "../harness/runtime.js";
@@ -13,7 +13,6 @@ import {
   lockNames,
   okProbe,
   pipelineDocument,
-  releaseTestResources,
   run,
   settingsFor,
   setup,
@@ -27,8 +26,6 @@ import {
  * composes from them, and the resolved-execution block it prints before the first
  * attempt.
  */
-
-afterAll(releaseTestResources, 120_000);
 
 describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
   it("runs the standard pipeline to completion, committing only the boundaries that changed", async () => {

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { STAGE_CATALOG } from "../pipeline/catalog.js";
 import type { CatalogStageId } from "../pipeline/stage-id.js";
@@ -19,24 +19,8 @@ import type {
 import { runGit } from "./git.js";
 import { collectBoundaryStatus, readHead } from "./status.js";
 
-/**
- * Temporary repositories are collected for the whole file and released once
- * every case has finished. The cases here run concurrently, so nothing may be
- * torn down between tests: a per-test hook would delete a repository another
- * in-flight case is still committing into.
- */
-const fixtures: RepoFixture[] = [];
-
-afterAll(async () => {
-  await Promise.all(
-    fixtures.map((fixture) => fixture.cleanup().catch(() => undefined)),
-  );
-});
-
 async function newFixture(): Promise<RepoFixture> {
-  const fixture = await createRepoFixture({ thread: {} });
-  fixtures.push(fixture);
-  return fixture;
+  return createRepoFixture({ thread: {} });
 }
 
 function policyOf(id: CatalogStageId): GitPolicy {

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   SCRIPTED_CASE_NAMES,
@@ -14,6 +14,7 @@ import {
   validateScriptedScenario,
   type ScriptedCaseName,
 } from "./scenario.js";
+import { tempDirSync } from "../../test-helpers/temp-root.js";
 
 /**
  * The stage IDs one representative Standard selection contributes. Scenario
@@ -44,11 +45,7 @@ const VALID_STANDARD_SCENARIO = {
 let dir: string;
 
 beforeEach(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "antmay-scripted-scenario-"));
-});
-
-afterEach(() => {
-  fs.rmSync(dir, { recursive: true, force: true });
+  dir = tempDirSync("antmay-scripted-scenario-");
 });
 
 function writeScenario(contents: string): string {
@@ -66,15 +63,9 @@ describe("resolveScriptedScenarioPath", () => {
   });
 
   it("does not create the file", () => {
-    const configRoot = fs.mkdtempSync(
-      path.join(os.tmpdir(), "antmay-scripted-empty-root-"),
-    );
-    try {
-      const scenarioPath = resolveScriptedScenarioPath(configRoot);
-      expect(fs.existsSync(scenarioPath)).toBe(false);
-    } finally {
-      fs.rmSync(configRoot, { recursive: true, force: true });
-    }
+    const configRoot = tempDirSync("antmay-scripted-empty-root-");
+    const scenarioPath = resolveScriptedScenarioPath(configRoot);
+    expect(fs.existsSync(scenarioPath)).toBe(false);
   });
 });
 

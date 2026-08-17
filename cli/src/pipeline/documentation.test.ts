@@ -1,9 +1,8 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { loadExecutionProfile } from "../config/execution-profile/load.js";
 import { loadStageSettings } from "../config/settings/load.js";
@@ -13,6 +12,7 @@ import { loadPipelineDocument } from "./documents.js";
 import { CATALOG_STAGE_IDS } from "./stage-id.js";
 import type { CatalogStageId } from "./stage-id.js";
 import type { ArtifactPrerequisite } from "../thread/artifacts.js";
+import { tempDirSync } from "../test-helpers/temp-root.js";
 
 /**
  * The published documentation is a contract surface of its own: `cli/README.md`
@@ -35,19 +35,9 @@ const ROOT_AGENTS = readRepoFile("AGENTS.md");
 const CLI_AGENTS = readRepoFile("cli/AGENTS.md");
 const SUITE_AGENTS = readRepoFile("suite/AGENTS.md");
 
-const tempRoots: string[] = [];
-
 function configRoot(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "antmay-doc-config-"));
-  tempRoots.push(root);
-  return root;
+  return tempDirSync("antmay-doc-config-");
 }
-
-afterAll(() => {
-  for (const root of tempRoots) {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
 
 /**
  * The body of the first fenced JSON block that follows `anchor`, which is the

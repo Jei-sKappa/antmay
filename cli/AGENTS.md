@@ -395,15 +395,20 @@ one change that reliably makes this suite slower.
 - The `run` and `resume` suites are **split by phase across several files**,
   over one shared harness each in `test-helpers/`. A module mock is hoisted per
   test file, so each file declares only the mocks its own cases need.
+- **Nothing allocated for a test is removed by that test.** `test-helpers/`
+  hands out every repository, config root, state root, and run directory from
+  one root under `temp-root.ts`, and the global teardown removes that root once,
+  after the last file. Concurrent removal is itself what makes every `git` call
+  racing it expensive, so this is a speed property as much as a safety one. A
+  case that narrows a path's permissions still restores them; only removal
+  belongs to the shared root.
 - The command suites, `execution/engine.test.ts`, and `gitops/boundary.test.ts`
-  declare their suites with **`describe.concurrent`**, so their cases overlap.
-  Each case owns an independent repository, config root, and state root, and
-  every temporary resource is collected in a module-level array released by a
-  single `afterAll`. In these files, teardown must never run between cases: an
-  `afterEach` hook would delete a repository a still-running case is using, and
-  `onTestFinished` is unusable because Vitest 2 attributes it to the wrong test
-  when cases run concurrently. Any new case in these files allocates through the
-  existing helpers and registers no teardown of its own.
+  declare their suites with **`describe.concurrent`**, so their cases overlap,
+  and each case owns an independent repository, config root, and state root.
+  Teardown must never run while cases are in flight: an `afterEach` hook would
+  delete a repository a still-running case is using, and `onTestFinished` is
+  unusable because Vitest 2 attributes it to the wrong test when cases run
+  concurrently.
 - `testTimeout`/`hookTimeout` in `vitest.config.ts` are deliberately generous.
   A Git-backed case needs seconds of wall clock under concurrent load; the
   budget exists so contention alone never fails a test.

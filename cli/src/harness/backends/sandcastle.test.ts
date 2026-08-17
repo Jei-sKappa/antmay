@@ -1,6 +1,4 @@
 import { appendFileSync, readFileSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +20,7 @@ import {
   createSandcastleInvoker,
   mapAgentStreamEvent,
 } from "./sandcastle.js";
+import { tempDir } from "../../test-helpers/temp-root.js";
 
 const runMock = vi.mocked(run);
 
@@ -495,7 +494,7 @@ describe("file logging integration", () => {
   let runDir: string;
 
   beforeEach(async () => {
-    runDir = await mkdtemp(path.join(tmpdir(), "antmay-sc-"));
+    runDir = await tempDir("antmay-sc-");
   });
 
   afterEach(() => {

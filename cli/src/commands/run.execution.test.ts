@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   EXIT_FAILURE,
@@ -31,7 +31,6 @@ import {
   lockNames,
   okProbe,
   pipelineDocument,
-  releaseTestResources,
   run,
   runDirNames,
   scriptedEnv,
@@ -64,8 +63,6 @@ vi.mock("../execution/engine.js", async (importOriginal) => {
       engineStub === null ? actual.executeEngine(ctx) : engineStub(ctx),
   };
 });
-
-afterAll(releaseTestResources, 120_000);
 
 describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () => {
   it("returns the signal exit code and creates no run when interrupted before allocation", async () => {

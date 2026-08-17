@@ -1,7 +1,7 @@
 import { rmSync, writeFileSync, promises as fs } from "node:fs";
 import path from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
@@ -13,11 +13,9 @@ import {
   dropPendingDecision,
   dropPendingDecisionSync,
   failingProbe,
-  heldLocks,
   lockNames,
   makeWorkspacesUnsafe,
   pipelineDocument,
-  releaseTestResources,
   run,
   runDirNames,
   settingsFor,
@@ -33,8 +31,6 @@ import {
  * gates, the allocation transaction's races, and the pauses allocation still
  * reaches.
  */
-
-afterAll(releaseTestResources, 120_000);
 
 describe.concurrent("runCommand — preflight failures leave no run, no checkpoint, no lock (AC-7.1)", () => {
   async function expectClean(h: Harness, result: RunResult): Promise<void> {
@@ -265,7 +261,6 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
       new Date(),
     );
     if (!outcome.ok) throw new Error("expected to acquire the lock");
-    heldLocks.push(outcome.handle);
 
     const result = await run(h, standardSteps(h.fixture));
     expect(result.code).toBe(1);

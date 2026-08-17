@@ -1,9 +1,8 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { Writable } from "node:stream";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../harness/id.js";
 import type { CatalogStageId } from "../pipeline/stage-id.js";
@@ -18,6 +17,7 @@ import { writeCheckpoint } from "../state/persist.js";
 import { runsDirectory } from "../state/runs.js";
 import { governedBy } from "../test-helpers/waiting.js";
 import { listCommand, type ListDeps } from "./list.js";
+import { tempDir as allocate } from "../test-helpers/temp-root.js";
 
 class Capture extends Writable {
   chunks: string[] = [];
@@ -34,19 +34,8 @@ class Capture extends Writable {
   }
 }
 
-const tempDirs: string[] = [];
-
-afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (dir) await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
-  }
-});
-
 async function tempDir(prefix: string): Promise<string> {
-  const dir = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), prefix)));
-  tempDirs.push(dir);
-  return dir;
+  return allocate(prefix);
 }
 
 function makeStage(

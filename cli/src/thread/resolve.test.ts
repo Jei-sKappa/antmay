@@ -1,33 +1,17 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { gitOrThrow } from "../gitops/git.js";
 import { createRepoFixture } from "../test-helpers/git-fixture.js";
+import { tempDir as allocate } from "../test-helpers/temp-root.js";
 import { resolveThreadTarget } from "./resolve.js";
 
-const cleanups: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  while (cleanups.length > 0) {
-    const cleanup = cleanups.pop();
-    if (cleanup) await cleanup();
-  }
-});
-
-async function fixture(options?: Parameters<typeof createRepoFixture>[0]) {
-  const f = await createRepoFixture(options);
-  cleanups.push(f.cleanup);
-  return f;
-}
+const fixture = createRepoFixture;
 
 async function tempDir(prefix = "antmay-resolve-"): Promise<string> {
-  const raw = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
-  const dir = await fs.realpath(raw);
-  cleanups.push(() => fs.rm(raw, { recursive: true, force: true }));
-  return dir;
+  return allocate(prefix);
 }
 
 describe("AC-5.1: all three forms resolve to the identical canonical result", () => {

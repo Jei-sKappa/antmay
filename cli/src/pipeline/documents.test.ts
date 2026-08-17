@@ -1,20 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { loadPipelineDocument } from "./documents.js";
 import type { PipelineDocument } from "./types.js";
+import { tempDirSync } from "../test-helpers/temp-root.js";
 
 let dir: string;
 
 beforeEach(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "antmay-pipeline-doc-"));
-});
-
-afterEach(() => {
-  fs.rmSync(dir, { recursive: true, force: true });
+  dir = tempDirSync("antmay-pipeline-doc-");
 });
 
 function write(document: unknown, filename = "pipeline.json"): string {
