@@ -317,7 +317,7 @@ export async function runCommand(
       });
 
       const display = createTerminalExecutionDisplay(displayOptions);
-      const result = await executeEngine({
+      const result = await (deps.runEngine ?? executeEngine)({
         entry: { kind: "allocated", checkpoint },
         runDir,
         invoker: harnessRuntime.invoker,

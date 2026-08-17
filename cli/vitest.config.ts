@@ -74,6 +74,13 @@ export default defineConfig({
     environment: "node",
     maxWorkers: workerCount,
     minWorkers: workerCount,
+    // A worker reuses one process for every file it runs. That is worth about a
+    // seventh of the suite's wall clock, and it lets the fixture template cache
+    // span files instead of being rebuilt for each one. What it costs is a
+    // shared module registry and shared globals: no two files may mock the same
+    // module, and a stub on `process.env` or on any shared object is unwound at
+    // file scope.
+    isolate: false,
     globalSetup: "./src/test-helpers/global-setup.ts",
     env: {
       [TEMP_ROOT_ENV]: tempRoot,

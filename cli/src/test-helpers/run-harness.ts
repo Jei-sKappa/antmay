@@ -41,11 +41,10 @@ import type { RunDeps } from "../commands/run/types.js";
 /**
  * The fixtures, helpers, and command driver the `runCommand` suites share.
  *
- * `run` is tested across several files so their cases run on separate workers,
- * and every one of them needs the same repository, config root, state root,
- * documents, and driver. Those live here so a case reads as the behavior it is
- * about; the files themselves declare only the module mocks they individually
- * need, because a mock is hoisted per test file.
+ * `run` is tested across several files, and every one of them needs the same
+ * repository, config root, state root, documents, and driver. Those live here so
+ * a case reads as the behavior it is about, and what a case needs to control it
+ * passes to `run` as an override rather than mocking the module underneath.
  */
 
 /** An in-memory writable stream that accumulates everything written to it. */
@@ -281,6 +280,7 @@ export async function run(
     writeInitialCheckpoint: RunDeps["writeInitialCheckpoint"];
     createAbortController: () => AbortController;
     installSignals: RunDeps["installSignals"];
+    runEngine: RunDeps["runEngine"];
     stdout: Capture;
   }> = {},
 ): Promise<RunResult> {
@@ -309,6 +309,9 @@ export async function run(
       : {}),
     ...(overrides.writeInitialCheckpoint !== undefined
       ? { writeInitialCheckpoint: overrides.writeInitialCheckpoint }
+      : {}),
+    ...(overrides.runEngine !== undefined
+      ? { runEngine: overrides.runEngine }
       : {}),
   };
   const code = await runCommand(

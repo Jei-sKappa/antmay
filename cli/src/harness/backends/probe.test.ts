@@ -10,19 +10,19 @@ import { tempDirSync } from "../../test-helpers/temp-root.js";
 
 let binDir: string;
 let repoRoot: string;
-let savedPath: string | undefined;
 
 beforeEach(() => {
   binDir = tempDirSync("antmay-bin-");
   repoRoot = tempDirSync("antmay-repo-");
-  savedPath = process.env.PATH;
   // Replace PATH so only the fakes we create are discoverable — nothing leaks
-  // in from the developer's real environment.
-  process.env.PATH = binDir;
+  // in from the developer's real environment. Stubbing rather than assigning is
+  // what keeps that replacement from outliving this file: one worker process
+  // runs many of them, and every other one resolves `git` through PATH.
+  vi.stubEnv("PATH", binDir);
 });
 
 afterEach(() => {
-  process.env.PATH = savedPath;
+  vi.unstubAllEnvs();
 });
 
 function fakeBinary(name: string, body: string): void {

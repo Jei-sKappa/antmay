@@ -40,11 +40,11 @@ import type { RunDeps } from "../commands/run/types.js";
 /**
  * The fixtures, helpers, and command drivers the `resumeCommand` suites share.
  *
- * `resume` is tested across several files so their cases run on separate
- * workers, and every one of them needs the same repository, config root, state
- * root, pipeline document, and seeded run. Those live here so a case reads as
- * the behavior it is about; the files themselves declare only the module mocks
- * they individually need, because a mock is hoisted per test file.
+ * `resume` is tested across several files, and every one of them needs the same
+ * repository, config root, state root, pipeline document, and seeded run. Those
+ * live here so a case reads as the behavior it is about, and what a case needs
+ * to control it passes to `resume` as an override rather than mocking the module
+ * underneath.
  */
 export class Capture extends Writable {
   chunks: string[] = [];
@@ -246,6 +246,7 @@ export async function resume(
     probe: HarnessExecutableProbe;
     installSignals: CommandDeps["installSignals"];
     createAbortController: () => AbortController;
+    runEngine: CommandDeps["runEngine"];
   }> = {},
 ): Promise<CmdResult> {
   const out = new Capture();
@@ -263,6 +264,7 @@ export async function resume(
     ...(overrides.createAbortController !== undefined
       ? { createAbortController: overrides.createAbortController }
       : {}),
+    ...(overrides.runEngine !== undefined ? { runEngine: overrides.runEngine } : {}),
   };
   const code = await resumeCommand({ runId }, deps);
   return { code, out: out.text, err: err.text, invoker };

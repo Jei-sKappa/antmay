@@ -370,18 +370,21 @@ as any other.
 
 ### Test suite shape
 
-**How many `git` processes the suite launches is how long it takes.** It drives
-real `git` subprocesses and real fsynced checkpoints, and while doing so it sits
-near-idle on CPU: the processes queue behind one saturated resource, so wall
-clock tracks their count almost linearly and neither the worker count nor the
-in-file concurrency moves it far from what `vitest.config.ts` already settles
-on. Every convention below exists to hold that count down, and raising it is the
-one change that reliably makes this suite slower.
+**The suite's wall clock is how many `git` processes it launches times what each
+one costs.** It drives real `git` subprocesses and real fsynced checkpoints, and
+while doing so it sits near-idle on CPU: the processes queue behind one
+saturated resource, and neither the worker count nor the in-file concurrency
+moves the total far from what `vitest.config.ts` already settles on. Both terms
+are levers and both have paid — the `xcrun` bypass in `vitest.config.ts` is
+worth about 35 seconds at an unchanged call count, and it is per-call cost
+rather than call count that the remaining headroom is in. Every convention below
+holds one of the two down.
 
 - `createRepoFixture` returns a **filesystem copy of a cached template
-  repository**, built once per distinct set of fixture options. Do not
-  reintroduce a per-test `init`/`config`/`add`/`commit` path — that was ~400 ms
-  of subprocess time per test case.
+  repository**, built once per distinct set of fixture options and shared by
+  every file a worker runs. Do not reintroduce a per-test
+  `init`/`config`/`add`/`commit` path — that was ~400 ms of subprocess time per
+  test case.
 - **A case selects the shortest pipeline that can show what it is about.** A
   stage boundary is the most expensive thing a case can ask for — a status, an
   add, a diff, a commit, and two tip reads — so the command suites default to
@@ -393,8 +396,17 @@ one change that reliably makes this suite slower.
   about the whole Standard sequence, about a `--from` suffix, or about a stage
   past `review-spec` names its selection explicitly.
 - The `run` and `resume` suites are **split by phase across several files**,
-  over one shared harness each in `test-helpers/`. A module mock is hoisted per
-  test file, so each file declares only the mocks its own cases need.
+  over one shared harness each in `test-helpers/`. What a case needs to control
+  it **injects through `CommandDeps`/`RunDeps`** — the engine handoff, the signal
+  installer, the abort controller, the ID generator, the initial-checkpoint
+  writer, the clock — rather than by mocking the module underneath.
+- **One worker process runs many test files** (`isolate: false`), which is worth
+  about a seventh of the wall clock and is what lets the fixture template cache
+  span files. The module registry and the process globals come with it: no two
+  files may mock the same module, because only the first registration binds;
+  `process.env` is changed with `vi.stubEnv` and never by assignment; and a spy
+  on anything shared — a `process` method, an SDK singleton — is restored at file
+  scope, not inside the one `describe` that installed it.
 - **Nothing allocated for a test is removed by that test.** `test-helpers/`
   hands out every repository, config root, state root, and run directory from
   one root under `temp-root.ts`, and the global teardown removes that root once,

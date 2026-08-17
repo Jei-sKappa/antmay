@@ -24,6 +24,15 @@ import { tempDir } from "../../test-helpers/temp-root.js";
 
 const runMock = vi.mocked(run);
 
+/**
+ * `agent.parseStreamLine` is spied on in several cases, and the agent is a
+ * provider singleton this module imports. Restoring at file scope is what keeps
+ * one case's spy from reaching the next file the worker runs.
+ */
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 function makeRequest(overrides: Partial<AttemptRequest> = {}): AttemptRequest {
   return {
     harness: "codex",
@@ -495,10 +504,6 @@ describe("file logging integration", () => {
 
   beforeEach(async () => {
     runDir = await tempDir("antmay-sc-");
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
   });
 
   it("appends verbose output after the pre-written header, header first", async () => {

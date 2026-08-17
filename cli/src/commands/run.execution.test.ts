@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   EXIT_FAILURE,
@@ -46,23 +46,6 @@ import {
  * What a new run does once it is allocated: signals, scripted-harness mode, and
  * the engine handoff.
  */
-
-/**
- * The engine call the command makes, replaceable one case at a time so each
- * structured result can be mapped without a whole pipeline behind it. Every other
- * case in this file drives the real engine, which is what the mock delegates to
- * while no case has installed a stub.
- */
-let engineStub: ((ctx: ExecutionContext) => Promise<ExecutionResult>) | null = null;
-
-vi.mock("../execution/engine.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../execution/engine.js")>();
-  return {
-    ...actual,
-    executeEngine: (ctx: ExecutionContext): Promise<ExecutionResult> =>
-      engineStub === null ? actual.executeEngine(ctx) : engineStub(ctx),
-  };
-});
 
 describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () => {
   it("returns the signal exit code and creates no run when interrupted before allocation", async () => {
@@ -299,10 +282,6 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
 });
 
 describe("runCommand — engine handoff (AC-1.1)", () => {
-  afterEach(() => {
-    engineStub = null;
-  });
-
   const cases: Array<{
     name: string;
     result: ExecutionResult;
@@ -342,13 +321,13 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
       const h = await setup();
       const entries: ExecutionEntry[] = [];
       const contexts: ExecutionContext[] = [];
-      engineStub = async (ctx) => {
+      const runEngine = async (ctx: ExecutionContext): Promise<ExecutionResult> => {
         contexts.push(ctx);
         entries.push(ctx.entry);
         return testCase.result;
       };
 
-      const result = await run(h, []);
+      const result = await run(h, [], { runEngine });
 
       // The command hands over exactly the run it allocated, once.
       expect(entries.map((entry) => entry.kind)).toEqual(["allocated"]);
@@ -399,12 +378,13 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
   it("releases the lock and uninstalls handlers when the engine throws", async () => {
     const h = await setup();
     let uninstalled = false;
-    engineStub = async () => {
+    const runEngine = async (): Promise<ExecutionResult> => {
       throw new Error("engine exploded");
     };
 
     await expect(
       run(h, [], {
+        runEngine,
         generateId: () => "enginethrow-00000000",
         installSignals: () => ({
           signaled: () => null,

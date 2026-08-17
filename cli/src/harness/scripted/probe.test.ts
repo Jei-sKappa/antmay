@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { HarnessId } from "../id.js";
 import {
@@ -37,8 +37,7 @@ describe("probeScriptedHarnessExecutables", () => {
   });
 
   it("does not require executables on PATH", async () => {
-    const saved = process.env.PATH;
-    process.env.PATH = "";
+    vi.stubEnv("PATH", "");
     try {
       const result = await probeScriptedHarnessExecutables(
         ["codex", "claude-code"],
@@ -46,7 +45,7 @@ describe("probeScriptedHarnessExecutables", () => {
       );
       expect(result.ok).toBe(true);
     } finally {
-      process.env.PATH = saved;
+      vi.unstubAllEnvs();
     }
   });
 });

@@ -1,7 +1,7 @@
 import { promises as fs, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   EXIT_FAILURE,
@@ -44,23 +44,6 @@ import {
  * read-only preflight reaches, the rules it applies to the worktree, and how it
  * maps what the engine hands back.
  */
-
-/**
- * The engine call the command makes, replaceable one case at a time so each
- * structured result can be mapped without a whole pipeline behind it. Every other
- * case in this file drives the real engine, which is what the mock delegates to
- * while no case has installed a stub.
- */
-let engineStub: ((ctx: ExecutionContext) => Promise<ExecutionResult>) | null = null;
-
-vi.mock("../execution/engine.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../execution/engine.js")>();
-  return {
-    ...actual,
-    executeEngine: (ctx: ExecutionContext): Promise<ExecutionResult> =>
-      engineStub === null ? actual.executeEngine(ctx) : engineStub(ctx),
-  };
-});
 
 /**
  * Every run directory a checkpoint was written to. Production has exactly one
@@ -423,10 +406,6 @@ describe.concurrent("resumeCommand — temporary-workspace safety (AC-1.7, AC-2.
 });
 
 describe("resumeCommand — signal observations through lock acquisition", () => {
-  afterEach(() => {
-    engineStub = null;
-  });
-
   const observations = [
     { name: "after run location", fireAt: 1 },
     { name: "after checkpoint load", fireAt: 2 },
@@ -449,13 +428,14 @@ describe("resumeCommand — signal observations through lock acquisition", () =>
       ).length;
 
       let engineCalls = 0;
-      engineStub = async () => {
+      const runEngine = async (): Promise<ExecutionResult> => {
         engineCalls += 1;
         throw new Error("engine must not run on a pre-engine signal exit");
       };
 
       let calls = 0;
       const result = await resume(h, runId, standardSteps(h), {
+        runEngine,
         installSignals: fakeSignals(() =>
           ++calls >= observation.fireAt ? "SIGINT" : null,
         ),
@@ -476,10 +456,6 @@ describe("resumeCommand — signal observations through lock acquisition", () =>
 });
 
 describe("resumeCommand — engine handoff (AC-1.1)", () => {
-  afterEach(() => {
-    engineStub = null;
-  });
-
   const cases: Array<{
     name: string;
     result: ExecutionResult;
@@ -524,13 +500,13 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       const durable = await readCp(h, runId);
       const entries: ExecutionEntry[] = [];
       const contexts: ExecutionContext[] = [];
-      engineStub = async (ctx) => {
+      const runEngine = async (ctx: ExecutionContext): Promise<ExecutionResult> => {
         contexts.push(ctx);
         entries.push(ctx.entry);
         return testCase.result;
       };
 
-      const result = await resume(h, runId, []);
+      const result = await resume(h, runId, [], { runEngine });
 
       expect(entries.map((entry) => entry.kind)).toEqual(["resume"]);
       // The cursor is the validated checkpoint exactly as it was found: recovering
@@ -553,12 +529,13 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
     const runId = await soleRunId(h);
     const before = await readCp(h, runId);
     let uninstalled = false;
-    engineStub = async () => {
+    const runEngine = async (): Promise<ExecutionResult> => {
       throw new Error("engine exploded");
     };
 
     await expect(
       resume(h, runId, [], {
+        runEngine,
         installSignals: () => ({
           signaled: () => null,
           exitCodeFor: () => EXIT_SIGINT,

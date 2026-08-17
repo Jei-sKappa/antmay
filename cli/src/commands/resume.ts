@@ -238,7 +238,7 @@ export async function resumeCommand(
         })),
       });
 
-      const result = await executeEngine({
+      const result = await (deps.runEngine ?? executeEngine)({
         entry: { kind: "resume", checkpoint },
         runDir,
         invoker,
