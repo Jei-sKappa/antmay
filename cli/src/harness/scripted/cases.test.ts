@@ -11,9 +11,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  createRepoFixture,
-  type RepoFixture,
-} from "../../test-helpers/git-fixture.js";
+  createThreadTree,
+  type ThreadTree,
+} from "../../test-helpers/thread-tree.js";
 import {
   executeScriptedCase,
   IMPLEMENT_REPORT_CONTENT,
@@ -37,27 +37,25 @@ import {
   type ScriptedCaseName,
 } from "./scenario.js";
 
-async function newFixture(): Promise<RepoFixture> {
-  return createRepoFixture({ thread: {} });
-}
+const newFixture = createThreadTree;
 
 /** The effect context the adapter hands the catalog for the fixture's thread. */
-async function contextFor(fixture: RepoFixture): Promise<ScriptedCaseContext> {
+async function contextFor(fixture: ThreadTree): Promise<ScriptedCaseContext> {
   const resolved = await resolveScriptedThreadRoot(
     fixture.root,
-    fixture.threadRelPath!,
+    fixture.threadRelPath,
   );
   if (!resolved.ok) {
     throw new Error(resolved.error);
   }
   return {
-    threadRelPath: fixture.threadRelPath!,
+    threadRelPath: fixture.threadRelPath,
     threadAbsRoot: resolved.absPath,
   };
 }
 
 async function runCase(
-  fixture: RepoFixture,
+  fixture: ThreadTree,
   caseName: ScriptedCaseName,
 ): Promise<ScriptedCaseExecution> {
   return executeScriptedCase(caseName, await contextFor(fixture));
@@ -111,7 +109,7 @@ describe("the scripted case catalog", () => {
       ["outcome-refused", "Outcome: REFUSED"],
     ] as const)("leaves the worktree unchanged for %s", async (caseName, token) => {
       const fixture = await newFixture();
-      const seedPath = path.join(fixture.threadPath!, "seed.md");
+      const seedPath = path.join(fixture.threadPath, "seed.md");
 
       const before = await readFile(seedPath, "utf8");
       const executed = await runCase(fixture, caseName);
@@ -129,7 +127,7 @@ describe("the scripted case catalog", () => {
     // it is what carries the throw past the adapter, which awaits the catalog
     // outside every `try` it has, and out to the bootstrap's crash renderer.
     const fixture = await newFixture();
-    const seedPath = path.join(fixture.threadPath!, "seed.md");
+    const seedPath = path.join(fixture.threadPath, "seed.md");
 
     const before = await readFile(seedPath, "utf8");
     await expect(runCase(fixture, "harness-crash")).rejects.toThrow(
@@ -146,7 +144,7 @@ describe("the scripted case catalog", () => {
 
     expect(finalTextOf(executed)).toBe("Outcome: DONE — Fake spec written: spec.md");
     expect(
-      await readFile(path.join(fixture.threadPath!, "spec.md"), "utf8"),
+      await readFile(path.join(fixture.threadPath, "spec.md"), "utf8"),
     ).toBe(SPEC_CORRECT_CONTENT);
   });
 
@@ -163,13 +161,13 @@ describe("the scripted case catalog", () => {
     expect(elapsed).toBeGreaterThanOrEqual(SPEC_CORRECT_DELAY_MS);
     // The spec is written before the wait, so the file exists throughout it.
     expect(
-      await readFile(path.join(fixture.threadPath!, "spec.md"), "utf8"),
+      await readFile(path.join(fixture.threadPath, "spec.md"), "utf8"),
     ).toBe(SPEC_CORRECT_CONTENT);
   });
 
   it("appends one fixed line for reconcile-spec-correct", async () => {
     const fixture = await newFixture();
-    const specPath = path.join(fixture.threadPath!, "spec.md");
+    const specPath = path.join(fixture.threadPath, "spec.md");
     await writeFile(specPath, "# Existing\n", "utf8");
 
     await runCase(fixture, "reconcile-spec-correct");
@@ -185,7 +183,7 @@ describe("the scripted case catalog", () => {
 
   it("queues one decision file and reports DONE for reconcile-spec-pending-decision", async () => {
     const fixture = await newFixture();
-    const specPath = path.join(fixture.threadPath!, "spec.md");
+    const specPath = path.join(fixture.threadPath, "spec.md");
     await writeFile(specPath, "# Existing\n", "utf8");
 
     const executed = await runCase(fixture, "reconcile-spec-pending-decision");
@@ -197,7 +195,7 @@ describe("the scripted case catalog", () => {
       `# Existing\n${RECONCILE_SPEC_APPEND_LINE}`,
     );
     const queuedPath = path.join(
-      fixture.threadPath!,
+      fixture.threadPath,
       ...RECONCILE_SPEC_PENDING_DECISION_PATH.split("/"),
     );
     expect(await readFile(queuedPath, "utf8")).toBe(
@@ -214,7 +212,7 @@ describe("the scripted case catalog", () => {
     await expect(
       readFile(
         path.join(
-          fixture.threadPath!,
+          fixture.threadPath,
           ...RECONCILE_SPEC_PENDING_DECISION_PATH.split("/"),
         ),
         "utf8",
@@ -232,27 +230,27 @@ describe("the scripted case catalog", () => {
 
   it("creates a missing plan-tasks directory and writes owned plan artifacts", async () => {
     const fixture = await newFixture();
-    const tasksDir = path.join(fixture.threadPath!, "plan-tasks");
+    const tasksDir = path.join(fixture.threadPath, "plan-tasks");
     await expect(lstat(tasksDir)).rejects.toMatchObject({ code: "ENOENT" });
 
     const executed = await runCase(fixture, "plan-strict-correct");
 
     expect(finalTextOf(executed)).toBe("Outcome: DONE — Fake plan written: plan.md");
-    expect(await readFile(path.join(fixture.threadPath!, "plan.md"), "utf8")).toBe(
+    expect(await readFile(path.join(fixture.threadPath, "plan.md"), "utf8")).toBe(
       PLAN_STRICT_PLAN_CONTENT,
     );
     for (const [relPath, content] of Object.entries(PLAN_STRICT_OWNED_TASKS)) {
       expect(
-        await readFile(path.join(fixture.threadPath!, relPath), "utf8"),
+        await readFile(path.join(fixture.threadPath, relPath), "utf8"),
       ).toBe(content);
     }
   });
 
   it("preserves unrelated files in an existing plan-tasks directory", async () => {
     const fixture = await newFixture();
-    const unrelated = path.join(fixture.threadPath!, "notes.md");
+    const unrelated = path.join(fixture.threadPath, "notes.md");
     await writeFile(unrelated, "keep me\n", "utf8");
-    const foreignTaskDir = path.join(fixture.threadPath!, "plan-tasks");
+    const foreignTaskDir = path.join(fixture.threadPath, "plan-tasks");
     await mkdir(foreignTaskDir, { recursive: true });
     await writeFile(
       path.join(foreignTaskDir, "99-unrelated.md"),
@@ -270,11 +268,11 @@ describe("the scripted case catalog", () => {
 
   it("validates every plan destination before changing plan.md", async () => {
     const fixture = await newFixture();
-    const planPath = path.join(fixture.threadPath!, "plan.md");
+    const planPath = path.join(fixture.threadPath, "plan.md");
     const planBefore = "# Existing plan\n";
     await writeFile(planPath, planBefore, "utf8");
     await writeFile(
-      path.join(fixture.threadPath!, "plan-tasks"),
+      path.join(fixture.threadPath, "plan-tasks"),
       "not a directory\n",
       "utf8",
     );
@@ -287,12 +285,12 @@ describe("the scripted case catalog", () => {
 
   it("rejects a symlinked plan-tasks parent before changing plan.md", async () => {
     const fixture = await newFixture();
-    const planPath = path.join(fixture.threadPath!, "plan.md");
+    const planPath = path.join(fixture.threadPath, "plan.md");
     const planBefore = "# Existing plan\n";
     await writeFile(planPath, planBefore, "utf8");
     const outsideTasks = path.join(fixture.root, "outside-plan-tasks");
     await mkdir(outsideTasks);
-    await symlink(outsideTasks, path.join(fixture.threadPath!, "plan-tasks"));
+    await symlink(outsideTasks, path.join(fixture.threadPath, "plan-tasks"));
 
     const executed = await runCase(fixture, "plan-strict-correct");
 
@@ -302,7 +300,7 @@ describe("the scripted case catalog", () => {
 
   it("appends reconcile-plan lines in lexical task order", async () => {
     const fixture = await newFixture();
-    const threadPath = fixture.threadPath!;
+    const threadPath = fixture.threadPath;
     await writeFile(path.join(threadPath, "plan.md"), "# Plan\n", "utf8");
     const tasksDir = path.join(threadPath, "plan-tasks");
     await mkdir(tasksDir, { recursive: true });
@@ -343,7 +341,7 @@ describe("the scripted case catalog", () => {
   it("writes the exact implementation-report bytes and rewrites them in place", async () => {
     const fixture = await newFixture();
     const reportPath = path.join(
-      fixture.threadPath!,
+      fixture.threadPath,
       "implementation-report.md",
     );
 
@@ -364,9 +362,9 @@ describe("the scripted case catalog", () => {
 
   it("rejects an in-thread symlinked implementation-report.md", async () => {
     const fixture = await newFixture();
-    const seedPath = path.join(fixture.threadPath!, "seed.md");
+    const seedPath = path.join(fixture.threadPath, "seed.md");
     const seedBefore = await readFile(seedPath, "utf8");
-    const linkPath = path.join(fixture.threadPath!, "implementation-report.md");
+    const linkPath = path.join(fixture.threadPath, "implementation-report.md");
     await symlink("seed.md", linkPath);
 
     const executed = await runCase(
@@ -383,7 +381,7 @@ describe("the scripted case catalog", () => {
     const fixture = await newFixture();
     const outside = path.join(fixture.root, "outside.md");
     await writeFile(outside, "secret\n", "utf8");
-    await symlink(outside, path.join(fixture.threadPath!, "spec.md"));
+    await symlink(outside, path.join(fixture.threadPath, "spec.md"));
 
     const executed = await runCase(fixture, "reconcile-spec-correct");
 
@@ -393,9 +391,9 @@ describe("the scripted case catalog", () => {
 
   it("rejects in-thread symlinked spec.md for reconcile-spec-correct", async () => {
     const fixture = await newFixture();
-    const seedPath = path.join(fixture.threadPath!, "seed.md");
+    const seedPath = path.join(fixture.threadPath, "seed.md");
     const seedBefore = await readFile(seedPath, "utf8");
-    await symlink("seed.md", path.join(fixture.threadPath!, "spec.md"));
+    await symlink("seed.md", path.join(fixture.threadPath, "spec.md"));
 
     const executed = await runCase(fixture, "reconcile-spec-correct");
 
@@ -405,9 +403,9 @@ describe("the scripted case catalog", () => {
 
   it("rejects in-thread symlinked spec.md for spec-correct", async () => {
     const fixture = await newFixture();
-    const seedPath = path.join(fixture.threadPath!, "seed.md");
+    const seedPath = path.join(fixture.threadPath, "seed.md");
     const seedBefore = await readFile(seedPath, "utf8");
-    const linkPath = path.join(fixture.threadPath!, "spec.md");
+    const linkPath = path.join(fixture.threadPath, "spec.md");
     await symlink("seed.md", linkPath);
 
     const executed = await runCase(fixture, "spec-correct");
@@ -423,12 +421,12 @@ describe("the scripted case catalog", () => {
 
       const resolved = await resolveScriptedThreadRoot(
         fixture.root,
-        fixture.threadRelPath!,
+        fixture.threadRelPath,
       );
 
       expect(resolved).toEqual({
         ok: true,
-        absPath: await realpath(fixture.threadPath!),
+        absPath: await realpath(fixture.threadPath),
       });
     });
 

@@ -12,9 +12,9 @@ import { resolveStageTarget } from "../../pipeline/targets.js";
 import type { StageTarget } from "../../pipeline/types.js";
 import { createAttemptLog, type AttemptLogHeader } from "../../state/logs.js";
 import {
-  createRepoFixture,
-  type RepoFixture,
-} from "../../test-helpers/git-fixture.js";
+  createThreadTree,
+  type ThreadTree,
+} from "../../test-helpers/thread-tree.js";
 import {
   createScriptedInvoker,
   SCRIPTED_HARNESS_ERROR_CLASS,
@@ -22,9 +22,7 @@ import {
 } from "./invoker.js";
 import type { ScriptedCaseName, ScriptedScenario } from "./scenario.js";
 
-async function newFixture(): Promise<RepoFixture> {
-  return createRepoFixture({ thread: {} });
-}
+const newFixture = createThreadTree;
 
 function makeScenario(
   stages: Record<string, readonly ScriptedCaseName[]>,
@@ -56,7 +54,7 @@ function targetOf(stage: CatalogStage): StageTarget {
 }
 
 function buildRequest(
-  fixture: RepoFixture,
+  fixture: ThreadTree,
   stage: CatalogStage,
   overrides: {
     attemptNumber?: number;
@@ -72,7 +70,7 @@ function buildRequest(
     logFilePath?: string;
   } = {},
 ): AttemptRequest {
-  const threadRelPath = overrides.threadRelPath ?? fixture.threadRelPath!;
+  const threadRelPath = overrides.threadRelPath ?? fixture.threadRelPath;
   const target = overrides.target ?? targetOf(stage);
   const resolved = resolveStageTarget(target, threadRelPath);
   if (!resolved.ok) {
@@ -116,7 +114,7 @@ function buildRequest(
 }
 
 async function initAttemptLog(
-  fixture: RepoFixture,
+  fixture: ThreadTree,
   request: AttemptRequest,
 ): Promise<string> {
   const logPath = request.logFilePath;
@@ -355,7 +353,7 @@ describe("createScriptedInvoker", () => {
     const request = buildRequest(fixture, stageById("plan-strict"));
     await initAttemptLog(fixture, request);
     const seedBefore = await readFile(
-      path.join(fixture.threadPath!, "seed.md"),
+      path.join(fixture.threadPath, "seed.md"),
       "utf8",
     );
 
@@ -367,10 +365,10 @@ describe("createScriptedInvoker", () => {
       errorMessage: expect.stringContaining("not compatible with stage plan-strict"),
     });
     await expect(
-      readFile(path.join(fixture.threadPath!, "spec.md"), "utf8"),
+      readFile(path.join(fixture.threadPath, "spec.md"), "utf8"),
     ).rejects.toThrow();
     expect(
-      await readFile(path.join(fixture.threadPath!, "seed.md"), "utf8"),
+      await readFile(path.join(fixture.threadPath, "seed.md"), "utf8"),
     ).toBe(seedBefore);
   });
 
@@ -392,7 +390,7 @@ describe("createScriptedInvoker", () => {
       errorMessage: expect.any(String),
     });
     await expect(
-      readFile(path.join(fixture.threadPath!, "spec.md"), "utf8"),
+      readFile(path.join(fixture.threadPath, "spec.md"), "utf8"),
     ).rejects.toThrow();
   });
 
