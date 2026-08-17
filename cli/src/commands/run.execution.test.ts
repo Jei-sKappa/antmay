@@ -67,7 +67,7 @@ vi.mock("../execution/engine.js", async (importOriginal) => {
 describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () => {
   it("returns the signal exit code and creates no run when interrupted before allocation", async () => {
     const h = await setup();
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       installSignals: fakeSignals(() => "SIGINT"),
     });
     expect(result.code).toBe(EXIT_SIGINT);
@@ -79,7 +79,7 @@ describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () 
     const h = await setup();
     let phase: "pre" | "post" = "pre";
     let uninstalled = false;
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       generateId: () => {
         // Allocation itself never observes signals; flipping here makes the
         // post-allocation checkpoint see SIGINT before launch.
@@ -253,7 +253,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
       probeHarnesses = [...harnesses];
       return okProbe(harnesses, repoRoot);
     };
-    const result = await run(h, standardSteps(h.fixture), { probe: trackingProbe });
+    const result = await run(h, standardSteps(h), { probe: trackingProbe });
     expect(result.code).toBe(0);
     expect(probeHarnesses.length).toBeGreaterThan(0);
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));

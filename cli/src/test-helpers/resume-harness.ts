@@ -385,28 +385,41 @@ export async function blockQueueScan(
 }
 
 /**
- * The six standard stage side effects; resume from stage k slices from k. Each
- * step leaves the artifact state its catalog stage promises, so `plan-strict`
- * writes an index *and* a task file: a DONE that leaves less is a contract
- * violation rather than a finished stage.
+ * What each Standard stage's attempt does to the worktree. Each step leaves the
+ * artifact state its catalog stage promises, so `plan-strict` writes an index
+ * *and* a task file: a DONE that leaves less is a contract violation rather
+ * than a finished stage.
  */
-export function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
-  return [
-    { before: () => writeThreadFileSync(fixture, "spec.md", "# Spec\n") },
-    { before: () => writeThreadFileSync(fixture, "spec.md", "# Spec v2\n") },
-    {},
-    {
-      before: () => {
-        writeThreadFileSync(fixture, "plan.md", "# Plan\n");
-        writePlanTaskSync(fixture, "01-task.md", "# Task 01\n");
-      },
+const STAGE_STEPS: Record<string, (f: RepoFixture) => FakeHarnessStep> = {
+  spec: (f) => ({ before: () => writeThreadFileSync(f, "spec.md", "# Spec\n") }),
+  "reconcile-spec": (f) => ({
+    before: () => writeThreadFileSync(f, "spec.md", "# Spec v2\n"),
+  }),
+  "review-spec": () => ({}),
+  "plan-strict": (f) => ({
+    before: () => {
+      writeThreadFileSync(f, "plan.md", "# Plan\n");
+      writePlanTaskSync(f, "01-task.md", "# Task 01\n");
     },
-    {},
-    {
-      before: () =>
-        writeThreadFileSync(fixture, "implementation-report.md", "# Report\n"),
-    },
-  ];
+  }),
+  "reconcile-plan": () => ({}),
+  "implement-plan-with-subagents": (f) => ({
+    before: () =>
+      writeThreadFileSync(f, "implementation-report.md", "# Report\n"),
+  }),
+};
+
+/**
+ * The scripted attempt for each stage the harness selected, in selection order;
+ * a resume from stage k slices from k.
+ *
+ * Keying by stage id rather than by position is what keeps a step tied to the
+ * stage it belongs to: the fake harness consumes the array by invocation
+ * ordinal, so a positional script silently changes meaning the moment a case
+ * selects a different prefix.
+ */
+export function standardSteps(h: Harness): FakeHarnessStep[] {
+  return h.stages.map((id) => STAGE_STEPS[id]!(h.fixture));
 }
 
 export const DONE = { kind: "completed", finalText: "Outcome: DONE" } as const;

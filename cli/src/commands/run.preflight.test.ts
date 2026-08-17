@@ -165,7 +165,7 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     const h = await setup();
     await makeWorkspacesUnsafe(h.fixture);
 
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
 
     await expectClean(h, result);
     const rel = h.fixture.threadRelPath as string;
@@ -243,7 +243,7 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     expect(first.code).toBe(2);
     const existingId = (await runDirNames(h.stateRoot))[0]!;
 
-    const second = await run(h, standardSteps(h.fixture));
+    const second = await run(h, standardSteps(h));
     expect(second.code).toBe(1);
     expect(second.err).toContain(existingId);
     expect(second.err).toContain("antmay afk resume");
@@ -262,7 +262,7 @@ describe.concurrent("runCommand — preflight failures leave no run, no checkpoi
     );
     if (!outcome.ok) throw new Error("expected to acquire the lock");
 
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
     expect(result.code).toBe(1);
     expect(result.err).toContain("already locked");
     expect(result.err).toContain(outcome.handle.lockPath);
@@ -278,7 +278,7 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
     // generateId runs after the initial preflight scan but before lock
     // acquisition and the under-lock recheck: dropping a pending file here
     // exercises the locked recheck race.
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       generateId: () => {
         void dropPendingDecisionSync(h.fixture, "race.md");
         return "queuerace-000000000000";
@@ -294,7 +294,7 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
     const h = await setup();
     // Preflight sees absent queues as empty. Replacing the path with a regular
     // file after that scan makes the under-lock readdir fail with ENOTDIR.
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       generateId: () => {
         writeFileSync(
           path.join(h.fixture.threadPath as string, ".pending-decisions"),
@@ -318,7 +318,7 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
     await createRunDirectory(h.stateRoot, "collide-000000000000");
 
     let call = 0;
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       generateId: () => (call++ === 0 ? "collide-000000000000" : "fresh-111111111111"),
     });
 
@@ -340,7 +340,7 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
     await createRunDirectory(h.stateRoot, "collide-000000000000");
 
     let call = 0;
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       generateId: () => {
         const id =
           call === 0 ? "collide-000000000000" : "fresh-111111111111";
@@ -371,7 +371,7 @@ describe.concurrent("runCommand — allocation races (AC-7.4, AC-7.5)", () => {
   it("preserves the run directory and releases the lock when the initial checkpoint write fails", async () => {
     const h = await setup();
     let uninstalled = false;
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       generateId: () => "writefail-000000000000",
       writeInitialCheckpoint: async () => {
         throw new Error("disk full");
@@ -445,7 +445,7 @@ describe.concurrent("runCommand — non-blocking and pause behavior (AC-7.6, AC-
     if (corrupt.kind === "created") {
       await fs.writeFile(path.join(corrupt.runDir, "state.json"), "{ not json", "utf8");
     }
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
     expect(result.code).toBe(0);
     expect(result.err).toContain("warning");
     expect(result.err).toContain("unreadable");

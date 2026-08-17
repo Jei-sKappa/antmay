@@ -404,31 +404,43 @@ export async function soleCheckpointDir(stateRoot: string): Promise<string> {
 }
 
 /**
- * Standard-pipeline script: the two authoring stages (spec, plan-strict), the
- * first reconciliation stage, and the implementation stage change their
- * boundary; review-spec and reconcile-plan change nothing.
+ * What each Standard stage's attempt does to the worktree: the two authoring
+ * stages (spec, plan-strict), the first reconciliation stage, and the
+ * implementation stage change their boundary; review-spec and reconcile-plan
+ * change nothing.
  *
  * Every step leaves the artifact state its catalog stage promises, because a
  * DONE that does not is a contract violation rather than a finished stage —
  * which is why `plan-strict` writes an index *and* a task file.
  */
-export function standardSteps(fixture: RepoFixture): FakeHarnessStep[] {
-  return [
-    { before: () => writeThreadFile(fixture, "spec.md", "# Spec\n") },
-    { before: () => writeThreadFile(fixture, "spec.md", "# Spec v2\n") },
-    {},
-    {
-      before: async () => {
-        await writeThreadFile(fixture, "plan.md", "# Plan\n");
-        await writeThreadFile(fixture, "plan-tasks/01-task.md", "# Task 01\n");
-      },
+const STAGE_STEPS: Record<string, (f: RepoFixture) => FakeHarnessStep> = {
+  spec: (f) => ({ before: () => writeThreadFile(f, "spec.md", "# Spec\n") }),
+  "reconcile-spec": (f) => ({
+    before: () => writeThreadFile(f, "spec.md", "# Spec v2\n"),
+  }),
+  "review-spec": () => ({}),
+  "plan-strict": (f) => ({
+    before: async () => {
+      await writeThreadFile(f, "plan.md", "# Plan\n");
+      await writeThreadFile(f, "plan-tasks/01-task.md", "# Task 01\n");
     },
-    {},
-    {
-      before: () =>
-        writeThreadFile(fixture, "implementation-report.md", "# Report\n"),
-    },
-  ];
+  }),
+  "reconcile-plan": () => ({}),
+  "implement-plan-with-subagents": (f) => ({
+    before: () => writeThreadFile(f, "implementation-report.md", "# Report\n"),
+  }),
+};
+
+/**
+ * The scripted attempt for each stage the harness selected, in selection order.
+ *
+ * Keying by stage id rather than by position is what keeps a step tied to the
+ * stage it belongs to: the fake harness consumes the array by invocation
+ * ordinal, so a positional script silently changes meaning the moment a case
+ * selects a different prefix.
+ */
+export function standardSteps(h: Harness): FakeHarnessStep[] {
+  return h.stages.map((id) => STAGE_STEPS[id]!(h.fixture));
 }
 
 /** Synchronous pending-file drop for the generateId hook so the file is on disk

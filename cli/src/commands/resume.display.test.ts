@@ -66,7 +66,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     await seed(h, [{ outcome: BLOCKED }], { probe: runProbe });
     const runId = await soleRunId(h);
 
-    const result = await resume(h, runId, standardSteps(h.fixture), {
+    const result = await resume(h, runId, standardSteps(h), {
       probe: resumeProbe,
     });
     expect(result.code).toBe(0);
@@ -95,7 +95,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
       JSON.stringify(settingsFor({}, "changed")),
       "utf8",
     );
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
     expect(
@@ -142,7 +142,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     await fs.rm(path.join(h.configRoot, "profiles", "quality.json"));
     await fs.rm(path.join(h.configRoot, "settings.json"));
 
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(0);
     const after = await readCp(h, runId);
     expect(after.pipelineName).toBe("standard");
@@ -188,7 +188,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     await fs.rm(path.join(h.configRoot, "profiles", "quality.json"));
     await fs.rm(path.join(h.configRoot, "settings.json"));
 
-    const resumed = await resume(h, runId, standardSteps(h.fixture));
+    const resumed = await resume(h, runId, standardSteps(h));
     expect(resumed.code).toBe(0);
     expect(startupBlock(resumed.out)).toBe(atAllocation);
   });
@@ -197,7 +197,7 @@ describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, A
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }], { dangerouslySkipPermissions: true });
     const runId = await soleRunId(h);
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.err).toContain("dangerously-skip-permissions");
   });
 });
@@ -294,7 +294,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     );
 
     let probeCalled = false;
-    const result = await resume(h, runId, standardSteps(h.fixture), {
+    const result = await resume(h, runId, standardSteps(h), {
       env: scriptedEnv(h),
       probe: async (...args) => {
         probeCalled = true;
@@ -322,7 +322,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("outcome-blocked");
 
-    const result = await resume(h, runId, standardSteps(h.fixture), {
+    const result = await resume(h, runId, standardSteps(h), {
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(2);
@@ -349,7 +349,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
   it("runs spec-correct on attempt 2 after an outcome-blocked pause", async () => {
     const h = await setup();
     const runId = await seedScriptedBlocked(h);
-    const result = await resume(h, runId, standardSteps(h.fixture), {
+    const result = await resume(h, runId, standardSteps(h), {
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(0);
@@ -396,7 +396,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
       h,
       standardScriptedScenario({ spec: ["outcome-blocked", "spec-correct"] }),
     );
-    const result = await resume(h, runId, standardSteps(h.fixture), {
+    const result = await resume(h, runId, standardSteps(h), {
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(0);
@@ -420,7 +420,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     );
     await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
 
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1), {
+    const result = await resume(h, runId, standardSteps(h).slice(1), {
       env: scriptedEnv(h),
     });
     expect(result.code).toBe(1);
@@ -523,14 +523,14 @@ describe.concurrent("resumeCommand — persisted-attempt Continue (AC-3.2, AC-3.
   it("omits Log and Continue on a pre-attempt pause", async () => {
     const h = await setup();
     let calls = 0;
-    await seed(h, standardSteps(h.fixture), {
+    await seed(h, standardSteps(h), {
       installSignals: fakeSignals(() => (++calls > 1 ? "SIGINT" : null)),
     });
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).attempts.length).toBe(0);
 
     dropPendingSync(h.fixture, "q.md");
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     expect(result.out).not.toContain("Continue:");
     expect(result.out).not.toContain("Log:");

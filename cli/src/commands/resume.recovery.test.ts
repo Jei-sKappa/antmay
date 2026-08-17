@@ -44,7 +44,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     await seed(h, [{ before: () => dropPendingSync(h.fixture, "q.md"), outcome: BLOCKED }]);
     const runId = await soleRunId(h);
     const before = await readCp(h, runId);
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     // The printed list comes from the pause's queue reason, so a file still
     // present has to be named there — the durable checkpoint stays untouched.
@@ -63,7 +63,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("outcome-blocked");
     dropPendingSync(h.fixture, "appeared.md");
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     expect(result.out).toContain("appeared.md");
   });
@@ -73,7 +73,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
     await blockQueueScan(h.fixture, ".pending-reviews");
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
     expect(cp.waiting?.reasons[0].kind).toBe("gate-error");
@@ -107,7 +107,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     // advanceable as it found it.
     await removePending(h.fixture, "q.md");
     await blockQueueScan(h.fixture, ".pending-reviews");
-    const held = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const held = await resume(h, runId, standardSteps(h).slice(1));
     expect(held.code).toBe(2);
     expect(held.invoker.calls.length).toBe(0);
     const heldCp = await readCp(h, runId);
@@ -120,7 +120,7 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
     await fs.rm(path.join(h.fixture.threadPath as string, ".pending-reviews"), {
       force: true,
     });
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
   });
@@ -168,7 +168,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3)", () 
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("pending-queues");
     await removePending(h.fixture, "q.md");
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
     expect(attemptCountAt(cp, 0)).toBe(2);
@@ -191,7 +191,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3)", () 
     expect(seededCp.attempts[0]?.result).toBe("done");
 
     await removePending(h.fixture, "q.md");
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
     expect(cp.condition).toBe("completed");
@@ -217,7 +217,7 @@ describe.concurrent("resumeCommand — pending-queues resolution (AC-15.3)", () 
     expect(seededCp.waiting?.reasons[0].kind).toBe("pending-queues");
 
     await removePending(h.fixture, "q.md");
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
     // Stage 1 (reconcile-spec, rerun) ran a fresh attempt over the finalized one.
@@ -241,7 +241,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("git-policy-violation");
 
     await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     const folder = h.fixture.threadFolder as string;
     expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
@@ -268,7 +268,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     const stale = await resume(
       h,
       runId,
-      standardSteps(h.fixture).slice(1),
+      standardSteps(h).slice(1),
     );
     expect(stale.code).toBe(2);
     expect(stale.invoker.calls).toHaveLength(0);
@@ -288,7 +288,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     const repaired = await resume(
       h,
       runId,
-      standardSteps(h.fixture).slice(1),
+      standardSteps(h).slice(1),
     );
     expect(repaired.code).toBe(0);
     expect(
@@ -319,7 +319,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
 
     // The out-of-bounds file is still there, so this resume's boundary refuses
     // exactly as the run's did — and the preserved attempt stays finalizable.
-    const refused = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const refused = await resume(h, runId, standardSteps(h).slice(1));
     expect(refused.code).toBe(2);
     expect(refused.invoker.calls.length).toBe(0);
     const stillPaused = await readCp(h, runId);
@@ -328,7 +328,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     expect(attemptCountAt(stillPaused, 0)).toBe(1);
 
     await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     const folder = h.fixture.threadFolder as string;
     expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): spec`);
@@ -353,7 +353,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     await h.fixture.git(["add", "--", `docs/threads/${folder}/spec.md`]);
     await h.fixture.git(["commit", "-m", "manual: user commit"]);
 
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     const subjects = await commitSubjects(h.fixture);
     // No executor spec commit: the user's commit already satisfied the boundary.
@@ -385,7 +385,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
 
     await fs.rm(path.join(h.fixture.root, "stray.txt"), { force: true });
     await removePending(h.fixture, "q.md");
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(0);
     const folder = h.fixture.threadFolder as string;
     expect(await commitSubjects(h.fixture)).toContain(`docs(${folder}): reconcile spec`);
@@ -412,7 +412,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     await h.fixture.git(["add", "--", "other.txt"]);
     await h.fixture.git(["commit", "-m", "chore: unrelated"]);
 
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.err).toContain("HEAD moved");
     expect(result.code).toBe(0);
   });
@@ -421,7 +421,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     // The implementation boundary is the one this case is about, so it selects
     // the whole Standard sequence to reach it.
     const h = await setup(settingsFor(), STANDARD_STAGE_IDS);
-    const steps = standardSteps(h.fixture);
+    const steps = standardSteps(h);
     steps[5] = {
       before: () => {
         writeThreadFileSync(h.fixture, "implementation-report.md", "# Report\n");
@@ -484,7 +484,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     await h.fixture.git(["add", "-A"]);
     await h.fixture.git(["commit", "-m", "chore: drop the spec"]);
 
-    const first = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const first = await resume(h, runId, standardSteps(h).slice(1));
     expect(first.code).toBe(2);
     expect(first.invoker.calls.length).toBe(0);
     expect(first.out).toContain(
@@ -503,7 +503,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
     await h.fixture.git(["add", "-A"]);
     await h.fixture.git(["commit", "-m", "chore: restore the spec"]);
-    const second = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const second = await resume(h, runId, standardSteps(h).slice(1));
     expect(second.code).toBe(0);
     expect(attemptCountAt(await readCp(h, runId), 1)).toBe(2);
   });
@@ -515,7 +515,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     // this pause is allowed to inspect.
     writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
 
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.err).not.toContain("not clean");
     expect(result.code).toBe(0);
     const folder = h.fixture.threadFolder as string;
@@ -551,7 +551,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     // reached — and it is the first and only evaluation of a HEAD rule this
     // attempt already broke.
     writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.code).toBe(2);
     expect(result.invoker.calls.length).toBe(0);
     const cp = await readCp(h, runId);
@@ -569,7 +569,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     const accepted = await resume(
       h,
       runId,
-      standardSteps(h.fixture).slice(1),
+      standardSteps(h).slice(1),
     );
     expect(accepted.code).toBe(0);
     expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
@@ -595,7 +595,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     // `spec` stage's forbidden-HEAD-movement rule holds and the repaired
     // promise finalizes.
     writeThreadFileSync(h.fixture, "spec.md", "# Spec\n");
-    const finalized = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const finalized = await resume(h, runId, standardSteps(h).slice(1));
     expect(finalized.out).not.toContain("forbids HEAD movement");
     expect(finalized.code).toBe(0);
     const folder = h.fixture.threadFolder as string;
@@ -610,7 +610,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     const h = await setup();
     const runId = await seedContractViolation(h);
 
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
     expect(cp.condition).toBe("completed");
@@ -624,7 +624,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     // gate-error would throw away the saved DONE's recovery path.
     await blockQueueScan(h.fixture, ".pending-reviews");
 
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
     expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
@@ -637,7 +637,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     const runId = await seedContractViolation(h);
     writeRootFileSync(h.fixture, "stray.txt", "x");
 
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     expect(result.invoker.calls.length).toBe(0);
     const cp = await readCp(h, runId);
@@ -760,7 +760,7 @@ describe.concurrent("resumeCommand — unrecoverable recovery documents (AC-2.3)
       if (!held.ok) throw new Error("expected to acquire the lock");
 
       let probeCalled = false;
-      const result = await resume(h, runId, standardSteps(h.fixture), {
+      const result = await resume(h, runId, standardSteps(h), {
         probe: async (...args) => {
           probeCalled = true;
           return okProbe(...args);
@@ -785,7 +785,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
     let calls = 0;
     // First signaled() (pre-allocation) is null; the second (pre-launch) fires
     // so the allocated ready checkpoint survives with no attempts.
-    await seed(h, standardSteps(h.fixture), {
+    await seed(h, standardSteps(h), {
       installSignals: fakeSignals(() => (++calls > 1 ? "SIGINT" : null)),
     });
     return soleRunId(h);
@@ -798,7 +798,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
 
     // First resume: a ready cursor with a queued file persists a no-attempt pause.
     dropPendingSync(h.fixture, "q.md");
-    const first = await resume(h, runId, standardSteps(h.fixture));
+    const first = await resume(h, runId, standardSteps(h));
     expect(first.code).toBe(2);
     const paused = await readCp(h, runId);
     expect(paused.condition).toBe("waiting-for-user");
@@ -807,7 +807,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
 
     // Second resume: queues empty, the pre-gate pause re-attempts the stage.
     await removePending(h.fixture, "q.md");
-    const second = await resume(h, runId, standardSteps(h.fixture));
+    const second = await resume(h, runId, standardSteps(h));
     expect(second.code).toBe(0);
     expect(attemptCountAt(await readCp(h, runId), 0)).toBe(1);
   });
@@ -815,7 +815,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
   it("runs the stored next stage for a ready run", async () => {
     const h = await setup();
     const runId = await seedReady(h);
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(0);
     expect((await readCp(h, runId)).condition).toBe("completed");
   });
@@ -852,7 +852,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
       new Date(),
     );
     if (!held.ok) throw new Error("expected to acquire the lock");
-    const refused = await resume(h, runId, standardSteps(h.fixture));
+    const refused = await resume(h, runId, standardSteps(h));
     expect(refused.code).toBe(1);
     expect(refused.err).toContain("already locked");
     expect((await readCp(h, runId)).condition).toBe("executing");
@@ -860,7 +860,7 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
     // Manual stale-lock removal, then recovery marks the attempt interrupted and
     // runs a fresh attempt.
     await held.handle.release();
-    const recovered = await resume(h, runId, standardSteps(h.fixture));
+    const recovered = await resume(h, runId, standardSteps(h));
     expect(recovered.code).toBe(0);
     const cp = await readCp(h, runId);
     expect(cp.attempts[0]?.result).toBe("interrupted");

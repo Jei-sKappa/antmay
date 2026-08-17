@@ -99,7 +99,7 @@ describe.concurrent("resumeCommand — preflight rejections (AC-15.2)", () => {
 
   it("reports a completed run and exits 1", async () => {
     const h = await setup();
-    const seeded = await seed(h, standardSteps(h.fixture));
+    const seeded = await seed(h, standardSteps(h));
     expect(seeded.code).toBe(0);
     const runId = await soleRunId(h);
     const result = await resume(h, runId, []);
@@ -122,7 +122,7 @@ describe.concurrent("resumeCommand — preflight rejections (AC-15.2)", () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
-    const result = await resume(h, runId, standardSteps(h.fixture), {
+    const result = await resume(h, runId, standardSteps(h), {
       env: {
         ANTMAY_CONFIG_HOME: "relative/not/absolute",
         ANTMAY_STATE_HOME: h.stateRoot,
@@ -167,7 +167,7 @@ const PREFLIGHT_REFUSALS: {
   {
     name: "a completed run",
     arrange: async (h, runId) => {
-      const finished = await resume(h, runId, standardSteps(h.fixture));
+      const finished = await resume(h, runId, standardSteps(h));
       expect(finished.code).toBe(0);
       return {};
     },
@@ -244,7 +244,7 @@ describe.concurrent("resumeCommand — read-only preflight (AC-1.2)", () => {
       ).length;
       const locksBefore = (await lockNames(h.stateRoot)).sort();
 
-      const result = await resume(h, runId, standardSteps(h.fixture), overrides);
+      const result = await resume(h, runId, standardSteps(h), overrides);
 
       expect(result.code).toBe(1);
       expect(result.invoker.calls.length).toBe(0);
@@ -293,7 +293,7 @@ describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
     const runId = await soleRunId(h);
     const before = await readCp(h, runId);
     await fs.writeFile(path.join(h.fixture.root, "stray.txt"), "dirty\n", "utf8");
-    const result = await resume(h, runId, standardSteps(h.fixture));
+    const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(1);
     expect(result.out).toContain("Run details");
     expect(result.out).toContain(runId);
@@ -318,7 +318,7 @@ describe.concurrent("resumeCommand — clean-worktree rule (AC-15.1)", () => {
     expect(seededCp.waiting?.reasons[0].kind).toBe("commit-error");
 
     await fs.rm(hook, { force: true });
-    const result = await resume(h, runId, standardSteps(h.fixture).slice(1));
+    const result = await resume(h, runId, standardSteps(h).slice(1));
     expect(result.err).not.toContain("not clean");
     expect(result.code).toBe(0);
     const folder = h.fixture.threadFolder as string;
@@ -390,7 +390,7 @@ describe.concurrent("resumeCommand — temporary-workspace safety (AC-1.7, AC-2.
       const before = await fs.readFile(checkpointFile, "utf8");
 
       await makeWorkspacesUnsafe(h.fixture);
-      const result = await resume(h, runId, standardSteps(h.fixture));
+      const result = await resume(h, runId, standardSteps(h));
 
       expect(result.code).toBe(1);
       const rel = h.fixture.threadRelPath as string;
@@ -455,7 +455,7 @@ describe("resumeCommand — signal observations through lock acquisition", () =>
       };
 
       let calls = 0;
-      const result = await resume(h, runId, standardSteps(h.fixture), {
+      const result = await resume(h, runId, standardSteps(h), {
         installSignals: fakeSignals(() =>
           ++calls >= observation.fireAt ? "SIGINT" : null,
         ),

@@ -34,7 +34,7 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
     const folder = h.fixture.threadFolder as string;
     const before = (await commitSubjects(h.fixture)).length;
 
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
 
     expect(result.code).toBe(0);
     const subjects = await commitSubjects(h.fixture);
@@ -60,7 +60,7 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
 
   it("stores every selected-harness version outside the immutable stage snapshot", async () => {
     const h = await setup();
-    await run(h, standardSteps(h.fixture));
+    await run(h, standardSteps(h));
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
     if (cp.ok) {
@@ -71,7 +71,7 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
 
   it("keeps the created snapshot fixed even when settings are edited afterward (AC-4.2)", async () => {
     const h = await setup();
-    await run(h, standardSteps(h.fixture));
+    await run(h, standardSteps(h));
     const runDir = await soleCheckpointDir(h.stateRoot);
     await fs.writeFile(
       path.join(h.configRoot, "settings.json"),
@@ -91,7 +91,7 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
 
   it("emits the unrestricted-permissions warning when the flag is set", async () => {
     const h = await setup();
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       dangerouslySkipPermissions: true,
     });
     expect(result.code).toBe(0);
@@ -102,7 +102,7 @@ describe.concurrent("runCommand — happy path (AC-1.3, AC-20.2)", () => {
 describe.concurrent("runCommand — external documents and selection (FR-1, FR-4, FR-5, FR-6)", () => {
   it("snapshots the declared identity and resolved source of a named pipeline", async () => {
     const h = await setup();
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
     expect(result.code).toBe(0);
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
@@ -126,7 +126,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
     await h.fixture.git(["add", "-A"]);
     await h.fixture.git(["commit", "-m", "chore: check in a pipeline"]);
 
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       pipeline: "./my-pipeline.json",
     });
     expect(result.code).toBe(0);
@@ -158,7 +158,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
       profileName: "maximum-quality",
     });
 
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       profile: "maximum-quality",
     });
     expect(result.code).toBe(0);
@@ -192,7 +192,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
       profileName: "partial",
     });
 
-    const result = await run(h, standardSteps(h.fixture), { profile: "partial" });
+    const result = await run(h, standardSteps(h), { profile: "partial" });
     expect(result.code).toBe(0);
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
@@ -210,7 +210,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
     await h.fixture.git(["add", "-A"]);
     await h.fixture.git(["commit", "-m", "docs: spec"]);
 
-    const result = await run(h, standardSteps(h.fixture).slice(3), {
+    const result = await run(h, standardSteps(h).slice(3), {
       from: "plan-strict",
     });
     expect(result.code).toBe(0);
@@ -233,7 +233,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
 
   it("snapshots the catalog contract and concrete target of every selected stage", async () => {
     const h = await setup({ stages: STANDARD_STAGE_IDS });
-    await run(h, standardSteps(h.fixture));
+    await run(h, standardSteps(h));
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
     if (!cp.ok) return;
@@ -253,7 +253,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
       ]),
     });
 
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
     expect(result.code).toBe(0);
     const rel = h.fixture.threadRelPath as string;
     expect(result.invoker.calls[0]!.prompt).toBe(
@@ -292,7 +292,7 @@ describe.concurrent("runCommand — external documents and selection (FR-1, FR-4
       return okProbe(harnesses, repoRoot);
     };
 
-    const result = await run(h, standardSteps(h.fixture), {
+    const result = await run(h, standardSteps(h), {
       probe: trackingProbe,
     });
     expect(result.code).toBe(0);
@@ -305,7 +305,7 @@ describe.concurrent("runCommand — resolved-execution startup display (AC-11)",
   it("shows the pipeline source, `settings only`, and every stage's binding and target", async () => {
     // The block lists every selected stage, so this case shows the whole set.
     const h = await setup({ stages: STANDARD_STAGE_IDS });
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
     expect(result.code).toBe(0);
 
     const startup = result.out.slice(
@@ -348,7 +348,7 @@ describe.concurrent("runCommand — resolved-execution startup display (AC-11)",
     await h.fixture.git(["add", "-A"]);
     await h.fixture.git(["commit", "-m", "docs: spec"]);
 
-    const result = await run(h, standardSteps(h.fixture).slice(3), {
+    const result = await run(h, standardSteps(h).slice(3), {
       from: "plan-strict",
       profile: "maximum-quality",
       probe: async (harnesses, repoRoot) => okProbe(harnesses, repoRoot),
@@ -370,7 +370,7 @@ describe.concurrent("runCommand — resolved-execution startup display (AC-11)",
 
   it("prints the whole block before the first attempt and prompts for nothing", async () => {
     const h = await setup();
-    const result = await run(h, standardSteps(h.fixture));
+    const result = await run(h, standardSteps(h));
     expect(result.code).toBe(0);
     expect(result.out.indexOf("Run details")).toBeLessThan(
       result.out.indexOf("Stage 1/3"),
