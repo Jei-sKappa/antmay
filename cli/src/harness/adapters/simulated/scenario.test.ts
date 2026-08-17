@@ -5,16 +5,16 @@ import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  SCRIPTED_CASE_NAMES,
-  SCRIPTED_SCENARIO_FILENAME,
+  SIMULATED_CASE_NAMES,
+  SIMULATED_SCENARIO_FILENAME,
   isCaseCompatibleWithStage,
-  isScriptedCaseName,
-  loadScriptedScenario,
-  resolveScriptedScenarioPath,
-  validateScriptedScenario,
-  type ScriptedCaseName,
+  isSimulatedCaseName,
+  loadSimulatedScenario,
+  resolveSimulatedScenarioPath,
+  validateSimulatedScenario,
+  type SimulatedCaseName,
 } from "./scenario.js";
-import { tempDirSync } from "../../test-helpers/temp-root.js";
+import { tempDirSync } from "../../../test-helpers/temp-root.js";
 
 /**
  * The stage IDs one representative Standard selection contributes. Scenario
@@ -45,33 +45,33 @@ const VALID_STANDARD_SCENARIO = {
 let dir: string;
 
 beforeEach(() => {
-  dir = tempDirSync("antmay-scripted-scenario-");
+  dir = tempDirSync("antmay-simulated-scenario-");
 });
 
 function writeScenario(contents: string): string {
-  const scenarioPath = path.join(dir, SCRIPTED_SCENARIO_FILENAME);
+  const scenarioPath = path.join(dir, SIMULATED_SCENARIO_FILENAME);
   fs.writeFileSync(scenarioPath, contents, "utf8");
   return scenarioPath;
 }
 
-describe("resolveScriptedScenarioPath", () => {
-  it("joins the config root with scripted-harness.json", () => {
+describe("resolveSimulatedScenarioPath", () => {
+  it("joins the config root with simulated-harness.json", () => {
     const configRoot = path.join(os.tmpdir(), "cfg", "antmay");
-    expect(resolveScriptedScenarioPath(configRoot)).toBe(
-      path.join(configRoot, SCRIPTED_SCENARIO_FILENAME),
+    expect(resolveSimulatedScenarioPath(configRoot)).toBe(
+      path.join(configRoot, SIMULATED_SCENARIO_FILENAME),
     );
   });
 
   it("does not create the file", () => {
-    const configRoot = tempDirSync("antmay-scripted-empty-root-");
-    const scenarioPath = resolveScriptedScenarioPath(configRoot);
+    const configRoot = tempDirSync("antmay-simulated-empty-root-");
+    const scenarioPath = resolveSimulatedScenarioPath(configRoot);
     expect(fs.existsSync(scenarioPath)).toBe(false);
   });
 });
 
 describe("case catalog", () => {
   it("exposes exactly the seventeen built-in names", () => {
-    expect([...SCRIPTED_CASE_NAMES]).toEqual([
+    expect([...SIMULATED_CASE_NAMES]).toEqual([
       "outcome-done",
       "outcome-blocked",
       "outcome-refused",
@@ -115,20 +115,20 @@ describe("case catalog", () => {
       true,
     ],
     ["implement-plan-with-subagents-correct", "reconcile-plan", false],
-  ] as const satisfies readonly [ScriptedCaseName, string, boolean][])(
+  ] as const satisfies readonly [SimulatedCaseName, string, boolean][])(
     "%s on %s => %s",
     (caseName, stageId, compatible) => {
-      expect(isScriptedCaseName(caseName)).toBe(true);
+      expect(isSimulatedCaseName(caseName)).toBe(true);
       expect(isCaseCompatibleWithStage(caseName, stageId)).toBe(compatible);
     },
   );
 
   it("rejects unknown case names", () => {
-    expect(isScriptedCaseName("outcome-success")).toBe(false);
+    expect(isSimulatedCaseName("outcome-success")).toBe(false);
   });
 });
 
-describe("validateScriptedScenario — accepted Standard input", () => {
+describe("validateSimulatedScenario — accepted Standard input", () => {
   it("accepts the spec example and preserves array order", () => {
     const document = {
       schemaVersion: 0,
@@ -141,7 +141,7 @@ describe("validateScriptedScenario — accepted Standard input", () => {
         "implement-plan-with-subagents": ["outcome-done"],
       },
     };
-    const result = validateScriptedScenario(document, STANDARD_STAGE_IDS);
+    const result = validateSimulatedScenario(document, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.scenario.schemaVersion).toBe(0);
@@ -161,13 +161,13 @@ describe("validateScriptedScenario — accepted Standard input", () => {
         "reconcile-plan": ["reconcile-plan-correct"],
       },
     };
-    const result = validateScriptedScenario(document, suffix);
+    const result = validateSimulatedScenario(document, suffix);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(Object.keys(result.scenario.stages)).toEqual(suffix);
 
     // A skipped stage is not selected, so covering it is an unexpected entry.
-    const withSkipped = validateScriptedScenario(
+    const withSkipped = validateSimulatedScenario(
       { schemaVersion: 0, stages: { ...document.stages, spec: ["spec-correct"] } },
       suffix,
     );
@@ -179,9 +179,9 @@ describe("validateScriptedScenario — accepted Standard input", () => {
   });
 });
 
-describe("validateScriptedScenario — invalid shape classes (AC-2.2)", () => {
+describe("validateSimulatedScenario — invalid shape classes (AC-2.2)", () => {
   function expectRejected(document: unknown, matcher: RegExp | string): void {
-    const result = validateScriptedScenario(document, STANDARD_STAGE_IDS);
+    const result = validateSimulatedScenario(document, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     const joined = result.errors.join("\n");
@@ -292,7 +292,7 @@ describe("validateScriptedScenario — invalid shape classes (AC-2.2)", () => {
           spec: ["not-a-real-case"],
         },
       },
-      "stages.spec[0] is not a recognized scripted case name.",
+      "stages.spec[0] is not a recognized simulated case name.",
     );
   });
 
@@ -330,7 +330,7 @@ describe("validateScriptedScenario — invalid shape classes (AC-2.2)", () => {
   });
 
   it("rejects duplicate expected stage ids", () => {
-    const result = validateScriptedScenario(VALID_STANDARD_SCENARIO, [
+    const result = validateSimulatedScenario(VALID_STANDARD_SCENARIO, [
       "spec",
       "spec",
     ]);
@@ -340,30 +340,30 @@ describe("validateScriptedScenario — invalid shape classes (AC-2.2)", () => {
   });
 });
 
-describe("loadScriptedScenario", () => {
+describe("loadSimulatedScenario", () => {
   it("loads a valid file from the fixed path", async () => {
     writeScenario(JSON.stringify(VALID_STANDARD_SCENARIO));
-    const result = await loadScriptedScenario(dir, STANDARD_STAGE_IDS);
+    const result = await loadSimulatedScenario(dir, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.scenarioPath).toBe(path.join(dir, SCRIPTED_SCENARIO_FILENAME));
+    expect(result.scenarioPath).toBe(path.join(dir, SIMULATED_SCENARIO_FILENAME));
     expect(result.scenario.stages["review-spec"]).toEqual(["outcome-done"]);
   });
 
   it("reports a missing file with the resolved path", async () => {
-    const result = await loadScriptedScenario(dir, STANDARD_STAGE_IDS);
+    const result = await loadSimulatedScenario(dir, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.scenarioPath).toBe(path.join(dir, SCRIPTED_SCENARIO_FILENAME));
+    expect(result.scenarioPath).toBe(path.join(dir, SIMULATED_SCENARIO_FILENAME));
     expect(result.errors[0]).toContain(result.scenarioPath);
-    expect(result.errors[0]).toContain("No scripted scenario file found");
+    expect(result.errors[0]).toContain("No simulated scenario file found");
     expect(fs.existsSync(result.scenarioPath)).toBe(false);
   });
 
   it("reports unreadable files with the resolved path", async () => {
-    const scenarioPath = path.join(dir, SCRIPTED_SCENARIO_FILENAME);
+    const scenarioPath = path.join(dir, SIMULATED_SCENARIO_FILENAME);
     fs.mkdirSync(scenarioPath);
-    const result = await loadScriptedScenario(dir, STANDARD_STAGE_IDS);
+    const result = await loadSimulatedScenario(dir, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.errors[0]).toContain(scenarioPath);
@@ -372,7 +372,7 @@ describe("loadScriptedScenario", () => {
 
   it("reports JSON syntax failures with the resolved path", async () => {
     const scenarioPath = writeScenario("{ not json");
-    const result = await loadScriptedScenario(dir, STANDARD_STAGE_IDS);
+    const result = await loadSimulatedScenario(dir, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.errors[0]).toContain(scenarioPath);
@@ -382,15 +382,15 @@ describe("loadScriptedScenario", () => {
   it("reads and parses the scenario file exactly once", async () => {
     writeScenario(JSON.stringify(VALID_STANDARD_SCENARIO));
     const readFile = vi.fn(async () => JSON.stringify(VALID_STANDARD_SCENARIO));
-    const result = await loadScriptedScenario(dir, STANDARD_STAGE_IDS, readFile);
+    const result = await loadSimulatedScenario(dir, STANDARD_STAGE_IDS, readFile);
     expect(readFile).toHaveBeenCalledTimes(1);
-    expect(readFile).toHaveBeenCalledWith(path.join(dir, SCRIPTED_SCENARIO_FILENAME));
+    expect(readFile).toHaveBeenCalledWith(path.join(dir, SIMULATED_SCENARIO_FILENAME));
     expect(result.ok).toBe(true);
   });
 
   it("returns a reusable frozen scenario object", async () => {
     writeScenario(JSON.stringify(VALID_STANDARD_SCENARIO));
-    const result = await loadScriptedScenario(dir, STANDARD_STAGE_IDS);
+    const result = await loadSimulatedScenario(dir, STANDARD_STAGE_IDS);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(Object.isFrozen(result.scenario)).toBe(true);

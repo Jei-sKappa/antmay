@@ -560,10 +560,10 @@ attempt that carries a session** and renders its snapshotted harness beside the
 session ID. That value can belong to an earlier stage than the summary's current
 stage; when no attempt captured a session, the field is omitted.
 
-## Scripted demo
+## Simulated demo
 
 `npm run demo` drives the built CLI through a real run against a disposable
-repository, with a scripted stand-in for the harness, so every terminal state the
+repository, with a simulated stand-in for the harness, so every terminal state the
 executor can produce is visible without contacting Codex or Claude Code. It
 builds the CLI first, then runs the scenario you pick. Each scenario stops at one
 distinct state — a closing block, a pause, a refusal — so that state is the last

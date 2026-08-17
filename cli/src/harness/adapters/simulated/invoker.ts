@@ -1,19 +1,19 @@
 import { appendFile } from "node:fs/promises";
 
-import { renderStagePrompt } from "../prompt.js";
+import { renderStagePrompt } from "../../prompt.js";
 import type {
   AttemptOutcome,
   AttemptRequest,
   HarnessEvent,
   HarnessInvoker,
-} from "../types.js";
-import type { ScriptedCaseEnding, TranscriptLine } from "./cases.js";
-import { executeScriptedCase, resolveScriptedThreadRoot } from "./cases.js";
-import type { ScriptedCaseName, ScriptedScenario } from "./scenario.js";
+} from "../../types.js";
+import type { SimulatedCaseEnding, TranscriptLine } from "./cases.js";
+import { executeSimulatedCase, resolveCaseThreadRoot } from "./cases.js";
+import type { SimulatedCaseName, SimulatedScenario } from "./scenario.js";
 import { isCaseCompatibleWithStage } from "./scenario.js";
 
-/** Error class name surfaced on scripted adapter failures. */
-export const SCRIPTED_HARNESS_ERROR_CLASS = "ScriptedHarnessError";
+/** Error class name surfaced on simulated adapter failures. */
+export const SIMULATED_HARNESS_ERROR_CLASS = "SimulatedHarnessError";
 
 const ABORTED_OUTCOME: AttemptOutcome = {
   kind: "failed",
@@ -23,12 +23,12 @@ const ABORTED_OUTCOME: AttemptOutcome = {
 };
 
 /**
- * Deterministic fake session identity for a launched scripted attempt. The
+ * Deterministic fake session identity for a launched simulated attempt. The
  * shape is intentionally obvious so pause and list renderings stay demo-covered
  * without resembling a real provider ID.
  */
-export function scriptedSessionId(stageId: string, attemptNumber: number): string {
-  return `scripted-session-${stageId}-${attemptNumber}`;
+export function simulatedSessionId(stageId: string, attemptNumber: number): string {
+  return `simulated-session-${stageId}-${attemptNumber}`;
 }
 
 function withSession(
@@ -67,11 +67,11 @@ function awaitAbort(signal: AbortSignal): Promise<AttemptOutcome> {
   });
 }
 
-function scriptedProviderError(message: string): AttemptOutcome {
+function simulatedProviderError(message: string): AttemptOutcome {
   return {
     kind: "failed",
     category: "provider-error",
-    errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+    errorClass: SIMULATED_HARNESS_ERROR_CLASS,
     errorMessage: message,
   };
 }
@@ -111,16 +111,16 @@ function validateRequestShape(
 }
 
 function selectCase(
-  scenario: ScriptedScenario,
+  scenario: SimulatedScenario,
   request: AttemptRequest,
 ):
-  | { ok: true; caseName: ScriptedCaseName }
+  | { ok: true; caseName: SimulatedCaseName }
   | { ok: false; error: string } {
   const stageCases = scenario.stages[request.stage.id];
   if (stageCases === undefined) {
     return {
       ok: false,
-      error: `no scripted cases configured for stage ${request.stage.id}.`,
+      error: `no simulated cases configured for stage ${request.stage.id}.`,
     };
   }
 
@@ -128,7 +128,7 @@ function selectCase(
   if (index >= stageCases.length) {
     return {
       ok: false,
-      error: `scripted cases exhausted for stage ${request.stage.id} at attempt ${request.stage.attemptNumber}.`,
+      error: `simulated cases exhausted for stage ${request.stage.id} at attempt ${request.stage.attemptNumber}.`,
     };
   }
 
@@ -179,9 +179,9 @@ function emitTranscript(
 }
 
 /**
- * Persist the synthetic session identity as scripted-harness metadata as soon
+ * Persist the synthetic session identity as simulated-harness metadata as soon
  * as it exists. Real harness logs retain the provider's raw session event; this
- * explicit line gives scripted logs the same recovery surface without
+ * explicit line gives simulated logs the same recovery surface without
  * fabricating provider JSON or emitting executor metadata as agent output.
  */
 async function appendSessionIdentity(
@@ -191,13 +191,13 @@ async function appendSessionIdentity(
   try {
     await appendFile(
       request.logFilePath,
-      `Scripted session: ${sessionId}\n`,
+      `Simulated session: ${sessionId}\n`,
       "utf8",
     );
   } catch (error) {
     return {
       ok: false,
-      error: `failed to append scripted session identity: ${(error as Error).message}`,
+      error: `failed to append simulated session identity: ${(error as Error).message}`,
     };
   }
   return { ok: true };
@@ -211,12 +211,12 @@ async function appendSessionIdentity(
  */
 async function appendSessionLog(
   request: AttemptRequest,
-  caseName: ScriptedCaseName,
+  caseName: SimulatedCaseName,
   transcript: readonly TranscriptLine[],
   closing: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const body = [
-    "Scripted Harness Run",
+    "Simulated Harness Run",
     `  Agent: ${request.harness}`,
     `  Model: ${request.model}`,
     `  Case: ${caseName}`,
@@ -238,37 +238,37 @@ async function appendSessionLog(
 }
 
 /** The closing log frame for the way the case ended. */
-function closingFor(ending: ScriptedCaseEnding): string {
+function closingFor(ending: SimulatedCaseEnding): string {
   switch (ending.kind) {
     case "ordinary":
-      return "Run complete: the scripted agent finished after 1 iteration(s).";
+      return "Run complete: the simulated agent finished after 1 iteration(s).";
     case "failed":
       return `Run failed: ${ending.category}: ${ending.errorMessage}.`;
     case "await-abort":
-      return "Run aborted: the scripted agent was waiting when the attempt was aborted.";
+      return "Run aborted: the simulated agent was waiting when the attempt was aborted.";
   }
 }
 
-async function invokeScripted(
-  scenario: ScriptedScenario,
+async function invokeSimulated(
+  scenario: SimulatedScenario,
   request: AttemptRequest,
 ): Promise<AttemptOutcome> {
   const shape = validateRequestShape(request);
   if (!shape.ok) {
-    return scriptedProviderError(shape.error);
+    return simulatedProviderError(shape.error);
   }
 
   const selected = selectCase(scenario, request);
   if (!selected.ok) {
-    return scriptedProviderError(selected.error);
+    return simulatedProviderError(selected.error);
   }
 
-  const threadRoot = await resolveScriptedThreadRoot(
+  const threadRoot = await resolveCaseThreadRoot(
     request.workspace.cwd,
     request.stage.threadRelPath,
   );
   if (!threadRoot.ok) {
-    return scriptedProviderError(threadRoot.error);
+    return simulatedProviderError(threadRoot.error);
   }
 
   if (request.signal.aborted) {
@@ -276,25 +276,25 @@ async function invokeScripted(
   }
 
   const session = {
-    id: scriptedSessionId(request.stage.id, request.stage.attemptNumber),
+    id: simulatedSessionId(request.stage.id, request.stage.attemptNumber),
   };
   request.onSessionCaptured?.(session);
   const sessionLog = await appendSessionIdentity(request, session.id);
   if (!sessionLog.ok) {
-    return withSession(scriptedProviderError(sessionLog.error), session);
+    return withSession(simulatedProviderError(sessionLog.error), session);
   }
 
-  const executed = await executeScriptedCase(selected.caseName, {
+  const executed = await executeSimulatedCase(selected.caseName, {
     threadRelPath: request.stage.threadRelPath,
     threadAbsRoot: threadRoot.absPath,
   });
   if (!executed.ok) {
-    return withSession(scriptedProviderError(executed.error), session);
+    return withSession(simulatedProviderError(executed.error), session);
   }
 
   const streamed = emitTranscript(request, executed.transcript);
   if (!streamed.ok) {
-    return withSession(scriptedProviderError(streamed.error), session);
+    return withSession(simulatedProviderError(streamed.error), session);
   }
 
   const log = await appendSessionLog(
@@ -304,7 +304,7 @@ async function invokeScripted(
     closingFor(executed.ending),
   );
   if (!log.ok) {
-    return withSession(scriptedProviderError(log.error), session);
+    return withSession(simulatedProviderError(log.error), session);
   }
 
   const ending = executed.ending;
@@ -319,7 +319,7 @@ async function invokeScripted(
       {
         kind: "failed",
         category: ending.category,
-        errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+        errorClass: SIMULATED_HARNESS_ERROR_CLASS,
         errorMessage: ending.errorMessage,
       },
       session,
@@ -329,15 +329,15 @@ async function invokeScripted(
 }
 
 /**
- * Create a provider-neutral scripted harness invoker bound to a validated
+ * Create a provider-neutral simulated harness invoker bound to a validated
  * scenario. Case selection uses explicit stage ID and durable attempt number
  * only; failures normalize to provider-error outcomes at the adapter boundary.
  * The optional developer observer receives the exact submitted prompt at
  * adapter entry, before request validation, and stays outside normalized
  * harness events and attempt logs.
  */
-export function createScriptedInvoker(
-  scenario: ScriptedScenario,
+export function createSimulatedInvoker(
+  scenario: SimulatedScenario,
   onResolvedPrompt: (prompt: string) => void = () => undefined,
 ): HarnessInvoker {
   return {
@@ -346,9 +346,9 @@ export function createScriptedInvoker(
         onResolvedPrompt(request.prompt);
       } catch {
         // Developer diagnostics are observational. A broken display path must
-        // not replace or reclassify the scripted harness outcome.
+        // not replace or reclassify the simulated harness outcome.
       }
-      return invokeScripted(scenario, request);
+      return invokeSimulated(scenario, request);
     },
   };
 }

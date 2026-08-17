@@ -16,8 +16,8 @@ import type {
 } from "../execution/engine.js";
 import type { HarnessId } from "../harness/id.js";
 import type { HarnessExecutableProbe } from "../harness/runtime.js";
-import { SCRIPTED_SCENARIO_FILENAME } from "../harness/scripted/scenario.js";
-import { SCRIPTED_HARNESS_TOGGLE_VAR } from "../harness/scripted/toggle.js";
+import { SIMULATED_SCENARIO_FILENAME } from "../harness/adapters/simulated/scenario.js";
+import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/toggle.js";
 import { SignalInterruption } from "../runner/signals.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
 import { runsDirectory } from "../state/runs.js";
@@ -33,17 +33,17 @@ import {
   pipelineDocument,
   run,
   runDirNames,
-  scriptedEnv,
+  simulatedEnv,
   setup,
   soleCheckpointDir,
-  standardScriptedScenario,
+  standardSimulatedScenario,
   standardSteps,
-  writeScriptedScenario,
+  writeSimulatedScenario,
   writeThreadFile,
 } from "../test-helpers/run-harness.js";
 
 /**
- * What a new run does once it is allocated: signals, scripted-harness mode, and
+ * What a new run does once it is allocated: signals, simulated-harness mode, and
  * the engine handoff.
  */
 
@@ -116,26 +116,26 @@ describe.concurrent("runCommand — signal interruption (AC-17.1, AC-17.2)", () 
   });
 });
 
-describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", () => {
+describe.concurrent("runCommand — simulated harness mode (FR-1, FR-5, FR-6)", () => {
   it("rejects a non-exact toggle before allocation", async () => {
     const h = await setup();
     const result = await run(h, [], {
-      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "true" },
+      env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "true" },
     });
     expect(result.code).toBe(1);
-    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(result.err).toContain(SIMULATED_HARNESS_TOGGLE_VAR);
     expect(await runDirNames(h.stateRoot)).toEqual([]);
   });
 
   it("rejects a missing scenario file before allocation", async () => {
     const h = await setup();
-    const result = await run(h, [], { env: scriptedEnv(h) });
+    const result = await run(h, [], { env: simulatedEnv(h) });
     expect(result.code).toBe(1);
-    expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(result.err).toContain(SIMULATED_SCENARIO_FILENAME);
     expect(await runDirNames(h.stateRoot)).toEqual([]);
   });
 
-  it("records the scripted runtime, prints startup output, and uses scripted seams", async () => {
+  it("records the simulated runtime, prints startup output, and uses simulated seams", async () => {
     const h = await setup({
       stages: STANDARD_STAGE_IDS,
       pipeline: pipelineDocument([
@@ -143,15 +143,15 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
         ...STANDARD_STAGE_IDS.slice(1),
       ]),
     });
-    const scenarioPath = await writeScriptedScenario(h);
+    const scenarioPath = await writeSimulatedScenario(h);
     const result = await run(h, [], {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
     });
     expect(result.code).toBe(0);
-    expect(result.out).toContain("[DEV] Scripted harness");
+    expect(result.out).toContain("[DEV] Simulated harness");
     expect(result.out).toContain(scenarioPath);
-    // The scripted note precedes the otherwise-unchanged startup output.
-    expect(result.out.indexOf("[DEV] Scripted harness")).toBeLessThan(
+    // The simulated note precedes the otherwise-unchanged startup output.
+    expect(result.out.indexOf("[DEV] Simulated harness")).toBeLessThan(
       result.out.indexOf("Run details"),
     );
     expect(result.out.match(/\[DEV\] Resolved prompt/g)).toHaveLength(6);
@@ -170,9 +170,9 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
     if (cp.ok) {
-      expect(cp.checkpoint.runtime).toEqual({ kind: "scripted" });
+      expect(cp.checkpoint.runtime).toEqual({ kind: "simulated" });
       expect(cp.checkpoint.condition).toBe("completed");
-      expect(cp.checkpoint.observedHarnessVersions.codex).toContain("scripted-harness");
+      expect(cp.checkpoint.observedHarnessVersions.codex).toContain("simulated-harness");
     }
     const folder = h.fixture.threadFolder as string;
     const subjects = await commitSubjects(h.fixture);
@@ -183,11 +183,11 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
 
   it("rejects a bare outcome-done that leaves the promised spec absent (AC-7.2, AC-7.3)", async () => {
     const h = await setup();
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({ spec: ["outcome-done"] }, h.stages),
+      standardSimulatedScenario({ spec: ["outcome-done"] }, h.stages),
     );
-    const result = await run(h, [], { env: scriptedEnv(h) });
+    const result = await run(h, [], { env: simulatedEnv(h) });
     expect(result.code).toBe(2);
     const runDir = await soleCheckpointDir(h.stateRoot);
     const cp = await readCheckpoint(runDir);
@@ -205,14 +205,14 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
 
   it("pauses when the implement stage reaches DONE without leaving a report", async () => {
     const h = await setup({ stages: STANDARD_STAGE_IDS });
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario(
+      standardSimulatedScenario(
         { "implement-plan-with-subagents": ["outcome-done"] },
         h.stages,
       ),
     );
-    const result = await run(h, [], { env: scriptedEnv(h) });
+    const result = await run(h, [], { env: simulatedEnv(h) });
     expect(result.code).toBe(2);
     const cp = await readCheckpoint(await soleCheckpointDir(h.stateRoot));
     expect(cp.ok).toBe(true);
@@ -253,17 +253,17 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
     await h.fixture.git(["add", "-A"]);
     await h.fixture.git(["commit", "-m", "docs: spec"]);
     // A scenario covering every document stage now over-covers the suffix.
-    await writeScriptedScenario(h);
+    await writeSimulatedScenario(h);
 
     const overCovered = await run(h, [], {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
       from: "plan-strict",
     });
     expect(overCovered.code).toBe(1);
     expect(overCovered.err).toContain("stages.spec is not an expected stage id.");
     expect(await runDirNames(h.stateRoot)).toEqual([]);
 
-    await writeScriptedScenario(h, {
+    await writeSimulatedScenario(h, {
       schemaVersion: 0,
       stages: {
         "plan-strict": ["plan-strict-correct"],
@@ -274,7 +274,7 @@ describe.concurrent("runCommand — scripted harness mode (FR-1, FR-5, FR-6)", (
       },
     });
     const suffixOnly = await run(h, [], {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
       from: "plan-strict",
     });
     expect(suffixOnly.code).toBe(0);

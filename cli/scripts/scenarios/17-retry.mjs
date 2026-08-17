@@ -1,6 +1,6 @@
 import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll, writeThreadFile } from "../demo/fixture.mjs";
-import { scriptedRun, STANDARD_STAGE_IDS } from "../demo/pipeline.mjs";
+import { simulatedRun, STANDARD_STAGE_IDS } from "../demo/pipeline.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
 
 /**
@@ -23,8 +23,8 @@ export default {
   label: "A suffix run whose blocked stage is resumed — shows '· attempt 2'",
   note:
     "Starts at --from reconcile-spec, so the run selects five of the six " +
-    "Standard stages and the scripted document names only those five.",
-  scenario: scriptedRun(SUFFIX_STAGE_IDS, {
+    "Standard stages and the simulated document names only those five.",
+  scenario: simulatedRun(SUFFIX_STAGE_IDS, {
     "reconcile-spec": ["outcome-blocked", "reconcile-spec-correct"],
   }),
   steps: [

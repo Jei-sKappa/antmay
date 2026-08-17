@@ -7,8 +7,8 @@ import {
 } from "../display/preflight.js";
 import {
   printRunSummary,
-  printScriptedModeStartup,
-  printScriptedResolvedPrompt,
+  printSimulatedModeStartup,
+  printSimulatedResolvedPrompt,
 } from "../display/startup.js";
 import { executeEngine } from "../execution/engine.js";
 import { installSignalHandlers } from "../runner/signals.js";
@@ -127,7 +127,7 @@ export async function resumeCommand(
     // The run's harness runtime is fixed at allocation, so the developer toggle
     // may only agree with it. Both directions are fail-closed and refuse here —
     // before the probe, the lock, and any mutation. Only the current stage's
-    // snapshotted harness is probed, and a scripted run's live scenario is
+    // snapshotted harness is probed, and a simulated run's live scenario is
     // reread and revalidated against the complete snapshotted stage set.
     const harnessRuntime = await resolveResumeRuntime(
       checkpoint,
@@ -137,7 +137,7 @@ export async function resumeCommand(
       repoRoot,
       deps.harnessRuntime,
       (prompt) => {
-        printScriptedResolvedPrompt(displayOptions, prompt);
+        printSimulatedResolvedPrompt(displayOptions, prompt);
       },
     );
     if (!harnessRuntime.ok) {
@@ -214,7 +214,7 @@ export async function resumeCommand(
       // Startup summary; re-print the unrestricted warning when the persisted
       // permission choice is unrestricted.
       if (harnessRuntime.scenarioPath !== undefined) {
-        printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
+        printSimulatedModeStartup(displayOptions, harnessRuntime.scenarioPath);
       }
       // Every value here comes from the checkpoint, so a resume renders the
       // execution the run was allocated with whatever later happened to the

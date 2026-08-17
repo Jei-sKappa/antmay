@@ -5,14 +5,14 @@ import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 import {
   formatTerminalOutcome,
   TERMINAL_OUTCOMES,
-} from "../../runner/outcome.js";
-import type { HarnessId } from "../id.js";
+} from "../../../runner/outcome.js";
+import type { HarnessId } from "../../id.js";
 import type {
   AttemptOutcome,
   AttemptRequest,
   HarnessEvent,
   HarnessInvoker,
-} from "../types.js";
+} from "../../types.js";
 
 /** The completion signals the harness emits to end the single iteration. */
 const COMPLETION_SIGNALS = TERMINAL_OUTCOMES.map((token) =>

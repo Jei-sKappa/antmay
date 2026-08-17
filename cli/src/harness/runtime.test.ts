@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { ProbeResult } from "./backends/probe.js";
+import type { ProbeResult } from "./adapters/real/probe.js";
 import type { HarnessId } from "./id.js";
 import {
   productionHarnessRuntimeLoader,
@@ -12,16 +12,16 @@ import {
   type HarnessRuntimeLoader,
   type HarnessRuntimeRequest,
 } from "./runtime.js";
-import type { ScriptedScenario } from "./scripted/scenario.js";
+import type { SimulatedScenario } from "./adapters/simulated/scenario.js";
 import {
-  SCRIPTED_SCENARIO_FILENAME,
-  loadScriptedScenario,
-} from "./scripted/scenario.js";
-import { SCRIPTED_HARNESS_TOGGLE_VAR } from "./scripted/toggle.js";
+  SIMULATED_SCENARIO_FILENAME,
+  loadSimulatedScenario,
+} from "./adapters/simulated/scenario.js";
+import { SIMULATED_HARNESS_TOGGLE_VAR } from "./adapters/simulated/toggle.js";
 import type { AttemptOutcome, HarnessInvoker } from "./types.js";
 import { tempDir as allocate } from "../test-helpers/temp-root.js";
 
-/** A config root holding the live scripted scenario, or none at all. */
+/** A config root holding the live simulated scenario, or none at all. */
 async function makeConfigRoot(scenario?: unknown): Promise<string> {
   const configRoot = await allocate("antmay-runtime-");
   if (scenario !== undefined) {
@@ -32,7 +32,7 @@ async function makeConfigRoot(scenario?: unknown): Promise<string> {
 
 async function writeScenario(configRoot: string, scenario: unknown): Promise<void> {
   await fs.writeFile(
-    path.join(configRoot, SCRIPTED_SCENARIO_FILENAME),
+    path.join(configRoot, SIMULATED_SCENARIO_FILENAME),
     JSON.stringify(scenario, null, 2),
     "utf8",
   );
@@ -57,36 +57,36 @@ const okProbe =
   };
 
 /**
- * Records which adapter family was loaded, which probe ran, and what the scripted
+ * Records which adapter family was loaded, which probe ran, and what the simulated
  * family was constructed with, so a test can prove exactly one family — with its
  * own probe — was ever evaluated.
  */
 type LoaderSpy = {
   loader: HarnessRuntimeLoader;
   realLoads: number;
-  scriptedLoads: number;
+  simulatedLoads: number;
   realProbeCalls: HarnessId[][];
-  scriptedProbeCalls: HarnessId[][];
-  scenarios: ScriptedScenario[];
+  simulatedProbeCalls: HarnessId[][];
+  scenarios: SimulatedScenario[];
   promptCallbacks: Array<(prompt: string) => void>;
   realInvoker: HarnessInvoker;
-  scriptedInvoker: HarnessInvoker;
+  simulatedInvoker: HarnessInvoker;
 };
 
 function createLoaderSpy(
-  probes: { real?: HarnessExecutableProbe; scripted?: HarnessExecutableProbe } = {},
+  probes: { real?: HarnessExecutableProbe; simulated?: HarnessExecutableProbe } = {},
 ): LoaderSpy {
   const realProbe = probes.real ?? okProbe("1.0.0");
-  const scriptedProbe = probes.scripted ?? okProbe("scripted");
+  const simulatedProbe = probes.simulated ?? okProbe("simulated");
   const spy: LoaderSpy = {
     realLoads: 0,
-    scriptedLoads: 0,
+    simulatedLoads: 0,
     realProbeCalls: [],
-    scriptedProbeCalls: [],
+    simulatedProbeCalls: [],
     scenarios: [],
     promptCallbacks: [],
     realInvoker: NEVER_INVOKED,
-    scriptedInvoker: { invoke: NEVER_INVOKED.invoke },
+    simulatedInvoker: { invoke: NEVER_INVOKED.invoke },
     loader: {
       real: async () => {
         spy.realLoads += 1;
@@ -98,21 +98,21 @@ function createLoaderSpy(
           },
         };
       },
-      scripted: async () => {
-        spy.scriptedLoads += 1;
+      simulated: async () => {
+        spy.simulatedLoads += 1;
         return {
           createInvoker: (scenario, onResolvedPrompt) => {
             spy.scenarios.push(scenario);
             spy.promptCallbacks.push(onResolvedPrompt);
-            return spy.scriptedInvoker;
+            return spy.simulatedInvoker;
           },
           probe: async (harnesses, repoRoot) => {
-            spy.scriptedProbeCalls.push([...harnesses]);
-            return scriptedProbe(harnesses, repoRoot);
+            spy.simulatedProbeCalls.push([...harnesses]);
+            return simulatedProbe(harnesses, repoRoot);
           },
           // The family reads the live scenario, so the spy delegates to the real
           // reader over the config root each case actually wrote.
-          loadScenario: loadScriptedScenario,
+          loadScenario: loadSimulatedScenario,
         };
       },
     },
@@ -127,7 +127,7 @@ function baseRequest(
     harnesses?: HarnessId[];
     stageIds?: string[];
     configRoot?: HarnessRuntimeRequest["configRoot"];
-    onScriptedPrompt?: (prompt: string) => void;
+    onSimulatedPrompt?: (prompt: string) => void;
   } = {},
 ): Omit<HarnessRuntimeRequest & { kind: "new-run" }, "kind"> {
   return {
@@ -137,11 +137,11 @@ function baseRequest(
     stageIds: overrides.stageIds ?? ["spec"],
     configRoot:
       overrides.configRoot ?? (() => ({ ok: true as const, configRoot })),
-    onScriptedPrompt: overrides.onScriptedPrompt ?? (() => undefined),
+    onSimulatedPrompt: overrides.onSimulatedPrompt ?? (() => undefined),
   };
 }
 
-const scriptedEnv: NodeJS.ProcessEnv = { [SCRIPTED_HARNESS_TOGGLE_VAR]: "1" };
+const simulatedEnv: NodeJS.ProcessEnv = { [SIMULATED_HARNESS_TOGGLE_VAR]: "1" };
 
 describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
   it("selects real and loads only the real family when the toggle is unset", async () => {
@@ -159,9 +159,9 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
     expect(resolution.versions).toEqual({ codex: "codex 1.0.0" });
     expect(resolution.scenarioPath).toBeUndefined();
     expect(spy.realLoads).toBe(1);
-    expect(spy.scriptedLoads).toBe(0);
+    expect(spy.simulatedLoads).toBe(0);
     expect(spy.realProbeCalls).toEqual([["codex"]]);
-    expect(spy.scriptedProbeCalls).toEqual([]);
+    expect(spy.simulatedProbeCalls).toEqual([]);
   });
 
   it("treats an empty toggle as real and never consults the config root", async () => {
@@ -171,7 +171,7 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
       {
         kind: "new-run",
         ...baseRequest("/unused", {
-          env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "" },
+          env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "" },
           configRoot: () => {
             configRootLookups += 1;
             return { ok: true, configRoot: "/unused" };
@@ -184,10 +184,10 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
     expect(resolution.ok).toBe(true);
     if (resolution.ok) expect(resolution.runtime).toEqual({ kind: "real" });
     expect(configRootLookups).toBe(0);
-    expect(spy.scriptedLoads).toBe(0);
+    expect(spy.simulatedLoads).toBe(0);
   });
 
-  it("selects scripted for the exact toggle and loads only the scripted family", async () => {
+  it("selects simulated for the exact toggle and loads only the simulated family", async () => {
     const configRoot = await makeConfigRoot(
       scenarioDocument({ spec: ["spec-correct"] }),
     );
@@ -197,8 +197,8 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
       {
         kind: "new-run",
         ...baseRequest(configRoot, {
-          env: scriptedEnv,
-          onScriptedPrompt: (prompt) => observed.push(prompt),
+          env: simulatedEnv,
+          onSimulatedPrompt: (prompt) => observed.push(prompt),
         }),
       },
       spy.loader,
@@ -206,19 +206,19 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
 
     expect(resolution.ok).toBe(true);
     if (!resolution.ok) return;
-    expect(resolution.runtime).toEqual({ kind: "scripted" });
-    expect(resolution.invoker).toBe(spy.scriptedInvoker);
-    expect(resolution.versions).toEqual({ codex: "codex scripted" });
+    expect(resolution.runtime).toEqual({ kind: "simulated" });
+    expect(resolution.invoker).toBe(spy.simulatedInvoker);
+    expect(resolution.versions).toEqual({ codex: "codex simulated" });
     expect(resolution.scenarioPath).toBe(
-      path.join(configRoot, SCRIPTED_SCENARIO_FILENAME),
+      path.join(configRoot, SIMULATED_SCENARIO_FILENAME),
     );
     expect(spy.realLoads).toBe(0);
-    expect(spy.scriptedLoads).toBe(1);
-    expect(spy.scriptedProbeCalls).toEqual([["codex"]]);
+    expect(spy.simulatedLoads).toBe(1);
+    expect(spy.simulatedProbeCalls).toEqual([["codex"]]);
     expect(spy.realProbeCalls).toEqual([]);
     expect(spy.scenarios[0]?.stages).toEqual({ spec: ["spec-correct"] });
 
-    // The scripted invoker is built with the request's observational callback.
+    // The simulated invoker is built with the request's observational callback.
     spy.promptCallbacks[0]!("$spec `docs/threads/x/`.");
     expect(observed).toEqual(["$spec `docs/threads/x/`."]);
   });
@@ -229,7 +229,7 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
       {
         kind: "new-run",
         ...baseRequest("/unused", {
-          env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "true" },
+          env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "true" },
         }),
       },
       spy.loader,
@@ -239,10 +239,10 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
     if (resolution.ok) return;
     expect(resolution.failure.kind).toBe("toggle-invalid");
     if (resolution.failure.kind === "toggle-invalid") {
-      expect(resolution.failure.message).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+      expect(resolution.failure.message).toContain(SIMULATED_HARNESS_TOGGLE_VAR);
     }
     expect(spy.realLoads).toBe(0);
-    expect(spy.scriptedLoads).toBe(0);
+    expect(spy.simulatedLoads).toBe(0);
   });
 
   it("probes each distinct harness once", async () => {
@@ -270,13 +270,13 @@ describe("resolveHarnessRuntime — new-run selection (AC-5.1, AC-5.4)", () => {
 });
 
 describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => {
-  it("refuses a scripted run without the exact toggle, before loading or probing", async () => {
+  it("refuses a simulated run without the exact toggle, before loading or probing", async () => {
     const spy = createLoaderSpy();
     const resolution = await resolveHarnessRuntime(
       {
         kind: "resume",
         runId: "260101T000000000Z-run",
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         ...baseRequest("/unused"),
       },
       spy.loader,
@@ -285,14 +285,14 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
     expect(resolution.ok).toBe(false);
     if (resolution.ok) return;
     expect(resolution.failure).toEqual({
-      kind: "scripted-runtime-requires-toggle",
+      kind: "simulated-runtime-requires-toggle",
       runId: "260101T000000000Z-run",
-      toggleVar: SCRIPTED_HARNESS_TOGGLE_VAR,
+      toggleVar: SIMULATED_HARNESS_TOGGLE_VAR,
     });
-    expect(spy.realLoads + spy.scriptedLoads).toBe(0);
+    expect(spy.realLoads + spy.simulatedLoads).toBe(0);
   });
 
-  it("refuses a real run when the scripted toggle is set, before loading or probing", async () => {
+  it("refuses a real run when the simulated toggle is set, before loading or probing", async () => {
     const configRoot = await makeConfigRoot(
       scenarioDocument({ spec: ["spec-correct"] }),
     );
@@ -302,7 +302,7 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
         kind: "resume",
         runId: "260101T000000000Z-run",
         runtime: { kind: "real" },
-        ...baseRequest(configRoot, { env: scriptedEnv }),
+        ...baseRequest(configRoot, { env: simulatedEnv }),
       },
       spy.loader,
     );
@@ -312,9 +312,9 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
     expect(resolution.failure).toEqual({
       kind: "real-runtime-refuses-toggle",
       runId: "260101T000000000Z-run",
-      toggleVar: SCRIPTED_HARNESS_TOGGLE_VAR,
+      toggleVar: SIMULATED_HARNESS_TOGGLE_VAR,
     });
-    expect(spy.realLoads + spy.scriptedLoads).toBe(0);
+    expect(spy.realLoads + spy.simulatedLoads).toBe(0);
   });
 
   it("rejects an unrecognized toggle value on a real run", async () => {
@@ -325,7 +325,7 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
         runId: "260101T000000000Z-run",
         runtime: { kind: "real" },
         ...baseRequest("/unused", {
-          env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "yes" },
+          env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "yes" },
         }),
       },
       spy.loader,
@@ -333,10 +333,10 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
 
     expect(resolution.ok).toBe(false);
     if (!resolution.ok) expect(resolution.failure.kind).toBe("toggle-invalid");
-    expect(spy.realLoads + spy.scriptedLoads).toBe(0);
+    expect(spy.realLoads + spy.simulatedLoads).toBe(0);
   });
 
-  it("rereads the live scenario on every scripted resolution", async () => {
+  it("rereads the live scenario on every simulated resolution", async () => {
     const configRoot = await makeConfigRoot(
       scenarioDocument({ spec: ["outcome-blocked"] }),
     );
@@ -344,8 +344,8 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
     const request: HarnessRuntimeRequest = {
       kind: "resume",
       runId: "260101T000000000Z-run",
-      runtime: { kind: "scripted" },
-      ...baseRequest(configRoot, { env: scriptedEnv }),
+      runtime: { kind: "simulated" },
+      ...baseRequest(configRoot, { env: simulatedEnv }),
     };
 
     const first = await resolveHarnessRuntime(request, spy.loader);
@@ -368,9 +368,9 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
       {
         kind: "resume",
         runId: "260101T000000000Z-run",
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         ...baseRequest(configRoot, {
-          env: scriptedEnv,
+          env: simulatedEnv,
           stageIds: ["spec", "review-spec"],
         }),
       },
@@ -385,20 +385,20 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
         "stages.review-spec must be present.",
       ]);
     }
-    // Reading the scenario is the scripted family's own work, so a rejected one
+    // Reading the scenario is the simulated family's own work, so a rejected one
     // still leaves the real family unloaded.
     expect(spy.realLoads).toBe(0);
   });
 
-  it("reports an unresolvable config root only in scripted mode", async () => {
+  it("reports an unresolvable config root only in simulated mode", async () => {
     const spy = createLoaderSpy();
     const resolution = await resolveHarnessRuntime(
       {
         kind: "resume",
         runId: "260101T000000000Z-run",
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         ...baseRequest("/unused", {
-          env: scriptedEnv,
+          env: simulatedEnv,
           configRoot: () => ({ ok: false, message: "HOME is not set" }),
         }),
       },
@@ -412,7 +412,7 @@ describe("resolveHarnessRuntime — resume enforcement (AC-5.2, AC-5.3)", () => 
         message: "HOME is not set",
       });
     }
-    expect(spy.scriptedLoads).toBe(0);
+    expect(spy.simulatedLoads).toBe(0);
   });
 });
 
@@ -501,27 +501,27 @@ describe("productionHarnessRuntimeLoader", () => {
     const realProbe = await real.probe([], "/repo");
     expect(realProbe).toEqual({ ok: true, versions: {} });
 
-    const scripted = await productionHarnessRuntimeLoader.scripted();
-    const scenario: ScriptedScenario = Object.freeze({
+    const simulated = await productionHarnessRuntimeLoader.simulated();
+    const scenario: SimulatedScenario = Object.freeze({
       schemaVersion: 0 as const,
       stages: Object.freeze({ spec: Object.freeze(["spec-correct" as const]) }),
     });
     expect(
-      typeof scripted.createInvoker(scenario, () => undefined).invoke,
+      typeof simulated.createInvoker(scenario, () => undefined).invoke,
     ).toBe("function");
-    const scriptedProbe = await scripted.probe(["codex"], "/repo");
-    expect(scriptedProbe.ok).toBe(true);
-    if (scriptedProbe.ok) {
-      expect(scriptedProbe.versions.codex).toContain("scripted-harness");
+    const simulatedProbe = await simulated.probe(["codex"], "/repo");
+    expect(simulatedProbe.ok).toBe(true);
+    if (simulatedProbe.ok) {
+      expect(simulatedProbe.versions.codex).toContain("simulated-harness");
     }
   });
 
-  it("reads the live scenario through the scripted family", async () => {
+  it("reads the live scenario through the simulated family", async () => {
     const configRoot = await makeConfigRoot(
       scenarioDocument({ spec: ["spec-correct"] }),
     );
-    const scripted = await productionHarnessRuntimeLoader.scripted();
-    const loaded = await scripted.loadScenario(configRoot, ["spec"]);
+    const simulated = await productionHarnessRuntimeLoader.simulated();
+    const loaded = await simulated.loadScenario(configRoot, ["spec"]);
 
     expect(loaded.ok).toBe(true);
     if (loaded.ok) expect(loaded.scenario.stages).toEqual({ spec: ["spec-correct"] });

@@ -974,7 +974,7 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
 
 describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () => {
   it("round-trips each legal runtime identity", () => {
-    for (const kind of ["real", "scripted"] as const) {
+    for (const kind of ["real", "simulated"] as const) {
       const doc = { ...validCheckpoint(), runtime: { kind } };
       const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
       expect(result.ok).toBe(true);
@@ -1003,10 +1003,10 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
 
   it("preserves the identity across representative condition transitions", () => {
     const transitions: RunCheckpoint[] = [
-      { ...validCheckpoint(), runtime: { kind: "scripted" }, condition: "ready", waiting: null },
+      { ...validCheckpoint(), runtime: { kind: "simulated" }, condition: "ready", waiting: null },
       {
         ...validCheckpoint(),
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         condition: "executing",
         waiting: null,
         attempts: [
@@ -1015,7 +1015,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
       },
       {
         ...validCheckpoint(),
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         condition: "waiting-for-user",
         waiting: governedBy({
           kind: "outcome-blocked",
@@ -1035,7 +1035,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
       },
       {
         ...validCheckpoint(),
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         condition: "waiting-for-user",
         waiting: governedBy({
           kind: "interrupted",
@@ -1045,7 +1045,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
       },
       {
         ...validCheckpoint(),
-        runtime: { kind: "scripted" },
+        runtime: { kind: "simulated" },
         condition: "completed",
         stageIndex: 2,
         waiting: null,
@@ -1056,7 +1056,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
       const result = validateCheckpoint(doc);
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.checkpoint.runtime).toEqual({ kind: "scripted" });
+        expect(result.checkpoint.runtime).toEqual({ kind: "simulated" });
       }
     }
   });

@@ -1,6 +1,6 @@
 import { dirtyWorktree } from "../demo/fixture.mjs";
 import { printedResumeCommand } from "../demo/markers.mjs";
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
 
 /**
@@ -21,7 +21,7 @@ export default {
     "Two invocations: the first pauses on the artifact contract, and the second " +
     "resumes with the promise still unmet and uncommitted work in the tree.",
   pipeline: pipelineDocument("spec-only", ["spec"]),
-  scenario: scriptedRun(["spec"], { spec: ["outcome-done"] }),
+  scenario: simulatedRun(["spec"], { spec: ["outcome-done"] }),
   steps: [
     run({
       expectExit: 2,

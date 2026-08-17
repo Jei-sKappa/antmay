@@ -1,6 +1,6 @@
 import { printedResumeCommand } from "../demo/markers.mjs";
 import { writeThreadFile } from "../demo/fixture.mjs";
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { action, resume, run } from "../demo/steps.mjs";
 
 /**
@@ -26,7 +26,7 @@ export default {
     "The first invocation pauses on the artifact contract, so the repair has a " +
     "saved DONE attempt to finalize. Resume makes no harness call.",
   pipeline: pipelineDocument("spec-only", ["spec"]),
-  scenario: scriptedRun(["spec"], { spec: ["outcome-done"] }),
+  scenario: simulatedRun(["spec"], { spec: ["outcome-done"] }),
   steps: [
     run({
       expectExit: 2,

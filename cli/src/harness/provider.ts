@@ -4,7 +4,7 @@ import type { HarnessId } from "./id.js";
  * One agentic harness the executor can drive: everything Antmay must know about
  * it that is independent of how it is invoked.
  *
- * A backend drives a harness; this is the harness itself, so nothing declared
+ * An adapter drives a harness; this is the harness itself, so nothing declared
  * here performs I/O or knows a provider SDK. That is what lets the prompt
  * renderer and the engine reach a harness statically without loading an adapter
  * family.

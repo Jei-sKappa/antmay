@@ -15,7 +15,7 @@ import { SPEC_CORRECT_DELAY_MS } from "./cases.js";
  * `npm run check`.
  */
 const SCENARIO_URL = new URL(
-  "../../../scripts/scenarios/18-runtime-prerequisite.mjs",
+  "../../../../scripts/scenarios/18-runtime-prerequisite.mjs",
   import.meta.url,
 );
 
@@ -28,7 +28,7 @@ type DemoStep = {
 
 /**
  * The scenario's invocations that change the world underneath a live child, which
- * are the only ones whose `afterMs` has to land in a scripted case's window.
+ * are the only ones whose `afterMs` has to land in a simulated case's window.
  */
 async function loadTimedInvocations(): Promise<DemoStep[]> {
   const module: { default: { steps: readonly DemoStep[] } } = await import(

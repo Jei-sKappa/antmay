@@ -73,7 +73,7 @@ behavior stay stable.
   agentic harness invoker.
 - Commands: `npm --prefix cli run check` (typecheck + test + build) is the full
   gate; `npm run build`, `npm run typecheck`, `npm run test` run the pieces.
-  `npm run demo` builds without tests and executes one scripted scenario in a
+  `npm run demo` builds without tests and executes one simulated scenario in a
   unique disposable repository under `/tmp`; `npm run demo:all` runs the whole
   scenario catalog and reports it as one verdict.
   The binary is `dist/main.js`, exposed as `antmay` via the `bin` field.
@@ -312,18 +312,19 @@ as any other.
   `AgentHarness` face) and `providers/`, one file per harness plus the
   `HARNESSES` record that is total over `HarnessId`; a harness declares only
   SDK-free facts, so the engine reaches one statically without loading an
-  adapter. **How a harness is driven** lives in the two adapter families — the
-  real one under `backends/` (the Sandcastle adapter and the executable probe)
-  and the developer scripted one under `scripted/` — which the resolver pairs
-  and loads one of. Availability belongs to the family rather than the harness,
-  because the scripted family establishes it without contacting anything. Both
-  families are ordinary modules here, the developer one included: a toggle picks
-  it while the process is running, so the resolver must be able to load it and
-  the bundle carries it. That is also what typechecks it against
-  `HarnessInvoker`, builds it for the demo, and holds it to the guards, so a
-  change to the request, outcome, or stage-context shape breaks the fake in the
-  same compile as the real adapter. Across
-  both axes, **which harnesses exist** is `id.ts`: the id union, the ids
+  adapter. **How a harness is driven** lives in the two adapter families,
+  sibling folders under `adapters/` so the pairing is visible from the tree —
+  the real one under `adapters/real/` (the Sandcastle adapter and the executable
+  probe) and the developer stand-in under `adapters/simulated/` — which the
+  resolver pairs and loads one of. Availability belongs to the family rather
+  than the harness, because the simulated family establishes it without
+  contacting anything. Both families are ordinary modules here, the developer
+  one included: a toggle picks it while the process is running, so the resolver
+  must be able to load it and the bundle carries it. That is also what
+  typechecks it against `HarnessInvoker`, builds it for the demo, and holds it
+  to the guards, so a change to the request, outcome, or stage-context shape
+  breaks the fake in the same compile as the real adapter. Across both axes,
+  **which harnesses exist** is `id.ts`: the id union, the ids
   themselves, and the one predicate that narrows an untrusted value into the
   union. The settings parser and checkpoint validation reach it rather than
   `provider.ts`, so a module needing only which ids exist does not depend on the
@@ -365,7 +366,7 @@ as any other.
   command whose suites span several files, for the co-located `*.test.ts`.
 - `scripts/demo.mjs` + `scripts/demo/` + `scripts/scenarios/` —
   dependency-free developer demo: a generic driver, its step/fixture/pipeline
-  helpers, and one self-contained file per scenario, driving a selected scripted
+  helpers, and one self-contained file per scenario, driving a selected simulated
   scenario through a unique `/tmp` repository.
 
 ### Test suite shape
@@ -475,15 +476,15 @@ holds one of the two down.
   marks the pipeline as paused there, and closes with recovery and resume
   instructions.
 
-### Scripted test harness (developer-only)
+### Simulated harness (developer-only)
 
-Scripted mode is gated exclusively by the environment variable
-`ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS`. Only the exact string `1` enables it;
-unset or empty preserves ordinary real-harness behavior; every other non-empty
-value is a configuration error that must not fall through to a real harness.
+Simulated mode is gated exclusively by the environment variable
+`ANTMAY_SIMULATED_HARNESS`. Only the exact string `1` enables it; unset or empty
+preserves ordinary real-harness behavior; every other non-empty value is a
+configuration error that must not fall through to a real harness.
 
-When enabled, a new `run` and a scripted run's `resume` read the live scenario
-from `<resolved-config-root>/scripted-harness.json` (fixed filename; never
+When enabled, a new `run` and a simulated run's `resume` read the live scenario
+from `<resolved-config-root>/simulated-harness.json` (fixed filename; never
 created by the CLI). The scenario is validated once per command against the
 selected or snapshotted stage IDs and reread on every resume — never copied into
 the checkpoint.
@@ -498,20 +499,20 @@ contact is bypassed.
 
 The runtime a run contacts is fixed at allocation, recorded in its checkpoint,
 and immutable for the run's whole life. Resume is fail-closed in both
-directions: a scripted run continues only while the toggle is exactly `1`, a
-real run refuses to be switched to the scripted harness, and either refusal
-lands before probe, lock acquisition, or any mutation. Scripted resume still
+directions: a simulated run continues only while the toggle is exactly `1`, a
+real run refuses to be switched to the simulated harness, and either refusal
+lands before probe, lock acquisition, or any mutation. Simulated resume still
 requires a valid live scenario even on queue/boundary paths that make no harness
 call.
 
-Built-in scripted cases only — no arbitrary code, shell commands, or
+Built-in simulated cases only — no arbitrary code, shell commands, or
 scenario-supplied operations outside the fixed case and effect catalog in
-`harness/scripted/cases.ts`, which the provider-facing adapter
-(`harness/scripted/invoker.ts`) is the only caller of. Help, version, grammar
-errors, and `list` never interpret the toggle or touch scenario/state/Git/harness
-modules.
+`harness/adapters/simulated/cases.ts`, which the provider-facing adapter
+(`harness/adapters/simulated/invoker.ts`) is the only caller of. Help, version,
+grammar errors, and `list` never interpret the toggle or touch
+scenario/state/Git/harness modules.
 
-Scripted output imitates an ordinary attempt rather than announcing itself:
+Simulated output imitates an ordinary attempt rather than announcing itself:
 progress lines stream through the invoker's event seam so the terminal renders
 them like real agent output, and each describes only filesystem work the case
 genuinely performs. Nothing written to the terminal or the attempt log fabricates
@@ -534,7 +535,7 @@ failure the code anticipates is caught and turned into a structured refusal. It
 reaches that rendering because the adapter awaits the catalog outside every `try`
 it has, so keep that call unguarded.
 
-Every launched scripted attempt reports a deterministic synthetic session ID on
+Every launched simulated attempt reports a deterministic synthetic session ID on
 every path a real capture would take. Its shape is deliberately
 non-provider-like, which is what lets the demo cover the pause `Continue` line
 and the list's `Latest session` field with no real harness and no per-scenario
@@ -550,11 +551,11 @@ scenario needing different executor configuration declares its own pipeline,
 profile, or per-stage binding overrides rather than reaching for a demo-only
 hook, so the demo exercises the same path a user would.
 
-Two rules about a scenario's scripted document are not apparent from a scenario
+Two rules about a scenario's simulated document are not apparent from a scenario
 that happens to work. A scenario that invokes `run` or `resume` declares one even
 when it stops before any attempt launches, because the document is loaded and
 validated in preflight, ahead of the checks such a scenario ends on; a
-`list`-only scenario declares none and is given no scripted-harness file. And the
+`list`-only scenario declares none and is given no simulated-harness file. And the
 document is keyed by exactly the stage IDs the run selects, which is what the
 executor validates it against, so a `--from` suffix scenario names only its
 suffix.
@@ -578,7 +579,7 @@ rather than in the alphabetical order the names alone would give. Run
 
 Each demo run allocates a unique `/tmp` directory holding an isolated config
 root, an isolated state root, and the disposable repository, and injects
-`ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the scripted toggle only into the
+`ANTMAY_CONFIG_HOME`, `ANTMAY_STATE_HOME`, and the simulated toggle only into the
 child CLI processes. That config root is built from scratch out of the same
 production-schema documents a user writes, so the demo depends on no
 configuration of the developer's: nothing under their real config or state root
@@ -589,7 +590,7 @@ is read or written. Everything temporary is preserved for inspection.
 Real-harness runs cost time and money, so the scenario catalog is the developer
 end-to-end suite for Antmay's terminal interface. A scenario drives the built CLI
 through its public command surface against isolated configuration, state, and
-repository fixtures, using the scripted harness whenever execution reaches an
+repository fixtures, using the simulated harness whenever execution reaches an
 agent.
 
 Every change that introduces or modifies user-visible terminal output must be
@@ -652,7 +653,7 @@ the built CLI and reading its interface yourself.
 ### What only a real harness proves
 
 Every harness under test is fake: the `*.test.ts` suite drives a fake invoker and
-the demo drives the scripted one, so no gate ever contacts Codex or Claude Code.
+the demo drives the simulated one, so no gate ever contacts Codex or Claude Code.
 Four properties therefore rest on construction alone, and only a human driving
 the built binary against real provider credentials in a throwaway repository can
 establish them: that a stage attempt launches a real session on the harness its

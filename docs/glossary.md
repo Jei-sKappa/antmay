@@ -118,9 +118,9 @@ stage leaves the wrong files changed or a pending queue is non-empty.
 | **boundary commit** | The single commit the executor makes at a stage boundary. |
 | **lock** | The exclusive per-workspace lock file guarding one workspace against concurrent runs. Never reclaimed automatically. |
 | **workspace** | The resolved place the harness runs. |
-| **scripted harness** | The developer-only test seam that replaces the real harness, enabled solely by `ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS=1`. |
-| **case** | One entry from the scripted harness's fixed built-in catalog, describing what a single stage attempt should do. Reserved for the scripted harness — a test case is called a test. |
-| **scenario** | One scripted-harness document mapping stage ids to ordered cases. A demo file that also carries invocation steps is a **demo scenario**. |
+| **simulated harness** | The developer-only stand-in that replaces the real harness, enabled solely by `ANTMAY_SIMULATED_HARNESS=1`. `cli/src/harness/adapters/simulated/`. |
+| **case** | One entry from the simulated harness's fixed built-in catalog, describing what a single stage attempt should do. Reserved for the simulated harness — a test case is called a test. |
+| **scenario** | One simulated-harness document mapping stage ids to ordered cases. A demo file that also carries invocation steps is a **demo scenario**. |
 
 ## Reserved and avoided words
 
@@ -129,6 +129,7 @@ stage leaves the wrong files changed or a pending queue is non-empty.
 | **workflow** | Not a term of art here. Write **method** for the whole approach, **recipe** for one of the three named paths, **thread artifact** for the artifact domain, and **process** for process-level intent. |
 | **issue** | Two unrelated senses, both live. GitHub's word for a **ticket**: write **ticket** for the concept, and `issue` only where a GitHub-specific reference, command, or accepted input form is being named. Also the middle **review severity** (`blocker`, `issue`, `nit`), which keeps its name. |
 | **contract** | Generic on its own, and used in three senses. Always qualify which: the **suite/CLI contract** between the modules, a skill's **output contract**, or a roadmap as the **decomposition contract**. Bare "contract" is unqualified only as the `[contract]` issue prefix, where the scope list supplies the sense. |
+| **simulated** | Two live senses, both in the CLI. Always qualify which: the **simulated harness** that stands in for a provider, or the **simulated artifact state** composition projects a stage's promise onto before the run begins. Bare "simulated" names neither. |
 | **status** | Never used for a run's end state. That is the **terminal outcome**. There is no status field, status token, or status layer anywhere in the method. |
 | **outcome** | On its own, means the terminal outcome. For a thread's lasting artifact write **final deliverable**; for the seed's goal write **intended goal**; for the delivered result write **implementation report**. |
 | **recipe** vs **pipeline** | A **recipe** is the documented advisory path; a **pipeline** is the CLI's enforced stage sequence. They are not two fidelities of one thing — never use either name for the other. |

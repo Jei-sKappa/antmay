@@ -247,7 +247,7 @@ function attemptsFor(condition, stageIndex) {
       // Every settled attempt carries an ID-only session so each entry shows a
       // `Latest session` field; multiple sessions on one run exercise newest
       // selection (only the final session-carrying attempt is rendered).
-      agentSession: { id: `scripted-session-${id}-1` },
+      agentSession: { id: `simulated-session-${id}-1` },
       headAtStart: HEAD,
       headAfterAttempt: HEAD,
       logPath: `logs/${String(i + 1).padStart(2, "0")}-${id}-attempt-01.log`,
@@ -272,7 +272,7 @@ function attemptsFor(condition, stageIndex) {
             },
             headAfterAttempt: HEAD,
           }),
-      agentSession: { id: `scripted-session-${id}-1` },
+      agentSession: { id: `simulated-session-${id}-1` },
       headAtStart: HEAD,
       logPath: `logs/${String(stageIndex + 1).padStart(2, "0")}-${id}-attempt-01.log`,
     });
@@ -304,7 +304,7 @@ function checkpointFor(ctx, row) {
     observedHarnessVersions: {
       [row.binding.agent.harness]: `${row.binding.agent.harness} 1.0.0`,
     },
-    runtime: { kind: "scripted" },
+    runtime: { kind: "simulated" },
     stageIndex: row.stageIndex,
     condition: row.condition,
     attempts: attemptsFor(row.condition, row.stageIndex),

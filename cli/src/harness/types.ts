@@ -3,7 +3,7 @@ import type { HarnessId } from "./id.js";
 
 /**
  * Antmay-owned stage metadata supplied on every harness invocation so adapters
- * can select and validate scripted cases without parsing the rendered prompt.
+ * can select and validate simulated cases without parsing the rendered prompt.
  * `resolvedTarget` is the concrete repository-relative target the composer
  * settled on, `instructions` are the pipeline entry's portable instructions when
  * it carried any, and `attemptNumber` is the positive, durable per-stage attempt

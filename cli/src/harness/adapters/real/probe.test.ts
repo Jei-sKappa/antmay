@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HarnessId } from "../id.js";
+import type { HarnessId } from "../../id.js";
 import type { ProbeExec } from "./probe.js";
 import { probeHarnessExecutables } from "./probe.js";
-import { tempDirSync } from "../../test-helpers/temp-root.js";
+import { tempDirSync } from "../../../test-helpers/temp-root.js";
 
 let binDir: string;
 let repoRoot: string;

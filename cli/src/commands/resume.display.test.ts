@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
 import type { HarnessId } from "../harness/id.js";
 import type { HarnessExecutableProbe } from "../harness/runtime.js";
-import { SCRIPTED_SCENARIO_FILENAME } from "../harness/scripted/scenario.js";
-import { SCRIPTED_HARNESS_TOGGLE_VAR } from "../harness/scripted/toggle.js";
+import { SIMULATED_SCENARIO_FILENAME } from "../harness/adapters/simulated/scenario.js";
+import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/toggle.js";
 import { SignalInterruption } from "../runner/signals.js";
 import { runDirectoryFor } from "../state/runs.js";
 import {
@@ -22,21 +22,21 @@ import {
   okProbe,
   readCp,
   resume,
-  scriptedEnv,
+  simulatedEnv,
   seed,
-  seedScriptedBlocked,
+  seedSimulatedBlocked,
   settingsFor,
   setup,
   soleRunId,
-  standardScriptedScenario,
+  standardSimulatedScenario,
   standardSteps,
-  writeScriptedScenario,
+  writeSimulatedScenario,
   type Harness,
 } from "../test-helpers/resume-harness.js";
 
 /**
  * What a resume renders and reports — snapshot fidelity, signals during resumed
- * execution, scripted-harness mode, and the persisted-attempt `Continue` line.
+ * execution, simulated-harness mode, and the persisted-attempt `Continue` line.
  */
 
 describe.concurrent("resumeCommand — snapshot fidelity and display (AC-15.4, AC-18.1)", () => {
@@ -230,7 +230,7 @@ describe.concurrent("resumeCommand — signals during resumed execution (AC-17)"
   });
 });
 
-describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () => {
+describe.concurrent("resumeCommand — simulated harness mode (FR-5, FR-8)", () => {
   it("rejects a non-exact toggle on an unmarked checkpoint before probe or lock", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
@@ -240,26 +240,26 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
 
     let probeCalled = false;
     const result = await resume(h, runId, [], {
-      env: { ...baseEnv(h), [SCRIPTED_HARNESS_TOGGLE_VAR]: "true" },
+      env: { ...baseEnv(h), [SIMULATED_HARNESS_TOGGLE_VAR]: "true" },
       probe: async (...args) => {
         probeCalled = true;
         return okProbe(...args);
       },
     });
     expect(result.code).toBe(1);
-    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(result.err).toContain(SIMULATED_HARNESS_TOGGLE_VAR);
     expect(probeCalled).toBe(false);
     const after = await readCp(h, runId);
     expect(after.updatedAt).toBe(before.updatedAt);
   });
 
-  it("rejects a marked scripted checkpoint without the toggle before probe or lock", async () => {
+  it("rejects a marked simulated checkpoint without the toggle before probe or lock", async () => {
     const h = await setup();
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({ spec: ["outcome-blocked"] }),
+      standardSimulatedScenario({ spec: ["outcome-blocked"] }),
     );
-    const seeded = await seed(h, [], { env: scriptedEnv(h) });
+    const seeded = await seed(h, [], { env: simulatedEnv(h) });
     expect(seeded.code).toBe(2);
     const runId = await soleRunId(h);
     const before = await readCp(h, runId);
@@ -272,13 +272,13 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
       },
     });
     expect(result.code).toBe(1);
-    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(result.err).toContain(SIMULATED_HARNESS_TOGGLE_VAR);
     expect(probeCalled).toBe(false);
     const after = await readCp(h, runId);
     expect(after.updatedAt).toBe(before.updatedAt);
   });
 
-  it("refuses to switch a real-runtime checkpoint to scripted mode, before probe or lock", async () => {
+  it("refuses to switch a real-runtime checkpoint to simulated mode, before probe or lock", async () => {
     const h = await setup();
     await seed(h, [{ outcome: BLOCKED }]);
     const runId = await soleRunId(h);
@@ -286,16 +286,16 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     expect(before.runtime).toEqual({ kind: "real" });
     // A valid live scenario is present, so only the run's own immutable runtime
     // can be what refuses.
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({
+      standardSimulatedScenario({
         spec: ["outcome-blocked", "spec-correct"],
       }),
     );
 
     let probeCalled = false;
     const result = await resume(h, runId, standardSteps(h), {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
       probe: async (...args) => {
         probeCalled = true;
         return okProbe(...args);
@@ -303,7 +303,7 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     });
     expect(result.code).toBe(1);
     expect(result.err).toContain("real harness");
-    expect(result.err).toContain(SCRIPTED_HARNESS_TOGGLE_VAR);
+    expect(result.err).toContain(SIMULATED_HARNESS_TOGGLE_VAR);
     expect(probeCalled).toBe(false);
     expect(result.invoker.calls.length).toBe(0);
     const after = await readCp(h, runId);
@@ -313,17 +313,17 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
 
   it("pauses with harness-error when the stage case array is exhausted on resume", async () => {
     const h = await setup();
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({ spec: ["outcome-blocked"] }),
+      standardSimulatedScenario({ spec: ["outcome-blocked"] }),
     );
-    const seeded = await seed(h, [], { env: scriptedEnv(h) });
+    const seeded = await seed(h, [], { env: simulatedEnv(h) });
     expect(seeded.code).toBe(2);
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe("outcome-blocked");
 
     const result = await resume(h, runId, standardSteps(h), {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
     });
     expect(result.code).toBe(2);
     const promptHeading = result.out.indexOf("[DEV] Resolved prompt");
@@ -348,9 +348,9 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
 
   it("runs spec-correct on attempt 2 after an outcome-blocked pause", async () => {
     const h = await setup();
-    const runId = await seedScriptedBlocked(h);
+    const runId = await seedSimulatedBlocked(h);
     const result = await resume(h, runId, standardSteps(h), {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
     });
     expect(result.code).toBe(0);
     const attemptHeader = result.out.indexOf("Stage 1/3 · spec · attempt 2");
@@ -381,69 +381,69 @@ describe.concurrent("resumeCommand — scripted harness mode (FR-5, FR-8)", () =
     const h = await setup();
     // The seeded scenario offers the spec stage one case, so the case the resumed
     // attempt runs exists nowhere but in the file the resume rereads.
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({ spec: ["outcome-blocked"] }),
+      standardSimulatedScenario({ spec: ["outcome-blocked"] }),
     );
-    const seeded = await seed(h, [], { env: scriptedEnv(h) });
+    const seeded = await seed(h, [], { env: simulatedEnv(h) });
     expect(seeded.code).toBe(2);
     const runId = await soleRunId(h);
     const paused = JSON.stringify(await readCp(h, runId));
-    expect(paused).not.toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(paused).not.toContain(SIMULATED_SCENARIO_FILENAME);
     expect(paused).not.toContain("spec-correct");
 
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({ spec: ["outcome-blocked", "spec-correct"] }),
+      standardSimulatedScenario({ spec: ["outcome-blocked", "spec-correct"] }),
     );
     const result = await resume(h, runId, standardSteps(h), {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
     });
     expect(result.code).toBe(0);
     const cp = await readCp(h, runId);
     expect(cp.condition).toBe("completed");
     expect(attemptCountAt(cp, 0)).toBe(2);
-    expect(cp.runtime).toEqual({ kind: "scripted" });
-    expect(JSON.stringify(cp)).not.toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(cp.runtime).toEqual({ kind: "simulated" });
+    expect(JSON.stringify(cp)).not.toContain(SIMULATED_SCENARIO_FILENAME);
   });
 
   it("requires a valid scenario for no-harness finalization resume paths", async () => {
     const h = await setup();
-    await writeScriptedScenario(
+    await writeSimulatedScenario(
       h,
-      standardScriptedScenario({ spec: ["outcome-done"] }),
+      standardSimulatedScenario({ spec: ["outcome-done"] }),
     );
-    await seed(h, [], { env: scriptedEnv(h) });
+    await seed(h, [], { env: simulatedEnv(h) });
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe(
       "stage-contract-violation",
     );
-    await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
+    await fs.rm(path.join(h.configRoot, SIMULATED_SCENARIO_FILENAME), { force: true });
 
     const result = await resume(h, runId, standardSteps(h).slice(1), {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
     });
     expect(result.code).toBe(1);
-    expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(result.err).toContain(SIMULATED_SCENARIO_FILENAME);
   });
 
   it("requires a valid scenario for no-call pending-queue resume paths", async () => {
     const h = await setup();
-    await writeScriptedScenario(h);
+    await writeSimulatedScenario(h);
     let calls = 0;
     await seed(h, [], {
-      env: scriptedEnv(h),
+      env: simulatedEnv(h),
       installSignals: fakeSignals(() => (++calls > 1 ? "SIGINT" : null)),
     });
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).condition).toBe("ready");
 
     dropPendingSync(h.fixture, "q.md");
-    await fs.rm(path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME), { force: true });
+    await fs.rm(path.join(h.configRoot, SIMULATED_SCENARIO_FILENAME), { force: true });
 
-    const result = await resume(h, runId, [], { env: scriptedEnv(h) });
+    const result = await resume(h, runId, [], { env: simulatedEnv(h) });
     expect(result.code).toBe(1);
-    expect(result.err).toContain(SCRIPTED_SCENARIO_FILENAME);
+    expect(result.err).toContain(SIMULATED_SCENARIO_FILENAME);
   });
 });
 

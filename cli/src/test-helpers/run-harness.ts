@@ -5,20 +5,20 @@ import { Writable } from "node:stream";
 
 import { expect } from "vitest";
 
-import type { ProbeResult } from "../harness/backends/probe.js";
+import type { ProbeResult } from "../harness/adapters/real/probe.js";
 import type { HarnessId } from "../harness/id.js";
 import type {
   HarnessExecutableProbe,
   HarnessRuntimeLoader,
 } from "../harness/runtime.js";
-import { createScriptedInvoker } from "../harness/scripted/invoker.js";
-import { probeScriptedHarnessExecutables } from "../harness/scripted/probe.js";
+import { createSimulatedInvoker } from "../harness/adapters/simulated/invoker.js";
+import { probeSimulatedHarnessExecutables } from "../harness/adapters/simulated/probe.js";
 import type { HarnessInvoker } from "../harness/types.js";
 import {
-  SCRIPTED_SCENARIO_FILENAME,
-  loadScriptedScenario,
-} from "../harness/scripted/scenario.js";
-import { SCRIPTED_HARNESS_TOGGLE_VAR } from "../harness/scripted/toggle.js";
+  SIMULATED_SCENARIO_FILENAME,
+  loadSimulatedScenario,
+} from "../harness/adapters/simulated/scenario.js";
+import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/toggle.js";
 import {
   EXIT_SIGHUP,
   EXIT_SIGINT,
@@ -175,8 +175,8 @@ export const failingProbe: HarnessExecutableProbe = async (harnesses): Promise<P
 /**
  * The one lazy runtime seam the command reads its adapters through. The real
  * family hands back the case-driven fake harness under test with whichever probe
- * the case injected; the scripted family is the genuine developer adapter, so a
- * scripted case exercises the same invoker, catalog, probe, and scenario reader
+ * the case injected; the simulated family is the genuine developer adapter, so a
+ * simulated case exercises the same invoker, catalog, probe, and scenario reader
  * production loads.
  */
 export function testRuntimeLoader(
@@ -185,10 +185,10 @@ export function testRuntimeLoader(
 ): HarnessRuntimeLoader {
   return {
     real: async () => ({ createInvoker: () => invoker, probe }),
-    scripted: async () => ({
-      createInvoker: createScriptedInvoker,
-      probe: probeScriptedHarnessExecutables,
-      loadScenario: loadScriptedScenario,
+    simulated: async () => ({
+      createInvoker: createSimulatedInvoker,
+      probe: probeSimulatedHarnessExecutables,
+      loadScenario: loadSimulatedScenario,
     }),
   };
 }
@@ -435,7 +435,7 @@ const STAGE_STEPS: Record<string, (f: RepoFixture) => FakeHarnessStep> = {
 };
 
 /**
- * The scripted attempt for each stage the harness selected, in selection order.
+ * The simulated attempt for each stage the harness selected, in selection order.
  *
  * Keying by stage id rather than by position is what keeps a step tied to the
  * stage it belongs to: the fake harness consumes the array by invocation
@@ -455,7 +455,7 @@ export function dropPendingDecisionSync(fixture: RepoFixture, name: string): voi
 }
 
 /** The case each Standard stage runs when a scenario does not override it. */
-export const SCRIPTED_STAGE_CASES: Record<string, string[]> = {
+export const SIMULATED_STAGE_CASES: Record<string, string[]> = {
   spec: ["spec-correct"],
   "reconcile-spec": ["reconcile-spec-correct"],
   "review-spec": ["outcome-done"],
@@ -465,11 +465,11 @@ export const SCRIPTED_STAGE_CASES: Record<string, string[]> = {
 };
 
 /**
- * A happy-path scripted document for `stages`. The executor validates a
+ * A happy-path simulated document for `stages`. The executor validates a
  * scenario against exactly the stage IDs the run selects, so the document is
  * keyed off the harness's own selection rather than off the whole Standard set.
  */
-export function standardScriptedScenario(
+export function standardSimulatedScenario(
   overrides: Partial<Record<string, string[]>> = {},
   stages: readonly string[] = DEFAULT_STAGE_IDS,
 ): Record<string, unknown> {
@@ -477,26 +477,26 @@ export function standardScriptedScenario(
     schemaVersion: 0,
     stages: {
       ...Object.fromEntries(
-        stages.map((stage) => [stage, SCRIPTED_STAGE_CASES[stage]]),
+        stages.map((stage) => [stage, SIMULATED_STAGE_CASES[stage]]),
       ),
       ...overrides,
     },
   };
 }
 
-export async function writeScriptedScenario(
+export async function writeSimulatedScenario(
   h: Harness,
-  scenario: Record<string, unknown> = standardScriptedScenario({}, h.stages),
+  scenario: Record<string, unknown> = standardSimulatedScenario({}, h.stages),
 ): Promise<string> {
-  const scenarioPath = path.join(h.configRoot, SCRIPTED_SCENARIO_FILENAME);
+  const scenarioPath = path.join(h.configRoot, SIMULATED_SCENARIO_FILENAME);
   await fs.writeFile(scenarioPath, JSON.stringify(scenario, null, 2), "utf8");
   return scenarioPath;
 }
 
-export function scriptedEnv(h: Harness): NodeJS.ProcessEnv {
+export function simulatedEnv(h: Harness): NodeJS.ProcessEnv {
   return {
     ANTMAY_CONFIG_HOME: h.configRoot,
     ANTMAY_STATE_HOME: h.stateRoot,
-    [SCRIPTED_HARNESS_TOGGLE_VAR]: "1",
+    [SIMULATED_HARNESS_TOGGLE_VAR]: "1",
   };
 }

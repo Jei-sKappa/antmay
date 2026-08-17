@@ -3,31 +3,31 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { renderStagePrompt } from "../prompt.js";
-import type { AttemptRequest } from "../types.js";
-import { STAGE_CATALOG } from "../../pipeline/catalog.js";
-import type { CatalogStage } from "../../pipeline/catalog.js";
-import type { CatalogStageId } from "../../pipeline/stage-id.js";
-import { resolveStageTarget } from "../../pipeline/targets.js";
-import type { StageTarget } from "../../pipeline/types.js";
-import { createAttemptLog, type AttemptLogHeader } from "../../state/logs.js";
+import { renderStagePrompt } from "../../prompt.js";
+import type { AttemptRequest } from "../../types.js";
+import { STAGE_CATALOG } from "../../../pipeline/catalog.js";
+import type { CatalogStage } from "../../../pipeline/catalog.js";
+import type { CatalogStageId } from "../../../pipeline/stage-id.js";
+import { resolveStageTarget } from "../../../pipeline/targets.js";
+import type { StageTarget } from "../../../pipeline/types.js";
+import { createAttemptLog, type AttemptLogHeader } from "../../../state/logs.js";
 import {
   createThreadTree,
   type ThreadTree,
-} from "../../test-helpers/thread-tree.js";
+} from "../../../test-helpers/thread-tree.js";
 import {
-  createScriptedInvoker,
-  SCRIPTED_HARNESS_ERROR_CLASS,
-  scriptedSessionId,
+  createSimulatedInvoker,
+  SIMULATED_HARNESS_ERROR_CLASS,
+  simulatedSessionId,
 } from "./invoker.js";
-import type { ScriptedCaseName, ScriptedScenario } from "./scenario.js";
+import type { SimulatedCaseName, SimulatedScenario } from "./scenario.js";
 
 const newFixture = createThreadTree;
 
 function makeScenario(
-  stages: Record<string, readonly ScriptedCaseName[]>,
-): ScriptedScenario {
-  const frozen: Record<string, readonly ScriptedCaseName[]> = {};
+  stages: Record<string, readonly SimulatedCaseName[]>,
+): SimulatedScenario {
+  const frozen: Record<string, readonly SimulatedCaseName[]> = {};
   for (const [stageId, cases] of Object.entries(stages)) {
     frozen[stageId] = Object.freeze([...cases]);
   }
@@ -43,7 +43,7 @@ function stageById(id: CatalogStageId): CatalogStage {
 
 /**
  * The concrete target a catalog stage resolves to in the fixture thread. Every
- * stage the scripted cases exercise has a `fixed` rule, so the branch is not
+ * stage the simulated cases exercise has a `fixed` rule, so the branch is not
  * state-sensitive here.
  */
 function targetOf(stage: CatalogStage): StageTarget {
@@ -125,7 +125,7 @@ async function initAttemptLog(
     attempt: request.stage.attemptNumber,
     harness: request.harness,
     model: request.model,
-    harnessVersion: "scripted-harness 1.0.0",
+    harnessVersion: "simulated-harness 1.0.0",
     repoRoot: fixture.root,
     threadRelPath: request.stage.threadRelPath,
     startedAt: "2026-07-24T00:00:00.000Z",
@@ -137,13 +137,13 @@ async function initAttemptLog(
   return logPath;
 }
 
-describe("createScriptedInvoker", () => {
+describe("createSimulatedInvoker", () => {
   it("selects cases by stage id and durable attempt number", async () => {
     const fixture = await newFixture();
     const scenario = makeScenario({
       spec: ["outcome-done", "outcome-blocked"],
     });
-    const invoker = createScriptedInvoker(scenario);
+    const invoker = createSimulatedInvoker(scenario);
     const stage = stageById("spec");
 
     const first = buildRequest(fixture, stage, { attemptNumber: 1 });
@@ -152,7 +152,7 @@ describe("createScriptedInvoker", () => {
     expect(firstOutcome).toEqual({
       kind: "completed",
       finalText: "Outcome: DONE — Fake completion; no files changed",
-      session: { id: scriptedSessionId("spec", 1) },
+      session: { id: simulatedSessionId("spec", 1) },
     });
 
     const second = buildRequest(fixture, stage, {
@@ -164,14 +164,14 @@ describe("createScriptedInvoker", () => {
     expect(secondOutcome).toEqual({
       kind: "completed",
       finalText: "Outcome: BLOCKED — Fake pause; no files changed",
-      session: { id: scriptedSessionId("spec", 2) },
+      session: { id: simulatedSessionId("spec", 2) },
     });
   });
 
   it("returns provider-error when the attempt array is exhausted", async () => {
     const fixture = await newFixture();
     const scenario = makeScenario({ spec: ["outcome-done"] });
-    const invoker = createScriptedInvoker(scenario);
+    const invoker = createSimulatedInvoker(scenario);
     const request = buildRequest(fixture, stageById("spec"), {
       attemptNumber: 2,
     });
@@ -181,14 +181,14 @@ describe("createScriptedInvoker", () => {
     expect(outcome).toEqual({
       kind: "failed",
       category: "provider-error",
-      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorClass: SIMULATED_HARNESS_ERROR_CLASS,
       errorMessage: expect.stringContaining("exhausted"),
     });
   });
 
   it("rejects a non-positive attempt number", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["outcome-done"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       attemptNumber: 0,
     });
@@ -198,13 +198,13 @@ describe("createScriptedInvoker", () => {
     expect(outcome.kind).toBe("failed");
     if (outcome.kind !== "failed") throw new Error("expected failure");
     expect(outcome.category).toBe("provider-error");
-    expect(outcome.errorClass).toBe(SCRIPTED_HARNESS_ERROR_CLASS);
+    expect(outcome.errorClass).toBe(SIMULATED_HARNESS_ERROR_CLASS);
   });
 
   it("rejects prompt mismatches without using prompt as dispatch", async () => {
     const fixture = await newFixture();
     const observedPrompts: string[] = [];
-    const invoker = createScriptedInvoker(
+    const invoker = createSimulatedInvoker(
       makeScenario({ spec: ["outcome-done"] }),
       (prompt) => observedPrompts.push(prompt),
     );
@@ -222,12 +222,12 @@ describe("createScriptedInvoker", () => {
     expect(observedPrompts).toEqual(["$wrong `target`."]);
   });
 
-  it("reports the submitted prompt before streaming scripted transcript events", async () => {
+  it("reports the submitted prompt before streaming simulated transcript events", async () => {
     const fixture = await newFixture();
     const observedOrder: string[] = [];
     const observedPrompts: string[] = [];
     const observedEvents: string[] = [];
-    const invoker = createScriptedInvoker(
+    const invoker = createSimulatedInvoker(
       makeScenario({ spec: ["outcome-done"] }),
       (prompt) => {
         observedPrompts.push(prompt);
@@ -258,7 +258,7 @@ describe("createScriptedInvoker", () => {
   it("reports each invocation's current prompt instead of replaying prior input", async () => {
     const fixture = await newFixture();
     const observedPrompts: string[] = [];
-    const invoker = createScriptedInvoker(
+    const invoker = createSimulatedInvoker(
       makeScenario({ spec: ["outcome-done", "outcome-done"] }),
       (prompt) => observedPrompts.push(prompt),
     );
@@ -294,7 +294,7 @@ describe("createScriptedInvoker", () => {
     "keeps the %s outcome authoritative when prompt rendering throws",
     async (caseName, expectedKind) => {
       const fixture = await newFixture();
-      const invoker = createScriptedInvoker(
+      const invoker = createSimulatedInvoker(
         makeScenario({ spec: [caseName] }),
         () => {
           throw new Error("prompt display exploded");
@@ -318,7 +318,7 @@ describe("createScriptedInvoker", () => {
 
   it("rejects resolved target mismatches", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["outcome-done"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       resolvedTarget: "docs/threads/other/",
     });
@@ -334,7 +334,7 @@ describe("createScriptedInvoker", () => {
 
   it("rejects instruction mismatches", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["outcome-done"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       instructions: "extra",
       prompt: "$spec `docs/threads/wrong`. extra",
@@ -347,7 +347,7 @@ describe("createScriptedInvoker", () => {
 
   it("rejects stage-incompatible cases at invoke time", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(
+    const invoker = createSimulatedInvoker(
       makeScenario({ "plan-strict": ["spec-correct"] }),
     );
     const request = buildRequest(fixture, stageById("plan-strict"));
@@ -361,7 +361,7 @@ describe("createScriptedInvoker", () => {
     expect(outcome).toEqual({
       kind: "failed",
       category: "provider-error",
-      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorClass: SIMULATED_HARNESS_ERROR_CLASS,
       errorMessage: expect.stringContaining("not compatible with stage plan-strict"),
     });
     await expect(
@@ -374,7 +374,7 @@ describe("createScriptedInvoker", () => {
 
   it("returns aborted without performing workspace effects", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["spec-correct"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["spec-correct"] }));
     const controller = new AbortController();
     controller.abort();
     const request = buildRequest(fixture, stageById("spec"), {
@@ -397,7 +397,7 @@ describe("createScriptedInvoker", () => {
   it("streams a deterministic transcript ending in the final message", async () => {
     const fixture = await newFixture();
     const events: string[] = [];
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["spec-correct"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["spec-correct"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       onEvent: (event) => {
         if (event.type === "text") events.push(event.text);
@@ -417,16 +417,16 @@ describe("createScriptedInvoker", () => {
 
   it("appends the session transcript without truncating the log header", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["spec-correct"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["spec-correct"] }));
     const request = buildRequest(fixture, stageById("spec"));
     const logPath = await initAttemptLog(fixture, request);
 
     await invoker.invoke(request);
     const log = await readFile(logPath, "utf8");
     expect(log.startsWith("Run: run-test\n")).toBe(true);
-    expect(log).toContain("Harness version: scripted-harness 1.0.0");
+    expect(log).toContain("Harness version: simulated-harness 1.0.0");
     expect(log).toContain("Stage: spec");
-    expect(log).toContain("Scripted session: scripted-session-spec-1");
+    expect(log).toContain("Simulated session: simulated-session-spec-1");
     expect(log).toContain("  Case: spec-correct");
     expect(log).toContain("  Attempt: 1");
     expect(log).toContain("Writing spec.md.");
@@ -436,7 +436,7 @@ describe("createScriptedInvoker", () => {
 
   it("normalizes event callback failures to provider-error", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["outcome-done"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       onEvent: () => {
         throw new Error("display exploded");
@@ -448,17 +448,17 @@ describe("createScriptedInvoker", () => {
     expect(outcome).toEqual({
       kind: "failed",
       category: "provider-error",
-      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
+      errorClass: SIMULATED_HARNESS_ERROR_CLASS,
       errorMessage: expect.stringContaining("display exploded"),
-      session: { id: scriptedSessionId("spec", 1) },
+      session: { id: simulatedSessionId("spec", 1) },
     });
     const log = await readFile(request.logFilePath, "utf8");
-    expect(log).toContain("Scripted session: scripted-session-spec-1");
+    expect(log).toContain("Simulated session: simulated-session-spec-1");
   });
 
   it("normalizes log append failures to provider-error", async () => {
     const fixture = await newFixture();
-    const invoker = createScriptedInvoker(makeScenario({ spec: ["outcome-done"] }));
+    const invoker = createSimulatedInvoker(makeScenario({ spec: ["outcome-done"] }));
     const request = buildRequest(fixture, stageById("spec"), {
       logFilePath: path.join(fixture.root, "missing-dir", "attempt.log"),
     });
@@ -467,16 +467,16 @@ describe("createScriptedInvoker", () => {
     expect(outcome).toMatchObject({
       kind: "failed",
       category: "provider-error",
-      errorClass: SCRIPTED_HARNESS_ERROR_CLASS,
-      session: { id: scriptedSessionId("spec", 1) },
+      errorClass: SIMULATED_HARNESS_ERROR_CLASS,
+      session: { id: simulatedSessionId("spec", 1) },
     });
   });
 
-  describe("scripted session identity", () => {
+  describe("simulated session identity", () => {
     it("reports the deterministic ID live and on completed outcomes", async () => {
       const fixture = await newFixture();
       const captured: { id: string }[] = [];
-      const invoker = createScriptedInvoker(
+      const invoker = createSimulatedInvoker(
         makeScenario({ spec: ["outcome-done"] }),
       );
       const request = buildRequest(fixture, stageById("spec"), {
@@ -485,11 +485,11 @@ describe("createScriptedInvoker", () => {
       await initAttemptLog(fixture, request);
 
       const outcome = await invoker.invoke(request);
-      expect(captured).toEqual([{ id: "scripted-session-spec-1" }]);
+      expect(captured).toEqual([{ id: "simulated-session-spec-1" }]);
       expect(outcome).toEqual({
         kind: "completed",
         finalText: "Outcome: DONE — Fake completion; no files changed",
-        session: { id: "scripted-session-spec-1" },
+        session: { id: "simulated-session-spec-1" },
       });
     });
 
@@ -500,7 +500,7 @@ describe("createScriptedInvoker", () => {
         ["harness-idle-timeout", "idle-timeout"],
       ] as const) {
         const captured: { id: string }[] = [];
-        const invoker = createScriptedInvoker(
+        const invoker = createSimulatedInvoker(
           makeScenario({ "review-spec": [caseName] }),
         );
         const request = buildRequest(fixture, stageById("review-spec"), {
@@ -515,12 +515,12 @@ describe("createScriptedInvoker", () => {
 
         const outcome = await invoker.invoke(request);
         expect(captured).toEqual([
-          { id: scriptedSessionId("review-spec", 1) },
+          { id: simulatedSessionId("review-spec", 1) },
         ]);
         expect(outcome).toMatchObject({
           kind: "failed",
           category,
-          session: { id: scriptedSessionId("review-spec", 1) },
+          session: { id: simulatedSessionId("review-spec", 1) },
         });
       }
     });
@@ -529,7 +529,7 @@ describe("createScriptedInvoker", () => {
       const fixture = await newFixture();
       const captured: { id: string }[] = [];
       const controller = new AbortController();
-      const invoker = createScriptedInvoker(
+      const invoker = createSimulatedInvoker(
         makeScenario({ "review-spec": ["harness-hang"] }),
       );
       const request = buildRequest(fixture, stageById("review-spec"), {
@@ -543,21 +543,21 @@ describe("createScriptedInvoker", () => {
 
       const outcome = await invoker.invoke(request);
       expect(captured).toEqual([
-        { id: scriptedSessionId("review-spec", 1) },
+        { id: simulatedSessionId("review-spec", 1) },
       ]);
       expect(outcome).toEqual({
         kind: "failed",
         category: "aborted",
         errorClass: "AbortError",
         errorMessage: "The attempt was aborted by a signal.",
-        session: { id: scriptedSessionId("review-spec", 1) },
+        session: { id: simulatedSessionId("review-spec", 1) },
       });
     });
 
     it("omits the session for pre-launch validation and abort failures", async () => {
       const fixture = await newFixture();
       const captured: { id: string }[] = [];
-      const invoker = createScriptedInvoker(
+      const invoker = createSimulatedInvoker(
         makeScenario({ spec: ["outcome-done"] }),
       );
 
@@ -598,7 +598,7 @@ describe("createScriptedInvoker", () => {
     it("keeps the terminal transcript unchanged while recording the session in the log", async () => {
       const fixture = await newFixture();
       const events: string[] = [];
-      const invoker = createScriptedInvoker(
+      const invoker = createSimulatedInvoker(
         makeScenario({ spec: ["spec-correct"] }),
       );
       const request = buildRequest(fixture, stageById("spec"), {
@@ -616,11 +616,11 @@ describe("createScriptedInvoker", () => {
       ]);
       expect(outcome).toMatchObject({
         kind: "completed",
-        session: { id: scriptedSessionId("spec", 1) },
+        session: { id: simulatedSessionId("spec", 1) },
       });
       const log = await readFile(logPath, "utf8");
       expect(log.startsWith("Run: run-test\n")).toBe(true);
-      expect(log).toContain("Scripted session: scripted-session-spec-1");
+      expect(log).toContain("Simulated session: simulated-session-spec-1");
       expect(log).toContain("  Case: spec-correct");
       expect(log).toContain("  Attempt: 1");
     });

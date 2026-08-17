@@ -19,8 +19,8 @@ import {
   printHarnessRuntimeRefusal,
   printRunList,
   printRunSummary,
-  printScriptedModeStartup,
-  printScriptedResolvedPrompt,
+  printSimulatedModeStartup,
+  printSimulatedResolvedPrompt,
   printTemporaryWorkspaceRefusal,
   printUnrestrictedWarning,
   resolveDisplayColor,
@@ -154,7 +154,7 @@ describe("printTemporaryWorkspaceRefusal", () => {
 });
 
 describe("printHarnessRuntimeRefusal", () => {
-  const TOGGLE = "ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS";
+  const TOGGLE = "ANTMAY_SIMULATED_HARNESS";
 
   it("explains an immutable runtime, refuses the switch, and gives the real-mode correction", () => {
     const { options, out, err } = makeOptions();
@@ -192,16 +192,16 @@ describe("printHarnessRuntimeRefusal", () => {
     ).toBe(plain.err.text);
   });
 
-  it("names the toggle a scripted run needs to continue", () => {
+  it("names the toggle a simulated run needs to continue", () => {
     const { options, err } = makeOptions();
     printHarnessRuntimeRefusal(options, {
-      kind: "scripted-runtime-requires-toggle",
+      kind: "simulated-runtime-requires-toggle",
       runId: "260101T000000000Z-run",
       toggleVar: TOGGLE,
     });
 
     expect(err.text).toBe(
-      `Run "260101T000000000Z-run" was started in scripted test mode. ` +
+      `Run "260101T000000000Z-run" was started in simulated mode. ` +
         `Re-run resume with ${TOGGLE}=1 to continue.\n`,
     );
   });
@@ -1124,23 +1124,23 @@ describe("printUnrestrictedWarning", () => {
   });
 });
 
-describe("printScriptedModeStartup", () => {
-  it("prints the scripted-harness block with every line marked [DEV]", () => {
+describe("printSimulatedModeStartup", () => {
+  it("prints the simulated-harness block with every line marked [DEV]", () => {
     const { options, out } = makeOptions();
-    printScriptedModeStartup(options, "/cfg/scripted-harness.json");
+    printSimulatedModeStartup(options, "/cfg/simulated-harness.json");
     const lines = out.lines.filter((line) => line.length > 0);
     expect(lines).toEqual([
-      "[DEV] Scripted harness",
+      "[DEV] Simulated harness",
       "[DEV]   enabled: true",
-      "[DEV]   config:  /cfg/scripted-harness.json",
+      "[DEV]   config:  /cfg/simulated-harness.json",
     ]);
   });
 });
 
-describe("printScriptedResolvedPrompt", () => {
+describe("printSimulatedResolvedPrompt", () => {
   it("prints a readable single-line prompt to stdout with [DEV] markers", () => {
     const { options, out, err } = makeOptions();
-    printScriptedResolvedPrompt(options, "$spec `docs/threads/demo`.");
+    printSimulatedResolvedPrompt(options, "$spec `docs/threads/demo`.");
 
     expect(out.lines.filter((line) => line.startsWith("[DEV]"))).toEqual([
       "[DEV] Resolved prompt",
@@ -1151,7 +1151,7 @@ describe("printScriptedResolvedPrompt", () => {
 
   it("preserves natural multiline input with every physical line marked [DEV]", () => {
     const { options, out, err } = makeOptions();
-    printScriptedResolvedPrompt(
+    printSimulatedResolvedPrompt(
       options,
       "$spec `docs/threads/demo`.\nPrefer small changes.\n",
     );

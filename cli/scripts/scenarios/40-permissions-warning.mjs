@@ -7,7 +7,7 @@ import { run } from "../demo/steps.mjs";
  * persisted permission choice is unrestricted, and the run details block then
  * reports that choice on its `Permissions` line.
  *
- * Scripted mode never contacts a provider, so nothing here actually runs
+ * Simulated mode never contacts a provider, so nothing here actually runs
  * unrestricted — only the rendering does.
  */
 export default {

@@ -17,11 +17,11 @@ import { action, run } from "../demo/steps.mjs";
  * `.pending-reviews/` are dropped, while `.implementation-runs/` keeps its rule
  * and is given committed content instead.
  *
- * The scripted document is the ordinary Standard one, and declaring it is
- * required rather than convenient: the scripted-scenario preflight loads and
+ * The simulated document is the ordinary Standard one, and declaring it is
+ * required rather than convenient: the simulated-scenario preflight loads and
  * validates it, and the executable probe runs against it, both before the
  * temporary-workspace check this scenario stops on. Without it the run exits `1`
- * on a missing `scripted-harness.json` instead, and the demo — which verifies
+ * on a missing `simulated-harness.json` instead, and the demo — which verifies
  * the exit code alone — reports `[PASS]` while showing a different refusal
  * entirely.
  */

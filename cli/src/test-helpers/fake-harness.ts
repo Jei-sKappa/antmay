@@ -5,7 +5,7 @@ import type {
 } from "../harness/types.js";
 
 /**
- * One scripted harness invocation. `before` runs a side effect (typically a
+ * One invocation a test scripts. `before` runs a side effect (typically a
  * filesystem mutation or an `AbortController.abort`) before the call resolves.
  * A step either resolves with a fixed `outcome` or, with `hangUntilAbort`, never
  * settles until the request's `AbortSignal` fires, then resolves as `aborted`.

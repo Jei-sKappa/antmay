@@ -1,5 +1,5 @@
 import { printedResumeCommand } from "../demo/markers.mjs";
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { resume, run, signalOnOutput } from "../demo/steps.mjs";
 
 /**
@@ -24,7 +24,7 @@ export default {
     "Two invocations: the first leaves a durably paused run, and the second is " +
     "signalled as soon as it has printed its run details, before it starts a stage.",
   pipeline: pipelineDocument("spec-only", ["spec"]),
-  scenario: scriptedRun(["spec"], { spec: ["outcome-blocked", "spec-correct"] }),
+  scenario: simulatedRun(["spec"], { spec: ["outcome-blocked", "spec-correct"] }),
   steps: [
     run({
       expectExit: 2,

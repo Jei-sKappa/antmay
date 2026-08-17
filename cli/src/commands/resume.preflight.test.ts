@@ -28,13 +28,13 @@ import {
   makeWorkspacesUnsafe,
   readCp,
   resume,
-  scriptedEnv,
+  simulatedEnv,
   seed,
   setup,
   soleRunId,
   standardSteps,
   writeRootFileSync,
-  writeScriptedScenario,
+  writeSimulatedScenario,
   writeThreadFileSync,
   type Harness,
 } from "../test-helpers/resume-harness.js";
@@ -178,12 +178,12 @@ const PREFLIGHT_REFUSALS: {
     },
   },
   {
-    name: "a scripted toggle over a real-runtime checkpoint",
+    name: "a simulated toggle over a real-runtime checkpoint",
     arrange: async (h) => {
       // A valid live scenario is present, so only the run's own immutable runtime
       // can be what refuses.
-      await writeScriptedScenario(h);
-      return { env: scriptedEnv(h) };
+      await writeSimulatedScenario(h);
+      return { env: simulatedEnv(h) };
     },
   },
   {

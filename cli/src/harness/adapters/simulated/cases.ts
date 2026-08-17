@@ -1,8 +1,8 @@
 import { appendFile, lstat, mkdir, readdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { formatTerminalOutcome } from "../../runner/outcome.js";
-import type { ScriptedCaseName } from "./scenario.js";
+import { formatTerminalOutcome } from "../../../runner/outcome.js";
+import type { SimulatedCaseName } from "./scenario.js";
 
 /** Exact bytes written by `spec-correct` and `spec-correct-delayed`. */
 export const SPEC_CORRECT_CONTENT = "# Spec: Fake\n\nPlaceholder\n";
@@ -18,7 +18,7 @@ export const SPEC_CORRECT_DELAY_MS = 3_000;
 
 /** Fixed newline-terminated append for `reconcile-spec-correct`. */
 export const RECONCILE_SPEC_APPEND_LINE =
-  "<!-- scripted reconcile-spec append -->\n";
+  "<!-- simulated reconcile-spec append -->\n";
 
 /**
  * Thread-relative path of the queued decision file written by
@@ -72,8 +72,8 @@ export const MALFORMED_FINAL_TEXT =
 
 /** The message `harness-crash` throws, named here so the test that expects it
  * and the scenario that reads it off the screen agree by construction. */
-export const SCRIPTED_CRASH_MESSAGE =
-  'scripted harness case "harness-crash": deliberate unhandled throw';
+export const SIMULATED_CRASH_MESSAGE =
+  'simulated harness case "harness-crash": deliberate unhandled throw';
 
 /** Fixed `plan.md` body for `plan-strict-correct`. */
 export const PLAN_STRICT_PLAN_CONTENT = "# Plan: Fake\n\nPlaceholder plan.\n";
@@ -85,7 +85,7 @@ export const PLAN_STRICT_OWNED_TASKS: Readonly<Record<string, string>> = {
 
 /** Fixed newline-terminated append for `reconcile-plan-correct`. */
 export const RECONCILE_PLAN_APPEND_LINE =
-  "<!-- scripted reconcile-plan append -->\n";
+  "<!-- simulated reconcile-plan append -->\n";
 
 /** Exact bytes written by `implement-plan-with-subagents-correct`. */
 export const IMPLEMENT_REPORT_CONTENT =
@@ -104,7 +104,7 @@ export type TranscriptLine = string | { tool: string; args: string };
  * carrying the terminal outcome line; on a harness failure the provider returned
  * instead of a result; or on a wait that only an abort ends.
  */
-export type ScriptedCaseEnding =
+export type SimulatedCaseEnding =
   | { kind: "ordinary"; finalText: string }
   | {
       kind: "failed";
@@ -118,16 +118,16 @@ export type ScriptedCaseEnding =
  * transcript to stream and log, and how the case ended. A refused effect reports
  * the reason instead, for the adapter to normalize.
  */
-export type ScriptedCaseExecution =
+export type SimulatedCaseExecution =
   | {
       ok: true;
       transcript: readonly TranscriptLine[];
-      ending: ScriptedCaseEnding;
+      ending: SimulatedCaseEnding;
     }
   | { ok: false; error: string };
 
 /** Where a case may apply its effects: the one selected thread, both ways named. */
-export type ScriptedCaseContext = {
+export type SimulatedCaseContext = {
   readonly threadRelPath: string;
   readonly threadAbsRoot: string;
 };
@@ -144,11 +144,11 @@ type CaseHandlerResult =
   | {
       ok: true;
       progress: readonly TranscriptLine[];
-      ending: Exclude<ScriptedCaseEnding, { kind: "ordinary" }>;
+      ending: Exclude<SimulatedCaseEnding, { kind: "ordinary" }>;
     }
   | { ok: false; error: string };
 
-type CaseHandler = (context: ScriptedCaseContext) => Promise<CaseHandlerResult>;
+type CaseHandler = (context: SimulatedCaseContext) => Promise<CaseHandlerResult>;
 
 type OwnedFileWrite = {
   threadRelativePath: string;
@@ -198,7 +198,7 @@ function joinThreadAbs(threadAbsRoot: string, threadRelativePath: string): strin
  * Resolve the absolute root the case's effects are confined to, refusing any
  * thread path that is not a real directory inside the attempt's workspace.
  */
-export async function resolveScriptedThreadRoot(
+export async function resolveCaseThreadRoot(
   workspaceCwd: string,
   threadRelPath: string,
 ): Promise<{ ok: true; absPath: string } | { ok: false; error: string }> {
@@ -569,7 +569,7 @@ async function appendFakeSpecNote(
   };
 }
 
-const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
+const CASE_HANDLERS: Record<SimulatedCaseName, CaseHandler> = {
   "outcome-done": async () => ({
     ok: true,
     progress: ["Making no changes."],
@@ -670,7 +670,7 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
   // unhandled-throw rendering, and it reaches it because the adapter awaits this
   // catalog outside every `try` it has.
   "harness-crash": () => {
-    throw new Error(SCRIPTED_CRASH_MESSAGE);
+    throw new Error(SIMULATED_CRASH_MESSAGE);
   },
   "spec-correct": async ({ threadRelPath, threadAbsRoot }) => {
     const result = await writeOwnedFile(
@@ -881,8 +881,8 @@ const CASE_HANDLERS: Record<ScriptedCaseName, CaseHandler> = {
  * The case names this catalog implements, exposed so a test can hold the
  * handlers to exactly the names the scenario validator accepts.
  */
-export const SCRIPTED_CASE_HANDLER_NAMES: readonly ScriptedCaseName[] =
-  Object.freeze(Object.keys(CASE_HANDLERS) as ScriptedCaseName[]);
+export const SIMULATED_CASE_HANDLER_NAMES: readonly SimulatedCaseName[] =
+  Object.freeze(Object.keys(CASE_HANDLERS) as SimulatedCaseName[]);
 
 /**
  * Apply one already-validated case's deterministic effects inside the selected
@@ -890,10 +890,10 @@ export const SCRIPTED_CASE_HANDLER_NAMES: readonly ScriptedCaseName[] =
  * ends ordinarily streams its final message as the last transcript line; one
  * that fails or waits streams only the work it did.
  */
-export async function executeScriptedCase(
-  caseName: ScriptedCaseName,
-  context: ScriptedCaseContext,
-): Promise<ScriptedCaseExecution> {
+export async function executeSimulatedCase(
+  caseName: SimulatedCaseName,
+  context: SimulatedCaseContext,
+): Promise<SimulatedCaseExecution> {
   const result = await CASE_HANDLERS[caseName](context);
   if (!result.ok) {
     return { ok: false, error: result.error };

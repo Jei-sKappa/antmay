@@ -1,16 +1,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { isPlainObject } from "../../shared/validation.js";
+import { isPlainObject } from "../../../shared/validation.js";
 
 /** Fixed scenario filename under the resolved config root. */
-export const SCRIPTED_SCENARIO_FILENAME = "scripted-harness.json";
+export const SIMULATED_SCENARIO_FILENAME = "simulated-harness.json";
 
 /**
- * The built-in scripted case catalog. Scenario files may select only these
+ * The built-in simulated case catalog. Scenario files may select only these
  * names.
  */
-export const SCRIPTED_CASE_NAMES = [
+export const SIMULATED_CASE_NAMES = [
   "outcome-done",
   "outcome-blocked",
   "outcome-refused",
@@ -30,16 +30,16 @@ export const SCRIPTED_CASE_NAMES = [
   "implement-plan-with-subagents-correct",
 ] as const;
 
-export type ScriptedCaseName = (typeof SCRIPTED_CASE_NAMES)[number];
+export type SimulatedCaseName = (typeof SIMULATED_CASE_NAMES)[number];
 
-const SCRIPTED_CASE_NAME_SET: ReadonlySet<string> = new Set(SCRIPTED_CASE_NAMES);
+const SIMULATED_CASE_NAME_SET: ReadonlySet<string> = new Set(SIMULATED_CASE_NAMES);
 
 /**
  * Stage-specific cases accept only their identically named stage. Generic
  * cases accept every stage.
  */
 const STAGE_SPECIFIC_CASE_STAGE: Readonly<
-  Partial<Record<ScriptedCaseName, string>>
+  Partial<Record<SimulatedCaseName, string>>
 > = {
   "spec-correct": "spec",
   "spec-correct-delayed": "spec",
@@ -50,7 +50,7 @@ const STAGE_SPECIFIC_CASE_STAGE: Readonly<
   "implement-plan-with-subagents-correct": "implement-plan-with-subagents",
 };
 
-const GENERIC_CASES: ReadonlySet<ScriptedCaseName> = new Set([
+const GENERIC_CASES: ReadonlySet<SimulatedCaseName> = new Set([
   "outcome-done",
   "outcome-blocked",
   "outcome-refused",
@@ -64,44 +64,44 @@ const GENERIC_CASES: ReadonlySet<ScriptedCaseName> = new Set([
 ]);
 
 /**
- * A validated scripted scenario. Stage case arrays preserve the order from the
+ * A validated simulated scenario. Stage case arrays preserve the order from the
  * source file.
  */
-export type ScriptedScenario = {
+export type SimulatedScenario = {
   readonly schemaVersion: 0;
-  readonly stages: Readonly<Record<string, readonly ScriptedCaseName[]>>;
+  readonly stages: Readonly<Record<string, readonly SimulatedCaseName[]>>;
 };
 
-export type ValidateScriptedScenarioResult =
-  | { ok: true; scenario: ScriptedScenario }
+export type ValidateSimulatedScenarioResult =
+  | { ok: true; scenario: SimulatedScenario }
   | { ok: false; errors: string[] };
 
-export type LoadScriptedScenarioResult =
-  | { ok: true; scenarioPath: string; scenario: ScriptedScenario }
+export type LoadSimulatedScenarioResult =
+  | { ok: true; scenarioPath: string; scenario: SimulatedScenario }
   | { ok: false; scenarioPath: string; errors: string[] };
 
 export type ReadScenarioFile = (scenarioPath: string) => Promise<string>;
 
 /**
- * Resolve `<config-root>/scripted-harness.json`. Pure: no filesystem access and
+ * Resolve `<config-root>/simulated-harness.json`. Pure: no filesystem access and
  * no directory creation.
  */
-export function resolveScriptedScenarioPath(configRoot: string): string {
-  return path.join(configRoot, SCRIPTED_SCENARIO_FILENAME);
+export function resolveSimulatedScenarioPath(configRoot: string): string {
+  return path.join(configRoot, SIMULATED_SCENARIO_FILENAME);
 }
 
 /**
  * Return whether `caseName` is a known catalog entry.
  */
-export function isScriptedCaseName(value: string): value is ScriptedCaseName {
-  return SCRIPTED_CASE_NAME_SET.has(value);
+export function isSimulatedCaseName(value: string): value is SimulatedCaseName {
+  return SIMULATED_CASE_NAME_SET.has(value);
 }
 
 /**
  * Return whether `caseName` may appear under `stageId` in a validated scenario.
  */
 export function isCaseCompatibleWithStage(
-  caseName: ScriptedCaseName,
+  caseName: SimulatedCaseName,
   stageId: string,
 ): boolean {
   if (GENERIC_CASES.has(caseName)) {
@@ -137,10 +137,10 @@ function normalizeExpectedStageIds(
  * Strictly validate a parsed scenario document against the supplied stage IDs.
  * Collects every schema problem before returning.
  */
-export function validateScriptedScenario(
+export function validateSimulatedScenario(
   parsed: unknown,
   expectedStageIds: readonly string[],
-): ValidateScriptedScenarioResult {
+): ValidateSimulatedScenarioResult {
   const normalized = normalizeExpectedStageIds(expectedStageIds);
   if (!normalized.ok) {
     return { ok: false, errors: normalized.errors };
@@ -148,7 +148,7 @@ export function validateScriptedScenario(
   const stageIds = normalized.stageIds;
   const expectedStageSet = new Set(stageIds);
   const errors: string[] = [];
-  const stages: Record<string, ScriptedCaseName[]> = {};
+  const stages: Record<string, SimulatedCaseName[]> = {};
 
   if (!isPlainObject(parsed)) {
     errors.push("The scenario document root must be an object.");
@@ -202,7 +202,7 @@ export function validateScriptedScenario(
       continue;
     }
 
-    const cases: ScriptedCaseName[] = [];
+    const cases: SimulatedCaseName[] = [];
     for (let index = 0; index < casesValue.length; index += 1) {
       const entry = casesValue[index];
       const entryPath = `${casesPath}[${index}]`;
@@ -214,8 +214,8 @@ export function validateScriptedScenario(
         errors.push(`${entryPath} must be a non-empty string.`);
         continue;
       }
-      if (!isScriptedCaseName(entry)) {
-        errors.push(`${entryPath} is not a recognized scripted case name.`);
+      if (!isSimulatedCaseName(entry)) {
+        errors.push(`${entryPath} is not a recognized simulated case name.`);
         continue;
       }
       if (!isCaseCompatibleWithStage(entry, stageId)) {
@@ -234,7 +234,7 @@ export function validateScriptedScenario(
     return { ok: false, errors };
   }
 
-  const frozenStages: Record<string, readonly ScriptedCaseName[]> = {};
+  const frozenStages: Record<string, readonly SimulatedCaseName[]> = {};
   for (const stageId of stageIds) {
     frozenStages[stageId] = Object.freeze([...stages[stageId]!]);
   }
@@ -249,17 +249,17 @@ export function validateScriptedScenario(
 }
 
 /**
- * Read and strictly validate `<config-root>/scripted-harness.json` once. The
+ * Read and strictly validate `<config-root>/simulated-harness.json` once. The
  * file is never created or rewritten. `readFile` exists for tests that assert
  * single-read behavior.
  */
-export async function loadScriptedScenario(
+export async function loadSimulatedScenario(
   configRoot: string,
   expectedStageIds: readonly string[],
   readFile: ReadScenarioFile = (scenarioPath) =>
     fs.readFile(scenarioPath, "utf8"),
-): Promise<LoadScriptedScenarioResult> {
-  const scenarioPath = resolveScriptedScenarioPath(configRoot);
+): Promise<LoadSimulatedScenarioResult> {
+  const scenarioPath = resolveSimulatedScenarioPath(configRoot);
 
   let raw: string;
   try {
@@ -270,7 +270,7 @@ export async function loadScriptedScenario(
       return {
         ok: false,
         scenarioPath,
-        errors: [`No scripted scenario file found at ${scenarioPath}.`],
+        errors: [`No simulated scenario file found at ${scenarioPath}.`],
       };
     }
     return {
@@ -293,7 +293,7 @@ export async function loadScriptedScenario(
     };
   }
 
-  const validated = validateScriptedScenario(parsed, expectedStageIds);
+  const validated = validateSimulatedScenario(parsed, expectedStageIds);
   if (!validated.ok) {
     return { ok: false, scenarioPath, errors: validated.errors };
   }

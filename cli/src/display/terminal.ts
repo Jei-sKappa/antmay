@@ -16,8 +16,8 @@ export {
 } from "./preflight.js";
 export {
   printRunSummary,
-  printScriptedModeStartup,
-  printScriptedResolvedPrompt,
+  printSimulatedModeStartup,
+  printSimulatedResolvedPrompt,
   printUnrestrictedWarning,
   type StageSummaryEntry,
 } from "./startup.js";

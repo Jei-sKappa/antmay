@@ -91,9 +91,9 @@ export type WaitingReasons = [WaitingReason, ...WaitingReason[]];
 /**
  * Which harness implementation a run contacts. Fixed when the run is allocated
  * and immutable for its whole life, so a later invocation cannot move an
- * existing run between the real provider and the developer's scripted harness.
+ * existing run between the real provider and the developer's simulated harness.
  */
-export type HarnessRuntimeIdentity = { kind: "real" } | { kind: "scripted" };
+export type HarnessRuntimeIdentity = { kind: "real" } | { kind: "simulated" };
 
 /**
  * One exact attempt in the history: the stage it belongs to and its one-based

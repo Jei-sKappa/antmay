@@ -4,6 +4,7 @@ import { Writable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
+import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/toggle.js";
 import type { HarnessId } from "../harness/id.js";
 import type { CatalogStageId } from "../pipeline/stage-id.js";
 import type {
@@ -385,7 +386,7 @@ describe("listCommand corruption handling (AC-16.3)", () => {
     expect(stateEntries).toEqual(["afk-runs"]);
   });
 
-  it("ignores the scripted toggle and lists runs without loading scenario dependencies", async () => {
+  it("ignores the simulated toggle and lists runs without loading scenario dependencies", async () => {
     const stateRoot = await tempDir("antmay-list-");
     await seedRun(
       stateRoot,
@@ -398,7 +399,7 @@ describe("listCommand corruption handling (AC-16.3)", () => {
     );
     const { deps: d, out, err } = deps({
       ANTMAY_STATE_HOME: stateRoot,
-      ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS: "1",
+      [SIMULATED_HARNESS_TOGGLE_VAR]: "1",
     });
 
     const code = await listCommand(d);

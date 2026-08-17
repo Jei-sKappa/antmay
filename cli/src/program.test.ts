@@ -141,6 +141,6 @@ describe("dispatch import boundaries (AC-5.5, FR-8)", () => {
 
   it("names no concrete harness adapter family", async () => {
     const source = await readProgramSource();
-    expect(source).not.toMatch(/harness\/(?:backends|scripted)/);
+    expect(source).not.toMatch(/harness\/adapters\//);
   });
 });

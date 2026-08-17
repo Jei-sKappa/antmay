@@ -7,7 +7,7 @@ import type { RunRuntimeResult } from "../types.js";
  * Resolve exactly one harness adapter family for a new run, probe the selected
  * harnesses, and return the invoker, immutable runtime identity, observed
  * versions, non-empty process-local version map, and optional scenario path —
- * or the structured runtime refusal. The command owns the scripted-prompt
+ * or the structured runtime refusal. The command owns the simulated-prompt
  * observer; this step never imports or invokes a presenter.
  */
 export async function resolveRunRuntime(
@@ -16,7 +16,7 @@ export async function resolveRunRuntime(
   repoRoot: string,
   configRoot: string,
   loader: HarnessRuntimeLoader,
-  onScriptedPrompt: (prompt: string) => void,
+  onSimulatedPrompt: (prompt: string) => void,
 ): Promise<RunRuntimeResult> {
   const harnessRuntime = await resolveHarnessRuntime(
     {
@@ -26,7 +26,7 @@ export async function resolveRunRuntime(
       repoRoot,
       stageIds: stages.map((stage) => stage.id),
       configRoot: () => ({ ok: true, configRoot }),
-      onScriptedPrompt,
+      onSimulatedPrompt,
     },
     loader,
   );

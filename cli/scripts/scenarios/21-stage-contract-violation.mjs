@@ -1,5 +1,5 @@
 import { printedResumeCommand } from "../demo/markers.mjs";
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
 /**
@@ -16,7 +16,7 @@ import { run } from "../demo/steps.mjs";
 export default {
   label: "DONE without the promised artifact — ends on the contract banner",
   pipeline: pipelineDocument("spec-only", ["spec"]),
-  scenario: scriptedRun(["spec"], { spec: ["outcome-done"] }),
+  scenario: simulatedRun(["spec"], { spec: ["outcome-done"] }),
   steps: [
     run({
       expectExit: 2,

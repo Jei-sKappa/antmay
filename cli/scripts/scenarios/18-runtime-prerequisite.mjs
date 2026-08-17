@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { printedResumeCommand } from "../demo/markers.mjs";
 import { commitAll, threadPath, writeThreadFile } from "../demo/fixture.mjs";
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { action, run } from "../demo/steps.mjs";
 
 /**
@@ -33,7 +33,7 @@ export default {
     "running, so the second stage meets a prerequisite that held at preflight " +
     "and no longer does.",
   pipeline: pipelineDocument("brief-implement", ["spec", "implement"]),
-  scenario: scriptedRun(["spec", "implement"], {
+  scenario: simulatedRun(["spec", "implement"], {
     spec: ["spec-correct-delayed"],
   }),
   steps: [
@@ -50,8 +50,8 @@ export default {
       // open once it has written the spec: above the cost of preflight, and
       // below the moment that case settles. This value clears preflight and
       // leaves the widest margin at the far end, and
-      // `src/harness/scripted/demo-timing.test.ts` holds it under the case's
-      // delay constant under the test gate.
+      // `src/harness/adapters/simulated/demo-timing.test.ts` holds it under
+      // the case's delay constant under the test gate.
       //
       // Either miss fails the demo rather than passing it on another scenario's
       // rendering. Landing too early puts the delete ahead of preflight, so

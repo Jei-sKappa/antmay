@@ -13,9 +13,9 @@ import { describe, expect, it } from "vitest";
 import {
   createThreadTree,
   type ThreadTree,
-} from "../../test-helpers/thread-tree.js";
+} from "../../../test-helpers/thread-tree.js";
 import {
-  executeScriptedCase,
+  executeSimulatedCase,
   IMPLEMENT_REPORT_CONTENT,
   PLAN_STRICT_OWNED_TASKS,
   PLAN_STRICT_PLAN_CONTENT,
@@ -23,25 +23,25 @@ import {
   RECONCILE_SPEC_APPEND_LINE,
   RECONCILE_SPEC_PENDING_DECISION_CONTENT,
   RECONCILE_SPEC_PENDING_DECISION_PATH,
-  resolveScriptedThreadRoot,
-  SCRIPTED_CASE_HANDLER_NAMES,
-  SCRIPTED_CRASH_MESSAGE,
+  resolveCaseThreadRoot,
+  SIMULATED_CASE_HANDLER_NAMES,
+  SIMULATED_CRASH_MESSAGE,
   SPEC_CORRECT_CONTENT,
   SPEC_CORRECT_DELAY_MS,
-  type ScriptedCaseContext,
-  type ScriptedCaseExecution,
+  type SimulatedCaseContext,
+  type SimulatedCaseExecution,
 } from "./cases.js";
 import {
   isCaseCompatibleWithStage,
-  SCRIPTED_CASE_NAMES,
-  type ScriptedCaseName,
+  SIMULATED_CASE_NAMES,
+  type SimulatedCaseName,
 } from "./scenario.js";
 
 const newFixture = createThreadTree;
 
 /** The effect context the adapter hands the catalog for the fixture's thread. */
-async function contextFor(fixture: ThreadTree): Promise<ScriptedCaseContext> {
-  const resolved = await resolveScriptedThreadRoot(
+async function contextFor(fixture: ThreadTree): Promise<SimulatedCaseContext> {
+  const resolved = await resolveCaseThreadRoot(
     fixture.root,
     fixture.threadRelPath,
   );
@@ -56,13 +56,13 @@ async function contextFor(fixture: ThreadTree): Promise<ScriptedCaseContext> {
 
 async function runCase(
   fixture: ThreadTree,
-  caseName: ScriptedCaseName,
-): Promise<ScriptedCaseExecution> {
-  return executeScriptedCase(caseName, await contextFor(fixture));
+  caseName: SimulatedCaseName,
+): Promise<SimulatedCaseExecution> {
+  return executeSimulatedCase(caseName, await contextFor(fixture));
 }
 
 /** The final message of a case that ended ordinarily. */
-function finalTextOf(executed: ScriptedCaseExecution): string {
+function finalTextOf(executed: SimulatedCaseExecution): string {
   if (!executed.ok) {
     throw new Error(`expected an applied case, got: ${executed.error}`);
   }
@@ -73,21 +73,21 @@ function finalTextOf(executed: ScriptedCaseExecution): string {
 }
 
 /** The reason a case refused to apply its effects. */
-function errorOf(executed: ScriptedCaseExecution): string {
+function errorOf(executed: SimulatedCaseExecution): string {
   if (executed.ok) {
     throw new Error("expected the case to refuse its effects");
   }
   return executed.error;
 }
 
-describe("the scripted case catalog", () => {
+describe("the simulated case catalog", () => {
   it("implements every accepted scenario case exactly once", () => {
-    expect([...SCRIPTED_CASE_HANDLER_NAMES].sort()).toEqual(
-      [...SCRIPTED_CASE_NAMES].sort(),
+    expect([...SIMULATED_CASE_HANDLER_NAMES].sort()).toEqual(
+      [...SIMULATED_CASE_NAMES].sort(),
     );
-    expect(SCRIPTED_CASE_HANDLER_NAMES.length).toBe(SCRIPTED_CASE_NAMES.length);
-    expect(new Set(SCRIPTED_CASE_HANDLER_NAMES).size).toBe(
-      SCRIPTED_CASE_HANDLER_NAMES.length,
+    expect(SIMULATED_CASE_HANDLER_NAMES.length).toBe(SIMULATED_CASE_NAMES.length);
+    expect(new Set(SIMULATED_CASE_HANDLER_NAMES).size).toBe(
+      SIMULATED_CASE_HANDLER_NAMES.length,
     );
   });
 
@@ -131,7 +131,7 @@ describe("the scripted case catalog", () => {
 
     const before = await readFile(seedPath, "utf8");
     await expect(runCase(fixture, "harness-crash")).rejects.toThrow(
-      SCRIPTED_CRASH_MESSAGE,
+      SIMULATED_CRASH_MESSAGE,
     );
 
     expect(await readFile(seedPath, "utf8")).toBe(before);
@@ -419,7 +419,7 @@ describe("the scripted case catalog", () => {
     it("resolves the selected thread inside the workspace", async () => {
       const fixture = await newFixture();
 
-      const resolved = await resolveScriptedThreadRoot(
+      const resolved = await resolveCaseThreadRoot(
         fixture.root,
         fixture.threadRelPath,
       );
@@ -438,7 +438,7 @@ describe("the scripted case catalog", () => {
     ])("refuses %s thread path", async (_label, threadRelPath) => {
       const fixture = await newFixture();
 
-      const resolved = await resolveScriptedThreadRoot(
+      const resolved = await resolveCaseThreadRoot(
         fixture.root,
         threadRelPath,
       );

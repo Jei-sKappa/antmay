@@ -109,7 +109,7 @@ export type RunStageSnapshotResult = RunPreflightResult<RunStageSnapshot>;
 
 /**
  * Resolved harness runtime for a new run: identity, invoker, observed versions,
- * the non-empty process-local version map, and optional scripted scenario path.
+ * the non-empty process-local version map, and optional simulated scenario path.
  */
 export type RunResolvedRuntime = {
   runtime: HarnessRuntimeIdentity;

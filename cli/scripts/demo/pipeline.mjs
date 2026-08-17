@@ -1,6 +1,6 @@
 /**
  * The documents the demo's isolated config root is built from, and the
- * scripted-harness document a scenario overrides one stage of.
+ * simulated-harness document a scenario overrides one stage of.
  *
  * Every document here uses the production schema the CLI validates, so a demo
  * run exercises exactly the files a user would write: a pipeline document under
@@ -106,7 +106,7 @@ const CORRECT_CASE = {
 };
 
 /**
- * A scripted-harness document keyed by exactly `stageIds` — the stage IDs the
+ * A simulated-harness document keyed by exactly `stageIds` — the stage IDs the
  * run selects, which is what the executor validates the document against. Each
  * key of `overrides` replaces that stage's case list; every other stage keeps
  * its correct case.
@@ -115,7 +115,7 @@ const CORRECT_CASE = {
  * so `{ "reconcile-spec": ["outcome-blocked", "reconcile-spec-correct"] }` blocks
  * the first attempt and succeeds on the retry.
  */
-export function scriptedRun(stageIds, overrides = {}) {
+export function simulatedRun(stageIds, overrides = {}) {
   for (const stageId of Object.keys(overrides)) {
     if (!stageIds.includes(stageId)) {
       throw new Error(`${stageId} is not a selected stage of this run.`);
@@ -128,7 +128,7 @@ export function scriptedRun(stageIds, overrides = {}) {
   return { schemaVersion: 0, stages };
 }
 
-/** The scripted document for a run selecting the whole Standard pipeline. */
+/** The simulated document for a run selecting the whole Standard pipeline. */
 export function standardScenario(overrides = {}) {
-  return scriptedRun(STANDARD_STAGE_IDS, overrides);
+  return simulatedRun(STANDARD_STAGE_IDS, overrides);
 }

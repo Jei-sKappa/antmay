@@ -1,6 +1,6 @@
 import { chmodPath } from "../demo/fixture.mjs";
 import { printedResumeCommand } from "../demo/markers.mjs";
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { run } from "../demo/steps.mjs";
 
 /**
@@ -21,7 +21,7 @@ export default {
     "The thread directory becomes unreadable while the first stage is still " +
     "running, so the promise it reported DONE on cannot be checked either way.",
   pipeline: pipelineDocument("spec-only", ["spec"]),
-  scenario: scriptedRun(["spec"], { spec: ["spec-correct-delayed"] }),
+  scenario: simulatedRun(["spec"], { spec: ["spec-correct-delayed"] }),
   steps: [
     run({
       expectExit: 2,

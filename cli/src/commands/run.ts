@@ -10,8 +10,8 @@ import {
 } from "../display/preflight.js";
 import {
   printRunSummary,
-  printScriptedModeStartup,
-  printScriptedResolvedPrompt,
+  printSimulatedModeStartup,
+  printSimulatedResolvedPrompt,
 } from "../display/startup.js";
 import { executeEngine } from "../execution/engine.js";
 import { installSignalHandlers } from "../runner/signals.js";
@@ -183,7 +183,7 @@ export async function runCommand(
       roots.configRoot,
       deps.harnessRuntime,
       (prompt) => {
-        printScriptedResolvedPrompt(displayOptions, prompt);
+        printSimulatedResolvedPrompt(displayOptions, prompt);
       },
     );
     if (!harnessRuntime.ok) {
@@ -297,7 +297,7 @@ export async function runCommand(
       // unrestricted warning when applicable), drive the run, and map the engine
       // result to an exit code.
       if (harnessRuntime.scenarioPath !== undefined) {
-        printScriptedModeStartup(displayOptions, harnessRuntime.scenarioPath);
+        printSimulatedModeStartup(displayOptions, harnessRuntime.scenarioPath);
       }
       printRunSummary(displayOptions, {
         runId: checkpoint.runId,

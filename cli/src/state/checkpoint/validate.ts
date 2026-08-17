@@ -566,8 +566,8 @@ function validateRuntime(value: unknown, errors: string[]): void {
     errors.push(`runtime is required and must be an object.`);
     return;
   }
-  if (value.kind !== "real" && value.kind !== "scripted") {
-    errors.push(`runtime.kind must be "real" or "scripted".`);
+  if (value.kind !== "real" && value.kind !== "simulated") {
+    errors.push(`runtime.kind must be "real" or "simulated".`);
   }
 }
 

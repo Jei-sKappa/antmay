@@ -1,58 +1,58 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  SCRIPTED_HARNESS_TOGGLE_VAR,
-  interpretScriptedHarnessToggle,
+  SIMULATED_HARNESS_TOGGLE_VAR,
+  interpretSimulatedHarnessToggle,
 } from "./toggle.js";
 
-describe("interpretScriptedHarnessToggle", () => {
+describe("interpretSimulatedHarnessToggle", () => {
   const cases: {
     label: string;
     env: NodeJS.ProcessEnv;
     expected:
       | { mode: "real" }
-      | { mode: "scripted" }
+      | { mode: "simulated" }
       | { mode: "error"; contains: string[] };
   }[] = [
     { label: "unset", env: {}, expected: { mode: "real" } },
     {
       label: "empty string",
-      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "" },
+      env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "" },
       expected: { mode: "real" },
     },
     {
       label: "exact 1",
-      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "1" },
-      expected: { mode: "scripted" },
+      env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "1" },
+      expected: { mode: "simulated" },
     },
     {
       label: "true",
-      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "true" },
+      env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "true" },
       expected: {
         mode: "error",
-        contains: [SCRIPTED_HARNESS_TOGGLE_VAR, '"1"', '"true"'],
+        contains: [SIMULATED_HARNESS_TOGGLE_VAR, '"1"', '"true"'],
       },
     },
     {
       label: "0",
-      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "0" },
+      env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "0" },
       expected: {
         mode: "error",
-        contains: [SCRIPTED_HARNESS_TOGGLE_VAR, '"1"', '"0"'],
+        contains: [SIMULATED_HARNESS_TOGGLE_VAR, '"1"', '"0"'],
       },
     },
     {
       label: "yes",
-      env: { [SCRIPTED_HARNESS_TOGGLE_VAR]: "yes" },
+      env: { [SIMULATED_HARNESS_TOGGLE_VAR]: "yes" },
       expected: {
         mode: "error",
-        contains: [SCRIPTED_HARNESS_TOGGLE_VAR, '"1"', '"yes"'],
+        contains: [SIMULATED_HARNESS_TOGGLE_VAR, '"1"', '"yes"'],
       },
     },
   ];
 
   it.each(cases)("$label", ({ env, expected }) => {
-    const result = interpretScriptedHarnessToggle(env);
+    const result = interpretSimulatedHarnessToggle(env);
     if (expected.mode === "error") {
       expect(result).toEqual({ mode: "error", message: expect.any(String) });
       if (result.mode !== "error") return;

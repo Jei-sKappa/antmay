@@ -148,7 +148,7 @@ export function printTemporaryWorkspaceRefusal(
 }
 
 /**
- * The block a resume prints when the developer toggle asks for the scripted
+ * The block a resume prints when the developer toggle asks for the simulated
  * harness on a run that was allocated against the real one. It is the only
  * runtime refusal a reader can mistake for something they may override, so it
  * separates the immutable fact from the one correction that continues the run.
@@ -168,7 +168,7 @@ function runtimeSwitchRefusal(
     line("Check", "Harness runtime identity"),
     line(
       "Problem",
-      `This run was started against a real harness, and ${failure.toggleVar}=1 selects the scripted test harness.`,
+      `This run was started against a real harness, and ${failure.toggleVar}=1 selects the simulated harness.`,
     ),
     "",
     `  ${paint("Why:", ...KEY_STYLE)}`,
@@ -176,7 +176,7 @@ function runtimeSwitchRefusal(
     "    - Continuing through another provider would execute the rest of the pipeline on a harness this run never used.",
     "",
     `  ${paint("Fix:", ...KEY_STYLE)}`,
-    "    Resume with scripted mode disabled:",
+    "    Resume with simulated mode disabled:",
     `      unset ${failure.toggleVar}`,
     `      antmay afk resume ${failure.runId}`,
     line(
@@ -203,9 +203,9 @@ function harnessRuntimeRefusalText(
     case "scenario-rejected":
       return failure.errors.join("\n");
 
-    case "scripted-runtime-requires-toggle":
+    case "simulated-runtime-requires-toggle":
       return (
-        `Run "${failure.runId}" was started in scripted test mode. ` +
+        `Run "${failure.runId}" was started in simulated mode. ` +
         `Re-run resume with ${failure.toggleVar}=1 to continue.`
       );
 

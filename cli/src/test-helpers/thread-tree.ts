@@ -19,7 +19,7 @@ export type ThreadTree = {
 };
 
 /**
- * Build that workspace. The scripted harness resolves a thread by `realpath`
+ * Build that workspace. The simulated harness resolves a thread by `realpath`
  * and prefix containment and reads and writes ordinary files under it, so what
  * it needs is a directory tree; giving it a repository would buy an `init`,
  * three `config` calls, an `add`, and a `commit` that nothing then interrogates.

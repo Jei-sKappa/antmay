@@ -1,14 +1,14 @@
 import type { HarnessRuntimeIdentity } from "../state/checkpoint/types.js";
-import type { ProbeFailure, ProbeResult } from "./backends/probe.js";
-import type { HarnessId } from "./id.js";
+import type { ProbeFailure, ProbeResult } from "./adapters/real/probe.js";
 import type {
-  LoadScriptedScenarioResult,
-  ScriptedScenario,
-} from "./scripted/scenario.js";
+  LoadSimulatedScenarioResult,
+  SimulatedScenario,
+} from "./adapters/simulated/scenario.js";
 import {
-  SCRIPTED_HARNESS_TOGGLE_VAR,
-  interpretScriptedHarnessToggle,
-} from "./scripted/toggle.js";
+  SIMULATED_HARNESS_TOGGLE_VAR,
+  interpretSimulatedHarnessToggle,
+} from "./adapters/simulated/toggle.js";
+import type { HarnessId } from "./id.js";
 import type { HarnessInvoker } from "./types.js";
 
 /**
@@ -28,23 +28,23 @@ export type RealHarnessAdapters = {
 };
 
 /**
- * The developer scripted adapter family: the scripted invoker, which drives a
+ * The developer stand-in adapter family: the simulated invoker, which drives a
  * validated scenario and observes each resolved prompt, its own probe, and the
  * read of the live scenario the invoker is built over. The scenario schema, the
  * case catalog it names, and the validator that enforces both belong to the
  * family rather than to the resolver, so selecting the real runtime loads none
  * of them.
  */
-export type ScriptedHarnessAdapters = {
+export type SimulatedHarnessAdapters = {
   createInvoker: (
-    scenario: ScriptedScenario,
+    scenario: SimulatedScenario,
     onResolvedPrompt: (prompt: string) => void,
   ) => HarnessInvoker;
   probe: HarnessExecutableProbe;
   loadScenario: (
     configRoot: string,
     stageIds: readonly string[],
-  ) => Promise<LoadScriptedScenarioResult>;
+  ) => Promise<LoadSimulatedScenarioResult>;
 };
 
 /**
@@ -54,12 +54,12 @@ export type ScriptedHarnessAdapters = {
  */
 export type HarnessRuntimeLoader = {
   real: () => Promise<RealHarnessAdapters>;
-  scripted: () => Promise<ScriptedHarnessAdapters>;
+  simulated: () => Promise<SimulatedHarnessAdapters>;
 };
 
 /**
- * How the resolver obtains the config root the live scripted scenario is read
- * from. It is consulted only in scripted mode, so a real run or resume never
+ * How the resolver obtains the config root the live simulated scenario is read
+ * from. It is consulted only in simulated mode, so a real run or resume never
  * depends on config-root resolution.
  */
 export type ConfigRootLookup = () =>
@@ -71,11 +71,11 @@ type HarnessRuntimeRequestBase = {
   /** The logical harnesses to probe, de-duplicated by the resolver. */
   harnesses: readonly HarnessId[];
   repoRoot: string;
-  /** The exact stage IDs a live scripted scenario must cover. */
+  /** The exact stage IDs a live simulated scenario must cover. */
   stageIds: readonly string[];
   configRoot: ConfigRootLookup;
-  /** Observes the prompt each scripted invocation submits. */
-  onScriptedPrompt: (prompt: string) => void;
+  /** Observes the prompt each simulated invocation submits. */
+  onSimulatedPrompt: (prompt: string) => void;
 };
 
 /**
@@ -103,7 +103,7 @@ export type HarnessProbeScope = "selected-stages" | "current-stage";
  */
 export type HarnessRuntimeFailure =
   | { kind: "toggle-invalid"; message: string }
-  | { kind: "scripted-runtime-requires-toggle"; runId: string; toggleVar: string }
+  | { kind: "simulated-runtime-requires-toggle"; runId: string; toggleVar: string }
   | { kind: "real-runtime-refuses-toggle"; runId: string; toggleVar: string }
   | { kind: "config-root-unresolved"; message: string }
   | { kind: "scenario-rejected"; errors: readonly string[] }
@@ -117,7 +117,7 @@ export type HarnessRuntimeFailure =
 /**
  * The resolved runtime: its immutable identity, the invoker of the one loaded
  * adapter family, the non-empty version line observed for every probed harness,
- * and — in scripted mode — the path the live scenario was read from, which is
+ * and — in simulated mode — the path the live scenario was read from, which is
  * developer-visible startup context and never persisted.
  */
 export type ResolvedHarnessRuntime = {
@@ -133,10 +133,10 @@ export type HarnessRuntimeResolution =
 
 /**
  * Decide which runtime a request runs against. A new run reads the developer
- * toggle once: unset or empty selects real, exactly `1` selects scripted, and
+ * toggle once: unset or empty selects real, exactly `1` selects simulated, and
  * every other non-empty value is a configuration error. A resume enforces its
- * checkpoint's runtime in both directions instead — a scripted run continues only
- * with the toggle set, and a real run refuses to be switched to the scripted
+ * checkpoint's runtime in both directions instead — a simulated run continues only
+ * with the toggle set, and a real run refuses to be switched to the simulated
  * provider rather than following the ambient environment.
  */
 function selectRuntime(
@@ -144,7 +144,7 @@ function selectRuntime(
 ):
   | { ok: true; runtime: HarnessRuntimeIdentity }
   | { ok: false; failure: HarnessRuntimeFailure } {
-  const toggle = interpretScriptedHarnessToggle(request.env);
+  const toggle = interpretSimulatedHarnessToggle(request.env);
 
   if (request.kind === "new-run") {
     if (toggle.mode === "error") {
@@ -156,14 +156,14 @@ function selectRuntime(
     return { ok: true, runtime: { kind: toggle.mode } };
   }
 
-  if (request.runtime.kind === "scripted") {
-    if (toggle.mode !== "scripted") {
+  if (request.runtime.kind === "simulated") {
+    if (toggle.mode !== "simulated") {
       return {
         ok: false,
         failure: {
-          kind: "scripted-runtime-requires-toggle",
+          kind: "simulated-runtime-requires-toggle",
           runId: request.runId,
-          toggleVar: SCRIPTED_HARNESS_TOGGLE_VAR,
+          toggleVar: SIMULATED_HARNESS_TOGGLE_VAR,
         },
       };
     }
@@ -176,13 +176,13 @@ function selectRuntime(
       failure: { kind: "toggle-invalid", message: toggle.message },
     };
   }
-  if (toggle.mode === "scripted") {
+  if (toggle.mode === "simulated") {
     return {
       ok: false,
       failure: {
         kind: "real-runtime-refuses-toggle",
         runId: request.runId,
-        toggleVar: SCRIPTED_HARNESS_TOGGLE_VAR,
+        toggleVar: SIMULATED_HARNESS_TOGGLE_VAR,
       },
     };
   }
@@ -190,13 +190,13 @@ function selectRuntime(
 }
 
 /**
- * Load the scripted adapter family and build its invoker over the live scenario
+ * Load the simulated adapter family and build its invoker over the live scenario
  * the family itself reads. That read and its validation against the request's
  * exact stage IDs happen on every resolution, so a developer edits one file
  * between invocations and the next one sees it; nothing about it is carried in
  * durable state.
  */
-async function resolveScripted(
+async function resolveSimulated(
   request: HarnessRuntimeRequest,
   loader: HarnessRuntimeLoader,
 ): Promise<
@@ -210,14 +210,14 @@ async function resolveScripted(
       failure: { kind: "config-root-unresolved", message: configRoot.message },
     };
   }
-  const adapters = await loader.scripted();
+  const adapters = await loader.simulated();
   const loaded = await adapters.loadScenario(configRoot.configRoot, request.stageIds);
   if (!loaded.ok) {
     return { ok: false, failure: { kind: "scenario-rejected", errors: loaded.errors } };
   }
   return {
     ok: true,
-    invoker: adapters.createInvoker(loaded.scenario, request.onScriptedPrompt),
+    invoker: adapters.createInvoker(loaded.scenario, request.onSimulatedPrompt),
     probe: adapters.probe,
     scenarioPath: loaded.scenarioPath,
   };
@@ -247,14 +247,14 @@ export async function resolveHarnessRuntime(
   let invoker: HarnessInvoker;
   let probe: HarnessExecutableProbe;
   let scenarioPath: string | undefined;
-  if (runtime.kind === "scripted") {
-    const scripted = await resolveScripted(request, loader);
-    if (!scripted.ok) {
-      return { ok: false, failure: scripted.failure };
+  if (runtime.kind === "simulated") {
+    const simulated = await resolveSimulated(request, loader);
+    if (!simulated.ok) {
+      return { ok: false, failure: simulated.failure };
     }
-    invoker = scripted.invoker;
-    probe = scripted.probe;
-    scenarioPath = scripted.scenarioPath;
+    invoker = simulated.invoker;
+    probe = simulated.probe;
+    scenarioPath = simulated.scenarioPath;
   } else {
     const adapters = await loader.real();
     invoker = adapters.createInvoker();
@@ -300,34 +300,34 @@ export async function resolveHarnessRuntime(
 /**
  * The production loader. Each family is imported only when its runtime is the
  * one selected, so an ordinary real run never evaluates the developer harness
- * and a scripted run never loads Sandcastle.
+ * and a simulated run never loads Sandcastle.
  */
 export const productionHarnessRuntimeLoader: HarnessRuntimeLoader = {
   real: async () => {
     const [{ createSandcastleInvoker }, { probeHarnessExecutables }] =
       await Promise.all([
-        import("./backends/sandcastle.js"),
-        import("./backends/probe.js"),
+        import("./adapters/real/sandcastle.js"),
+        import("./adapters/real/probe.js"),
       ]);
     return {
       createInvoker: createSandcastleInvoker,
       probe: probeHarnessExecutables,
     };
   },
-  scripted: async () => {
+  simulated: async () => {
     const [
-      { createScriptedInvoker },
-      { probeScriptedHarnessExecutables },
-      { loadScriptedScenario },
+      { createSimulatedInvoker },
+      { probeSimulatedHarnessExecutables },
+      { loadSimulatedScenario },
     ] = await Promise.all([
-      import("./scripted/invoker.js"),
-      import("./scripted/probe.js"),
-      import("./scripted/scenario.js"),
+      import("./adapters/simulated/invoker.js"),
+      import("./adapters/simulated/probe.js"),
+      import("./adapters/simulated/scenario.js"),
     ]);
     return {
-      createInvoker: createScriptedInvoker,
-      probe: probeScriptedHarnessExecutables,
-      loadScenario: loadScriptedScenario,
+      createInvoker: createSimulatedInvoker,
+      probe: probeSimulatedHarnessExecutables,
+      loadScenario: loadSimulatedScenario,
     };
   },
 };

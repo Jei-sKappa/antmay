@@ -6,7 +6,7 @@ import { run } from "../demo/steps.mjs";
  * A stage that keeps working long enough to report that it is still alive.
  * Shows the repeated dim `· still working — elapsed …` line, which an ordinary
  * demo run never reaches because the default interval is five minutes and a
- * scripted stage finishes in well under a second.
+ * simulated stage finishes in well under a second.
  *
  * The interval is set on the hanging stage's own binding in the demo's
  * settings file — the same field a real user would set, not a demo-only hook.

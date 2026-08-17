@@ -51,12 +51,12 @@ export function printUnrestrictedWarning(options: DisplayOptions): void {
 }
 
 /**
- * The developer-only scripted-harness block, printed on new-run and resume
+ * The developer-only simulated-harness block, printed on new-run and resume
  * startup ahead of the ordinary run details block so it reads as one added note
  * before otherwise-unchanged output. Carries the resolved scenario path;
  * logical harness/model stay in the ordinary details block and stage headers.
  */
-export function printScriptedModeStartup(
+export function printSimulatedModeStartup(
   options: DisplayOptions,
   scenarioPath: string,
 ): void {
@@ -66,7 +66,7 @@ export function printScriptedModeStartup(
   emitDev(
     options,
     [
-      paint("Scripted harness", "bold"),
+      paint("Simulated harness", "bold"),
       infoLine(paint, "  ", "enabled", "true", width),
       infoLine(paint, "  ", "config", scenarioPath, width),
     ].join("\n"),
@@ -74,12 +74,12 @@ export function printScriptedModeStartup(
 }
 
 /**
- * The exact prompt submitted to one scripted harness invocation. Printed as
- * developer-only input before the scripted adapter validates or runs the
+ * The exact prompt submitted to one simulated harness invocation. Printed as
+ * developer-only input before the simulated adapter validates or runs the
  * request, so prompt-assembly failures still leave their central evidence on
  * screen without reading as agent output.
  */
-export function printScriptedResolvedPrompt(
+export function printSimulatedResolvedPrompt(
   options: DisplayOptions,
   prompt: string,
 ): void {

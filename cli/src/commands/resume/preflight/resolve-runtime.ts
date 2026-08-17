@@ -29,9 +29,9 @@ export type ResumeRuntimeResult =
 
 /**
  * Enforce the checkpoint's immutable runtime, probe only the current stage's
- * harness, resolve config only through the lazy scripted path, and return the
+ * harness, resolve config only through the lazy simulated path, and return the
  * invoker, optional scenario path, and merged version map. The command owns the
- * scripted-prompt observer; this step never imports or invokes a presenter.
+ * simulated-prompt observer; this step never imports or invokes a presenter.
  */
 export async function resolveResumeRuntime(
   checkpoint: RunCheckpoint,
@@ -40,7 +40,7 @@ export async function resolveResumeRuntime(
   homedir: string | undefined,
   repoRoot: string,
   loader: HarnessRuntimeLoader,
-  onScriptedPrompt: (prompt: string) => void,
+  onSimulatedPrompt: (prompt: string) => void,
 ): Promise<ResumeRuntimeResult> {
   const currentHarness =
     checkpoint.stages[checkpoint.stageIndex]!.binding.agent.harness;
@@ -54,7 +54,7 @@ export async function resolveResumeRuntime(
       harnesses: [currentHarness],
       repoRoot,
       stageIds: checkpoint.stages.map((snapshotted) => snapshotted.id),
-      // Consulted in scripted mode only, so a config-root problem never blocks
+      // Consulted in simulated mode only, so a config-root problem never blocks
       // an otherwise state-only resume.
       configRoot: () => {
         const roots = resolveRoots(env, homedir);
@@ -62,7 +62,7 @@ export async function resolveResumeRuntime(
           ? { ok: true, configRoot: roots.configRoot }
           : { ok: false, message: roots.message };
       },
-      onScriptedPrompt,
+      onSimulatedPrompt,
     },
     loader,
   );

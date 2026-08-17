@@ -525,7 +525,7 @@ describe("the terminal-outcome protocol has one owner", () => {
     // a hand-written copy watching for a string that no longer appears, and
     // nothing fails to build. The Sandcastle completion signals are the sharpest
     // case — the SDK stops recognizing completion, the attempt runs to its idle
-    // timeout — and the scripted catalog's fabricated final messages are worse
+    // timeout — and the simulated catalog's fabricated final messages are worse
     // placed still, since the demo they turn red sits outside `npm run check`.
     //
     // The prefix is held as tightly as the tokens: a copy assembled one
@@ -1227,10 +1227,10 @@ describe("a harness is a provider object, never a literal", () => {
     }
   });
 
-  it("keeps a provider free of I/O, of packages, and of the backends", async () => {
+  it("keeps a provider free of I/O, of packages, and of the adapters", async () => {
     // The prompt renderer imports the registry statically and the engine
     // imports the prompt renderer, so anything a provider loads is loaded on
-    // every run — including a scripted one that must contact no provider.
+    // every run — including a simulated one that must contact no provider.
     for (const module of await productionModules()) {
       if (!module.id.startsWith(PROVIDER_DOMAIN)) continue;
       for (const reference of module.references) {
@@ -1239,7 +1239,7 @@ describe("a harness is a provider object, never a literal", () => {
           `${module.id} imports ${reference.specifier}`,
         ).not.toBeNull();
         expect(
-          /^harness\/(?:backends|scripted)\//.test(reference.target!),
+          /^harness\/adapters\//.test(reference.target!),
           `${module.id} imports ${reference.target}`,
         ).toBe(false);
       }
@@ -1269,19 +1269,19 @@ describe("a harness is a provider object, never a literal", () => {
 describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => {
   /**
    * What resolving a runtime loads: one family's entry points — its invoker
-   * paired with its probe, and, for the scripted family, the read of the live
+   * paired with its probe, and, for the simulated family, the read of the live
    * scenario its invoker is built over.
    */
   const ENTRY_ADAPTERS = [
-    "harness/backends/sandcastle.ts",
-    "harness/backends/probe.ts",
-    "harness/scripted/invoker.ts",
-    "harness/scripted/probe.ts",
-    "harness/scripted/scenario.ts",
+    "harness/adapters/real/sandcastle.ts",
+    "harness/adapters/real/probe.ts",
+    "harness/adapters/simulated/invoker.ts",
+    "harness/adapters/simulated/probe.ts",
+    "harness/adapters/simulated/scenario.ts",
   ];
-  /** The fixed case and effect catalog, internal to the scripted family. */
-  const SCRIPTED_CASES = "harness/scripted/cases.ts";
-  const ADAPTERS = [...ENTRY_ADAPTERS, SCRIPTED_CASES];
+  /** The fixed case and effect catalog, internal to the simulated family. */
+  const SIMULATED_CASES = "harness/adapters/simulated/cases.ts";
+  const ADAPTERS = [...ENTRY_ADAPTERS, SIMULATED_CASES];
   /** The resolver is the one module allowed to name either family. */
   const RESOLVER = "harness/runtime.ts";
 
@@ -1315,8 +1315,8 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
     }
   });
 
-  it("reaches the fixed scripted case catalog through the scripted invoker only", async () => {
-    expect(await importersOf(SCRIPTED_CASES)).toEqual(["harness/scripted/invoker.ts"]);
+  it("reaches the fixed simulated case catalog through the simulated invoker only", async () => {
+    expect(await importersOf(SIMULATED_CASES)).toEqual(["harness/adapters/simulated/invoker.ts"]);
   });
 
   it("keeps dispatch and the commands free of every concrete adapter", async () => {
@@ -1326,7 +1326,7 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
         expect(ADAPTERS, `${id} imports ${target}`).not.toContain(target);
       }
       expect(module.source, `${id} names an adapter factory`).not.toMatch(
-        /\b(?:createSandcastleInvoker|createScriptedInvoker|probeHarnessExecutables|probeScriptedHarnessExecutables)\b/,
+        /\b(?:createSandcastleInvoker|createSimulatedInvoker|probeHarnessExecutables|probeSimulatedHarnessExecutables)\b/,
       );
     }
   });
@@ -1334,7 +1334,7 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
   it("keeps the provider SDK behind the real adapter", async () => {
     for (const module of await productionModules()) {
       const packages = module.references.map((reference) => reference.specifier);
-      if (module.id === "harness/backends/sandcastle.ts") {
+      if (module.id === "harness/adapters/real/sandcastle.ts") {
         expect(packages).toContain("@ai-hero/sandcastle");
         continue;
       }
@@ -1495,12 +1495,12 @@ describe("commands are one sequence over named steps", () => {
     }
   });
 
-  it("lets runtime steps accept only a pass-through scripted-prompt observer", async () => {
+  it("lets runtime steps accept only a pass-through simulated-prompt observer", async () => {
     // The command owns the observer that prints; the step forwards it to the
     // resolver and never defines or invokes presentation of its own.
     for (const id of RUNTIME_STEPS) {
       const source = withoutComments((await moduleNamed(id)).source);
-      expect(source, `${id} accepts the observer`).toMatch(/\bonScriptedPrompt\b/);
+      expect(source, `${id} accepts the observer`).toMatch(/\bonSimulatedPrompt\b/);
       expect(source, `${id} invokes presentation`).not.toMatch(
         /\b(?:print[A-Z]\w*|createTerminalExecutionDisplay)\s*\(/,
       );

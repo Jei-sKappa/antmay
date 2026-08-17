@@ -1,19 +1,19 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { pipelineDocument, scriptedRun } from "../demo/pipeline.mjs";
+import { pipelineDocument, simulatedRun } from "../demo/pipeline.mjs";
 import { action, resume } from "../demo/steps.mjs";
 
 /**
  * A run allocated against a real harness is asked to continue through the
- * scripted one. Ends on the `Run cannot resume` block that names the run,
+ * simulated one. Ends on the `Run cannot resume` block that names the run,
  * states that its runtime is fixed for the run's whole life, and gives the one
  * correction — unset the toggle and resume again — that continues it.
  *
- * The demo injects the scripted toggle into every child CLI process, so that
+ * The demo injects the simulated toggle into every child CLI process, so that
  * toggle is already the mismatch this scenario needs: all it has to supply is a
  * run whose recorded runtime is the real provider. That run is seeded straight
- * into the state root because no demo invocation can produce one. The scripted
+ * into the state root because no demo invocation can produce one. The simulated
  * document below is written for the same reason every resume scenario writes
  * one, and this resume never reads it: the runtime identity is enforced ahead of
  * the live scenario, the probe, the lock, and every mutation, so the seeded
@@ -103,10 +103,10 @@ function seedRealRun(ctx) {
 }
 
 export default {
-  label: "Scripted toggle on a real-harness run — ends on the runtime refusal",
-  note: "Seeds one real-harness run into the state root, because every demo invocation carries the scripted toggle and so can only create a scripted run. Resume then meets that toggle on a run it may not switch.",
+  label: "Simulated toggle on a real-harness run — ends on the runtime refusal",
+  note: "Seeds one real-harness run into the state root, because every demo invocation carries the simulated toggle and so can only create a simulated run. Resume then meets that toggle on a run it may not switch.",
   pipeline: PIPELINE,
-  scenario: scriptedRun(["spec"]),
+  scenario: simulatedRun(["spec"]),
   steps: [
     action("seed a real-harness run into the state root", seedRealRun),
     resume({
@@ -115,7 +115,7 @@ export default {
         "Run cannot resume",
         "Harness runtime identity",
         "This run was started against a real harness",
-        "unset ANTMAY_TEST_ENABLE_SCRIPTED_HARNESS",
+        "unset ANTMAY_SIMULATED_HARNESS",
       ],
     }),
   ],
