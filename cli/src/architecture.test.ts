@@ -1267,7 +1267,7 @@ describe("a harness is a provider object, never a literal", () => {
   });
 });
 
-describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => {
+describe("harness adapter families are separate and load lazily (AC-5.4, AC-5.5, AC-8.4)", () => {
   /**
    * What resolving a runtime loads: one family's entry points — its invoker
    * paired with its probe, and, for the simulated family, the read of the live
@@ -1292,6 +1292,21 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
   ];
   /** The resolver is the one module allowed to name either family. */
   const RESOLVER = "harness/runtime.ts";
+  /**
+   * The two families, by the folder each occupies. Membership is the path rather
+   * than the lists above, so a file added beside an adapter is bound by the
+   * separation rule whatever it is classified as — the toggle included, which
+   * sits in the simulated family's folder without being one of its adapters.
+   */
+  const FAMILIES = [
+    "harness/adapters/real/",
+    "harness/adapters/simulated/",
+  ] as const;
+
+  /** The family a module belongs to, or `null` for one above or outside both. */
+  function familyOf(id: ModuleId): string | null {
+    return FAMILIES.find((family) => id.startsWith(family)) ?? null;
+  }
 
   it("leaves no module under the adapter tree unclassified", async () => {
     // `ADAPTERS` is a hand-written list, so a new file beside it would be bound
@@ -1302,7 +1317,11 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
     expect(present.sort()).toEqual([...ADAPTERS, ...NOT_ADAPTERS].sort());
   });
 
-  it("gives no concrete adapter a loading importer outside its own family", async () => {
+  it("reaches a concrete adapter only through a dynamic import", async () => {
+    // An adapter is what a family costs to load: the provider SDK on one side,
+    // the case catalog on the other. A static import from anywhere outside the
+    // set puts that cost on every invocation, including the ones that resolve
+    // the other family or no runtime at all.
     for (const module of await productionModules()) {
       if (ADAPTERS.includes(module.id)) continue;
       for (const reference of module.references) {
@@ -1312,6 +1331,28 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
           reference.dynamic,
           `${module.id} statically imports ${reference.target}`,
         ).toBe(true);
+      }
+    }
+  });
+
+  it("lets neither adapter family reference the other in any form", async () => {
+    // The families are alternatives, never collaborators: resolving a runtime
+    // selects one and leaves the other unloaded, so a module that names its
+    // sibling is written in terms of something that need not be there beside
+    // it. Whatever both are written in terms of belongs above them instead,
+    // which is what `harness/adapters/probe.ts` is.
+    //
+    // A type-only reference is judged with the rest, unlike in the laziness
+    // rule above. It loads nothing and costs no bundle, but it still makes one
+    // family's declarations the other's to change — and being free at runtime
+    // is exactly why this direction is reached in that form.
+    for (const module of await productionModules()) {
+      const family = familyOf(module.id);
+      if (family === null) continue;
+      for (const reference of module.references) {
+        const target = reference.target === null ? null : familyOf(reference.target);
+        if (target === null) continue;
+        expect(target, `${module.id} references ${reference.target}`).toBe(family);
       }
     }
   });

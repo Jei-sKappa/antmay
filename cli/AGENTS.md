@@ -455,10 +455,11 @@ holds one of the two down.
   with steps forbidden from invoking one another or leaking their leaf
   collaborators back into the orchestrator, phase-specific display consumers, and
   adapter families loaded only through the runtime resolver, with every module
-  under that tree classified as an adapter or as something no family owns. It
-  reads source text, so a static, dynamic, re-export, or type-only import is
-  judged for what it is. When it fails, the boundary moved — argue the
-  direction, do not relax the guard to match the new import.
+  under that tree classified as an adapter or as something no family owns and
+  neither family reaching into the other. It reads source text, so a static,
+  dynamic, re-export, or type-only import is judged for what it is. When it
+  fails, the boundary moved — argue the direction, do not relax the guard to
+  match the new import.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal
