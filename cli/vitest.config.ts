@@ -5,6 +5,10 @@ import path from "node:path";
 
 import { defineConfig } from "vitest/config";
 
+import {
+  isAppleGitStub,
+  resolveExecutableOnPath,
+} from "./src/test-helpers/direct-git.js";
 import { TEMP_ROOT_ENV } from "./src/test-helpers/temp-root.js";
 
 /**
@@ -18,13 +22,18 @@ import { TEMP_ROOT_ENV } from "./src/test-helpers/temp-root.js";
  * paying it thousands of times sets the whole suite's pace.
  *
  * `xcrun --find git` reports the very executable the stub would exec, so putting
- * a link to it first on the workers' `PATH` runs the identical Git — same
- * version, same behavior — without the lookup. It applies only when both report
- * the same version, and any failure to establish that leaves `PATH` untouched:
- * a shortcut that cannot be shown to lead to the same place is not taken.
+ * a link to it first on the workers' `PATH` runs the identical Git without the
+ * lookup. It applies only when `PATH` canonically selects `/usr/bin/git` and
+ * both report the same version. A wrapper or another Git build stays selected,
+ * and any failure to establish the shortcut leaves `PATH` untouched.
  */
 function directGitDirectory(): string | null {
-  if (process.platform !== "darwin") return null;
+  const selectedGit = resolveExecutableOnPath(
+    "git",
+    process.env.PATH,
+    process.cwd(),
+  );
+  if (!isAppleGitStub(process.platform, selectedGit)) return null;
   try {
     const resolved = execFileSync("xcrun", ["--find", "git"], {
       encoding: "utf8",

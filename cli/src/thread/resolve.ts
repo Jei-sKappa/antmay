@@ -58,11 +58,15 @@ async function worktreeRootOf(
     "--show-toplevel",
   ]);
   if (combined.code === 0) {
-    const [isBare = "", topLevel = ""] = combined.stdout
-      .split("\n")
-      .map((line) => line.trim());
-    if (isBare === "false" && topLevel !== "") {
-      return { ok: true, root: topLevel };
+    const separator = combined.stdout.indexOf("\n");
+    if (separator !== -1 && combined.stdout.endsWith("\n")) {
+      const isBare = combined.stdout.slice(0, separator);
+      // Git terminates each emitted value with one newline. Remove exactly that
+      // final delimiter so newlines belonging to the worktree path survive.
+      const topLevel = combined.stdout.slice(separator + 1, -1);
+      if (isBare === "false" && topLevel !== "") {
+        return { ok: true, root: topLevel };
+      }
     }
   }
 

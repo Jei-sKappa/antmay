@@ -51,6 +51,21 @@ describe("AC-5.1: all three forms resolve to the identical canonical result", ()
       threadFolder: folder,
     });
   });
+
+  it("preserves newlines inside the canonical worktree path", async () => {
+    const f = await fixture({ thread: {} });
+    const repoRoot = `${f.root}\ncontinued`;
+    await fs.rename(f.root, repoRoot);
+
+    const folder = f.threadFolder!;
+    const result = await resolveThreadTarget(folder, repoRoot);
+    expect(result).toEqual({
+      ok: true,
+      repoRoot,
+      threadRelPath: `docs/threads/${folder}`,
+      threadFolder: folder,
+    });
+  });
 });
 
 describe("AC-5.2: thread-resolution rejections, each with a distinct message and no writes", () => {
