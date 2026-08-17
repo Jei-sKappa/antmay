@@ -2,30 +2,10 @@ import { execFile } from "node:child_process";
 
 import type { HarnessId } from "../../id.js";
 import { HARNESSES } from "../../providers/index.js";
+import type { ProbeFailure, ProbeResult } from "../probe.js";
 
 /** The `--version` probe timeout, fixed at 10 seconds. */
 const PROBE_TIMEOUT_MS = 10_000;
-
-/**
- * One failing harness probe: the harness that failed, the binary that was
- * probed, and a human-readable reason distinguishing spawn, timeout, signal,
- * exit-code, and empty-output failures.
- */
-export type ProbeFailure = {
-  harness: HarnessId;
-  binary: string;
-  reason: string;
-};
-
-/**
- * The aggregate result of probing every requested harness executable. On
- * success, `versions` carries each requested harness's trimmed `--version`
- * line. On failure, `failures` lists every harness that failed, each diagnosed
- * distinctly.
- */
-export type ProbeResult =
-  | { ok: true; versions: Partial<Record<HarnessId, string>> }
-  | { ok: false; failures: ProbeFailure[] };
 
 /** The normalized outcome of running one `<binary> --version` invocation. */
 export type ProbeExecResult =

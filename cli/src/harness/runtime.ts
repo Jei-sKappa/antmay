@@ -1,5 +1,5 @@
 import type { HarnessRuntimeIdentity } from "../state/checkpoint/types.js";
-import type { ProbeFailure, ProbeResult } from "./adapters/real/probe.js";
+import type { HarnessExecutableProbe, ProbeFailure } from "./adapters/probe.js";
 import type {
   LoadSimulatedScenarioResult,
   SimulatedScenario,
@@ -10,16 +10,6 @@ import {
 } from "./adapters/simulated/toggle.js";
 import type { HarnessId } from "./id.js";
 import type { HarnessInvoker } from "./types.js";
-
-/**
- * Probe every requested logical harness's executable. One runtime's invoker and
- * probe always come from the same adapter family, so this is the seam that moves
- * with the invoker rather than a dependency of its own.
- */
-export type HarnessExecutableProbe = (
-  harnesses: HarnessId[],
-  repoRoot: string,
-) => Promise<ProbeResult>;
 
 /** The real provider adapter family: the Sandcastle invoker and its own probe. */
 export type RealHarnessAdapters = {

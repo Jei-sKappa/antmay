@@ -3,12 +3,14 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { ProbeResult } from "./adapters/real/probe.js";
+import type {
+  HarnessExecutableProbe,
+  ProbeResult,
+} from "./adapters/probe.js";
 import type { HarnessId } from "./id.js";
 import {
   productionHarnessRuntimeLoader,
   resolveHarnessRuntime,
-  type HarnessExecutableProbe,
   type HarnessRuntimeLoader,
   type HarnessRuntimeRequest,
 } from "./runtime.js";

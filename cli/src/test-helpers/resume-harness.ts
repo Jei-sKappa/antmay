@@ -6,12 +6,12 @@ import { Writable } from "node:stream";
 import { expect } from "vitest";
 
 import { EXIT_SIGINT } from "../cli/exit-codes.js";
-import type { ProbeResult } from "../harness/adapters/real/probe.js";
-import type { HarnessId } from "../harness/id.js";
 import type {
   HarnessExecutableProbe,
-  HarnessRuntimeLoader,
-} from "../harness/runtime.js";
+  ProbeResult,
+} from "../harness/adapters/probe.js";
+import type { HarnessId } from "../harness/id.js";
+import type { HarnessRuntimeLoader } from "../harness/runtime.js";
 import { createSimulatedInvoker } from "../harness/adapters/simulated/invoker.js";
 import { probeSimulatedHarnessExecutables } from "../harness/adapters/simulated/probe.js";
 import type { HarnessInvoker } from "../harness/types.js";

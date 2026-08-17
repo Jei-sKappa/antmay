@@ -15,7 +15,7 @@ import type {
   ExecutionResult,
 } from "../execution/engine.js";
 import type { HarnessId } from "../harness/id.js";
-import type { HarnessExecutableProbe } from "../harness/runtime.js";
+import type { HarnessExecutableProbe } from "../harness/adapters/probe.js";
 import { SIMULATED_SCENARIO_FILENAME } from "../harness/adapters/simulated/scenario.js";
 import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/toggle.js";
 import { SignalInterruption } from "../runner/signals.js";

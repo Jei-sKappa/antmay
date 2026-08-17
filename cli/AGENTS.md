@@ -318,13 +318,15 @@ as any other.
   probe) and the developer stand-in under `adapters/simulated/` — which the
   resolver pairs and loads one of. Availability belongs to the family rather
   than the harness, because the simulated family establishes it without
-  contacting anything. Both families are ordinary modules here, the developer
-  one included: a toggle picks it while the process is running, so the resolver
-  must be able to load it and the bundle carries it. That is also what
-  typechecks it against `HarnessInvoker`, builds it for the demo, and holds it
-  to the guards, so a change to the request, outcome, or stage-context shape
-  breaks the fake in the same compile as the real adapter. Across both axes,
-  **which harnesses exist** is `id.ts`: the id union, the ids
+  contacting anything. What a probe answers is declared once above both of
+  them, in `adapters/probe.ts`, so neither family's probe nor the resolver
+  reads the other family's file for it. Both families are ordinary modules
+  here, the developer one included: a toggle picks it while the process is
+  running, so the resolver must be able to load it and the bundle carries it.
+  That is also what typechecks it against `HarnessInvoker`, builds it for the
+  demo, and holds it to the guards, so a change to the request, outcome, or
+  stage-context shape breaks the fake in the same compile as the real adapter.
+  Across both axes, **which harnesses exist** is `id.ts`: the id union, the ids
   themselves, and the one predicate that narrows an untrusted value into the
   union. The settings parser and checkpoint validation reach it rather than
   `provider.ts`, so a module needing only which ids exist does not depend on the
@@ -452,10 +454,11 @@ holds one of the two down.
   preflight step plus the run-allocation and resume-acquisition collaborators,
   with steps forbidden from invoking one another or leaking their leaf
   collaborators back into the orchestrator, phase-specific display consumers, and
-  adapter families loaded only through the runtime resolver. It reads source
-  text, so a static, dynamic, re-export, or type-only import is judged for what
-  it is. When it fails, the boundary moved — argue the direction, do not relax
-  the guard to match the new import.
+  adapter families loaded only through the runtime resolver, with every module
+  under that tree classified as an adapter or as something no family owns. It
+  reads source text, so a static, dynamic, re-export, or type-only import is
+  judged for what it is. When it fails, the boundary moved — argue the
+  direction, do not relax the guard to match the new import.
 - **The workspace lock is never reclaimed automatically.** Do not add logic
   that silently removes another executor's lock.
 - **Every distinct terminal rendering has a demo scenario.** Give the terminal

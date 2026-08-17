@@ -14,7 +14,7 @@ import type {
   ExecutionEntry,
   ExecutionResult,
 } from "../execution/engine.js";
-import type { HarnessExecutableProbe } from "../harness/runtime.js";
+import type { HarnessExecutableProbe } from "../harness/adapters/probe.js";
 import { acquireWorkspaceLock } from "../state/lock.js";
 import { writeCheckpoint } from "../state/persist.js";
 import { runDirectoryFor } from "../state/runs.js";

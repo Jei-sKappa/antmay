@@ -588,6 +588,7 @@ describe("a vocabulary module declares and does nothing", () => {
       id: "config/binding/types.ts",
       anchor: /^export type ResolvedStageBinding\b/m,
     },
+    { id: "harness/adapters/probe.ts", anchor: /^export type ProbeResult\b/m },
   ];
 
   /** The three forms a declarations-only module is made of, and their closers. */
@@ -1282,8 +1283,24 @@ describe("harness adapter families load lazily (AC-5.4, AC-5.5, AC-8.4)", () => 
   /** The fixed case and effect catalog, internal to the simulated family. */
   const SIMULATED_CASES = "harness/adapters/simulated/cases.ts";
   const ADAPTERS = [...ENTRY_ADAPTERS, SIMULATED_CASES];
+  /** Every module under the adapter tree that is not a concrete adapter. */
+  const NOT_ADAPTERS = [
+    // Declarations only, and both families' probes are written in terms of it.
+    "harness/adapters/probe.ts",
+    // Read before a family is selected, so the resolver imports it statically.
+    "harness/adapters/simulated/toggle.ts",
+  ];
   /** The resolver is the one module allowed to name either family. */
   const RESOLVER = "harness/runtime.ts";
+
+  it("leaves no module under the adapter tree unclassified", async () => {
+    // `ADAPTERS` is a hand-written list, so a new file beside it would be bound
+    // by none of the rules below and nothing would say whether that was meant.
+    const present = (await productionModules())
+      .map((module) => module.id)
+      .filter((id) => id.startsWith("harness/adapters/"));
+    expect(present.sort()).toEqual([...ADAPTERS, ...NOT_ADAPTERS].sort());
+  });
 
   it("gives no concrete adapter a loading importer outside its own family", async () => {
     for (const module of await productionModules()) {

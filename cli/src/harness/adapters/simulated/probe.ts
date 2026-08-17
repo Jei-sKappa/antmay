@@ -1,5 +1,5 @@
-import type { ProbeResult } from "../real/probe.js";
 import type { HarnessId } from "../../id.js";
+import type { ProbeResult } from "../probe.js";
 
 /** Deterministic version observation returned for every logical harness. */
 export const SIMULATED_PROBE_VERSION = "simulated-harness 1.0.0";

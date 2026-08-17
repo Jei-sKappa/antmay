@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { HarnessId } from "../harness/id.js";
-import type { HarnessExecutableProbe } from "../harness/runtime.js";
+import type { HarnessExecutableProbe } from "../harness/adapters/probe.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
 import {
   DEFAULT_STAGE_IDS,
