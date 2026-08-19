@@ -1,6 +1,9 @@
 import type { StageDisposition } from "../../display/types.js";
 import type {
   AttemptRecord,
+  DoneTerminalResult,
+  ExecutingAttemptRecord,
+  QueueObservation,
   TerminalResult,
   WaitingInfo,
 } from "../../state/checkpoint/types.js";
@@ -26,14 +29,14 @@ import type { Transition } from "../run-state.js";
 /** Everything the three endings share about the attempt they are ending. */
 export type SettlingAttempt = {
   /** The executing record the cursor holds, which every settlement amends. */
-  executing: AttemptRecord;
+  executing: ExecutingAttemptRecord;
   session: { id: string } | undefined;
   endedAt: string;
   durationMs: number;
-  terminalResult: TerminalResult | null;
   /** The tip observed once this attempt settled, boundary commit included. */
   observedHead: string;
-  pendingFiles: string[];
+  /** What the post-attempt queue scan observed, or that it could not run. */
+  queues: QueueObservation;
 };
 
 /**
@@ -42,10 +45,15 @@ export type SettlingAttempt = {
  * here re-derives either.
  */
 export type Settlement =
-  | { kind: "advanced" }
-  | { kind: "done-pending-queues"; waiting: WaitingInfo }
+  | { kind: "advanced"; terminalResult: DoneTerminalResult }
+  | {
+      kind: "done-pending-queues";
+      terminalResult: DoneTerminalResult;
+      waiting: WaitingInfo;
+    }
   | {
       kind: "stopped";
+      terminalResult: TerminalResult | null;
       waiting: WaitingInfo;
       /** Whether a signal-caused abort is what ended the attempt. */
       aborted: boolean;
@@ -53,34 +61,27 @@ export type Settlement =
       disposition: StageDisposition;
     };
 
-/** What a settled record carries whichever ending produced it. */
-function settledFields(settling: SettlingAttempt) {
-  return {
-    ...settling.executing,
-    endedAt: settling.endedAt,
-    terminalResult: settling.terminalResult,
-  };
-}
-
 /**
- * What each ending records and where it leaves the cursor. The three shapes
- * differ in exactly one field each, and they sit together so that difference is
- * readable: an advanced attempt observed no pending queue and records no such
- * key, which is not the same as recording an empty one.
+ * What each ending records and where it leaves the cursor. Every ending amends
+ * the same settlement onto the executing record and then states what its own
+ * disposition carries: the advancing verdict for the two that reached one, and
+ * the failure the pause leads with for the one that did not.
  */
 function settledBy(
   settling: SettlingAttempt,
   settlement: Settlement,
 ): { attempt: AttemptRecord; movement: Transition } {
+  const settled = {
+    ...settling.executing,
+    endedAt: settling.endedAt,
+    headAfterAttempt: settling.observedHead,
+    queues: settling.queues,
+  };
   switch (settlement.kind) {
     case "advanced":
       return {
         attempt: withAgentSession(
-          {
-            ...settledFields(settling),
-            result: "done",
-            headAfterAttempt: settling.observedHead,
-          },
+          { ...settled, result: "done", terminalResult: settlement.terminalResult },
           settling.session,
         ),
         movement: { kind: "advance" },
@@ -88,12 +89,7 @@ function settledBy(
     case "done-pending-queues":
       return {
         attempt: withAgentSession(
-          {
-            ...settledFields(settling),
-            result: "done",
-            pendingFiles: settling.pendingFiles,
-            headAfterAttempt: settling.observedHead,
-          },
+          { ...settled, result: "done", terminalResult: settlement.terminalResult },
           settling.session,
         ),
         movement: { kind: "pause", waiting: settlement.waiting },
@@ -106,13 +102,10 @@ function settledBy(
       return {
         attempt: withAgentSession(
           {
-            ...settledFields(settling),
+            ...settled,
             result: settlement.aborted ? "interrupted" : "waiting",
-            ...(settling.pendingFiles.length > 0
-              ? { pendingFiles: settling.pendingFiles }
-              : {}),
+            terminalResult: settlement.terminalResult,
             failure: { kind: governing.kind, message: governing.message },
-            headAfterAttempt: settling.observedHead,
           },
           settling.session,
         ),

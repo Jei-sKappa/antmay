@@ -1,4 +1,7 @@
-import type { AttemptRecord } from "../../state/checkpoint/types.js";
+import type {
+  AttemptRecord,
+  ExecutingAttemptRecord,
+} from "../../state/checkpoint/types.js";
 import { attemptLogPaths, createAttemptLog } from "../../state/logs.js";
 import type { AttemptLogHeader } from "../../state/logs.js";
 import type { StageContext } from "../context.js";
@@ -24,7 +27,7 @@ import { commitCursor, fatal, refused } from "../result.js";
  */
 export type ReservedAttempt = {
   /** The executing record the checkpoint holds. */
-  record: AttemptRecord;
+  record: ExecutingAttemptRecord;
   /** The attempt log, created with its header and nothing else yet. */
   logAbsPath: string;
 };
@@ -68,7 +71,7 @@ export async function reserveAttempt(
   );
   const startedAt = ctx.clock().toISOString();
 
-  const executingAttempt: AttemptRecord = {
+  const executingAttempt: ExecutingAttemptRecord = {
     attempt: attemptNumber,
     stageIndex,
     stageId: stage.id,

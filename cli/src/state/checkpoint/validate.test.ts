@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { governedBy } from "../../test-helpers/waiting.js";
 import type {
+  AttemptIdentity,
   AttemptRecord,
+  AttemptSettlement,
+  QueueObservation,
   RunCheckpoint,
   WaitingRecovery,
 } from "./types.js";
@@ -89,6 +92,8 @@ function validCheckpoint(): RunCheckpoint {
         endedAt: "2026-07-23T12:15:30.000Z",
         result: "waiting",
         terminalResult: { token: "BLOCKED", candidateLine: "Outcome: BLOCKED — x", detail: "blocked" },
+        failure: { kind: "outcome-blocked", message: "The spec stage reported BLOCKED." },
+        queues: { kind: "observed", pendingFiles: [] },
         headAtStart: "abc123",
         headAfterAttempt: "abc123",
         logPath: "logs/00-spec-attempt-01.log",
@@ -102,40 +107,94 @@ function validCheckpoint(): RunCheckpoint {
   };
 }
 
-/** A settled current-stage attempt that reported DONE, which the three
- * attempt-referencing recoveries are all about. */
-function doneAttempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
+/** One arm of the attempt union, addressed by the disposition that names it. */
+type AttemptOf<R extends AttemptRecord["result"]> = Extract<
+  AttemptRecord,
+  { result: R }
+>;
+
+/** What every fixture attempt of the first stage carries. */
+function attemptIdentity(): AttemptIdentity {
   return {
     attempt: 1,
     stageIndex: 0,
     stageId: "spec",
     startedAt: "2026-07-23T12:15:01.000Z",
+    headAtStart: "aaa111",
+    logPath: "logs/00-spec-attempt-01.log",
+  };
+}
+
+/** The settlement every fixture attempt that reached an ending records. */
+function attemptSettlement(): AttemptSettlement {
+  return {
     endedAt: "2026-07-23T12:15:30.000Z",
+    headAfterAttempt: "bbb222",
+    queues: { kind: "observed", pendingFiles: [] },
+  };
+}
+
+/** A settled current-stage attempt that reported DONE and is still holding it,
+ * which the three attempt-referencing recoveries are all about. */
+function doneAttempt(overrides: Partial<AttemptOf<"waiting">> = {}): AttemptRecord {
+  return {
+    ...attemptIdentity(),
+    ...attemptSettlement(),
     result: "waiting",
     terminalResult: { token: "DONE", candidateLine: "Outcome: DONE", detail: "done" },
-    headAtStart: "aaa111",
-    headAfterAttempt: "bbb222",
-    logPath: "logs/00-spec-attempt-01.log",
+    failure: { kind: "git-policy-violation", message: "The boundary was refused." },
+    ...overrides,
+  };
+}
+
+/** The same attempt once a finalization flipped it to the `done` disposition. */
+function finalizedAttempt(
+  overrides: Partial<AttemptOf<"done">> = {},
+): AttemptRecord {
+  return {
+    ...attemptIdentity(),
+    ...attemptSettlement(),
+    result: "done",
+    terminalResult: { token: "DONE", candidateLine: "Outcome: DONE", detail: "done" },
+    ...overrides,
+  };
+}
+
+/** An attempt a signal or an abandoned executor ended before any verdict. */
+function interruptedAttempt(
+  overrides: Partial<AttemptOf<"interrupted">> = {},
+): AttemptRecord {
+  return {
+    ...attemptIdentity(),
+    ...attemptSettlement(),
+    result: "interrupted",
+    terminalResult: null,
+    queues: { kind: "unavailable" },
+    failure: { kind: "interrupted", message: "The attempt was interrupted." },
     ...overrides,
   };
 }
 
 /**
- * The same attempt while it is still live: executing, carrying neither an ending
- * nor a post-attempt observation because it has reached neither. Both keys are
- * absent rather than present and undefined, which is what a live attempt looks
- * like once serialized.
+ * The same attempt while it is still live: executing, carrying neither an ending,
+ * nor a post-attempt `HEAD` observation, nor a queue observation, because it has
+ * reached none of the three.
  */
-function liveAttempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
-  const { endedAt: _ending, headAfterAttempt: _observed, ...live } = doneAttempt();
-  return { ...live, result: "executing", terminalResult: null, ...overrides };
+function liveAttempt(
+  overrides: Partial<AttemptOf<"executing">> = {},
+): AttemptRecord {
+  return {
+    ...attemptIdentity(),
+    result: "executing",
+    terminalResult: null,
+    ...overrides,
+  };
 }
 
 /** A newer current-stage failure that makes any reference to attempt 1 stale. */
 function laterBlockedAttempt(): AttemptRecord {
   return doneAttempt({
     attempt: 2,
-    result: "waiting",
     terminalResult: {
       token: "BLOCKED",
       candidateLine: "Outcome: BLOCKED — later attempt",
@@ -206,8 +265,11 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
     const result = validateCheckpoint(validCheckpoint());
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.attempts[0]!.headAtStart).toBe("abc123");
-      expect(result.checkpoint.attempts[0]!.headAfterAttempt).toBe("abc123");
+      const settled = result.checkpoint.attempts[0]!;
+      expect(settled.headAtStart).toBe("abc123");
+      expect(settled.result === "executing" ? null : settled.headAfterAttempt).toBe(
+        "abc123",
+      );
       expect(result.checkpoint.observedHarnessVersions).toEqual({
         codex: "codex 1.0.0",
         "claude-code": "claude 2.0.0",
@@ -515,7 +577,7 @@ function recoveryMultiFaultCheckpoint(): {
         attempt: { stageIndex: 0, attempt: 2 },
         queueResolution: "advance",
       },
-      [doneAttempt({ result: "done" })],
+      [finalizedAttempt()],
     ),
     diagnostics: [
       "waiting.recovery.attempt names no recorded attempt (stage 0, attempt 2).",
@@ -692,15 +754,12 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
   });
 
   it("accepts a completed run at stageIndex === stage count", () => {
-    const doc = validCheckpoint();
-    doc.condition = "completed";
-    doc.waiting = null;
-    doc.stageIndex = 2;
-    doc.attempts[0]!.result = "done";
-    doc.attempts[0]!.terminalResult = {
-      token: "DONE",
-      candidateLine: "Outcome: DONE",
-      detail: "ok",
+    const doc: RunCheckpoint = {
+      ...validCheckpoint(),
+      condition: "completed",
+      waiting: null,
+      stageIndex: 2,
+      attempts: [finalizedAttempt()],
     };
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
@@ -739,22 +798,22 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
   });
 
   it("requires exactly the final attempt executing iff executing", () => {
-    const doc = validCheckpoint();
-    doc.condition = "executing";
-    doc.waiting = null;
-    doc.attempts[0]!.result = "executing";
-    doc.attempts[0]!.terminalResult = null;
-    delete doc.attempts[0]!.headAfterAttempt;
+    const doc: RunCheckpoint = {
+      ...validCheckpoint(),
+      condition: "executing",
+      waiting: null,
+      attempts: [liveAttempt()],
+    };
     const ok = validateCheckpoint(doc);
     expect(ok.ok).toBe(true);
 
-    const bad = validCheckpoint();
-    bad.condition = "ready";
-    bad.waiting = null;
-    bad.stageIndex = 1;
-    bad.attempts[0]!.result = "executing";
-    bad.attempts[0]!.terminalResult = null;
-    delete bad.attempts[0]!.headAfterAttempt;
+    const bad: RunCheckpoint = {
+      ...validCheckpoint(),
+      condition: "ready",
+      waiting: null,
+      stageIndex: 1,
+      attempts: [liveAttempt()],
+    };
     const result = validateCheckpoint(bad);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((e) => /no attempt with result "executing"/.test(e))).toBe(true);
@@ -1041,7 +1100,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
           kind: "interrupted",
           message: "The harness attempt was interrupted by a signal.",
         }),
-        attempts: [doneAttempt({ result: "interrupted", terminalResult: null })],
+        attempts: [interruptedAttempt()],
       },
       {
         ...validCheckpoint(),
@@ -1049,7 +1108,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
         condition: "completed",
         stageIndex: 2,
         waiting: null,
-        attempts: [doneAttempt({ result: "done" })],
+        attempts: [finalizedAttempt()],
       },
     ];
     for (const doc of transitions) {
@@ -1080,7 +1139,7 @@ describe("validateCheckpoint — waiting recovery round trips (AC-2.1)", () => {
     {
       name: "resume-finalized-done",
       checkpoint: () =>
-        withRecovery(RESUME_FINALIZED, [doneAttempt({ result: "done" })]),
+        withRecovery(RESUME_FINALIZED, [finalizedAttempt()]),
     },
     { name: "recheck-stage-contract", checkpoint: () => withRecovery(RECHECK_CONTRACT) },
     { name: "retry-git-finalization", checkpoint: () => withRecovery(RETRY_GIT) },
@@ -1142,7 +1201,7 @@ describe("validateCheckpoint — waiting recovery round trips (AC-2.1)", () => {
       pausedAtHead: "ccc333",
     };
     const doc = withRecovery(recovery, [
-      doneAttempt({ result: "done" }),
+      finalizedAttempt(),
       doneAttempt({
         stageIndex: 1,
         stageId: "plan-strict",
@@ -1199,7 +1258,7 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       name: "a finalized-DONE recovery that references an older matching attempt",
       document: () =>
         withRecovery(RESUME_FINALIZED, [
-          doneAttempt({ result: "done" }),
+          finalizedAttempt(),
           laterBlockedAttempt(),
         ]),
       error: /must name the final attempt in the ordered history/,
@@ -1239,7 +1298,7 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       name: "a queue resolution the current stage does not declare",
       document: () =>
         withRecovery({ ...RESUME_FINALIZED, queueResolution: "advance" }, [
-          doneAttempt({ result: "done" }),
+          finalizedAttempt(),
         ]),
       error: /does not match the current stage's snapshotted resolution/,
     },
@@ -1289,7 +1348,7 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       name: "a pause-time HEAD on a resume-finalized-done recovery",
       document: () =>
         withRecovery({ ...RESUME_FINALIZED, pausedAtHead: "ccc333" } as never, [
-          doneAttempt({ result: "done" }),
+          finalizedAttempt(),
         ]),
       error: /pausedAtHead is not permitted on a "resume-finalized-done" recovery/,
     },
@@ -1326,7 +1385,7 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       name: "an arbitrary field on a resume-finalized-done recovery",
       document: () =>
         withRecovery({ ...RESUME_FINALIZED, legacyCursor: "old" } as never, [
-          doneAttempt({ result: "done" }),
+          finalizedAttempt(),
         ]),
       error:
         /legacyCursor is not permitted on a "resume-finalized-done" recovery/,
@@ -1379,24 +1438,183 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
     };
     expect(validateCheckpoint(JSON.parse(JSON.stringify(executing))).ok).toBe(true);
 
+    const observed = liveAttempt() as Record<string, unknown>;
+    observed.headAfterAttempt = "bbb222";
     const settledLive = validateCheckpoint(
-      JSON.parse(
-        JSON.stringify({
-          ...executing,
-          attempts: [
-            liveAttempt({ headAfterAttempt: "bbb222" }),
-          ],
-        }),
-      ),
+      JSON.parse(JSON.stringify({ ...executing, attempts: [observed] })),
     );
     expect(settledLive.ok).toBe(false);
     if (!settledLive.ok) {
       expect(
         settledLive.errors.some((e) =>
-          /headAfterAttempt is not permitted while the attempt is executing/.test(e),
+          /headAfterAttempt is not permitted on an attempt with result "executing"/.test(
+            e,
+          ),
         ),
       ).toBe(true);
     }
+  });
+});
+
+describe("validateCheckpoint — the attempt's disposition decides its fields", () => {
+  /** A waiting document whose sole attempt is the untrusted value given. */
+  function withAttempt(attempt: unknown): unknown {
+    return { ...withRecovery(RETRY_GIT), attempts: [attempt] };
+  }
+
+  const cases: Array<{ name: string; document: () => unknown; error: RegExp }> = [
+    {
+      name: "a settled attempt carrying no queue observation",
+      document: () => {
+        const attempt = doneAttempt() as Record<string, unknown>;
+        delete attempt.queues;
+        return withAttempt(attempt);
+      },
+      error: /attempts\[0\]\.queues is required on a settled attempt/,
+    },
+    {
+      name: "an observation naming neither of the two cases",
+      document: () => withAttempt(doneAttempt({ queues: { kind: "guessed" } as never })),
+      error: /attempts\[0\]\.queues\.kind must be "observed" or "unavailable"/,
+    },
+    {
+      name: "an unavailable observation carrying a file list",
+      document: () =>
+        withAttempt(
+          doneAttempt({
+            queues: { kind: "unavailable", pendingFiles: [] } as never,
+          }),
+        ),
+      error:
+        /attempts\[0\]\.queues\.pendingFiles is not permitted on an unavailable queue observation/,
+    },
+    {
+      name: "an observed list that is not sorted",
+      document: () =>
+        withAttempt(
+          doneAttempt({
+            queues: { kind: "observed", pendingFiles: ["b.md", "a.md"] },
+          }),
+        ),
+      error: /attempts\[0\]\.queues\.pendingFiles must be lexically sorted/,
+    },
+    {
+      name: "an observed list holding the same path twice",
+      document: () =>
+        withAttempt(
+          doneAttempt({
+            queues: { kind: "observed", pendingFiles: ["a.md", "a.md"] },
+          }),
+        ),
+      error: /attempts\[0\]\.queues\.pendingFiles must not contain duplicate paths/,
+    },
+    {
+      name: "an executing attempt carrying a queue observation at all",
+      document: () => {
+        const attempt = liveAttempt() as Record<string, unknown>;
+        attempt.queues = { kind: "observed", pendingFiles: [] };
+        return {
+          ...validCheckpoint(),
+          condition: "executing",
+          waiting: null,
+          attempts: [attempt],
+        };
+      },
+      error:
+        /attempts\[0\]\.queues is not permitted on an attempt with result "executing"/,
+    },
+    {
+      name: "an executing attempt carrying a terminal result",
+      document: () => {
+        const attempt = liveAttempt() as Record<string, unknown>;
+        attempt.terminalResult = {
+          token: "DONE",
+          candidateLine: "Outcome: DONE",
+          detail: "",
+        };
+        return {
+          ...validCheckpoint(),
+          condition: "executing",
+          waiting: null,
+          attempts: [attempt],
+        };
+      },
+      error:
+        /attempts\[0\]\.terminalResult must be null while the attempt is executing/,
+    },
+    {
+      name: "a done attempt whose terminal result is null",
+      document: () =>
+        withAttempt({ ...finalizedAttempt(), terminalResult: null }),
+      error: /attempts\[0\] is "done" but does not carry a parsed DONE outcome/,
+    },
+    {
+      name: "a done attempt whose terminal token is not the advancing one",
+      document: () =>
+        withAttempt({
+          ...finalizedAttempt(),
+          terminalResult: {
+            token: "BLOCKED",
+            candidateLine: "Outcome: BLOCKED",
+            detail: "",
+          },
+        }),
+      error: /attempts\[0\] is "done" but does not carry a parsed DONE outcome/,
+    },
+    {
+      name: "a done attempt carrying a failure it has none of",
+      document: () =>
+        withAttempt({
+          ...finalizedAttempt(),
+          failure: { kind: "outcome-blocked", message: "x" },
+        }),
+      error:
+        /attempts\[0\]\.failure is not permitted on an attempt with result "done"/,
+    },
+    {
+      name: "a waiting attempt carrying no failure",
+      document: () => {
+        const attempt = doneAttempt() as Record<string, unknown>;
+        delete attempt.failure;
+        return withAttempt(attempt);
+      },
+      error:
+        /attempts\[0\]\.failure is required on an attempt with result "waiting"/,
+    },
+    {
+      name: "a failure naming no known waiting kind",
+      document: () =>
+        withAttempt(
+          doneAttempt({ failure: { kind: "exploded" as never, message: "x" } }),
+        ),
+      error: /attempts\[0\]\.failure\.kind must be a known waiting kind/,
+    },
+  ];
+
+  for (const testCase of cases) {
+    it(`rejects ${testCase.name}`, () => {
+      const result = validateCheckpoint(
+        JSON.parse(JSON.stringify(testCase.document())),
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.errors.some((e) => testCase.error.test(e))).toBe(true);
+      }
+    });
+  }
+
+  it("accepts an unavailable observation on a settled attempt", () => {
+    const doc = withAttempt(doneAttempt({ queues: { kind: "unavailable" } }));
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok ? [] : result.errors).toEqual([]);
+  });
+
+  it("accepts an observed observation with an empty list", () => {
+    const doc = withAttempt(
+      doneAttempt({ queues: { kind: "observed", pendingFiles: [] } }),
+    );
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
+    expect(result.ok ? [] : result.errors).toEqual([]);
   });
 });
 
@@ -1404,7 +1622,6 @@ describe("validateCheckpoint — recovery regressions the audit found accepted (
   it("rejects a saved-DONE recovery whose referenced attempt reported BLOCKED", () => {
     const doc = withRecovery(RESUME_FINALIZED, [
       doneAttempt({
-        result: "waiting",
         terminalResult: {
           token: "BLOCKED",
           candidateLine: "Outcome: BLOCKED — needs a human",

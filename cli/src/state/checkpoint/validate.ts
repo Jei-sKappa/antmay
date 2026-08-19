@@ -314,6 +314,112 @@ function validateSortedUniquePending(
   }
 }
 
+/** The keys an attempt carries whatever its disposition. */
+const ATTEMPT_COMMON_KEYS: readonly string[] = [
+  "attempt",
+  "stageIndex",
+  "stageId",
+  "startedAt",
+  "headAtStart",
+  "logPath",
+  "agentSession",
+  "result",
+  "terminalResult",
+];
+
+/** The keys an attempt that reached an ending carries beyond those. */
+const ATTEMPT_SETTLEMENT_KEYS: readonly string[] = [
+  "endedAt",
+  "headAfterAttempt",
+  "queues",
+];
+
+/**
+ * Validate a settled attempt's post-attempt queue observation. The two cases
+ * carry different data and neither may carry the other's: an unavailable scan
+ * reporting a file list would be the conflation the explicit value exists to
+ * end.
+ */
+function validateQueueObservation(
+  value: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (!isPlainObject(value)) {
+    errors.push(`${label} must be an object.`);
+    return;
+  }
+  if (value.kind === "unavailable") {
+    validateAllowedKeys(
+      value,
+      label,
+      ["kind"],
+      errors,
+      "on an unavailable queue observation",
+    );
+    return;
+  }
+  if (value.kind === "observed") {
+    validateAllowedKeys(
+      value,
+      label,
+      ["kind", "pendingFiles"],
+      errors,
+      "on an observed queue observation",
+    );
+    validateSortedUniquePending(value.pendingFiles, `${label}.pendingFiles`, errors);
+    return;
+  }
+  errors.push(`${label}.kind must be "observed" or "unavailable".`);
+}
+
+/** Validate what a settled attempt records beyond its identity. */
+function validateAttemptSettlement(
+  value: Record<string, unknown>,
+  label: string,
+  errors: string[],
+): void {
+  if (!isIsoUtc(value.endedAt)) {
+    errors.push(
+      `${label}.endedAt must be an ISO-8601 UTC timestamp on a settled attempt.`,
+    );
+  }
+  if (!isNonEmptyString(value.headAfterAttempt)) {
+    errors.push(
+      `${label}.headAfterAttempt must be a commit string on a settled attempt.`,
+    );
+  }
+  if (value.queues === undefined) {
+    errors.push(`${label}.queues is required on a settled attempt.`);
+  } else {
+    validateQueueObservation(value.queues, `${label}.queues`, errors);
+  }
+}
+
+/** Validate the failure a non-DONE settled attempt reports about itself. */
+function validateAttemptFailure(
+  value: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (!isPlainObject(value)) {
+    errors.push(`${label} must be an object.`);
+    return;
+  }
+  validateAllowedKeys(value, label, ["kind", "message"], errors);
+  if (typeof value.kind !== "string" || !WAITING_KINDS.has(value.kind)) {
+    errors.push(`${label}.kind must be a known waiting kind.`);
+  }
+  if (typeof value.message !== "string") {
+    errors.push(`${label}.message must be a string.`);
+  }
+}
+
+/**
+ * Validate one attempt: its identity, then exactly what its disposition
+ * declares. The `result` is the discriminant, so an unrecognized one leaves
+ * nothing further to check — every remaining field belongs to an arm.
+ */
 function validateAttempt(value: unknown, label: string, errors: string[]): void {
   if (!isPlainObject(value)) {
     errors.push(`${label} must be an object.`);
@@ -339,31 +445,11 @@ function validateAttempt(value: unknown, label: string, errors: string[]): void 
   if (!isIsoUtc(value.startedAt)) {
     errors.push(`${label}.startedAt must be an ISO-8601 UTC timestamp.`);
   }
-  if (value.endedAt !== undefined && !isIsoUtc(value.endedAt)) {
-    errors.push(`${label}.endedAt must be an ISO-8601 UTC timestamp.`);
+  if (!isNonEmptyString(value.headAtStart)) {
+    errors.push(`${label}.headAtStart must be a commit string.`);
   }
-  if (typeof value.result !== "string" || !ATTEMPT_RESULTS.has(value.result)) {
-    errors.push(`${label}.result must be a known attempt result.`);
-  }
-  if (!("terminalResult" in value)) {
-    errors.push(`${label}.terminalResult is required (object or null).`);
-  } else {
-    validateTerminalResult(value.terminalResult, `${label}.terminalResult`, errors);
-  }
-  if (value.pendingFiles !== undefined) {
-    validateSortedUniquePending(value.pendingFiles, `${label}.pendingFiles`, errors);
-  }
-  if (value.failure !== undefined) {
-    if (!isPlainObject(value.failure)) {
-      errors.push(`${label}.failure must be an object.`);
-    } else {
-      if (!isNonEmptyString(value.failure.kind)) {
-        errors.push(`${label}.failure.kind must be a non-empty string.`);
-      }
-      if (typeof value.failure.message !== "string") {
-        errors.push(`${label}.failure.message must be a string.`);
-      }
-    }
+  if (!isNormalizedRelPosix(value.logPath)) {
+    errors.push(`${label}.logPath must be a normalized run-relative POSIX path.`);
   }
   if (value.agentSession !== undefined) {
     if (!isPlainObject(value.agentSession)) {
@@ -372,22 +458,53 @@ function validateAttempt(value: unknown, label: string, errors: string[]): void 
       errors.push(`${label}.agentSession.id must be a non-empty string.`);
     }
   }
-  if (!isNonEmptyString(value.headAtStart)) {
-    errors.push(`${label}.headAtStart must be a commit string.`);
+  if (typeof value.result !== "string" || !ATTEMPT_RESULTS.has(value.result)) {
+    errors.push(`${label}.result must be a known attempt result.`);
+    return;
   }
+  const context = `on an attempt with result "${value.result}"`;
+
   if (value.result === "executing") {
-    if (value.headAfterAttempt !== undefined) {
+    validateAllowedKeys(value, label, ATTEMPT_COMMON_KEYS, errors, context);
+    if (value.terminalResult !== null) {
+      errors.push(`${label}.terminalResult must be null while the attempt is executing.`);
+    }
+    return;
+  }
+
+  validateAllowedKeys(
+    value,
+    label,
+    value.result === "done"
+      ? [...ATTEMPT_COMMON_KEYS, ...ATTEMPT_SETTLEMENT_KEYS]
+      : [...ATTEMPT_COMMON_KEYS, ...ATTEMPT_SETTLEMENT_KEYS, "failure"],
+    errors,
+    context,
+  );
+  validateAttemptSettlement(value, label, errors);
+
+  if (value.result === "done") {
+    validateTerminalResult(value.terminalResult, `${label}.terminalResult`, errors);
+    if (
+      !isPlainObject(value.terminalResult) ||
+      value.terminalResult.token !== DONE_OUTCOME
+    ) {
       errors.push(
-        `${label}.headAfterAttempt is not permitted while the attempt is executing.`,
+        `${label} is "done" but does not carry a parsed ${DONE_OUTCOME} outcome.`,
       );
     }
-  } else if (!isNonEmptyString(value.headAfterAttempt)) {
-    errors.push(
-      `${label}.headAfterAttempt must be a commit string on a settled attempt.`,
-    );
+    return;
   }
-  if (!isNormalizedRelPosix(value.logPath)) {
-    errors.push(`${label}.logPath must be a normalized run-relative POSIX path.`);
+
+  if (!("terminalResult" in value)) {
+    errors.push(`${label}.terminalResult is required (object or null).`);
+  } else {
+    validateTerminalResult(value.terminalResult, `${label}.terminalResult`, errors);
+  }
+  if (value.failure === undefined) {
+    errors.push(`${label}.failure is required ${context}.`);
+  } else {
+    validateAttemptFailure(value.failure, `${label}.failure`, errors);
   }
 }
 
@@ -694,14 +811,6 @@ function attemptsAgreeWithSnapshottedStages(checkpoint: RunCheckpoint): string[]
       );
     } else {
       seen.add(attempt.attempt);
-    }
-    if (
-      attempt.result === "done" &&
-      (attempt.terminalResult === null || attempt.terminalResult.token !== "DONE")
-    ) {
-      errors.push(
-        `attempts[${i}] is "done" but does not carry a parsed ${DONE_OUTCOME} outcome.`,
-      );
     }
   });
   return errors;

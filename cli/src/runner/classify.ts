@@ -1,5 +1,6 @@
 import type { AttemptOutcome } from "../harness/types.js";
 import type {
+  DoneTerminalResult,
   WaitingKind,
   WaitingReason,
   WaitingReasons,
@@ -36,6 +37,13 @@ export type BoundaryDisposition =
 export type ClassificationInput = {
   attemptOutcome: AttemptOutcome;
   parse: OutcomeParse | null;
+  /**
+   * The advancing verdict the same parse produced, or `null` for every other
+   * token and for no terminal text at all. The value rather than a flag, because
+   * the two actions it unlocks are exactly the ones whose attempt records
+   * `done`, and that record has to state the token.
+   */
+  done: DoneTerminalResult | null;
   pendingFiles: string[];
   queueScanError: string | null;
   boundary: BoundaryDisposition;
@@ -51,9 +59,9 @@ export type ClassificationInput = {
  * while a queue reason also held reports both.
  */
 export type Classification =
-  | { action: "advance" }
+  | { action: "advance"; done: DoneTerminalResult }
   | { action: "pause"; reasons: WaitingReasons }
-  | { action: "pause-done"; reasons: WaitingReasons };
+  | { action: "pause-done"; done: DoneTerminalResult; reasons: WaitingReasons };
 
 /**
  * Every accepted opening as the malformed-outcome diagnostic lists them: one
@@ -197,8 +205,9 @@ function stageReason(
  * queue-level reason that both hold are both reported.
  */
 export function classifyAttempt(input: ClassificationInput): Classification {
-  const { attemptOutcome, parse, pendingFiles, queueScanError, boundary } = input;
-  const isDone = parse !== null && parse.token === "DONE";
+  const { attemptOutcome, parse, done, pendingFiles, queueScanError, boundary } =
+    input;
+  const isDone = done !== null;
   const queues = queueReasons(pendingFiles, queueScanError);
 
   // 1. A parsed DONE with a failed boundary is governed by its boundary kind
@@ -222,12 +231,12 @@ export function classifyAttempt(input: ClassificationInput): Classification {
 
   // 3. A parsed DONE with a finalized-ok boundary advances on an empty queue,
   //    else pauses as a DONE-finalized pending-queues pause.
-  if (isDone) {
+  if (done !== null) {
     const [governing, ...rest] = queues;
     if (governing === undefined) {
-      return { action: "advance" };
+      return { action: "advance", done };
     }
-    return { action: "pause-done", reasons: [governing, ...rest] };
+    return { action: "pause-done", done, reasons: [governing, ...rest] };
   }
 
   // 4. For every non-DONE result, pending files govern over BLOCKED, REFUSED,

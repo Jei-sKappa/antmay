@@ -3,8 +3,10 @@ import type { AttemptOutcome } from "../../harness/types.js";
 import type { BoundaryDisposition } from "../../runner/classify.js";
 import { classifyAttempt } from "../../runner/classify.js";
 import type { OutcomeParse } from "../../runner/outcome.js";
-import { parseTerminalOutcome } from "../../runner/outcome.js";
+import { DONE_OUTCOME, parseTerminalOutcome } from "../../runner/outcome.js";
 import type {
+  DoneTerminalResult,
+  QueueObservation,
   TerminalResult,
   WaitingDiagnostics,
 } from "../../state/checkpoint/types.js";
@@ -53,6 +55,20 @@ function terminalResultFrom(parse: OutcomeParse | null): TerminalResult | null {
     return { token: null, candidateLine: parse.candidateLine, detail: "" };
   }
   return { token: parse.token, candidateLine: parse.candidateLine, detail: parse.detail };
+}
+
+/**
+ * The advancing verdict this attempt reported, or `null` when it reported
+ * another token or none. Holding the recognized value rather than a flag is what
+ * lets the two DONE endings state the token their record requires.
+ */
+function doneResultFrom(parse: OutcomeParse | null): DoneTerminalResult | null {
+  if (parse === null || parse.token !== DONE_OUTCOME) return null;
+  return {
+    token: DONE_OUTCOME,
+    candidateLine: parse.candidateLine,
+    detail: parse.detail,
+  };
 }
 
 /**
@@ -116,13 +132,19 @@ export async function settleAttempt(
   };
   const startedAt = executingAttempt.startedAt;
 
+  // The two cases are recorded apart: a scan that could not run is not an empty
+  // queue, and the finalization of a saved DONE answers them differently.
   const postScan = await scanPendingQueues(ctx.repoRoot, ctx.threadRelPath);
+  const queues: QueueObservation = postScan.ok
+    ? { kind: "observed", pendingFiles: postScan.pendingFiles }
+    : { kind: "unavailable" };
   const pendingFiles = postScan.ok ? postScan.pendingFiles : [];
   const queueScanError = postScan.ok ? null : postScan.message;
 
   const parse =
     outcome.kind === "completed" ? parseTerminalOutcome(outcome.finalText) : null;
-  const isDone = parse !== null && parse.token === "DONE";
+  const doneResult = doneResultFrom(parse);
+  const isDone = doneResult !== null;
 
   const postAttemptHead = await observeHead(ctx, "after-attempt");
   if (!postAttemptHead.ok) return refused(postAttemptHead.message);
@@ -138,7 +160,7 @@ export async function settleAttempt(
       sig: abortSig,
       executingAttempt,
       headAfterAttempt: observedHead,
-      pendingFiles,
+      queues,
       failure: {
         errorClass: outcome.errorClass,
         errorMessage: outcome.errorMessage,
@@ -163,12 +185,12 @@ export async function settleAttempt(
           session: agentSession,
           endedAt,
           durationMs: Date.parse(endedAt) - Date.parse(startedAt),
-          terminalResult: terminalResultFrom(parse),
           observedHead,
-          pendingFiles,
+          queues,
         },
         {
           kind: "stopped",
+          terminalResult: terminalResultFrom(parse),
           waiting: verdict.waiting,
           aborted: false,
           disposition: stageDisposition(false, parse),
@@ -194,6 +216,7 @@ export async function settleAttempt(
   const classification = classifyAttempt({
     attemptOutcome: outcome,
     parse,
+    done: doneResult,
     pendingFiles,
     queueScanError,
     boundary,
@@ -205,18 +228,21 @@ export async function settleAttempt(
     session: agentSession,
     endedAt,
     durationMs: Date.parse(endedAt) - Date.parse(startedAt),
-    terminalResult: terminalResultFrom(parse),
     observedHead,
-    pendingFiles,
+    queues,
   };
 
   if (classification.action === "advance") {
-    return commitSettlement(ctx, settling, { kind: "advanced" });
+    return commitSettlement(ctx, settling, {
+      kind: "advanced",
+      terminalResult: classification.done,
+    });
   }
 
   if (classification.action === "pause-done") {
     return commitSettlement(ctx, settling, {
       kind: "done-pending-queues",
+      terminalResult: classification.done,
       waiting: Pause.donePendingQueues({
         classified: classification.reasons,
         attempt: attemptReference,
@@ -228,6 +254,7 @@ export async function settleAttempt(
   const aborted = outcome.kind === "failed" && outcome.category === "aborted";
   return commitSettlement(ctx, settling, {
     kind: "stopped",
+    terminalResult: terminalResultFrom(parse),
     waiting: Pause.attemptStopped({
       classified: classification.reasons,
       aborted,

@@ -244,6 +244,7 @@ function attemptsFor(condition, stageIndex) {
         candidateLine: `Outcome: DONE — ${id} finished.`,
         detail: `— ${id} finished.`,
       },
+      queues: { kind: "observed", pendingFiles: [] },
       // Every settled attempt carries an ID-only session so each entry shows a
       // `Latest session` field; multiple sessions on one run exercise newest
       // selection (only the final session-carrying attempt is rendered).
@@ -270,6 +271,11 @@ function attemptsFor(condition, stageIndex) {
               candidateLine: "Outcome: BLOCKED — the spec contradicts the roadmap.",
               detail: "— the spec contradicts the roadmap.",
             },
+            failure: {
+              kind: "outcome-blocked",
+              message: WAITING.reasons[0].message,
+            },
+            queues: { kind: "observed", pendingFiles: [] },
             headAfterAttempt: HEAD,
           }),
       agentSession: { id: `simulated-session-${id}-1` },

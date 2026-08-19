@@ -18,7 +18,9 @@ import type {
 import type { PartialArtifactState } from "../thread/artifacts.js";
 import { inspectArtifactState as inspectArtifactStateOnDisk } from "../thread/artifacts.js";
 import type {
+  AttemptFailure,
   AttemptRecord,
+  AttemptSettlement,
   RunCheckpoint,
   SnapshottedStage,
 } from "../state/checkpoint/types.js";
@@ -332,6 +334,32 @@ function attemptsAt(cp: RunCheckpoint, stageIndex: number): AttemptRecord[] {
 }
 
 /**
+ * What one recorded attempt settled with, or `undefined` while it is still live.
+ * A case asserting the ending, the tip, or the queue an attempt settled at reads
+ * it through here, because a live attempt has reached none of the three.
+ */
+function settlementOf(
+  attempt: AttemptRecord | undefined,
+): AttemptSettlement | undefined {
+  if (attempt === undefined || attempt.result === "executing") return undefined;
+  return {
+    endedAt: attempt.endedAt,
+    headAfterAttempt: attempt.headAfterAttempt,
+    queues: attempt.queues,
+  };
+}
+
+/** The failure a settled non-DONE attempt reports about itself. */
+function failureOf(
+  attempt: AttemptRecord | undefined,
+): AttemptFailure | undefined {
+  return attempt !== undefined &&
+    (attempt.result === "waiting" || attempt.result === "interrupted")
+    ? attempt.failure
+    : undefined;
+}
+
+/**
  * Drive one run from a freshly allocated cursor, the way `run` does, so the state
  * a later resume reads is one the engine itself wrote and the validator accepts.
  */
@@ -401,6 +429,7 @@ describe.concurrent("executeEngine — abandoned executing recovery (AC-1.4, AC-
     delete live.endedAt;
     delete live.failure;
     delete live.headAfterAttempt;
+    delete live.queues;
     await writeCheckpoint(runDir, {
       ...paused,
       condition: "executing",
@@ -416,8 +445,10 @@ describe.concurrent("executeEngine — abandoned executing recovery (AC-1.4, AC-
     expect(attempts.map((a) => a.result)).toEqual(["interrupted", "done"]);
     // The abandoned attempt settles here, so this is where it acquires the
     // post-attempt observation every settled attempt carries.
-    expect(attempts[0]?.headAfterAttempt).toBe(await readHead(fixture.root));
-    expect(attempts[0]?.failure?.message).toContain("manual-recovery");
+    expect(settlementOf(attempts[0])?.headAfterAttempt).toBe(
+      await readHead(fixture.root),
+    );
+    expect(failureOf(attempts[0])?.message).toContain("manual-recovery");
     expect(harness.calls.length).toBe(1);
   });
 
@@ -432,6 +463,7 @@ describe.concurrent("executeEngine — abandoned executing recovery (AC-1.4, AC-
     delete live.endedAt;
     delete live.failure;
     delete live.headAfterAttempt;
+    delete live.queues;
     const executing: RunCheckpoint = {
       ...paused,
       condition: "executing",
@@ -474,6 +506,7 @@ describe.concurrent("executeEngine — guarded HEAD observations (AC-6.5, AC-6.6
     delete live.endedAt;
     delete live.failure;
     delete live.headAfterAttempt;
+    delete live.queues;
     await writeCheckpoint(runDir, {
       ...paused,
       condition: "executing",
@@ -578,7 +611,7 @@ describe.concurrent("executeEngine — guarded HEAD observations (AC-6.5, AC-6.6
     const abandoned = await loadCheckpoint(runDir);
     expect(abandoned.condition).toBe("executing");
     expect(abandoned.attempts[0]).toMatchObject({ result: "executing" });
-    expect(abandoned.attempts[0]?.headAfterAttempt).toBeUndefined();
+    expect(settlementOf(abandoned.attempts[0])).toBeUndefined();
 
     const stillUnreadableBefore = await fs.readFile(
       path.join(runDir, "state.json"),
@@ -601,7 +634,7 @@ describe.concurrent("executeEngine — guarded HEAD observations (AC-6.5, AC-6.6
       "interrupted",
       "done",
     ]);
-    expect(completed.attempts[0]?.headAfterAttempt).toBe(
+    expect(settlementOf(completed.attempts[0])?.headAfterAttempt).toBe(
       await readHead(fixture.root),
     );
   });
@@ -800,21 +833,26 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
 
     expect(result).toEqual({
       kind: "fatal-checkpoint",
-      message: "The validated checkpoint records no attempt 99 for stage 0.",
+      message:
+        "The validated checkpoint records no settled attempt 99 for stage 0.",
     });
     expect(rec.runFailed).toHaveLength(1);
     expect(persistenceCalls).toBe(0);
     expect(harness.calls).toHaveLength(0);
   });
 
-  it("returns a typed fatal result when a finalizable attempt has no settled HEAD", async () => {
+  it("returns a typed fatal result when a finalizable attempt records no DONE verdict", async () => {
+    // The one relation finalization has to narrow at runtime: the `done` record
+    // it builds states the advancing token, which the preserved `waiting` record
+    // it is flipping cannot promise. Checkpoint validation proves it, so a
+    // document reaching here without it is invalid rather than recoverable.
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     await pauseOnContract(fixture, runDir);
     await writeThreadFile(fixture, "spec.md", "# Spec\n");
     const paused = await loadCheckpoint(runDir);
     const malformedAttempt = { ...paused.attempts[0]! } as Record<string, unknown>;
-    delete malformedAttempt.headAfterAttempt;
+    malformedAttempt.terminalResult = null;
     const malformed: RunCheckpoint = {
       ...paused,
       attempts: [malformedAttempt as unknown as AttemptRecord],
@@ -832,7 +870,8 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
 
     expect(result).toEqual({
       kind: "fatal-checkpoint",
-      message: "Attempt 1 of stage 0 records no post-attempt HEAD observation.",
+      message:
+        'The validated "recheck-stage-contract" recovery names attempt 1 of stage 0, which records no parsed DONE outcome.',
     });
     expect(rec.runFailed).toHaveLength(1);
     expect(persistenceCalls).toBe(0);
@@ -859,7 +898,9 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
     expect(attempts.length).toBe(1);
     expect(attempts[0]?.result).toBe("done");
     // The boundary commit this resume made is the tip the finalized attempt records.
-    expect(attempts[0]?.headAfterAttempt).toBe(await readHead(fixture.root));
+    expect(settlementOf(attempts[0])?.headAfterAttempt).toBe(
+      await readHead(fixture.root),
+    );
   });
 
   it("runs the stage again when the promise is still unmet over a clean worktree", async () => {
@@ -1093,7 +1134,9 @@ describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4,
     const attempts = attemptsAt(cp, 0);
     expect(attempts.length).toBe(1);
     expect(attempts[0]?.result).toBe("done");
-    expect(attempts[0]?.headAfterAttempt).toBe(await readHead(fixture.root));
+    expect(settlementOf(attempts[0])?.headAfterAttempt).toBe(
+      await readHead(fixture.root),
+    );
   });
 
   it("keeps the same attempt finalizable, re-aimed at the fresh tip, when it fails again", async () => {
@@ -1141,8 +1184,8 @@ describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4,
       message: expect.stringContaining("boundary-status"),
     });
     expect(after.waiting?.recovery).toEqual(recovery);
-    expect(after.attempts[0]?.headAfterAttempt).toBe(
-      before.attempts[0]?.headAfterAttempt,
+    expect(settlementOf(after.attempts[0])?.headAfterAttempt).toBe(
+      settlementOf(before.attempts[0])?.headAfterAttempt,
     );
   });
 
@@ -1251,7 +1294,11 @@ describe.concurrent("executeEngine — full completion (AC-6.3, AC-13.3)", () =>
     expect(cp.attempts.map((a) => a.result)).toEqual(["done", "done"]);
     // Every settled attempt carries its own start and post-attempt observation.
     expect(cp.attempts.every((a) => a.headAtStart.length > 0)).toBe(true);
-    expect(cp.attempts.every((a) => (a.headAfterAttempt ?? "").length > 0)).toBe(true);
+    expect(
+      cp.attempts.every(
+        (a) => (settlementOf(a)?.headAfterAttempt ?? "").length > 0,
+      ),
+    ).toBe(true);
     expect(cp.attempts.every((a) => a.terminalResult?.token === "DONE")).toBe(true);
 
     // Stage alpha committed its required change; beta committed nothing.
@@ -1364,11 +1411,14 @@ describe.concurrent("executeEngine — DONE with a pending-queue pause (AC-11.3,
     expect(cp.waiting?.reasons[0]!.pendingFiles).toEqual([pendingRel]);
     expect(cp.attempts[0]!.result).toBe("done");
     expect(cp.attempts[0]!.terminalResult?.token).toBe("DONE");
-    // The queue that held the run is what this settled attempt records.
-    expect(cp.attempts[0]!.pendingFiles).toEqual([pendingRel]);
+    // The queue that held the run is what this settled attempt observed.
+    expect(settlementOf(cp.attempts[0])?.queues).toEqual({
+      kind: "observed",
+      pendingFiles: [pendingRel],
+    });
     // The executor commit's HEAD is the attempt's post-attempt observation, and
     // the finalized DONE is what releasing the queue resolves against.
-    expect(cp.attempts[0]!.headAfterAttempt).toBe(commitHead);
+    expect(settlementOf(cp.attempts[0])?.headAfterAttempt).toBe(commitHead);
     expect(cp.waiting?.recovery).toEqual({
       kind: "resume-finalized-done",
       attempt: { stageIndex: 0, attempt: 1 },
@@ -1465,11 +1515,15 @@ describe.concurrent("executeEngine — non-DONE pauses (AC-11.3, AC-12.6, AC-12.
       expect(cp.waiting?.reasons[0]!.kind).toBe(testCase.kind);
       expect(cp.waiting?.nextAction).toContain("unvalidated");
       expect(cp.attempts[0]!.result).toBe("waiting");
-      expect(cp.attempts[0]!.headAfterAttempt).toBe(headBefore);
-      // Nothing was queued, so the stopped attempt records no queue; its failure
-      // telemetry is the reason its pause leads with.
-      expect(Object.hasOwn(cp.attempts[0]!, "pendingFiles")).toBe(false);
-      expect(cp.attempts[0]!.failure).toEqual({
+      expect(settlementOf(cp.attempts[0])?.headAfterAttempt).toBe(headBefore);
+      // The scan ran and found nothing, which the stopped attempt records as an
+      // observation of an empty queue; its failure telemetry is the reason its
+      // pause leads with.
+      expect(settlementOf(cp.attempts[0])?.queues).toEqual({
+        kind: "observed",
+        pendingFiles: [],
+      });
+      expect(failureOf(cp.attempts[0])).toEqual({
         kind: testCase.kind,
         message: cp.waiting?.reasons[0]!.message,
       });
@@ -1859,7 +1913,7 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
     expect(cp.attempts[0]!.result).toBe("waiting");
     expect(cp.attempts[0]!.terminalResult?.token).toBe("DONE");
     expect(cp.attempts[0]!.headAtStart).toBe(headBefore);
-    expect(cp.attempts[0]!.headAfterAttempt).toBe(headBefore);
+    expect(settlementOf(cp.attempts[0])?.headAfterAttempt).toBe(headBefore);
     expect(cp.waiting?.recovery).toEqual({
       kind: "recheck-stage-contract",
       attempt: { stageIndex: 0, attempt: 1 },
@@ -1909,7 +1963,10 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
       "pending-queues",
     ]);
     expect(cp.waiting?.reasons[1]!.pendingFiles).toEqual([pendingRel]);
-    expect(cp.attempts[0]!.pendingFiles).toEqual([pendingRel]);
+    expect(settlementOf(cp.attempts[0])?.queues).toEqual({
+      kind: "observed",
+      pendingFiles: [pendingRel],
+    });
   });
 
   it("still pauses git-policy-violation when the promise holds but a required change is missing", async () => {
@@ -2036,7 +2093,10 @@ describe.concurrent("executeEngine — signal interruption (AC-17.1, AC-17.3)", 
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0]!.kind).toBe("interrupted");
     expect(cp.waiting?.reasons[1]!.pendingFiles).toEqual([pendingRel]);
-    expect(cp.attempts[0]!.pendingFiles).toEqual([pendingRel]);
+    expect(settlementOf(cp.attempts[0])?.queues).toEqual({
+      kind: "observed",
+      pendingFiles: [pendingRel],
+    });
   });
 
   it("stops between stages without touching the ready checkpoint or rendering a pause", async () => {
@@ -2197,11 +2257,10 @@ describe.concurrent("executeEngine — live agentSession persistence (AC-2.2–A
       terminalResult: null,
       agentSession: { id: "live-1" },
     });
-    expect(provisional.attempts[0]!.endedAt).toBeUndefined();
-    // The live attempt records the tip it launched from and has not yet reached
-    // its post-attempt observation.
+    // The live attempt records the tip it launched from and has reached no
+    // settlement, so it carries neither an ending nor either observation.
     expect(provisional.attempts[0]!.headAtStart.length).toBeGreaterThan(0);
-    expect(provisional.attempts[0]!.headAfterAttempt).toBeUndefined();
+    expect(settlementOf(provisional.attempts[0])).toBeUndefined();
 
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("completed");
@@ -2733,6 +2792,8 @@ describe.concurrent("executeEngine — harness stage context", () => {
         endedAt: "2026-07-24T00:01:00.000Z",
         result: "waiting",
         terminalResult: { token: "BLOCKED", candidateLine: "Outcome: BLOCKED", detail: "" },
+        failure: { kind: "outcome-blocked", message: "blocked" },
+        queues: { kind: "observed", pendingFiles: [] },
         headAtStart: head,
         headAfterAttempt: head,
         logPath: "logs/01-reconcile-spec-attempt-1.log",

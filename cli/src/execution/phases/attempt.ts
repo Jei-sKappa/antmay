@@ -1,5 +1,5 @@
 import type { AttemptOutcome } from "../../harness/types.js";
-import type { AttemptRecord } from "../../state/checkpoint/types.js";
+import type { ExecutingAttemptRecord } from "../../state/checkpoint/types.js";
 import type { StageContext } from "../context.js";
 import { settleInterrupted, signalReason } from "../interruption.js";
 import type { ExecutionResult } from "../result.js";
@@ -24,7 +24,7 @@ import { reserveAttempt } from "./reserve-attempt.js";
  */
 export type LaunchedAttempt = {
   /** The executing record the checkpoint records. */
-  record: AttemptRecord;
+  record: ExecutingAttemptRecord;
   outcome: AttemptOutcome;
   /** The session the attempt ended up holding, if it held one. */
   session: { id: string } | undefined;
@@ -55,7 +55,8 @@ export async function launchAttempt(
         sig: preLaunchSig,
         executingAttempt: reserved.record,
         headAfterAttempt: reserved.record.headAtStart,
-        pendingFiles: [],
+        // The attempt never ran, so no post-attempt scan was made.
+        queues: { kind: "unavailable" },
       }),
     };
   }

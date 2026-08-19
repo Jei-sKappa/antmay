@@ -7,7 +7,11 @@ import type {
   ClassificationInput,
 } from "./classify.js";
 import { classifyAttempt } from "./classify.js";
-import type { WaitingKind, WaitingReason } from "../state/checkpoint/types.js";
+import type {
+  DoneTerminalResult,
+  WaitingKind,
+  WaitingReason,
+} from "../state/checkpoint/types.js";
 import type { OutcomeParse } from "./outcome.js";
 
 const completed: AttemptOutcome = { kind: "completed", finalText: "Outcome: DONE" };
@@ -64,10 +68,20 @@ const commitErrorBoundary: BoundaryDisposition = {
   message: "The executor commit failed while finalizing the boundary.",
 };
 
+/** The advancing verdict a parse carries, as the classifier is handed it. */
+function doneResultOf(parse: OutcomeParse | null): DoneTerminalResult | null {
+  if (parse === null || parse.token !== "DONE") return null;
+  return { token: "DONE", candidateLine: parse.candidateLine, detail: parse.detail };
+}
+
 function input(overrides: Partial<ClassificationInput>): ClassificationInput {
+  // The verdict comes from the same parse the case declares, so a case states
+  // its parse alone and the two can never disagree.
+  const parse = overrides.parse === undefined ? doneParse : overrides.parse;
   return {
     attemptOutcome: completed,
-    parse: doneParse,
+    parse,
+    done: doneResultOf(parse),
     pendingFiles: [],
     queueScanError: null,
     boundary: okBoundary,
@@ -112,8 +126,11 @@ function reasonOf(result: Classification, kind: WaitingKind): WaitingReason {
 }
 
 describe("classifyAttempt", () => {
-  it("DONE + ok boundary + empty queues advances", () => {
-    expect(classifyAttempt(input({}))).toEqual({ action: "advance" });
+  it("DONE + ok boundary + empty queues advances, carrying the verdict", () => {
+    expect(classifyAttempt(input({}))).toEqual({
+      action: "advance",
+      done: { token: "DONE", candidateLine: "Outcome: DONE", detail: "" },
+    });
   });
 
   it("DONE + ok boundary + pending files pauses as pause-done", () => {

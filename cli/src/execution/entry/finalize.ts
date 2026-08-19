@@ -1,6 +1,10 @@
 import type { GitBoundaryContext } from "../../gitops/boundary.js";
-import type { AttemptRecord } from "../../state/checkpoint/types.js";
-import { attemptInterval } from "../attempts.js";
+import { DONE_OUTCOME } from "../../runner/outcome.js";
+import type {
+  DoneTerminalResult,
+  SettledAttemptRecord,
+  TerminalResult,
+} from "../../state/checkpoint/types.js";
 import type { StageContext } from "../context.js";
 import type { FailedFinalization } from "../recovery.js";
 import type { RecoveryDirective } from "../recovery-policy.js";
@@ -35,10 +39,22 @@ export type FinalizationOutcome =
   | { kind: "resolved"; result: ExecutionResult | null }
   | { kind: "unfinalized"; evidence: FailedFinalization };
 
+/**
+ * Whether the preserved attempt's recorded verdict is the advancing one the
+ * `done` disposition requires. Checkpoint validation already proves it for every
+ * finalizing recovery; narrowing the value here is what lets the finalized
+ * record state the token rather than carry whichever one it happened to hold.
+ */
+function isDoneTerminalResult(
+  result: TerminalResult | null,
+): result is DoneTerminalResult {
+  return result !== null && result.token === DONE_OUTCOME;
+}
+
 export async function finalizeSavedDone(
   ctx: StageContext,
   directive: Extract<RecoveryDirective, { kind: "finalize-boundary" }>,
-  preserved: AttemptRecord | undefined,
+  preserved: SettledAttemptRecord | undefined,
 ): Promise<FinalizationOutcome> {
   // A finalization directive can arise only from either attempt-referencing
   // finalization recovery, so absence here is an invalid engine entry rather
@@ -52,15 +68,27 @@ export async function finalizeSavedDone(
       ),
     };
   }
+  // The finalized record states the advancing verdict, which the preserved
+  // record's own type leaves open on the disposition it is being flipped from.
+  // The same invalid-checkpoint report the absent attempt above gets covers it.
+  const terminalResult = preserved.terminalResult;
+  if (!isDoneTerminalResult(terminalResult)) {
+    return {
+      kind: "resolved",
+      result: fatal(
+        ctx,
+        `The validated "${directive.recovery.kind}" recovery names attempt ${preserved.attempt} of stage ${preserved.stageIndex}, which records no parsed ${DONE_OUTCOME} outcome.`,
+      ),
+    };
+  }
   let context: GitBoundaryContext;
   if (directive.context === "after-contract-repair") {
-    const interval = attemptInterval(preserved);
-    if (!interval.ok) {
-      return { kind: "resolved", result: fatal(ctx, interval.message) };
-    }
     context = {
       kind: "after-contract-repair",
-      attempt: interval.value,
+      attempt: {
+        headAtStart: preserved.headAtStart,
+        headAfterAttempt: preserved.headAfterAttempt,
+      },
       pausedAtHead: directive.recovery.pausedAtHead,
     };
   } else {
@@ -124,12 +152,24 @@ export async function finalizeSavedDone(
   const finalized: Transition = {
     kind: "finalize-preserved-done",
     attempt: {
-      ...preserved,
+      attempt: preserved.attempt,
+      stageIndex: preserved.stageIndex,
+      stageId: preserved.stageId,
+      startedAt: preserved.startedAt,
+      headAtStart: preserved.headAtStart,
+      logPath: preserved.logPath,
+      ...(preserved.agentSession !== undefined
+        ? { agentSession: preserved.agentSession }
+        : {}),
       result: "done",
+      endedAt: preserved.endedAt,
       headAfterAttempt: finalization.headAfterFinalization,
+      queues: preserved.queues,
+      terminalResult,
     },
   };
-  const hadPending = (preserved.pendingFiles?.length ?? 0) > 0;
+  const hadPending =
+    preserved.queues.kind === "observed" && preserved.queues.pendingFiles.length > 0;
   if (hadPending && ctx.stage.queueResolution === "rerun") {
     return {
       kind: "resolved",

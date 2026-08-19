@@ -1,5 +1,9 @@
-import type { AttemptRecord, WaitingInfo } from "../../state/checkpoint/types.js";
-import { referencedAttempt } from "../attempts.js";
+import type {
+  AttemptRecord,
+  SettledAttemptRecord,
+  WaitingInfo,
+} from "../../state/checkpoint/types.js";
+import { latestSettledAttempt, referencedAttempt } from "../attempts.js";
 import type { RunContext, StageContext } from "../context.js";
 import { stageContext } from "../context.js";
 import { signalReason } from "../interruption.js";
@@ -46,13 +50,13 @@ type PausedCursor = {
   /** The waiting object the checkpoint records. */
   paused: WaitingInfo;
   /** The record the recovery names, absent for a recovery that names none. */
-  recoveryAttempt: AttemptRecord | undefined;
+  recoveryAttempt: SettledAttemptRecord | undefined;
   /**
    * The record a pause that stays paused describes. A recovery that names no
    * attempt has none of its own to describe, so its display describes the latest
    * persisted attempt that led to the pause.
    */
-  describedAttempt: AttemptRecord | undefined;
+  describedAttempt: SettledAttemptRecord | undefined;
 };
 
 /** Carry out one recovery directive as a durable transition. */
@@ -132,6 +136,8 @@ export async function recoverFromDurableCursor(
       result: "interrupted",
       endedAt: ctx.clock().toISOString(),
       terminalResult: null,
+      // This settlement scans no queue, so it observed nothing about one.
+      queues: { kind: "unavailable" },
       headAfterAttempt: abandonedHead.value,
       failure: { kind: "interrupted", message: ABANDONED_ATTEMPT_NOTE },
     };
@@ -152,15 +158,15 @@ export async function recoverFromDurableCursor(
   }
 
   const pausedRecovery = enteredWaiting.recovery;
-  let recoveryAttempt: AttemptRecord | undefined;
-  let describedAttempt: AttemptRecord | undefined;
+  let recoveryAttempt: SettledAttemptRecord | undefined;
+  let describedAttempt: SettledAttemptRecord | undefined;
   if (referencesAttempt(pausedRecovery)) {
     const resolved = referencedAttempt(run.checkpoint, pausedRecovery.attempt);
     if (!resolved.ok) return fatal(ctx, resolved.message);
     recoveryAttempt = resolved.value;
     describedAttempt = resolved.value;
   } else {
-    describedAttempt = run.checkpoint.attempts[run.checkpoint.attempts.length - 1];
+    describedAttempt = latestSettledAttempt(run.checkpoint);
   }
   const cursor: PausedCursor = {
     paused: enteredWaiting,

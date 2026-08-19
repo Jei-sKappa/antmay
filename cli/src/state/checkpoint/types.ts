@@ -166,32 +166,101 @@ export type TerminalResult = {
 };
 
 /**
- * One entry in the ordered attempt history.
- *
- * The two `HEAD` observations bind Git evidence to the attempt that produced it:
- * `headAtStart` is the tip the attempt was launched from, and
- * `headAfterAttempt` the tip its settlement left behind — the tip observed once
- * the attempt ended when no boundary was finalized for it, and otherwise the
- * tip the finalization settled its boundary at, that boundary's commit
- * included, whether the run or a later recovery finalized it. An attempt still
- * executing has not reached its second observation yet and carries none.
+ * The terminal text result of an attempt that reported the advancing outcome.
+ * The `done` disposition is named for that verdict, so its arm states it rather
+ * than leaving a `done` attempt able to carry any token at all.
  */
-export type AttemptRecord = {
+export type DoneTerminalResult = TerminalResult & { token: "DONE" };
+
+/**
+ * The post-attempt pending-queue observation a settled attempt records.
+ *
+ * A scan that could not complete is its own case rather than an empty list: an
+ * unreadable queue is never an empty one, and the finalization of a saved
+ * `DONE` answers the two differently. The unavailable case carries no message,
+ * because the scan's failure is reported as the pause's `gate-error` reason.
+ */
+export type QueueObservation =
+  | { kind: "observed"; pendingFiles: string[] }
+  | { kind: "unavailable" };
+
+/**
+ * What an attempt reports about the failure that stopped it. The kind is the
+ * pause vocabulary's, because the attempt records the reason that governs the
+ * pause it settled into.
+ */
+export type AttemptFailure = { kind: WaitingKind; message: string };
+
+/**
+ * What every entry in the attempt history carries whatever became of it: which
+ * attempt of which stage it is, when and from which tip it was launched, and
+ * where its log lives.
+ */
+export type AttemptIdentity = {
   attempt: number;
   stageIndex: number;
   stageId: string;
   startedAt: string;
-  endedAt?: string;
-  result: AttemptResult;
-  terminalResult: TerminalResult | null;
-  pendingFiles?: string[];
-  failure?: { kind: string; message: string };
+  headAtStart: string;
+  logPath: string;
   /** Opaque provider session ID when one was captured for this attempt. */
   agentSession?: { id: string };
-  headAtStart: string;
-  headAfterAttempt?: string;
-  logPath: string;
 };
+
+/**
+ * What an attempt that reached an ending carries on top of its identity.
+ *
+ * `headAfterAttempt` is the second of the two `HEAD` observations that bind Git
+ * evidence to the attempt that produced it: the tip its settlement left behind
+ * — the tip observed once the attempt ended when no boundary was finalized for
+ * it, and otherwise the tip the finalization settled its boundary at, that
+ * boundary's commit included, whether the run or a later recovery finalized it.
+ */
+export type AttemptSettlement = {
+  endedAt: string;
+  headAfterAttempt: string;
+  queues: QueueObservation;
+};
+
+/**
+ * One entry in the ordered attempt history, as a union over the disposition it
+ * ended in.
+ *
+ * Each arm carries exactly what that disposition has. An attempt still
+ * executing has reached neither an ending, nor a post-attempt `HEAD`
+ * observation, nor a queue observation, and carries none of the three. Both
+ * non-DONE dispositions carry the failure that stopped them; a `done` attempt
+ * carries the advancing verdict it is named for instead.
+ */
+export type AttemptRecord =
+  | (AttemptIdentity & { result: "executing"; terminalResult: null })
+  | (AttemptIdentity &
+      AttemptSettlement & {
+        result: "done";
+        terminalResult: DoneTerminalResult;
+      })
+  | (AttemptIdentity &
+      AttemptSettlement & {
+        result: "waiting";
+        terminalResult: TerminalResult | null;
+        failure: AttemptFailure;
+      })
+  | (AttemptIdentity &
+      AttemptSettlement & {
+        result: "interrupted";
+        terminalResult: TerminalResult | null;
+        failure: AttemptFailure;
+      });
+
+/** The attempt a run is holding live, which the checkpoint records as its last. */
+export type ExecutingAttemptRecord = Extract<AttemptRecord, { result: "executing" }>;
+
+/**
+ * Every attempt that reached an ending. What a recovery names and what a pause
+ * describes are both of these, so a caller holding one reads the settlement's
+ * own fields without asking whether they are there.
+ */
+export type SettledAttemptRecord = Exclude<AttemptRecord, { result: "executing" }>;
 
 /**
  * An immutable snapshot of one selected stage: the complete catalog descriptor

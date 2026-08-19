@@ -1,5 +1,10 @@
 import { SignalInterruption } from "../runner/signals.js";
-import type { AttemptRecord, WaitingDiagnostics } from "../state/checkpoint/types.js";
+import type {
+  AttemptRecord,
+  ExecutingAttemptRecord,
+  QueueObservation,
+  WaitingDiagnostics,
+} from "../state/checkpoint/types.js";
 import { withAgentSession } from "./attempts.js";
 import type { StageContext } from "./context.js";
 import { Pause } from "./pause.js";
@@ -44,9 +49,10 @@ export async function settleInterrupted(
   ctx: StageContext,
   args: {
     sig: NodeJS.Signals;
-    executingAttempt: AttemptRecord;
+    executingAttempt: ExecutingAttemptRecord;
     headAfterAttempt: string;
-    pendingFiles: string[];
+    /** What the post-attempt queue scan observed, or that none was made. */
+    queues: QueueObservation;
     failure?: { errorClass: string; errorMessage: string } | undefined;
     agentSession?: { id: string } | undefined;
   },
@@ -59,10 +65,9 @@ export async function settleInterrupted(
         origin: args.sig,
       }
     : { origin: args.sig };
-  const waiting = Pause.attemptInterrupted({
-    diagnostics,
-    pendingFiles: args.pendingFiles,
-  });
+  const pendingFiles =
+    args.queues.kind === "observed" ? args.queues.pendingFiles : [];
+  const waiting = Pause.attemptInterrupted({ diagnostics, pendingFiles });
   // The attempt records the reason that governs its pause, which is the one
   // the pause leads with.
   const governing = waiting.reasons[0];
@@ -72,9 +77,7 @@ export async function settleInterrupted(
       result: "interrupted",
       endedAt,
       terminalResult: null,
-      ...(args.pendingFiles.length > 0
-        ? { pendingFiles: args.pendingFiles }
-        : {}),
+      queues: args.queues,
       failure: { kind: governing.kind, message: governing.message },
       headAfterAttempt: args.headAfterAttempt,
     },

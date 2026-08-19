@@ -1,6 +1,6 @@
 import { renderStagePrompt } from "../../harness/prompt.js";
 import type { AttemptOutcome } from "../../harness/types.js";
-import type { AttemptRecord } from "../../state/checkpoint/types.js";
+import type { ExecutingAttemptRecord } from "../../state/checkpoint/types.js";
 import { withAgentSession } from "../attempts.js";
 import type { StageContext } from "../context.js";
 import type { CommitOutcome } from "../run-state.js";
@@ -46,7 +46,7 @@ type SessionCapture = {
 
 function captureLiveSession(
   ctx: StageContext,
-  executingAttempt: AttemptRecord,
+  executingAttempt: ExecutingAttemptRecord,
 ): SessionCapture {
   let liveSession: { id: string } | undefined;
   let provisionalWrite: Promise<CommitOutcome> | undefined;

@@ -24,6 +24,7 @@ import {
   resume,
   seed,
   settingsFor,
+  settledHead,
   setup,
   soleRunId,
   standardSteps,
@@ -313,7 +314,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     const savedDone = {
       kind: "retry-git-finalization",
       attempt: { stageIndex: 0, attempt: 1 },
-      pausedAtHead: paused.attempts[0]?.headAfterAttempt,
+      pausedAtHead: settledHead(paused.attempts[0]),
     };
     expect(paused.waiting?.recovery).toEqual(savedDone);
 
@@ -448,7 +449,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     // The boundary commit this resume made is the tip the finalized attempt
     // records, exactly as a boundary committed during the run leaves it.
     const finalized = cp.attempts.find((a) => a.stageIndex === 5);
-    expect(finalized?.headAfterAttempt).toBe(await headOf(h.fixture));
+    expect(settledHead(finalized)).toBe(await headOf(h.fixture));
   });
 });
 
@@ -560,9 +561,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(cp.waiting?.reasons[0].message).toContain(
       cp.attempts[0]?.headAtStart,
     );
-    expect(cp.waiting?.reasons[0].message).toContain(
-      cp.attempts[0]?.headAfterAttempt,
-    );
+    expect(cp.waiting?.reasons[0].message).toContain(settledHead(cp.attempts[0]));
     expect(cp.waiting?.nextAction).toContain("will not block the next resume");
     expect(cp.waiting?.nextAction).not.toContain("unvalidated");
 
@@ -834,8 +833,9 @@ describe.concurrent("resumeCommand — ready and executing recovery (AC-15.3, AC
     };
     delete (executingAttempt as { endedAt?: string }).endedAt;
     delete (executingAttempt as { failure?: unknown }).failure;
-    // A live attempt has not reached its post-attempt observation yet.
+    // A live attempt has reached neither of its settlement observations yet.
     delete (executingAttempt as { headAfterAttempt?: string }).headAfterAttempt;
+    delete (executingAttempt as { queues?: unknown }).queues;
     const executingCp: RunCheckpoint = {
       ...base,
       condition: "executing",

@@ -1,5 +1,7 @@
-import type { AttemptRecord, WaitingInfo } from "../../state/checkpoint/types.js";
-import { attemptInterval } from "../attempts.js";
+import type {
+  SettledAttemptRecord,
+  WaitingInfo,
+} from "../../state/checkpoint/types.js";
 import type { StageContext } from "../context.js";
 import {
   Pause,
@@ -9,7 +11,7 @@ import {
 import { holdsPreservedDone } from "../recovery.js";
 import type { RecoveryDirective } from "../recovery-policy.js";
 import type { ExecutionResult } from "../result.js";
-import { fatal, pauseRun, renderPause } from "../result.js";
+import { pauseRun, renderPause } from "../result.js";
 
 /**
  * The pause a resume leaves in place, restated over what this resume just
@@ -28,7 +30,7 @@ export async function remainPaused(
     /** The waiting object the checkpoint records, which this refresh restates. */
     paused: WaitingInfo;
     /** The attempt this pause describes, when it still describes one. */
-    attempt: AttemptRecord | undefined;
+    attempt: SettledAttemptRecord | undefined;
     directive: Extract<RecoveryDirective, { kind: "remain-paused" }>;
   },
 ): Promise<ExecutionResult> {
@@ -99,24 +101,23 @@ export async function remainPaused(
 
     case "git-finalization-failed": {
       // An advisory movement is worded from the preserved attempt's own
-      // interval, so that interval has to be resolvable before the pause can
-      // be built at all.
-      const interval =
+      // interval, which its two `HEAD` observations are.
+      const advisory =
         isAdvisoryHeadMovement(facts.failure) && attempt !== undefined
-          ? attemptInterval(attempt)
+          ? attempt
           : undefined;
-      if (interval !== undefined && !interval.ok) {
-        return fatal(ctx, interval.message);
-      }
       return pauseRun(
         ctx,
         Pause.refreshBoundaryRefused({
           recovery: directive.recovery,
           failure: facts.failure,
           message:
-            interval?.ok === true
-              ? unexpectedHeadMovementMessage(interval.value)
-              : `${facts.message}.`,
+            advisory === undefined
+              ? `${facts.message}.`
+              : unexpectedHeadMovementMessage({
+                  headAtStart: advisory.headAtStart,
+                  headAfterAttempt: advisory.headAfterAttempt,
+                }),
           candidateLine,
         }),
         attempt,

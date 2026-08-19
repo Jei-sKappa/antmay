@@ -66,7 +66,16 @@ function baseCheckpoint(overrides: Partial<RunCheckpoint> = {}): RunCheckpoint {
   };
 }
 
-function attempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
+/** One arm of the attempt union, addressed by the disposition that names it. */
+type AttemptOf<R extends AttemptRecord["result"]> = Extract<
+  AttemptRecord,
+  { result: R }
+>;
+
+/** A live attempt of the first stage. */
+function liveAttempt(
+  overrides: Partial<AttemptOf<"executing">> = {},
+): AttemptOf<"executing"> {
   return {
     attempt: 1,
     stageIndex: 0,
@@ -76,6 +85,53 @@ function attempt(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
     terminalResult: null,
     headAtStart: "aaaa",
     logPath: "logs/stage-01-attempt-1.log",
+    ...overrides,
+  };
+}
+
+/** The same attempt settled as a non-DONE pause. */
+function waitingAttempt(
+  overrides: Partial<AttemptOf<"waiting">> = {},
+): AttemptOf<"waiting"> {
+  return {
+    ...liveAttempt(),
+    result: "waiting",
+    endedAt: "2026-02-01T10:00:00.000Z",
+    headAfterAttempt: "bbbb",
+    queues: { kind: "observed", pendingFiles: [] },
+    terminalResult: null,
+    failure: { kind: "outcome-blocked", message: "The stage reported BLOCKED." },
+    ...overrides,
+  };
+}
+
+/** The same attempt settled as a finalized DONE. */
+function doneAttempt(
+  overrides: Partial<AttemptOf<"done">> = {},
+): AttemptOf<"done"> {
+  return {
+    ...liveAttempt(),
+    result: "done",
+    endedAt: "2026-02-01T10:00:00.000Z",
+    headAfterAttempt: "bbbb",
+    queues: { kind: "observed", pendingFiles: [] },
+    terminalResult: { token: "DONE", candidateLine: "Outcome: DONE", detail: "" },
+    ...overrides,
+  };
+}
+
+/** The same attempt a signal ended before any verdict. */
+function interruptedAttempt(
+  overrides: Partial<AttemptOf<"interrupted">> = {},
+): AttemptOf<"interrupted"> {
+  return {
+    ...liveAttempt(),
+    result: "interrupted",
+    endedAt: "2026-02-01T10:00:00.000Z",
+    headAfterAttempt: "bbbb",
+    queues: { kind: "unavailable" },
+    terminalResult: null,
+    failure: { kind: "interrupted", message: "The attempt was interrupted." },
     ...overrides,
   };
 }
@@ -119,7 +175,7 @@ describe("RunState — the cursor it reads as", () => {
 describe("RunState — one transition, one durable step", () => {
   it("reserves a live attempt and makes the run executing", async () => {
     const { run, written } = cursor();
-    const live = attempt();
+    const live = liveAttempt();
 
     expect(await run.commit({ kind: "reserve-attempt", attempt: live })).toEqual({
       ok: true,
@@ -131,7 +187,7 @@ describe("RunState — one transition, one durable step", () => {
   });
 
   it("attaches a captured session to the live attempt, leaving it live", async () => {
-    const live = attempt();
+    const live = liveAttempt();
     const { run } = cursor(
       baseCheckpoint({ condition: "executing", attempts: [live] }),
     );
@@ -148,54 +204,45 @@ describe("RunState — one transition, one durable step", () => {
   });
 
   it("settles the live attempt without touching the ones before it", async () => {
-    const earlier = attempt({
-      attempt: 1,
-      result: "waiting",
-      endedAt: "2026-02-01T09:59:59.000Z",
-      headAfterAttempt: "aaaa",
-    });
-    const live = attempt({ attempt: 2 });
+    const earlier = waitingAttempt({ attempt: 1, headAfterAttempt: "aaaa" });
+    const live = liveAttempt({ attempt: 2 });
     const { run } = cursor(
       baseCheckpoint({ condition: "executing", attempts: [earlier, live] }),
     );
 
     await run.commit({
       kind: "settle-attempt",
-      attempt: { ...live, result: "waiting", headAfterAttempt: "bbbb" },
+      attempt: waitingAttempt({ attempt: 2, headAfterAttempt: "bbbb" }),
     });
 
     expect(run.checkpoint.attempts[0]).toEqual(earlier);
-    expect(run.checkpoint.attempts[1]!.result).toBe("waiting");
-    expect(run.checkpoint.attempts[1]!.headAfterAttempt).toBe("bbbb");
+    expect(run.checkpoint.attempts[1]).toMatchObject({
+      result: "waiting",
+      headAfterAttempt: "bbbb",
+    });
   });
 
   it("finalizes the preserved DONE by identity, wherever it sits", async () => {
     // A preserved DONE is addressed by its own `(stageIndex, attempt)` rather
     // than by position, which is what a `settle-attempt` of the tail cannot
     // express.
-    const preserved = attempt({
+    const preserved = waitingAttempt({
       attempt: 3,
-      result: "waiting",
-      endedAt: "2026-02-01T09:59:59.000Z",
       terminalResult: { token: "DONE", candidateLine: "Outcome: DONE", detail: "" },
-      headAfterAttempt: "bbbb",
     });
-    const trailing = attempt({
-      attempt: 4,
-      result: "interrupted",
-      endedAt: "2026-02-01T09:59:59.000Z",
-      headAfterAttempt: "cccc",
-    });
+    const trailing = interruptedAttempt({ attempt: 4, headAfterAttempt: "cccc" });
     const { run } = cursor(baseCheckpoint({ attempts: [trailing, preserved] }));
 
     await run.commit({
       kind: "finalize-preserved-done",
-      attempt: { ...preserved, result: "done", headAfterAttempt: "dddd" },
+      attempt: doneAttempt({ attempt: 3, headAfterAttempt: "dddd" }),
     });
 
     expect(run.checkpoint.attempts[0]).toEqual(trailing);
-    expect(run.checkpoint.attempts[1]!.result).toBe("done");
-    expect(run.checkpoint.attempts[1]!.headAfterAttempt).toBe("dddd");
+    expect(run.checkpoint.attempts[1]).toMatchObject({
+      result: "done",
+      headAfterAttempt: "dddd",
+    });
   });
 
   it("records a pause, and clears it again on becoming ready", async () => {
@@ -232,13 +279,8 @@ describe("RunState — one transition, one durable step", () => {
     // completion is the cursor reaching the stage count — are what a transition
     // has to keep. Validating each committed document is what proves it does.
     const { run, written } = cursor();
-    const live = attempt();
-    const settled: AttemptRecord = {
-      ...live,
-      result: "waiting",
-      endedAt: "2026-02-01T10:00:00.000Z",
-      headAfterAttempt: "bbbb",
-    };
+    const live = liveAttempt();
+    const settled = waitingAttempt();
     const steps: Transition[][] = [
       [{ kind: "reserve-attempt", attempt: live }],
       [
@@ -261,16 +303,11 @@ describe("RunState — one transition, one durable step", () => {
 
 describe("RunState — what one commit means", () => {
   it("writes several transitions as one document", async () => {
-    const live = attempt();
+    const live = liveAttempt();
     const { run, written } = cursor(
       baseCheckpoint({ condition: "executing", attempts: [live] }),
     );
-    const settled: AttemptRecord = {
-      ...live,
-      result: "waiting",
-      endedAt: "2026-02-01T10:00:00.000Z",
-      headAfterAttempt: "bbbb",
-    };
+    const settled = waitingAttempt();
 
     await run.commit(
       { kind: "settle-attempt", attempt: settled },
@@ -384,7 +421,7 @@ describe("RunState — a pause the checkpoint already records", () => {
   it("writes when the step carries anything besides that pause", async () => {
     // The pause repeats itself, but the attempt it settles does not, so the step
     // still changes the run.
-    const live = attempt();
+    const live = liveAttempt();
     const recorded = Pause.queueBlocked([
       "docs/threads/260201100000Z-t/.pending-decisions/one.md",
     ]);
@@ -398,15 +435,7 @@ describe("RunState — a pause the checkpoint already records", () => {
     run.apply({ kind: "pause", waiting: recorded });
 
     await run.commit(
-      {
-        kind: "settle-attempt",
-        attempt: {
-          ...live,
-          result: "waiting",
-          endedAt: "2026-02-01T10:00:00.000Z",
-          headAfterAttempt: "bbbb",
-        },
-      },
+      { kind: "settle-attempt", attempt: waitingAttempt() },
       {
         kind: "pause",
         waiting: Pause.queueBlocked([

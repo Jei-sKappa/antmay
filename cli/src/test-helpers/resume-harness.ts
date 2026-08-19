@@ -21,7 +21,10 @@ import {
 } from "../harness/adapters/simulated/scenario.js";
 import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/toggle.js";
 import type { installSignalHandlers } from "../runner/signals.js";
-import type { RunCheckpoint } from "../state/checkpoint/types.js";
+import type {
+  AttemptRecord,
+  RunCheckpoint,
+} from "../state/checkpoint/types.js";
 import { locksDirectory } from "../state/lock.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
 import { runDirectoryFor, runsDirectory } from "../state/runs.js";
@@ -305,6 +308,17 @@ export async function readCp(h: Harness, runId: string): Promise<RunCheckpoint> 
 
 export function attemptCountAt(cp: RunCheckpoint, stageIndex: number): number {
   return cp.attempts.filter((a) => a.stageIndex === stageIndex).length;
+}
+
+/**
+ * The post-attempt tip one recorded attempt settled at, which only a settled
+ * attempt carries. `undefined` for a missing or still-live one, so a case
+ * asserting a boundary compares against the absence rather than crashing on it.
+ */
+export function settledHead(attempt: AttemptRecord | undefined): string | undefined {
+  return attempt === undefined || attempt.result === "executing"
+    ? undefined
+    : attempt.headAfterAttempt;
 }
 
 export async function commitSubjects(fixture: RepoFixture): Promise<string[]> {
