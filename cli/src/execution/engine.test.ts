@@ -21,6 +21,7 @@ import type {
   AttemptFailure,
   AttemptRecord,
   AttemptSettlement,
+  QueueObservation,
   RunCheckpoint,
   SnapshottedStage,
 } from "../state/checkpoint/types.js";
@@ -320,6 +321,26 @@ const promisingStage: SyntheticStage = {
     commitSubjectTemplate: "chore(<thread-folder>): promise",
   },
   queueResolution: "advance",
+};
+
+/**
+ * The same promise with a `rerun` queue resolution, so finalizing its saved DONE
+ * re-enters the stage rather than advancing past it. Its boundary requires no
+ * change, because the attempt a rerun launches is judged by that rule again and
+ * has nothing left to write.
+ */
+const rerunPromisingStage: SyntheticStage = {
+  id: "review-spec",
+  skill: "rerun-promise-skill",
+  target: { kind: "thread-file", path: "spec.md" },
+  promises: { spec: true },
+  gitPolicy: {
+    headMayChange: false,
+    allowedChanges: [{ kind: "exact-file", threadRelativePath: "spec.md" }],
+    changeRequired: false,
+    commitSubjectTemplate: "chore(<thread-folder>): rerun promise",
+  },
+  queueResolution: "rerun",
 };
 
 const BLOCKED_ATTEMPT: AttemptOutcome = {
@@ -1053,6 +1074,88 @@ describe.concurrent("executeEngine — finalized DONE resolutions on resume (AC-
       "done",
     ]);
   });
+});
+
+describe.concurrent("executeEngine — finalization answers the recorded queue observation", () => {
+  /**
+   * Pause one promising stage on its contract, so its DONE is preserved for a
+   * finalization, then record on it the queue observation the case is about and
+   * repair the promise the finalization needs.
+   *
+   * The observation is seeded rather than produced: this pause is where a human
+   * resolves bundles, so a scan performed here would answer a different question
+   * than the one the attempt recorded — which is exactly why finalization reads
+   * the record. Seeding is also the only way to reach the unavailable case at
+   * this branch, whose scan failed during a run that has since ended.
+   */
+  async function pausedOnContractObserving(
+    stage: SyntheticStage,
+    queues: QueueObservation,
+  ): Promise<{ fixture: RepoFixture; runDir: string }> {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    await allocatedRun(fixture, runDir, [stage], [{}]);
+    const paused = await loadCheckpoint(runDir);
+    expect(paused.waiting?.recovery.kind).toBe("recheck-stage-contract");
+    const preserved = paused.attempts[0]!;
+    if (preserved.result === "executing") throw new Error("expected a settlement");
+    await writeCheckpoint(runDir, {
+      ...paused,
+      attempts: [{ ...preserved, queues }],
+    });
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    return { fixture, runDir };
+  }
+
+  const cases: Array<{
+    name: string;
+    stage: SyntheticStage;
+    queues: QueueObservation;
+    reruns: boolean;
+  }> = [
+    {
+      name: "an unavailable observation on a rerun stage leaves the run ready and runs it again (AC-3.1)",
+      stage: rerunPromisingStage,
+      queues: { kind: "unavailable" },
+      reruns: true,
+    },
+    {
+      name: "an unavailable observation on an advancing stage advances the cursor (AC-3.2)",
+      stage: promisingStage,
+      queues: { kind: "unavailable" },
+      reruns: false,
+    },
+    {
+      name: "an observed empty queue advances a rerun stage (AC-3.3)",
+      stage: rerunPromisingStage,
+      queues: { kind: "observed", pendingFiles: [] },
+      reruns: false,
+    },
+    {
+      name: "an observed empty queue advances an advancing stage (AC-3.3)",
+      stage: promisingStage,
+      queues: { kind: "observed", pendingFiles: [] },
+      reruns: false,
+    },
+  ];
+
+  for (const testCase of cases) {
+    it(testCase.name, async () => {
+      const { runDir } = await pausedOnContractObserving(
+        testCase.stage,
+        testCase.queues,
+      );
+
+      const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+      expect(result).toEqual({ kind: "completed" });
+      expect(harness.calls).toHaveLength(testCase.reruns ? 1 : 0);
+      const cp = await loadCheckpoint(runDir);
+      expect(attemptsAt(cp, 0).map((a) => a.result)).toEqual(
+        testCase.reruns ? ["done", "done"] : ["done"],
+      );
+    });
+  }
 });
 
 describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4, AC-4.3)", () => {

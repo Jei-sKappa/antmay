@@ -146,9 +146,8 @@ export async function finalizeSavedDone(
   }
 
   // Success: flip the preserved DONE attempt from waiting to done over the tip
-  // this finalization left it at, clear waiting, then apply the declared
-  // resolution when the attempt listed pending files, else the normal
-  // successful-stage advance.
+  // this finalization left it at, clear waiting, then apply the stage's declared
+  // queue resolution or take the normal successful-stage advance.
   const finalized: Transition = {
     kind: "finalize-preserved-done",
     attempt: {
@@ -168,9 +167,17 @@ export async function finalizeSavedDone(
       terminalResult,
     },
   };
-  const hadPending =
-    preserved.queues.kind === "observed" && preserved.queues.pendingFiles.length > 0;
-  if (hadPending && ctx.stage.queueResolution === "rerun") {
+  // A scan that could not run is answered as though pending work had been
+  // observed: the recorded observation is all there is to read — this pause is
+  // where a human resolved the bundles, so a fresh scan would find them gone —
+  // and erring toward re-running a stage is the only way not to carry a run past
+  // work that may exist. The re-entered stage's queue gate makes the fresh
+  // observation, so bundles still present are caught there and a scan that fails
+  // again pauses on current evidence.
+  const mayHoldPending =
+    preserved.queues.kind !== "observed" ||
+    preserved.queues.pendingFiles.length > 0;
+  if (mayHoldPending && ctx.stage.queueResolution === "rerun") {
     return {
       kind: "resolved",
       result: await commitCursor(ctx, finalized, { kind: "become-ready" }),
