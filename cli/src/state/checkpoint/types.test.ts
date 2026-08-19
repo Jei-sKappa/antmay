@@ -8,6 +8,9 @@ import type {
   AttemptSettlement,
   DoneTerminalResult,
   QueueObservation,
+  RunCheckpoint,
+  RunCheckpointFields,
+  WaitingInfo,
   WaitingReason,
 } from "./types.js";
 
@@ -234,5 +237,85 @@ describe("every waiting kind determines the evidence it carries", () => {
       harnessErrorWithEvidence,
       blockedWithoutAgentReason,
     ]).toHaveLength(6);
+  });
+});
+
+describe("the checkpoint states its own pause correlation", () => {
+  // Nothing here is about a stage or an attempt, so the run carries neither.
+  const FIELDS: RunCheckpointFields = {
+    schemaVersion: 0,
+    runId: "260819100000Z-0a1b2c3d",
+    executor: { pid: 4242, version: "0.1.0" },
+    createdAt: "2026-08-19T10:00:00.000Z",
+    updatedAt: "2026-08-19T10:00:00.000Z",
+    repoRoot: "/tmp/repo",
+    threadRelPath: "docs/threads/260819100000Z-t",
+    workspace: {
+      strategy: "current-checkout",
+      path: "/tmp/repo",
+      execution: { cwd: "/tmp/repo", sandbox: "none", branchStrategy: "head" },
+    },
+    dangerouslySkipPermissions: false,
+    pipelineName: "standard",
+    pipelineSourcePath: "/tmp/config/pipelines/standard.json",
+    profileSelection: { kind: "settings-only" },
+    stages: [],
+    observedHarnessVersions: {},
+    runtime: { kind: "real" },
+    stageIndex: 0,
+    attempts: [],
+  };
+
+  const PAUSE: WaitingInfo = {
+    reasons: [
+      { kind: "gate-error", message: "The scan failed.", errorMessage: "EACCES" },
+    ],
+    recovery: { kind: "retry-stage" },
+  };
+
+  const paused: RunCheckpoint = {
+    ...FIELDS,
+    condition: "waiting-for-user",
+    waiting: PAUSE,
+  };
+  const ready: RunCheckpoint = { ...FIELDS, condition: "ready", waiting: null };
+  const executing: RunCheckpoint = {
+    ...FIELDS,
+    condition: "executing",
+    waiting: null,
+  };
+  const completed: RunCheckpoint = {
+    ...FIELDS,
+    condition: "completed",
+    waiting: null,
+  };
+
+  // @ts-expect-error a paused run carries the pause that explains it
+  const pausedWithoutPause: RunCheckpoint = {
+    ...FIELDS,
+    condition: "waiting-for-user",
+    waiting: null,
+  };
+
+  // @ts-expect-error a completed run has no pause to carry
+  const completedWithPause: RunCheckpoint = {
+    ...FIELDS,
+    condition: "completed",
+    waiting: PAUSE,
+  };
+
+  it("keeps every legal condition and pause pairing constructible", () => {
+    expect(
+      [paused, ready, executing, completed].map((cp) => [
+        cp.condition,
+        cp.waiting === null,
+      ]),
+    ).toEqual([
+      ["waiting-for-user", false],
+      ["ready", true],
+      ["executing", true],
+      ["completed", true],
+    ]);
+    expect([pausedWithoutPause, completedWithPause]).toHaveLength(2);
   });
 });

@@ -217,6 +217,7 @@ function withRecovery(
 ): RunCheckpoint {
   return {
     ...validCheckpoint(),
+    condition: "waiting-for-user",
     attempts,
     waiting: {
       reasons: [

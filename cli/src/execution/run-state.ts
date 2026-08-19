@@ -13,10 +13,12 @@ import { waitingEquals } from "./pause.js";
  * A state change here is a value rather than an assignment: every way the cursor
  * can move is a named `Transition`, applied through one reducer, so a caller
  * states what happened and never how the resulting document is shaped. That is
- * what keeps the invariants a checkpoint carries — an appended attempt is the
- * only executing one, a pause carries a waiting object and nothing else does,
- * completion is the cursor reaching the stage count — in one readable place
- * instead of in the reading order of the procedure that used to rebuild them.
+ * what keeps the invariants the document's own shape leaves open — an appended
+ * attempt is the only executing one, completion is the cursor reaching the stage
+ * count — in one readable place instead of in the reading order of the procedure
+ * that used to rebuild them. The pause and the condition that names it move
+ * together because the reducer constructs one arm of the checkpoint union, which
+ * is where that correlation is stated.
  *
  * `commit` is the whole persistence boundary of a run in flight: the one place
  * `updatedAt` is stamped, the one place the atomic writer is called after

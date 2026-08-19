@@ -832,6 +832,7 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
     const paused = await loadCheckpoint(runDir);
     const malformed: RunCheckpoint = {
       ...paused,
+      condition: "waiting-for-user",
       waiting: {
         ...paused.waiting!,
         recovery: {
@@ -1333,7 +1334,11 @@ describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4,
       const cursor: RunCheckpoint =
         order === "as-recorded"
           ? paused
-          : { ...paused, waiting: reordered(paused.waiting!) };
+          : {
+              ...paused,
+              condition: "waiting-for-user",
+              waiting: reordered(paused.waiting!),
+            };
       const { result, harness } = await resumeFromDisk(runDir, [{}], {
         checkpoint: cursor,
       });

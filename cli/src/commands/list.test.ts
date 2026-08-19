@@ -10,6 +10,7 @@ import type { CatalogStageId } from "../pipeline/stage-id.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
+  RunCheckpointFields,
   RunCondition,
   SnapshottedStage,
 } from "../state/checkpoint/types.js";
@@ -90,7 +91,7 @@ function makeCheckpoint(overrides: {
     observedHarnessVersions[stage.binding.agent.harness] =
       `${stage.binding.agent.harness} 1.0.0`;
   }
-  const checkpoint: RunCheckpoint = {
+  const fields: RunCheckpointFields = {
     schemaVersion: 0,
     runId: overrides.runId,
     executor: { pid: 4242, version: "0.1.0" },
@@ -111,16 +112,19 @@ function makeCheckpoint(overrides: {
     observedHarnessVersions,
     runtime: { kind: "real" },
     stageIndex: overrides.stageIndex,
-    condition: overrides.condition,
     attempts: overrides.attempts ?? [],
-    waiting: null,
   };
-  if (overrides.condition === "waiting-for-user") {
-    checkpoint.waiting = governedBy({
-      kind: "idle-timeout",
-      message: "The stage idled out.",
-    });
-  }
+  const checkpoint: RunCheckpoint =
+    overrides.condition === "waiting-for-user"
+      ? {
+          ...fields,
+          condition: overrides.condition,
+          waiting: governedBy({
+            kind: "idle-timeout",
+            message: "The stage idled out.",
+          }),
+        }
+      : { ...fields, condition: overrides.condition, waiting: null };
   // Guard the fixtures themselves: a test-authored invalid checkpoint would
   // otherwise silently exercise the warning path instead of the summary path.
   const validated = validateCheckpoint(JSON.parse(JSON.stringify(checkpoint)));

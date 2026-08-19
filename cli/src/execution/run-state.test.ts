@@ -4,6 +4,8 @@ import { STAGE_CATALOG } from "../pipeline/catalog.js";
 import type {
   AttemptRecord,
   RunCheckpoint,
+  RunCheckpointFields,
+  RunCondition,
   SnapshottedStage,
   WaitingInfo,
 } from "../state/checkpoint/types.js";
@@ -37,8 +39,18 @@ function snapshotted(index: number): SnapshottedStage {
   };
 }
 
-function baseCheckpoint(overrides: Partial<RunCheckpoint> = {}): RunCheckpoint {
-  return {
+/**
+ * A cursor at rest, with the fields a case is about replaced. The condition and
+ * the pause travel together, because the document says they do.
+ */
+function baseCheckpoint(
+  overrides: Partial<RunCheckpointFields> & {
+    condition?: RunCondition;
+    waiting?: WaitingInfo | null;
+  } = {},
+): RunCheckpoint {
+  const { condition = "ready", waiting = null, ...rest } = overrides;
+  const fields: RunCheckpointFields = {
     schemaVersion: 0,
     runId: "260201095959Z-abcdef",
     executor: { pid: 4242, version: "0.1.0" },
@@ -59,11 +71,14 @@ function baseCheckpoint(overrides: Partial<RunCheckpoint> = {}): RunCheckpoint {
     observedHarnessVersions: { codex: "codex 1.2.3" },
     runtime: { kind: "real" },
     stageIndex: 0,
-    condition: "ready",
     attempts: [],
-    waiting: null,
-    ...overrides,
+    ...rest,
   };
+  if (condition === "waiting-for-user") {
+    if (waiting === null) throw new Error("a paused fixture needs a pause");
+    return { ...fields, condition, waiting };
+  }
+  return { ...fields, condition, waiting: null };
 }
 
 /** One arm of the attempt union, addressed by the disposition that names it. */

@@ -326,7 +326,7 @@ export type ProfileSelection =
   | { kind: "profile"; name: string; sourcePath: string };
 
 /**
- * The full `state.json` document at `schemaVersion: 0`.
+ * What every `state.json` document carries whatever condition the run is in.
  *
  * `pipelineName` is the pipeline document's declared identity and
  * `pipelineSourcePath` the absolute source it was read from; the two are
@@ -334,7 +334,7 @@ export type ProfileSelection =
  * identity. `fromStage` is present only when the invocation named an entry
  * point, and `stages` holds exactly the selected suffix.
  */
-export type RunCheckpoint = {
+export type RunCheckpointFields = {
   schemaVersion: 0;
   runId: string;
   executor: { pid: number; version: string };
@@ -352,10 +352,30 @@ export type RunCheckpoint = {
   observedHarnessVersions: Partial<Record<HarnessId, string>>;
   runtime: HarnessRuntimeIdentity;
   stageIndex: number;
-  condition: RunCondition;
   attempts: AttemptRecord[];
-  waiting: WaitingInfo | null;
 };
+
+/** A run in a condition that is not a pause, which carries no waiting object. */
+export type UnpausedCheckpoint<C extends Exclude<RunCondition, "waiting-for-user">> =
+  RunCheckpointFields & { condition: C; waiting: null };
+
+/**
+ * The full `state.json` document at `schemaVersion: 0`, as a union over the
+ * run's condition. The pause and the condition that names it are one fact: a
+ * `waiting-for-user` run carries the waiting object, and no other condition may.
+ *
+ * The relation between an `executing` condition and the history's final attempt
+ * sits at the same level and is deliberately left with checkpoint validation,
+ * which reads untrusted JSON and constructs the value this union describes.
+ */
+export type RunCheckpoint =
+  | UnpausedCheckpoint<"ready">
+  | UnpausedCheckpoint<"executing">
+  | UnpausedCheckpoint<"completed">
+  | (RunCheckpointFields & {
+      condition: "waiting-for-user";
+      waiting: WaitingInfo;
+    });
 
 /**
  * The outcome of validating an untrusted checkpoint document.
