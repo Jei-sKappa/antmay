@@ -25,6 +25,7 @@ import {
   type Harness,
   type RunResult,
 } from "../test-helpers/run-harness.js";
+import { reasonOf } from "../test-helpers/waiting.js";
 
 /**
  * What refuses a new run and what it leaves behind when it does: the preflight
@@ -431,10 +432,10 @@ describe.concurrent("runCommand — artifact drift after preflight (AC-7.1)", ()
     expect(cp.checkpoint.condition).toBe("waiting-for-user");
     expect(cp.checkpoint.stageIndex).toBe(0);
     expect(cp.checkpoint.attempts).toEqual([]);
-    expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");
-    expect(cp.checkpoint.waiting?.reasons[0].contract).toEqual([
-      { dimension: "spec", expected: true, observed: false },
-    ]);
+    expect(
+      reasonOf(cp.checkpoint.waiting?.reasons[0], "stage-prerequisite-unmet")
+        .contract,
+    ).toEqual([{ dimension: "spec", expected: true, observed: false }]);
   });
 });
 

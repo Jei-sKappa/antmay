@@ -157,7 +157,7 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   immediately before every attempt, and verifies the promised artifact state
   after a recognized `DONE`. That verification runs **before** the Git boundary,
   so a `DONE` implement attempt that left no `implementation-report.md` reports
-  `stage-contract-violation` and never reaches boundary evaluation.
+  `stage-contract-unmet` and never reaches boundary evaluation.
 - Once the promise holds, the **Git boundary** (`src/gitops/boundary.ts`)
   validates that post-DONE changes fall within the stage's allowed selectors and
   produces the declared boundary commit. Each refusal carries a structured cause:
@@ -213,10 +213,10 @@ creates no config root, no `settings.json`, and no pipeline or profile document.
   snapshotted at allocation, so `resume` rereads no pipeline, profile, or
   settings document. Its preflight is read-only with respect to that checkpoint:
   it never branches on a recovery variant or reason kind, applies no worktree
-  exemption of its own, and persists nothing. A `stage-contract-violation` pause
-  or Git-boundary pause whose recovery preserves a saved `DONE` is exempt from
-  the clean-worktree rule, because the repair or boundary diff it waits for is
-  uncommitted.
+  exemption of its own, and persists nothing. A `stage-contract-unmet` or
+  `stage-contract-uninspectable` pause, or a Git-boundary pause, whose recovery
+  preserves a saved `DONE` is exempt from the clean-worktree rule, because the
+  repair or boundary diff it waits for is uncommitted.
 
 ### Module layout (`src/`)
 

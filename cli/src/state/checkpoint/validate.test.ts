@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { governedBy } from "../../test-helpers/waiting.js";
+import { governedBy, reasonOf } from "../../test-helpers/waiting.js";
 import type {
   AttemptIdentity,
   AttemptRecord,
   AttemptSettlement,
   QueueObservation,
   RunCheckpoint,
+  WaitingKind,
   WaitingRecovery,
 } from "./types.js";
 import { validateCheckpoint } from "./validate.js";
@@ -102,7 +103,7 @@ function validCheckpoint(): RunCheckpoint {
     waiting: governedBy({
       kind: "outcome-blocked",
       message: "The spec stage reported BLOCKED.",
-      candidateLine: "Outcome: BLOCKED — x",
+      agentReason: "x",
     }),
   };
 }
@@ -289,6 +290,7 @@ describe("validateCheckpoint field and round-trip (AC-13.1)", () => {
     doc.waiting = governedBy({
       kind: "malformed-outcome",
       message: "No valid outcome token.",
+      candidateLine: "outcome: maybe done?",
     });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(true);
@@ -683,30 +685,36 @@ describe("validateCheckpoint cross-field invariants (AC-14.1, AC-12.7)", () => {
     }
   });
 
-  it("rejects non-string diagnostics on a reason", () => {
+  it("rejects an interruption whose signal origin is not a string", () => {
     const doc = validCheckpoint();
     doc.waiting = governedBy({
-      kind: "harness-error",
-      message: "The provider returned an error.",
-      diagnostics: { errorClass: 503 as unknown as string },
+      kind: "interrupted",
+      message: "The attempt was interrupted.",
+      origin: 9 as unknown as string,
     });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(
         result.errors.some((e) =>
-          /reasons\[0\]\.diagnostics\.errorClass must be a string/.test(e),
+          /reasons\[0\]\.origin must be a non-empty string/.test(e),
         ),
       ).toBe(true);
     }
   });
 
-  it("accepts diagnostics recorded on the reason they describe", () => {
+  it("accepts the diagnostic each producing situation records for itself", () => {
     const doc = validCheckpoint();
+    doc.waiting = governedBy({
+      kind: "interrupted",
+      message: "The attempt was interrupted.",
+      origin: "SIGINT",
+    });
+    expect(validateCheckpoint(doc).ok).toBe(true);
+
     doc.waiting = governedBy({
       kind: "harness-error",
       message: "The provider returned an error.",
-      diagnostics: { errorClass: "HttpError", errorMessage: "503", origin: "SIGINT" },
     });
     expect(validateCheckpoint(doc).ok).toBe(true);
   });
@@ -935,20 +943,22 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
     const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.waiting?.reasons[0].contract).toEqual([
-        { dimension: "spec", expected: true, observed: false },
-      ]);
+      expect(
+        reasonOf(result.checkpoint.waiting?.reasons[0], "stage-prerequisite-unmet")
+          .contract,
+      ).toEqual([{ dimension: "spec", expected: true, observed: false }]);
     }
   });
 
-  it("accepts a stage-contract-violation carrying a plan-state mismatch", () => {
+  it("accepts an unmet stage contract carrying a plan-state mismatch", () => {
     const doc = withRecovery(RECHECK_CONTRACT);
     doc.waiting = {
       reasons: [
         {
-          kind: "stage-contract-violation",
+          kind: "stage-contract-unmet",
           message: "The stage reported DONE without leaving its promised plan.",
           contract: [{ dimension: "plan", expected: "strict", observed: "brief" }],
+          preservationNote: null,
         },
       ],
       recovery: RECHECK_CONTRACT,
@@ -956,20 +966,22 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
     const result = validateCheckpoint(JSON.parse(JSON.stringify(doc)));
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.checkpoint.waiting?.reasons[0].contract).toEqual([
-        { dimension: "plan", expected: "strict", observed: "brief" },
-      ]);
+      expect(
+        reasonOf(result.checkpoint.waiting?.reasons[0], "stage-contract-unmet")
+          .contract,
+      ).toEqual([{ dimension: "plan", expected: "strict", observed: "brief" }]);
     }
   });
 
   it("rejects a contract entry naming something that is not a dimension", () => {
     const doc = validCheckpoint();
     doc.waiting = governedBy({
-      kind: "stage-contract-violation",
+      kind: "stage-contract-unmet",
       message: "unmet",
       contract: [
         { dimension: "roadmap" as unknown as "spec", expected: true, observed: false },
       ],
+      preservationNote: null,
     });
     const result = validateCheckpoint(doc);
     expect(result.ok).toBe(false);
@@ -985,8 +997,9 @@ describe("validateCheckpoint — artifact-contract pauses (AC-7.1, AC-7.3)", () 
   it("rejects a value of the wrong type for its dimension", () => {
     const doc = validCheckpoint();
     doc.waiting = governedBy({
-      kind: "stage-contract-violation",
+      kind: "stage-contract-unmet",
       message: "unmet",
+      preservationNote: null,
       contract: [
         { dimension: "plan", expected: true as unknown as "strict", observed: "brief" },
         {
@@ -1080,7 +1093,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
           kind: "outcome-blocked",
           message:
             "The spec stage reported BLOCKED and paused for human attention.",
-          candidateLine: "Outcome: BLOCKED — x",
+          agentReason: "x",
         }),
         attempts: [
           doneAttempt({
@@ -1099,6 +1112,7 @@ describe("validateCheckpoint — harness runtime identity (AC-2.6, AC-5.1)", () 
         waiting: governedBy({
           kind: "interrupted",
           message: "The harness attempt was interrupted by a signal.",
+          origin: "SIGINT",
         }),
         attempts: [interruptedAttempt()],
       },
@@ -1454,6 +1468,93 @@ describe("validateCheckpoint — waiting recovery rejections (AC-2.2, AC-2.5)", 
       ).toBe(true);
     }
   });
+});
+
+describe("validateCheckpoint — every waiting kind carries exactly its own evidence", () => {
+  const UNMET = [{ dimension: "spec", expected: true, observed: false }];
+
+  /**
+   * The evidence each kind declares, as one valid value of it. The record is
+   * total over the vocabulary, so the loop below reaches every kind the type
+   * admits and a new one arrives here before it can be persisted.
+   */
+  const EVIDENCE: Record<WaitingKind, Record<string, unknown>> = {
+    "outcome-blocked": { agentReason: "needs input" },
+    "outcome-refused": { agentReason: null },
+    "pending-queues": {
+      pendingFiles: ["docs/threads/260723121015Z-demo/.pending-decisions/a.md"],
+    },
+    "malformed-outcome": { candidateLine: "outcome: maybe done?" },
+    "harness-error": {},
+    "idle-timeout": {},
+    interrupted: { origin: "SIGINT" },
+    "gate-error": { errorMessage: "EACCES" },
+    "unexpected-head-movement": {},
+    "git-policy-violation": {},
+    "commit-error": {},
+    "stage-prerequisite-unmet": { contract: UNMET },
+    "stage-prerequisite-uninspectable": { errorMessage: "EACCES" },
+    "stage-contract-unmet": { contract: UNMET, preservationNote: null },
+    "stage-contract-uninspectable": { errorMessage: "EACCES" },
+  };
+
+  /** Every evidence key any kind declares, which is what makes one foreign. */
+  const EVERY_KEY = [
+    ...new Set(Object.values(EVIDENCE).flatMap((evidence) => Object.keys(evidence))),
+  ];
+
+  /** A waiting document explaining itself with exactly the reason given. */
+  function pauseWith(reason: Record<string, unknown>): unknown {
+    return {
+      ...validCheckpoint(),
+      waiting: { reasons: [reason], recovery: { kind: "retry-stage" } },
+    };
+  }
+
+  function errorsOf(document: unknown): string[] {
+    const result = validateCheckpoint(JSON.parse(JSON.stringify(document)));
+    return result.ok ? [] : result.errors;
+  }
+
+  for (const [kind, evidence] of Object.entries(EVIDENCE) as [
+    WaitingKind,
+    Record<string, unknown>,
+  ][]) {
+    it(`accepts a ${kind} reason and rejects every other evidence shape for it`, () => {
+      const own: Record<string, unknown> = {
+        kind,
+        message: `A ${kind} pause.`,
+        ...evidence,
+      };
+      expect(errorsOf(pauseWith(own))).toEqual([]);
+
+      // A field another kind declares and this one does not is not a field
+      // nobody looked at: it is a document this kind cannot mean.
+      const foreign = EVERY_KEY.find((key) => !(key in evidence));
+      expect(foreign, `${kind} declares every evidence key`).toBeDefined();
+      expect(
+        errorsOf(pauseWith({ ...own, [foreign!]: EVIDENCE_VALUE[foreign!] })),
+      ).toContainEqual(
+        `waiting.reasons[0].${foreign!} is not permitted on a "${kind}" reason.`,
+      );
+
+      // And each field it does declare is required, so an absent one is a
+      // reason that does not say what its kind promises.
+      for (const key of Object.keys(evidence)) {
+        const { [key]: _missing, ...rest } = own;
+        expect(
+          errorsOf(pauseWith(rest)),
+          `${kind} without ${key}`,
+        ).not.toEqual([]);
+      }
+    });
+  }
+
+  /** One valid value per evidence key, for building the foreign-field cases. */
+  const EVIDENCE_VALUE: Record<string, unknown> = Object.assign(
+    {},
+    ...Object.values(EVIDENCE),
+  );
 });
 
 describe("validateCheckpoint — the attempt's disposition decides its fields", () => {

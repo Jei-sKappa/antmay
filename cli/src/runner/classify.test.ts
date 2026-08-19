@@ -11,6 +11,7 @@ import type {
   DoneTerminalResult,
   WaitingKind,
   WaitingReason,
+  WaitingReasonOf,
 } from "../state/checkpoint/types.js";
 import type { OutcomeParse } from "./outcome.js";
 
@@ -98,7 +99,6 @@ function pauseOf(result: Classification): {
   action: "pause" | "pause-done";
   kind: WaitingKind;
   message: string;
-  detail: string | undefined;
   kinds: WaitingKind[];
   reasons: WaitingReason[];
 } {
@@ -110,19 +110,24 @@ function pauseOf(result: Classification): {
     action: result.action,
     kind: governing.kind,
     message: governing.message,
-    detail: governing.detail,
     kinds: result.reasons.map((reason) => reason.kind),
     reasons: result.reasons,
   };
 }
 
-/** The reason of a given kind the pause reported, for asserting on a co-reason. */
-function reasonOf(result: Classification, kind: WaitingKind): WaitingReason {
+/**
+ * The reason of a given kind the pause reported, as that kind, for asserting on
+ * a co-reason and the evidence it carries.
+ */
+function reasonOf<K extends WaitingKind>(
+  result: Classification,
+  kind: K,
+): WaitingReasonOf<K> {
   const found = pauseOf(result).reasons.find((reason) => reason.kind === kind);
   if (found === undefined) {
     throw new Error(`expected a ${kind} reason`);
   }
-  return found;
+  return found as WaitingReasonOf<K>;
 }
 
 describe("classifyAttempt", () => {
@@ -263,9 +268,10 @@ describe("classifyAttempt", () => {
   });
 
   it("BLOCKED with no pending files pauses as outcome-blocked", () => {
-    const result = pauseOf(
-      classifyAttempt(input({ parse: blockedParse, boundary: okBoundary })),
+    const classification = classifyAttempt(
+      input({ parse: blockedParse, boundary: okBoundary }),
     );
+    const result = pauseOf(classification);
     expect(result.kind).toBe("outcome-blocked");
     // The sentence quotes the outcome line the attempt ended on, so it is pinned
     // byte for byte: it reaches the terminal, and the tokens and the prefix it
@@ -275,7 +281,9 @@ describe("classifyAttempt", () => {
     );
     // The agent's own reason travels separately from the classification
     // sentence, stripped of the dash that separated it from the token.
-    expect(result.detail).toBe("needs input");
+    expect(reasonOf(classification, "outcome-blocked").agentReason).toBe(
+      "needs input",
+    );
     expect(result.message).not.toContain("—");
   });
 
@@ -286,7 +294,7 @@ describe("classifyAttempt", () => {
     expect(pauseOf(result).action).toBe("pause");
     expect(pauseOf(result).kind).toBe("pending-queues");
     expect(pauseOf(result).kinds).toEqual(["pending-queues", "outcome-blocked"]);
-    expect(reasonOf(result, "outcome-blocked").detail).toBe("needs input");
+    expect(reasonOf(result, "outcome-blocked").agentReason).toBe("needs input");
   });
 
   it("REFUSED with no pending files pauses as outcome-refused", () => {

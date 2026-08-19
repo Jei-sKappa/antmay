@@ -601,7 +601,7 @@ describe("runPaused", () => {
           {
             kind: "outcome-refused",
             message: "The stage reported Outcome: REFUSED and paused for human attention.",
-            detail: "Spec section 3 contradicts the seed",
+            agentReason: "Spec section 3 contradicts the seed",
           },
         ],
         recovery: { kind: "retry-stage" },
@@ -653,7 +653,7 @@ describe("runPaused", () => {
           kind: "outcome-blocked",
           message:
             "The stage reported Outcome: BLOCKED and paused for human attention.",
-          detail: "needs input",
+          agentReason: "needs input",
         },
         { nextAction: "Revert or commit the changes before resuming." },
       ),
@@ -680,7 +680,7 @@ describe("runPaused", () => {
           kind: "outcome-blocked",
           message:
             "The stage reported Outcome: BLOCKED and paused for human attention.",
-          detail: "Fake pause; no files changed",
+          agentReason: "Fake pause; no files changed",
         },
         { nextAction: "Revert or commit the changes before resuming." },
       ),
@@ -698,7 +698,11 @@ describe("runPaused", () => {
 
   it("omits detail and next-action lines when the pause carries neither", () => {
     const { out } = paused({
-      waiting: governedBy({ kind: "gate-error", message: "gate failed" }),
+      waiting: governedBy({
+        kind: "gate-error",
+        message: "gate failed",
+        errorMessage: "EACCES",
+      }),
     });
     expect(out.text).not.toContain("Detail:");
     expect(out.text).not.toContain("Next:");
@@ -706,7 +710,11 @@ describe("runPaused", () => {
 
   it("omits the log line when no attempt was allocated", () => {
     const { out } = paused({
-      waiting: governedBy({ kind: "gate-error", message: "gate failed" }),
+      waiting: governedBy({
+        kind: "gate-error",
+        message: "gate failed",
+        errorMessage: "EACCES",
+      }),
       logAbsPath: null,
     });
     expect(out.text).not.toContain("Log:");
@@ -818,9 +826,9 @@ describe("runPaused", () => {
       'The requirements for stage 2/6 "implement" could not be checked: permission denied.';
     const { out } = paused({
       waiting: governedBy({
-        kind: "stage-prerequisite-unmet",
+        kind: "stage-prerequisite-uninspectable",
         message,
-        diagnostics: { errorMessage: "permission denied" },
+        errorMessage: "permission denied",
       }),
       logAbsPath: null,
     });
@@ -841,11 +849,12 @@ describe("runPaused", () => {
   it("announces a promised artifact the stage never left behind", () => {
     const { out } = paused({
       waiting: governedBy({
-        kind: "stage-contract-violation",
+        kind: "stage-contract-unmet",
         message: "The stage reported DONE without leaving the state it promises.",
         contract: [
           { dimension: "implementationReport", expected: true, observed: false },
         ],
+        preservationNote: null,
       }),
     });
     expect(out.text).toContain("FAILED — promised artifact state unmet ❌");
@@ -856,23 +865,51 @@ describe("runPaused", () => {
     expect(out.text).not.toContain("implementationReport");
   });
 
+  it("announces a promise that could not be verified under the same banner", () => {
+    // The split is a difference in evidence, not in what the pause is called, so
+    // an unverifiable promise reads as the unmet one with nothing to list.
+    const { out } = paused({
+      waiting: governedBy({
+        kind: "stage-contract-uninspectable",
+        message:
+          "The stage reported DONE but its promised artifact state could not be " +
+          "verified: permission denied.",
+        errorMessage: "permission denied.",
+      }),
+    });
+    expect(out.text).toContain("FAILED — promised artifact state unmet ❌");
+    expect(out.text).toContain("could not be verified");
+    expect(out.text).not.toContain("Artifacts:");
+  });
+
   it("lists no artifact block for a reason that carries no contract", () => {
     const { out } = paused();
     expect(out.text).not.toContain("Artifacts:");
   });
 
-  it("does not echo a candidate line the reason already accounts for", () => {
-    const { out } = paused({
+  it("echoes the candidate line for the one kind whose evidence it is", () => {
+    // The line is what a malformed outcome's complaint is about, so it is drawn
+    // there and nowhere else — a blocked outcome's own reason already accounts
+    // for it.
+    const malformed = paused({
+      waiting: governedBy({
+        kind: "malformed-outcome",
+        message: "The attempt produced no recognizable terminal outcome.",
+        candidateLine: "Outcome maybe DONE?",
+      }),
+    });
+    expect(malformed.out.text).toContain("Candidate outcome line:");
+    expect(malformed.out.text).toContain("│ Outcome maybe DONE?");
+
+    const blocked = paused({
       waiting: governedBy({
         kind: "outcome-blocked",
         message:
           "The stage reported Outcome: BLOCKED and paused for human attention.",
-        detail: "needs input",
-        candidateLine: "Outcome: BLOCKED — needs input",
+        agentReason: "needs input",
       }),
     });
-    expect(out.text).not.toContain("Candidate outcome line:");
-    expect(out.text).not.toContain("│ Outcome: BLOCKED");
+    expect(blocked.out.text).not.toContain("Candidate outcome line:");
   });
 });
 

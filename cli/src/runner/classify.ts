@@ -112,11 +112,12 @@ function harnessMessage(
 /**
  * The agent's own reason text, ready to stand on its own line: the verbatim
  * remainder after the outcome token, stripped of the dash that separated it from
- * that token. Absent when the attempt supplied no reason.
+ * that token. `null` when the attempt supplied no reason, which is a state of
+ * the outcome rather than a missing field.
  */
-function detailOf(detail: string): string | undefined {
+function agentReasonOf(detail: string): string | null {
   const clean = detail.replace(/^[—–-]+\s*/, "").trim();
-  return clean.length > 0 ? clean : undefined;
+  return clean.length > 0 ? clean : null;
 }
 
 function malformedMessage(candidateLine: string | null): string {
@@ -129,10 +130,7 @@ function malformedMessage(candidateLine: string | null): string {
   return `${opening} No candidate final line was present.`;
 }
 
-function candidateLineOf(parse: OutcomeParse | null): string | undefined {
-  if (parse === null || parse.candidateLine === null) return undefined;
-  return parse.candidateLine;
-}
+
 
 /**
  * Every queue-level reason that holds, scan failure first: a scan that could not
@@ -151,7 +149,11 @@ export function queueReasons(
   const sorted = sortPending(pendingFiles);
   const reasons: WaitingReason[] = [];
   if (queueScanError !== null) {
-    reasons.push({ kind: "gate-error", message: gateErrorMessage(queueScanError) });
+    reasons.push({
+      kind: "gate-error",
+      message: gateErrorMessage(queueScanError),
+      errorMessage: queueScanError,
+    });
   }
   if (sorted.length > 0) {
     reasons.push({
@@ -179,19 +181,17 @@ function stageReason(
   }
   if (parse !== null && (parse.token === "BLOCKED" || parse.token === "REFUSED")) {
     const blocked = parse.token === "BLOCKED";
-    const detail = detailOf(parse.detail);
     return {
       kind: blocked ? "outcome-blocked" : "outcome-refused",
       message: `The stage reported ${formatTerminalOutcome(parse.token)} and paused for human attention.`,
-      ...(detail !== undefined ? { detail } : {}),
-      candidateLine: parse.candidateLine,
+      agentReason: agentReasonOf(parse.detail),
     };
   }
-  const candidateLine = candidateLineOf(parse);
+  const candidateLine = parse === null ? null : parse.candidateLine;
   return {
     kind: "malformed-outcome",
-    message: malformedMessage(parse === null ? null : parse.candidateLine),
-    ...(candidateLine !== undefined ? { candidateLine } : {}),
+    message: malformedMessage(candidateLine),
+    candidateLine,
   };
 }
 

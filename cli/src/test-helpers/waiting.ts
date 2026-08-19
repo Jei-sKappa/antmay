@@ -1,6 +1,10 @@
+import { expect } from "vitest";
+
 import type {
   WaitingInfo,
+  WaitingKind,
   WaitingReason,
+  WaitingReasonOf,
   WaitingReasons,
 } from "../state/checkpoint/types.js";
 
@@ -25,4 +29,17 @@ export function governedBy(
 export function reordered(waiting: WaitingInfo): WaitingInfo {
   const reversed = [...waiting.reasons].reverse() as WaitingReasons;
   return { ...waiting, reasons: reversed };
+}
+
+/**
+ * One recorded reason as its own kind, so a case can read the evidence that kind
+ * carries. Asserting the kind is what earns the narrow, so a case that names the
+ * wrong one fails on the kind rather than on a missing field.
+ */
+export function reasonOf<K extends WaitingKind>(
+  reason: WaitingReason | undefined,
+  kind: K,
+): WaitingReasonOf<K> {
+  expect(reason?.kind).toBe(kind);
+  return reason as WaitingReasonOf<K>;
 }

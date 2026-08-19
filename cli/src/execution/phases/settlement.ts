@@ -8,7 +8,6 @@ import type {
   DoneTerminalResult,
   QueueObservation,
   TerminalResult,
-  WaitingDiagnostics,
 } from "../../state/checkpoint/types.js";
 import { scanPendingQueues } from "../../thread/queues.js";
 import type { StageContext } from "../context.js";
@@ -87,22 +86,16 @@ function stageDisposition(
 }
 
 /**
- * What a stopped pause reports about the attempt's own failure: the harness
- * error it ended with, and, when an abort ended it, where that abort came from.
- * An attempt that completed has no such failure to describe.
+ * Where the abort that ended this attempt came from, or `null` for a settlement
+ * no signal reached. Only the interruption a pause reports is worded from it.
  */
-function stoppedDiagnostics(
+function abortedBy(
   outcome: AttemptOutcome,
   signal: AbortSignal,
-): WaitingDiagnostics | undefined {
-  if (outcome.kind !== "failed") return undefined;
-  const failure = {
-    errorClass: outcome.errorClass,
-    errorMessage: outcome.errorMessage,
-  };
-  return outcome.category === "aborted"
-    ? { ...failure, origin: abortOrigin(signal) }
-    : failure;
+): { origin: string } | null {
+  return outcome.kind === "failed" && outcome.category === "aborted"
+    ? { origin: abortOrigin(signal) }
+    : null;
 }
 
 /**
@@ -161,10 +154,6 @@ export async function settleAttempt(
       executingAttempt,
       headAfterAttempt: observedHead,
       queues,
-      failure: {
-        errorClass: outcome.errorClass,
-        errorMessage: outcome.errorMessage,
-      },
       agentSession,
     });
   }
@@ -251,14 +240,14 @@ export async function settleAttempt(
     });
   }
 
-  const aborted = outcome.kind === "failed" && outcome.category === "aborted";
+  const abort = abortedBy(outcome, ctx.signal);
+  const aborted = abort !== null;
   return commitSettlement(ctx, settling, {
     kind: "stopped",
     terminalResult: terminalResultFrom(parse),
     waiting: Pause.attemptStopped({
       classified: classification.reasons,
-      aborted,
-      diagnostics: stoppedDiagnostics(outcome, ctx.signal),
+      abort,
       attempt: attemptReference,
       boundary: refusedBoundary(boundary, headMovementAdvisory, observedHead),
     }),

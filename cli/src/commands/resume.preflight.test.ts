@@ -350,7 +350,7 @@ const CLEAN_WORKTREE_EXEMPT_PAUSES: {
     },
   },
   {
-    kind: "stage-contract-violation",
+    kind: "stage-contract-unmet",
     seedPause: async (h) => {
       // The `spec` stage reports DONE and writes nothing, so the spec it
       // promises is missing.
@@ -467,7 +467,11 @@ describe("resumeCommand — engine handoff (AC-1.1)", () => {
       name: "a durable pause",
       result: {
         kind: "paused",
-        waiting: governedBy({ kind: "outcome-blocked", message: "blocked" }),
+        waiting: governedBy({
+          kind: "outcome-blocked",
+          message: "blocked",
+          agentReason: null,
+        }),
       },
       code: EXIT_WAITING,
     },

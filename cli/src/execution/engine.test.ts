@@ -32,7 +32,7 @@ import {
   type FakeHarness,
   type FakeHarnessStep,
 } from "../test-helpers/fake-harness.js";
-import { governedBy, reordered } from "../test-helpers/waiting.js";
+import { governedBy, reasonOf, reordered } from "../test-helpers/waiting.js";
 import {
   createRepoFixture,
   type RepoFixture,
@@ -821,7 +821,7 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
   ): Promise<void> {
     await allocatedRun(fixture, runDir, [promisingStage], [{}]);
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.reasons[0]!.kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0]!.kind).toBe("stage-contract-unmet");
     expect(cp.waiting?.recovery.kind).toBe("recheck-stage-contract");
   }
 
@@ -951,9 +951,9 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.stageIndex).toBe(0);
-    expect(cp.waiting?.reasons[0]!.kind).toBe("stage-contract-violation");
-    expect(cp.waiting?.reasons[0]!.detail).toContain("dirty");
-    expect(cp.waiting?.reasons[0]!.contract).toEqual([
+    const stillUnmet = reasonOf(cp.waiting?.reasons[0], "stage-contract-unmet");
+    expect(stillUnmet.preservationNote).toContain("dirty");
+    expect(stillUnmet.contract).toEqual([
       { dimension: "spec", expected: true, observed: false },
     ]);
     expect(cp.waiting?.recovery.kind).toBe("recheck-stage-contract");
@@ -997,11 +997,11 @@ describe.concurrent("executeEngine — contract recheck on resume (AC-1.4, AC-3.
     const checkpoint = await loadCheckpoint(runDir);
     expect(checkpoint.waiting?.reasons[0]!.message).toBe(initialReason?.message);
     expect(checkpoint.waiting?.reasons[0]).toMatchObject({
-      kind: "stage-contract-violation",
+      kind: "stage-contract-uninspectable",
       message:
         "The stage reported DONE but its promised artifact state could not be " +
         "verified: synthetic artifact read failure",
-      diagnostics: { errorMessage: "synthetic artifact read failure" },
+      errorMessage: "synthetic artifact read failure",
     });
     expect(checkpoint.waiting?.reasons[0]!.message).not.toContain("re-verified");
 
@@ -1201,7 +1201,7 @@ describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4,
     expect(redirected.harness.calls).toHaveLength(0);
     const contractPause = await loadCheckpoint(runDir);
     expect(contractPause.waiting?.reasons[0]).toMatchObject({
-      kind: "stage-contract-violation",
+      kind: "stage-contract-unmet",
       contract: [{ dimension: "spec", expected: true, observed: false }],
     });
     expect(contractPause.waiting?.recovery).toEqual({
@@ -1510,8 +1510,9 @@ describe.concurrent("executeEngine — DONE with a pending-queue pause (AC-11.3,
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
     expect(cp.stageIndex).toBe(0);
-    expect(cp.waiting?.reasons[0]!.kind).toBe("pending-queues");
-    expect(cp.waiting?.reasons[0]!.pendingFiles).toEqual([pendingRel]);
+    expect(
+      reasonOf(cp.waiting?.reasons[0], "pending-queues").pendingFiles,
+    ).toEqual([pendingRel]);
     expect(cp.attempts[0]!.result).toBe("done");
     expect(cp.attempts[0]!.terminalResult?.token).toBe("DONE");
     // The queue that held the run is what this settled attempt observed.
@@ -1662,8 +1663,9 @@ describe.concurrent("executeEngine — pre-attempt queue gates (AC-11.2, AC-11.5
     expect(rec.stageSucceeded.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.reasons[0]!.kind).toBe("pending-queues");
-    expect(cp.waiting?.reasons[0]!.pendingFiles).toEqual([pendingRel]);
+    expect(
+      reasonOf(cp.waiting?.reasons[0], "pending-queues").pendingFiles,
+    ).toEqual([pendingRel]);
     expect(cp.attempts.length).toBe(0);
     await expect(fs.access(path.join(runDir, "logs"))).rejects.toThrow();
   });
@@ -1923,9 +1925,9 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
       "stage-prerequisite-unmet",
     ]);
     // The pause names what was required and what the thread actually held.
-    expect(cp.waiting?.reasons[0]!.contract).toEqual([
-      { dimension: "spec", expected: true, observed: false },
-    ]);
+    expect(
+      reasonOf(cp.waiting?.reasons[0], "stage-prerequisite-unmet").contract,
+    ).toEqual([{ dimension: "spec", expected: true, observed: false }]);
     expect(cp.waiting?.reasons[0]!.message).toContain("a non-empty spec.md");
     expect(cp.waiting?.reasons[0]!.message).toContain("no spec.md");
     expect(cp.waiting?.reasons[0]!.message).not.toContain("spec = ");
@@ -1981,7 +1983,7 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
     expect(cp.attempts.length).toBe(1);
   });
 
-  it("pauses stage-contract-violation when a DONE leaves the promised artifact absent", async () => {
+  it("pauses on an unmet stage contract when a DONE leaves the promised artifact absent", async () => {
     const fixture = await newFixture();
     const runDir = await makeRunDir();
     const before = await commitCount(fixture);
@@ -2000,10 +2002,9 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
     expect(cp.stageIndex).toBe(0);
-    expect(cp.waiting?.reasons[0]!.kind).toBe("stage-contract-violation");
-    expect(cp.waiting?.reasons[0]!.contract).toEqual([
-      { dimension: "spec", expected: true, observed: false },
-    ]);
+    expect(
+      reasonOf(cp.waiting?.reasons[0], "stage-contract-unmet").contract,
+    ).toEqual([{ dimension: "spec", expected: true, observed: false }]);
     // The promised-state sentence names the file the same way the rows do.
     expect(cp.waiting?.reasons[0]!.message).toContain("a non-empty spec.md");
     expect(cp.waiting?.reasons[0]!.message).toContain("no spec.md");
@@ -2042,7 +2043,7 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
     expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
-      "stage-contract-violation",
+      "stage-contract-unmet",
     ]);
     expect(await commitCount(fixture)).toBe(before);
   });
@@ -2062,10 +2063,12 @@ describe.concurrent("executeEngine — artifact contracts (AC-7.1, AC-7.2, AC-7.
     expect(result.kind).toBe("paused");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons.map((reason) => reason.kind)).toEqual([
-      "stage-contract-violation",
+      "stage-contract-unmet",
       "pending-queues",
     ]);
-    expect(cp.waiting?.reasons[1]!.pendingFiles).toEqual([pendingRel]);
+    expect(
+      reasonOf(cp.waiting?.reasons[1], "pending-queues").pendingFiles,
+    ).toEqual([pendingRel]);
     expect(settlementOf(cp.attempts[0])?.queues).toEqual({
       kind: "observed",
       pendingFiles: [pendingRel],
@@ -2107,8 +2110,7 @@ describe.concurrent("executeEngine — interruption (AC-17.3)", () => {
     // An interrupted stage is stopped, not "finished with problems".
     expect(rec.stageStopped.map((s) => s.disposition)).toEqual(["interrupted"]);
     const cp = await loadCheckpoint(runDir);
-    expect(cp.waiting?.reasons[0]!.kind).toBe("interrupted");
-    expect(cp.waiting?.reasons[0]!.diagnostics?.origin).toBe("SIGINT");
+    expect(reasonOf(cp.waiting?.reasons[0], "interrupted").origin).toBe("SIGINT");
     expect(cp.attempts[0]!.result).toBe("interrupted");
     expect(cp.waiting?.nextAction).toContain("unvalidated");
   });
@@ -2135,8 +2137,7 @@ describe.concurrent("executeEngine — signal interruption (AC-17.1, AC-17.3)", 
     expect(harness.calls.length).toBe(0);
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.reasons[0]!.kind).toBe("interrupted");
-    expect(cp.waiting?.reasons[0]!.diagnostics?.origin).toBe("SIGINT");
+    expect(reasonOf(cp.waiting?.reasons[0], "interrupted").origin).toBe("SIGINT");
     expect(cp.attempts.length).toBe(1);
     expect(cp.attempts[0]!.result).toBe("interrupted");
   });
@@ -2164,8 +2165,7 @@ describe.concurrent("executeEngine — signal interruption (AC-17.1, AC-17.3)", 
     expect(rec.stageStopped[0]!.disposition).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
     expect(cp.condition).toBe("waiting-for-user");
-    expect(cp.waiting?.reasons[0]!.kind).toBe("interrupted");
-    expect(cp.waiting?.reasons[0]!.diagnostics?.origin).toBe("SIGTERM");
+    expect(reasonOf(cp.waiting?.reasons[0], "interrupted").origin).toBe("SIGTERM");
     expect(cp.waiting?.nextAction).toContain("unvalidated");
     expect(cp.attempts.length).toBe(1);
     expect(cp.attempts[0]!.result).toBe("interrupted");
@@ -2195,7 +2195,9 @@ describe.concurrent("executeEngine — signal interruption (AC-17.1, AC-17.3)", 
     expect(result.kind).toBe("interrupted");
     const cp = await loadCheckpoint(runDir);
     expect(cp.waiting?.reasons[0]!.kind).toBe("interrupted");
-    expect(cp.waiting?.reasons[1]!.pendingFiles).toEqual([pendingRel]);
+    expect(
+      reasonOf(cp.waiting?.reasons[1], "pending-queues").pendingFiles,
+    ).toEqual([pendingRel]);
     expect(settlementOf(cp.attempts[0])?.queues).toEqual({
       kind: "observed",
       pendingFiles: [pendingRel],
@@ -2902,7 +2904,11 @@ describe.concurrent("executeEngine — harness stage context", () => {
         logPath: "logs/01-reconcile-spec-attempt-1.log",
       },
     ];
-    checkpoint.waiting = governedBy({ kind: "outcome-blocked", message: "blocked" });
+    checkpoint.waiting = governedBy({
+      kind: "outcome-blocked",
+      message: "blocked",
+      agentReason: null,
+    });
     const harness = createFakeHarness([{}]);
 
     await executeEngine(resumedFrom(makeContext(checkpoint, runDir, harness)));

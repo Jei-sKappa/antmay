@@ -21,7 +21,7 @@ import { SIMULATED_HARNESS_TOGGLE_VAR } from "../harness/adapters/simulated/togg
 import { SignalInterruption } from "../runner/signals.js";
 import { readCheckpoint } from "../state/checkpoint/read.js";
 import { runsDirectory } from "../state/runs.js";
-import { governedBy } from "../test-helpers/waiting.js";
+import { governedBy, reasonOf } from "../test-helpers/waiting.js";
 import {
   ClosedPipe,
   SIGNAL_EXIT,
@@ -195,10 +195,9 @@ describe.concurrent("runCommand — simulated harness mode (FR-1, FR-5, FR-6)", 
     if (cp.ok) {
       // The promised state is checked before the boundary is looked at, so the
       // pause names the missing artifact rather than the empty diff.
-      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("stage-contract-violation");
-      expect(cp.checkpoint.waiting?.reasons[0].contract).toEqual([
-        { dimension: "spec", expected: true, observed: false },
-      ]);
+      expect(
+        reasonOf(cp.checkpoint.waiting?.reasons[0], "stage-contract-unmet").contract,
+      ).toEqual([{ dimension: "spec", expected: true, observed: false }]);
       expect(cp.checkpoint.stageIndex).toBe(0);
     }
   });
@@ -218,8 +217,9 @@ describe.concurrent("runCommand — simulated harness mode (FR-1, FR-5, FR-6)", 
     expect(cp.ok).toBe(true);
     if (cp.ok) {
       expect(cp.checkpoint.stageIndex).toBe(5);
-      expect(cp.checkpoint.waiting?.reasons[0].kind).toBe("stage-contract-violation");
-      expect(cp.checkpoint.waiting?.reasons[0].contract).toEqual([
+      expect(
+        reasonOf(cp.checkpoint.waiting?.reasons[0], "stage-contract-unmet").contract,
+      ).toEqual([
         { dimension: "implementationReport", expected: true, observed: false },
       ]);
     }
@@ -293,7 +293,11 @@ describe("runCommand — engine handoff (AC-1.1)", () => {
       name: "a durable pause",
       result: {
         kind: "paused",
-        waiting: governedBy({ kind: "outcome-blocked", message: "blocked" }),
+        waiting: governedBy({
+          kind: "outcome-blocked",
+          message: "blocked",
+          agentReason: null,
+        }),
       },
       code: EXIT_WAITING,
     },

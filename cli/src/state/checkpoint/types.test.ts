@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import type { ArtifactMismatch } from "../../thread/artifacts.js";
+
 import type {
   AttemptIdentity,
   AttemptRecord,
   AttemptSettlement,
   DoneTerminalResult,
   QueueObservation,
+  WaitingReason,
 } from "./types.js";
 
 /**
@@ -142,5 +145,94 @@ describe("a settled attempt states its queue observation", () => {
     );
     expect(unavailable.kind).toBe("unavailable");
     expect([settledWithoutObservation, unavailableWithFiles]).toHaveLength(2);
+  });
+});
+
+describe("every waiting kind determines the evidence it carries", () => {
+  const UNMET: ArtifactMismatch[] = [
+    { dimension: "spec", expected: true, observed: false },
+  ];
+
+  const pending: WaitingReason = {
+    kind: "pending-queues",
+    message: "1 pending bundle file awaits human resolution.",
+    pendingFiles: ["docs/threads/260819100000Z-t/.pending-decisions/one.md"],
+  };
+  const gateError: WaitingReason = {
+    kind: "gate-error",
+    message: "The pending-queue scan failed.",
+    errorMessage: "EACCES",
+  };
+  const contractUnmet: WaitingReason = {
+    kind: "stage-contract-unmet",
+    message: "The stage left no spec.md.",
+    contract: UNMET,
+    preservationNote: null,
+  };
+  const harnessError: WaitingReason = {
+    kind: "harness-error",
+    message: "The harness attempt failed.",
+  };
+
+  // @ts-expect-error a pending-queue reason states the files it found
+  const pendingWithoutFiles: WaitingReason = {
+    kind: "pending-queues",
+    message: "1 pending bundle file awaits human resolution.",
+  };
+
+  // @ts-expect-error a gate error states the text of the failure it reports
+  const gateErrorWithoutText: WaitingReason = {
+    kind: "gate-error",
+    message: "The pending-queue scan failed.",
+  };
+
+  const pendingWithMismatches: WaitingReason = {
+    kind: "pending-queues",
+    message: "1 pending bundle file awaits human resolution.",
+    pendingFiles: [],
+    // @ts-expect-error artifact mismatches belong to the contract kinds alone
+    contract: UNMET,
+  };
+
+  const blockedWithCandidateLine: WaitingReason = {
+    kind: "outcome-blocked",
+    message: "The stage reported BLOCKED.",
+    agentReason: null,
+    // @ts-expect-error the candidate line is the malformed-outcome kind's alone
+    candidateLine: "Outcome: BLOCKED",
+  };
+
+  const harnessErrorWithEvidence: WaitingReason = {
+    kind: "harness-error",
+    message: "The harness attempt failed.",
+    // @ts-expect-error a harness error carries nothing beyond its message
+    errorMessage: "ECONNRESET",
+  };
+
+  // @ts-expect-error the blocked kind states the agent's own reason text
+  const blockedWithoutAgentReason: WaitingReason = {
+    kind: "outcome-blocked",
+    message: "The stage reported BLOCKED.",
+  };
+
+  it("keeps the legal counterpart of each rejected reason constructible", () => {
+    expect(
+      [pending, gateError, contractUnmet, harnessError].map(
+        (reason) => reason.kind,
+      ),
+    ).toEqual([
+      "pending-queues",
+      "gate-error",
+      "stage-contract-unmet",
+      "harness-error",
+    ]);
+    expect([
+      pendingWithoutFiles,
+      gateErrorWithoutText,
+      pendingWithMismatches,
+      blockedWithCandidateLine,
+      harnessErrorWithEvidence,
+      blockedWithoutAgentReason,
+    ]).toHaveLength(6);
   });
 });

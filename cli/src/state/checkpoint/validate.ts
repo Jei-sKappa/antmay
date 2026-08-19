@@ -25,6 +25,7 @@ import type {
   CheckpointResult,
   RunCheckpoint,
   RunCondition,
+  WaitingEvidence,
   WaitingKind,
 } from "./types.js";
 
@@ -42,21 +43,109 @@ const ATTEMPT_RESULTS: ReadonlySet<string> = new Set<AttemptResult>([
   "interrupted",
 ]);
 
-const WAITING_KINDS: ReadonlySet<string> = new Set<WaitingKind>([
-  "outcome-blocked",
-  "outcome-refused",
-  "pending-queues",
-  "malformed-outcome",
-  "harness-error",
-  "idle-timeout",
-  "interrupted",
-  "gate-error",
-  "unexpected-head-movement",
-  "git-policy-violation",
-  "commit-error",
-  "stage-prerequisite-unmet",
-  "stage-contract-violation",
-]);
+/**
+ * What each waiting kind carries beyond `message`, and how a raw value of it is
+ * checked. The record is total over the kind union, so a sixteenth kind fails to
+ * compile here until it states its own evidence and how to read it; `keys` is
+ * what makes a reason carrying another kind's evidence a rejection rather than a
+ * field nobody looked at.
+ */
+const WAITING_EVIDENCE: {
+  [K in WaitingKind]: {
+    keys: readonly (keyof WaitingEvidence[K] & string)[];
+    validate: (
+      value: Record<string, unknown>,
+      label: string,
+      errors: string[],
+    ) => void;
+  };
+} = {
+  "outcome-blocked": { keys: ["agentReason"], validate: requireNullableString("agentReason") },
+  "outcome-refused": { keys: ["agentReason"], validate: requireNullableString("agentReason") },
+  "pending-queues": {
+    keys: ["pendingFiles"],
+    validate: (value, label, errors) =>
+      validateSortedUniquePending(value.pendingFiles, `${label}.pendingFiles`, errors),
+  },
+  "malformed-outcome": {
+    keys: ["candidateLine"],
+    validate: requireNullableString("candidateLine"),
+  },
+  "harness-error": { keys: [], validate: noEvidence },
+  "idle-timeout": { keys: [], validate: noEvidence },
+  interrupted: { keys: ["origin"], validate: requireNonEmptyString("origin") },
+  "gate-error": {
+    keys: ["errorMessage"],
+    validate: requireNonEmptyString("errorMessage"),
+  },
+  "unexpected-head-movement": { keys: [], validate: noEvidence },
+  "git-policy-violation": { keys: [], validate: noEvidence },
+  "commit-error": { keys: [], validate: noEvidence },
+  "stage-prerequisite-unmet": { keys: ["contract"], validate: requireContract },
+  "stage-prerequisite-uninspectable": {
+    keys: ["errorMessage"],
+    validate: requireNonEmptyString("errorMessage"),
+  },
+  "stage-contract-unmet": {
+    keys: ["contract", "preservationNote"],
+    validate: (value, label, errors) => {
+      requireContract(value, label, errors);
+      requireNullableString("preservationNote")(value, label, errors);
+    },
+  },
+  "stage-contract-uninspectable": {
+    keys: ["errorMessage"],
+    validate: requireNonEmptyString("errorMessage"),
+  },
+};
+
+const WAITING_KINDS: ReadonlySet<string> = new Set<WaitingKind>(
+  Object.keys(WAITING_EVIDENCE) as WaitingKind[],
+);
+
+/** A required, nullable string: absent is a rejection, `null` is a real state. */
+function requireNullableString(
+  key: string,
+): (value: Record<string, unknown>, label: string, errors: string[]) => void {
+  return (value, label, errors) => {
+    if (!(key in value)) {
+      errors.push(`${label}.${key} is required (a string or null).`);
+      return;
+    }
+    if (value[key] !== null && typeof value[key] !== "string") {
+      errors.push(`${label}.${key} must be a string or null.`);
+    }
+  };
+}
+
+/** A required, non-empty string: the diagnostic text a check owes its reader. */
+function requireNonEmptyString(
+  key: string,
+): (value: Record<string, unknown>, label: string, errors: string[]) => void {
+  return (value, label, errors) => {
+    if (!isNonEmptyString(value[key])) {
+      errors.push(`${label}.${key} must be a non-empty string.`);
+    }
+  };
+}
+
+/** The artifact mismatches an evaluated contract check found unmet. */
+function requireContract(
+  value: Record<string, unknown>,
+  label: string,
+  errors: string[],
+): void {
+  if (value.contract === undefined) {
+    errors.push(`${label}.contract is required.`);
+    return;
+  }
+  errors.push(
+    ...validateSerializedArtifactMismatches(value.contract, `${label}.contract`),
+  );
+}
+
+/** A kind whose whole evidence is its message has nothing further to check. */
+function noEvidence(): void {}
 
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -623,41 +712,24 @@ function validateWaitingReasons(value: unknown, errors: string[]): void {
       errors.push(`${label} must be an object.`);
       return;
     }
-    if (typeof entry.kind !== "string" || !WAITING_KINDS.has(entry.kind)) {
-      errors.push(`${label}.kind must be a known waiting kind.`);
-    }
     if (!isNonEmptyString(entry.message)) {
       errors.push(`${label}.message must be a non-empty string.`);
     }
-    if (entry.detail !== undefined && !isNonEmptyString(entry.detail)) {
-      errors.push(`${label}.detail must be a non-empty string.`);
+    // The kind is the discriminant, so an unrecognized one leaves nothing
+    // further to check: every remaining field belongs to a kind's own evidence.
+    if (typeof entry.kind !== "string" || !WAITING_KINDS.has(entry.kind)) {
+      errors.push(`${label}.kind must be a known waiting kind.`);
+      return;
     }
-    if (entry.pendingFiles !== undefined) {
-      validateSortedUniquePending(entry.pendingFiles, `${label}.pendingFiles`, errors);
-    }
-    if (entry.candidateLine !== undefined && typeof entry.candidateLine !== "string") {
-      errors.push(`${label}.candidateLine must be a string.`);
-    }
-    if (entry.contract !== undefined) {
-      errors.push(
-        ...validateSerializedArtifactMismatches(
-          entry.contract,
-          `${label}.contract`,
-        ),
-      );
-    }
-    if (entry.diagnostics !== undefined) {
-      const d = entry.diagnostics;
-      if (!isPlainObject(d)) {
-        errors.push(`${label}.diagnostics must be an object.`);
-      } else {
-        for (const key of ["errorClass", "errorMessage", "origin"] as const) {
-          if (d[key] !== undefined && typeof d[key] !== "string") {
-            errors.push(`${label}.diagnostics.${key} must be a string.`);
-          }
-        }
-      }
-    }
+    const evidence = WAITING_EVIDENCE[entry.kind as WaitingKind];
+    validateAllowedKeys(
+      entry,
+      label,
+      ["kind", "message", ...evidence.keys],
+      errors,
+      `on a "${entry.kind}" reason`,
+    );
+    evidence.validate(entry, label, errors);
   });
 }
 

@@ -33,6 +33,12 @@ export type AttemptResult = "executing" | "done" | "waiting" | "interrupted";
 
 /**
  * The closed set of reasons a run pauses in `waiting-for-user`.
+ *
+ * A kind whose evidence is not functionally determined by it is two kinds. Both
+ * artifact-contract checks therefore name the check that ran and failed apart
+ * from the check that could not run at all: the pause is called the same thing
+ * either way, and it carries the mismatches in one case and the failed
+ * inspection's error text in the other.
  */
 export type WaitingKind =
   | "outcome-blocked"
@@ -47,39 +53,72 @@ export type WaitingKind =
   | "git-policy-violation"
   | "commit-error"
   | "stage-prerequisite-unmet"
-  | "stage-contract-violation";
+  | "stage-prerequisite-uninspectable"
+  | "stage-contract-unmet"
+  | "stage-contract-uninspectable";
+
+/** The evidence a kind that carries none declares: its `message` alone. */
+export type NoWaitingEvidence = Record<never, never>;
 
 /**
- * Structured harness/gate diagnostics about the reason that carries them. They
- * are recorded for later inspection of the checkpoint and are never rendered.
+ * What each waiting kind carries beyond the `message` every kind carries.
+ *
+ * This is the one statement of the pairing, and `WaitingReason` below is derived
+ * from it, so a new kind fails to compile until this table says what it carries
+ * and no other module can restate the pairing. A field is required and nullable
+ * wherever its absence is a real state rather than a missing key.
+ *
+ * `contract` holds every artifact-state dimension an artifact-contract check
+ * found unmet, with what the contract required and what the thread actually
+ * held, so the terminal diagnostic and any later reading of the checkpoint
+ * describe the failure without consulting a live pipeline document.
+ *
+ * `agentReason` is the agent's own text after its outcome token, and
+ * `preservationNote` says who owns the uncommitted changes at a refreshed
+ * contract violation. They are separate fields because they mean unrelated
+ * things, and neither kind may pick up the other's.
+ *
+ * Diagnostics are deliberately lighter than the rest: `origin` and
+ * `errorMessage` are recorded for a later reading of the checkpoint, nothing
+ * renders them, and the two shapes have nothing in common beyond being
+ * diagnostic, so no type spans them.
  */
-export type WaitingDiagnostics = {
-  errorClass?: string;
-  errorMessage?: string;
-  origin?: string;
-};
+export interface WaitingEvidence {
+  "outcome-blocked": { agentReason: string | null };
+  "outcome-refused": { agentReason: string | null };
+  "pending-queues": { pendingFiles: string[] };
+  "malformed-outcome": { candidateLine: string | null };
+  "harness-error": NoWaitingEvidence;
+  "idle-timeout": NoWaitingEvidence;
+  interrupted: { origin: string };
+  "gate-error": { errorMessage: string };
+  "unexpected-head-movement": NoWaitingEvidence;
+  "git-policy-violation": NoWaitingEvidence;
+  "commit-error": NoWaitingEvidence;
+  "stage-prerequisite-unmet": { contract: ArtifactMismatch[] };
+  "stage-prerequisite-uninspectable": { errorMessage: string };
+  "stage-contract-unmet": {
+    contract: ArtifactMismatch[];
+    preservationNote: string | null;
+  };
+  "stage-contract-uninspectable": { errorMessage: string };
+}
 
 /**
- * One reason a run stopped. Several can hold at once — a stage that reported
- * REFUSED while a pending bundle also awaits resolution stops for both — so a
- * pause records every reason it observed rather than only the one that governs
- * the resume path.
+ * One reason a run stopped, as a union over the kind that names it. Several can
+ * hold at once — a stage that reported REFUSED while a pending bundle also awaits
+ * resolution stops for both — so a pause records every reason it observed rather
+ * than only the one that governs the resume path.
  */
 export type WaitingReason = {
-  kind: WaitingKind;
-  message: string;
-  detail?: string;
-  pendingFiles?: string[];
-  candidateLine?: string;
-  diagnostics?: WaitingDiagnostics;
-  /**
-   * Every artifact-state dimension an artifact-contract check found unmet, with
-   * what the stage's contract required and what the thread actually held. It is
-   * recorded so the terminal diagnostic and any later reading of the checkpoint
-   * describe the failure without consulting a live pipeline document.
-   */
-  contract?: ArtifactMismatch[];
-};
+  [K in WaitingKind]: { kind: K; message: string } & WaitingEvidence[K];
+}[WaitingKind];
+
+/** The one reason of a given kind, for a site that acts per kind. */
+export type WaitingReasonOf<K extends WaitingKind> = Extract<
+  WaitingReason,
+  { kind: K }
+>;
 
 /**
  * Every reason one pause stopped for, never empty and ordered by precedence so

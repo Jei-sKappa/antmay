@@ -3,6 +3,7 @@ import type {
   WaitingInfo,
   WaitingKind,
   WaitingReason,
+  WaitingReasonOf,
 } from "../state/checkpoint/types.js";
 import {
   describeArtifact,
@@ -65,6 +66,10 @@ const STAGE_DISPOSITION: Record<
  * the banners when several hold at once: what the stage did comes before what
  * the queue state is, so the reason nearest the resume command is the one to
  * act on.
+ *
+ * Total over the kind union, so a new kind fails to compile until it says what
+ * the terminal calls it. A kind that was split off another shares the banner it
+ * split from: the split is a difference in evidence, not in what the pause is.
  */
 const REASON_BANNER: Record<
   WaitingKind,
@@ -108,18 +113,30 @@ const REASON_BANNER: Record<
     color: "red",
     group: "stage",
   },
-  // The two artifact-contract banners stay out of the BLOCKED/REFUSED words,
-  // which belong to the skill's own terminal tokens: these are the executor's
-  // own verdict on the thread's artifact state. Neither says "missing", because
-  // a dimension can also hold the wrong shape — a `strict` plan promised where
-  // a `brief` one is present is unmet with nothing absent.
+  // The artifact-contract banners stay out of the BLOCKED/REFUSED words, which
+  // belong to the skill's own terminal tokens: these are the executor's own
+  // verdict on the thread's artifact state. None says "missing", because a
+  // dimension can also hold the wrong shape — a `strict` plan promised where a
+  // `brief` one is present is unmet with nothing absent.
   "stage-prerequisite-unmet": {
     label: "STAGE CANNOT START — requirements not met",
     icon: "❌",
     color: "red",
     group: "stage",
   },
-  "stage-contract-violation": {
+  "stage-prerequisite-uninspectable": {
+    label: "STAGE CANNOT START — requirements not met",
+    icon: "❌",
+    color: "red",
+    group: "stage",
+  },
+  "stage-contract-unmet": {
+    label: "FAILED — promised artifact state unmet",
+    icon: "❌",
+    color: "red",
+    group: "stage",
+  },
+  "stage-contract-uninspectable": {
     label: "FAILED — promised artifact state unmet",
     icon: "❌",
     color: "red",
@@ -206,21 +223,27 @@ function orderedReasons(waiting: WaitingInfo): WaitingReason[] {
   return [...inGroup("stage"), ...inGroup("queue")];
 }
 
+/** The two reasons a pre-attempt prerequisite pause is worded from. */
+type PrerequisiteReason = WaitingReasonOf<
+  "stage-prerequisite-unmet" | "stage-prerequisite-uninspectable"
+>;
+
 /**
- * One reason's banner and its supporting lines. An unrecognizable terminal line
- * is echoed here behind the agent gutter that marks it quoted, because that line
- * is the whole of the complaint.
+ * The stage-prerequisite pause, worded over the requirements it names. A check
+ * that could not run has no mismatches to show, so it says so instead — under
+ * the same banner, because it is the same pause.
  */
 function prerequisiteReasonBlock(
   paint: Painter,
-  reason: WaitingReason,
+  reason: PrerequisiteReason,
   currentStage: CurrentStageInfo,
 ): string[] {
   const banner = REASON_BANNER[reason.kind];
   const line = (key: string, value: string): string =>
     infoLine(paint, "  ", key, value, CLOSING_WIDTH);
   const stage = `stage ${currentStage.position} "${currentStage.id}"`;
-  const contract = reason.contract;
+  const contract =
+    reason.kind === "stage-prerequisite-unmet" ? reason.contract : undefined;
   const hasContract = contract !== undefined && contract.length > 0;
   const label = hasContract
     ? banner.label
@@ -289,12 +312,27 @@ function prerequisiteReasonBlock(
   return lines;
 }
 
+/**
+ * The one prose line a reason contributes under `Detail`: the agent's own reason
+ * text after its outcome token, or the note about who owns the uncommitted work
+ * at a refreshed contract violation. Every other kind contributes none.
+ */
+function detailOf(reason: WaitingReason): string | null {
+  if (reason.kind === "outcome-blocked" || reason.kind === "outcome-refused") {
+    return reason.agentReason;
+  }
+  return reason.kind === "stage-contract-unmet" ? reason.preservationNote : null;
+}
+
 function reasonBlock(
   paint: Painter,
   reason: WaitingReason,
   currentStage: CurrentStageInfo,
 ): string[] {
-  if (reason.kind === "stage-prerequisite-unmet") {
+  if (
+    reason.kind === "stage-prerequisite-unmet" ||
+    reason.kind === "stage-prerequisite-uninspectable"
+  ) {
     return prerequisiteReasonBlock(paint, reason, currentStage);
   }
 
@@ -307,22 +345,23 @@ function reasonBlock(
     paint(`${banner.label} ${banner.icon}`, "bold", banner.color),
     line("Reason", reason.message),
   ];
-  if (reason.detail !== undefined) {
-    lines.push(line("Detail", reason.detail));
+  const detail = detailOf(reason);
+  if (detail !== null) {
+    lines.push(line("Detail", detail));
   }
-  if (reason.pendingFiles !== undefined && reason.pendingFiles.length > 0) {
+  if (reason.kind === "pending-queues" && reason.pendingFiles.length > 0) {
     lines.push(`  ${paint("Pending:", ...KEY_STYLE)}`);
     for (const file of reason.pendingFiles) {
       lines.push(`    - ${file}`);
     }
   }
-  if (reason.contract !== undefined && reason.contract.length > 0) {
+  if (reason.kind === "stage-contract-unmet" && reason.contract.length > 0) {
     lines.push(`  ${paint("Artifacts:", ...KEY_STYLE)}`);
     for (const mismatch of reason.contract) {
       lines.push(`    - ${formatArtifactMismatch(mismatch)}`);
     }
   }
-  if (reason.kind === "malformed-outcome" && reason.candidateLine !== undefined) {
+  if (reason.kind === "malformed-outcome" && reason.candidateLine !== null) {
     lines.push(`  ${paint("Candidate outcome line:", ...KEY_STYLE)}`);
     lines.push(
       `${paint(AGENT_GUTTER, "dim")}${paint(reason.candidateLine, ...AGENT_STYLE)}`,

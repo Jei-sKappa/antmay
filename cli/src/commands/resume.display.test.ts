@@ -416,7 +416,7 @@ describe.concurrent("resumeCommand — simulated harness mode (FR-5, FR-8)", () 
     await seed(h, [], { env: simulatedEnv(h) });
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe(
-      "stage-contract-violation",
+      "stage-contract-unmet",
     );
     await fs.rm(path.join(h.configRoot, SIMULATED_SCENARIO_FILENAME), { force: true });
 

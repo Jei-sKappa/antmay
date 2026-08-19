@@ -32,6 +32,7 @@ import {
   writeThreadFileSync,
   type Harness,
 } from "../test-helpers/resume-harness.js";
+import { reasonOf } from "../test-helpers/waiting.js";
 
 /**
  * What a resume does about the pause it finds: queue gates under the lock,
@@ -157,7 +158,9 @@ describe.concurrent("resumeCommand — queue handling under the lock (AC-15.3, A
       "git-policy-violation",
       "gate-error",
     ]);
-    expect(cp.waiting?.reasons[1]?.diagnostics?.errorMessage).toBeDefined();
+    expect(
+      reasonOf(cp.waiting?.reasons[1], "gate-error").errorMessage,
+    ).not.toBe("");
     expect(result.out).toContain("FAILED — queue scan error");
   });
 });
@@ -275,7 +278,7 @@ describe.concurrent("resumeCommand — harness-free Git-boundary finalization (A
     expect(stale.invoker.calls).toHaveLength(0);
     const contractPause = await readCp(h, runId);
     expect(contractPause.waiting?.reasons[0].kind).toBe(
-      "stage-contract-violation",
+      "stage-contract-unmet",
     );
     expect(contractPause.waiting?.recovery).toMatchObject({
       kind: "recheck-stage-contract",
@@ -463,7 +466,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(seeded.code).toBe(2);
     const runId = await soleRunId(h);
     const cp = await readCp(h, runId);
-    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-unmet");
     expect(cp.attempts[0]?.terminalResult?.token).toBe("DONE");
     return runId;
   }
@@ -494,10 +497,9 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(first.out).toContain("stage 2 of 3 · reconcile-spec");
     const paused = await readCp(h, runId);
     expect(paused.stageIndex).toBe(1);
-    expect(paused.waiting?.reasons[0].kind).toBe("stage-prerequisite-unmet");
-    expect(paused.waiting?.reasons[0].contract).toEqual([
-      { dimension: "spec", expected: true, observed: false },
-    ]);
+    expect(
+      reasonOf(paused.waiting?.reasons[0], "stage-prerequisite-unmet").contract,
+    ).toEqual([{ dimension: "spec", expected: true, observed: false }]);
     expect(attemptCountAt(paused, 1)).toBe(1);
 
     // Restored and committed, the stage starts.
@@ -545,7 +547,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(seeded.code).toBe(2);
     const runId = await soleRunId(h);
     expect((await readCp(h, runId)).waiting?.reasons[0].kind).toBe(
-      "stage-contract-violation",
+      "stage-contract-unmet",
     );
 
     // The human repairs the promise. The contract now holds, so finalization is
@@ -588,7 +590,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(relaunched.code).toBe(2);
     const paused = await readCp(h, runId);
     expect(attemptCountAt(paused, 0)).toBe(2);
-    expect(paused.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(paused.waiting?.reasons[0].kind).toBe("stage-contract-unmet");
 
     // Attempt 2 started after that commit and moved HEAD no further, so the
     // `spec` stage's forbidden-HEAD-movement rule holds and the repaired
@@ -626,7 +628,7 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     const result = await resume(h, runId, standardSteps(h));
     expect(result.code).toBe(2);
     const cp = await readCp(h, runId);
-    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
+    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-unmet");
     expect(cp.waiting?.reasons[1]?.kind).toBe("gate-error");
     expect(result.out).toContain("FAILED — queue scan error");
   });
@@ -641,8 +643,9 @@ describe.concurrent("resumeCommand — artifact-contract recovery (AC-7.4, AC-7.
     expect(result.invoker.calls.length).toBe(0);
     const cp = await readCp(h, runId);
     expect(cp.stageIndex).toBe(0);
-    expect(cp.waiting?.reasons[0].kind).toBe("stage-contract-violation");
-    expect(cp.waiting?.reasons[0].detail).toContain("dirty");
+    expect(
+      reasonOf(cp.waiting?.reasons[0], "stage-contract-unmet").preservationNote,
+    ).toContain("dirty");
     expect(cp.waiting?.nextAction).toContain("revert");
     expect(attemptCountAt(cp, 0)).toBe(1);
     // The recheck restates the still-unmet promise as the file it is about, in

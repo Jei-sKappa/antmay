@@ -54,14 +54,13 @@ export async function verifyPromisedState(
   const inspection = await ctx.inspectArtifacts(ctx.repoRoot, ctx.threadRelPath);
   let violation: PromiseViolation | null = null;
   if (!inspection.ok) {
-    // No end-to-end path reaches this branch, and none is expected to. An
-    // inspection fails only when the thread directory cannot be read at all,
-    // preflight refuses to start a run whose thread it cannot inspect, and
-    // nothing the executor, a stage's skill, or a boundary commit does
-    // revokes that readability mid-run — so producing it takes an outside
-    // actor, and a test for it would have to fabricate a state the system
-    // does not reach. It is written anyway because pausing is the
-    // fail-closed direction: a promise that could not be evaluated is never
+    // An inspection fails only when the thread directory cannot be read at all,
+    // which takes an outside actor: preflight refuses to start a run whose
+    // thread it cannot inspect, and nothing the executor, a stage's skill, or a
+    // boundary commit does revokes that readability mid-run. It is reachable all
+    // the same — the `22-contract-unverifiable` scenario revokes the directory's
+    // permissions while an attempt is live — and pausing is the fail-closed
+    // direction either way: a promise that could not be evaluated is never
     // credited as kept, so an unreadable thread stops the pipeline with the
     // completed attempt preserved rather than advancing past it.
     violation = { kind: "uninspectable", message: inspection.message };

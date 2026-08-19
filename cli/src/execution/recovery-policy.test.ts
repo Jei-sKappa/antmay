@@ -350,6 +350,7 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
   const queue: WaitingReason = {
     kind: "pending-queues",
     message: "One bundle awaits attention.",
+    pendingFiles: ["docs/threads/t/.pending-decisions/one.md"],
   };
   const pauses: WaitingInfo[] = [
     { reasons: [boundary, queue], recovery: GIT_RETRY },
@@ -357,7 +358,11 @@ describe("decideRecovery — diagnostics cannot reach a directive (AC-2.4)", () 
     {
       reasons: [
         queue,
-        { kind: "gate-error", message: "The pending-queue scan failed." },
+        {
+          kind: "gate-error",
+          message: "The pending-queue scan failed.",
+          errorMessage: "EACCES",
+        },
         boundary,
       ],
       recovery: GIT_RETRY,

@@ -7,9 +7,9 @@ import {
 import { DONE_OUTCOME } from "../runner/outcome.js";
 import type {
   AttemptReference,
-  WaitingDiagnostics,
   WaitingInfo,
   WaitingReason,
+  WaitingReasonOf,
   WaitingReasons,
   WaitingRecovery,
 } from "../state/checkpoint/types.js";
@@ -50,11 +50,10 @@ const UNVALIDATED_CHANGES_NOTE =
   "commit them before resuming.";
 
 /**
- * The instruction a `stage-contract-violation` pause carries. The attempt
- * reported `DONE` without leaving the artifact state its stage promises, so the
- * human chooses which of the two recoveries resume takes: repairing the
- * artifact finalizes the completed attempt, and reverting its changes runs the
- * stage again.
+ * The instruction an artifact-contract pause carries. The attempt reported `DONE`
+ * without leaving the artifact state its stage promises, so the human chooses
+ * which of the two recoveries resume takes: repairing the artifact finalizes the
+ * completed attempt, and reverting its changes runs the stage again.
  */
 const CONTRACT_REPAIR_NOTE =
   "Repair the promised artifact and resume to finalize the completed attempt, " +
@@ -133,26 +132,19 @@ function withoutGateErrors(
   return reasons.filter((reason) => reason.kind !== "gate-error");
 }
 
-/** The reason a failed pending-queue scan carries, with its raw diagnostic. */
-function gateErrorReason(scanMessage: string): WaitingReason {
+/** The reason a failed pending-queue scan carries, with its own error text. */
+function gateErrorReason(scanMessage: string): WaitingReasonOf<"gate-error"> {
   return {
     kind: "gate-error",
     message: gateErrorMessage(scanMessage),
-    diagnostics: { errorMessage: scanMessage },
+    errorMessage: scanMessage,
   };
 }
 
-/**
- * The candidate line a reason carries, as the fragment it contributes to that
- * reason. An attempt that reported no final line contributes no key at all,
- * which is what a reason without one says on disk.
- */
-function candidate(line: string | undefined): { candidateLine?: string } {
-  return line === undefined ? {} : { candidateLine: line };
-}
-
 /** The reason a set of still-present bundle files carries. */
-function pendingQueuesReason(pendingFiles: string[]): WaitingReason {
+function pendingQueuesReason(
+  pendingFiles: string[],
+): WaitingReasonOf<"pending-queues"> {
   return {
     kind: "pending-queues",
     message: pendingQueuesMessage(pendingFiles),
@@ -243,11 +235,11 @@ function prerequisiteUninspectable(
   return {
     reasons: [
       {
-        kind: "stage-prerequisite-unmet",
+        kind: "stage-prerequisite-uninspectable",
         message:
           `The requirements for stage ${args.stagePosition} "${args.stageId}" could not ` +
           `be checked: ${args.message}`,
-        diagnostics: { errorMessage: args.message },
+        errorMessage: args.message,
       },
     ],
     recovery: { kind: "retry-stage" },
@@ -283,9 +275,9 @@ function contractUninspectable(
   return {
     reasons: [
       {
-        kind: "stage-contract-violation",
+        kind: "stage-contract-uninspectable",
         message: uninspectablePromiseMessage(args.message),
-        diagnostics: { errorMessage: args.message },
+        errorMessage: args.message,
       },
       ...queueReasons(args.pendingFiles, args.queueScanError),
     ],
@@ -310,9 +302,12 @@ function contractViolated(
   return {
     reasons: [
       {
-        kind: "stage-contract-violation",
+        kind: "stage-contract-unmet",
         message: contractViolationMessage(args.unmet),
         contract: args.unmet,
+        // A fresh violation owes no note about who owns the uncommitted work:
+        // the attempt has only just settled, and its own changes are all there is.
+        preservationNote: null,
       },
       ...queueReasons(args.pendingFiles, args.queueScanError),
     ],
@@ -358,32 +353,26 @@ function donePendingQueues(args: {
  */
 function attemptStopped(args: {
   classified: WaitingReasons;
-  aborted: boolean;
-  diagnostics: WaitingDiagnostics | undefined;
+  /** Where the abort came from, for the settlement a signal ended; else `null`. */
+  abort: { origin: string } | null;
   attempt: AttemptReference;
   boundary: BoundaryOutcome;
 }): WaitingInfo {
-  const reasons: WaitingReasons = args.aborted
-    ? [
-        {
-          kind: "interrupted",
-          message: INTERRUPTED_MESSAGE,
-          ...(args.diagnostics !== undefined
-            ? { diagnostics: args.diagnostics }
-            : {}),
-        },
-        ...args.classified.filter(
-          (reason) =>
-            reason.kind === "pending-queues" || reason.kind === "gate-error",
-        ),
-      ]
-    : args.diagnostics === undefined
+  const abort = args.abort;
+  const reasons: WaitingReasons =
+    abort === null
       ? args.classified
-      : (args.classified.map((reason) =>
-          reason.kind === "harness-error" || reason.kind === "idle-timeout"
-            ? { ...reason, diagnostics: args.diagnostics }
-            : reason,
-        ) as WaitingReasons);
+      : [
+          {
+            kind: "interrupted",
+            message: INTERRUPTED_MESSAGE,
+            origin: abort.origin,
+          },
+          ...args.classified.filter(
+            (reason) =>
+              reason.kind === "pending-queues" || reason.kind === "gate-error",
+          ),
+        ];
   return {
     reasons,
     // A refused boundary preserves a finalizable DONE, so its recovery retries
@@ -409,11 +398,11 @@ function attemptStopped(args: {
  * cannot simply resume.
  */
 function attemptInterrupted(args: {
-  diagnostics: WaitingDiagnostics;
+  origin: string;
   pendingFiles: string[];
 }): WaitingInfo {
   const reasons: WaitingReasons = [
-    { kind: "interrupted", message: INTERRUPTED_MESSAGE, diagnostics: args.diagnostics },
+    { kind: "interrupted", message: INTERRUPTED_MESSAGE, origin: args.origin },
   ];
   if (args.pendingFiles.length > 0) {
     reasons.push(pendingQueuesReason(args.pendingFiles));
@@ -493,16 +482,14 @@ function refreshPromiseUninspectable(args: {
   paused: WaitingInfo;
   recovery: WaitingRecovery;
   message: string;
-  candidateLine: string | undefined;
 }): WaitingInfo {
   const [, ...rest] = args.paused.reasons;
   return {
     reasons: [
       {
-        kind: "stage-contract-violation",
+        kind: "stage-contract-uninspectable",
         message: uninspectablePromiseMessage(args.message),
-        diagnostics: { errorMessage: args.message },
-        ...candidate(args.candidateLine),
+        errorMessage: args.message,
       },
       ...withoutGateErrors(rest),
     ],
@@ -521,18 +508,16 @@ function refreshPromiseUnmet(args: {
   recovery: WaitingRecovery;
   unmet: ArtifactMismatch[];
   worktree: WorktreeCleanliness;
-  candidateLine: string | undefined;
 }): WaitingInfo {
   const [, ...rest] = args.paused.reasons;
   return {
     reasons: [
       {
-        kind: "stage-contract-violation",
+        kind: "stage-contract-unmet",
         message: stillUnmetContractMessage(args.unmet),
         contract: args.unmet,
-        detail:
+        preservationNote:
           args.worktree === "dirty" ? DIRTY_WORKTREE_DETAIL : PRESERVED_DONE_DETAIL,
-        ...candidate(args.candidateLine),
       },
       ...withoutGateErrors(rest),
     ],
@@ -550,7 +535,6 @@ function refreshBoundaryRefused(args: {
   recovery: WaitingRecovery;
   failure: GitFinalizationFailure;
   message: string;
-  candidateLine: string | undefined;
 }): WaitingInfo {
   const advisory = isAdvisoryHeadMovement(args.failure);
   return {
@@ -562,7 +546,6 @@ function refreshBoundaryRefused(args: {
             ? "git-policy-violation"
             : "commit-error",
         message: args.message,
-        ...candidate(args.candidateLine),
       },
     ],
     recovery: args.recovery,
@@ -592,40 +575,66 @@ export const Pause = {
   refreshBoundaryRefused,
 } as const;
 
-function pendingFilesEqual(
-  a: string[] | undefined,
-  b: string[] | undefined,
-): boolean {
-  if (a === undefined || b === undefined) return a === b;
+function pendingFilesEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((file, index) => file === b[index]);
 }
 
-function diagnosticsEqual(
-  a: WaitingDiagnostics | undefined,
-  b: WaitingDiagnostics | undefined,
-): boolean {
-  if (a === undefined || b === undefined) return a === b;
-  return (
-    a.errorClass === b.errorClass &&
-    a.errorMessage === b.errorMessage &&
-    a.origin === b.origin
-  );
-}
-
 /**
- * Every field of one reason. An optional field compares by value, so an absent
- * one and an `undefined` one say the same thing.
+ * Whether two reasons say the same thing: their kind, their message, and the
+ * evidence that kind carries.
+ *
+ * The switch is total over the kind union rather than defaulting, so a
+ * sixteenth kind fails to compile here until it states what comparing it means
+ * — which is the only thing that keeps an unchanged refresh from rewriting the
+ * checkpoint over evidence nobody remembered to compare.
  */
 function reasonEquals(a: WaitingReason, b: WaitingReason): boolean {
-  return (
-    a.kind === b.kind &&
-    a.message === b.message &&
-    a.detail === b.detail &&
-    a.candidateLine === b.candidateLine &&
-    pendingFilesEqual(a.pendingFiles, b.pendingFiles) &&
-    diagnosticsEqual(a.diagnostics, b.diagnostics) &&
-    artifactMismatchesEqual(a.contract, b.contract)
-  );
+  if (a.kind !== b.kind || a.message !== b.message) return false;
+  switch (a.kind) {
+    case "outcome-blocked":
+      return b.kind === "outcome-blocked" && a.agentReason === b.agentReason;
+    case "outcome-refused":
+      return b.kind === "outcome-refused" && a.agentReason === b.agentReason;
+    case "pending-queues":
+      return (
+        b.kind === "pending-queues" &&
+        pendingFilesEqual(a.pendingFiles, b.pendingFiles)
+      );
+    case "malformed-outcome":
+      return b.kind === "malformed-outcome" && a.candidateLine === b.candidateLine;
+    case "interrupted":
+      return b.kind === "interrupted" && a.origin === b.origin;
+    case "gate-error":
+      return b.kind === "gate-error" && a.errorMessage === b.errorMessage;
+    case "stage-prerequisite-uninspectable":
+      return (
+        b.kind === "stage-prerequisite-uninspectable" &&
+        a.errorMessage === b.errorMessage
+      );
+    case "stage-contract-uninspectable":
+      return (
+        b.kind === "stage-contract-uninspectable" &&
+        a.errorMessage === b.errorMessage
+      );
+    case "stage-prerequisite-unmet":
+      return (
+        b.kind === "stage-prerequisite-unmet" &&
+        artifactMismatchesEqual(a.contract, b.contract)
+      );
+    case "stage-contract-unmet":
+      return (
+        b.kind === "stage-contract-unmet" &&
+        artifactMismatchesEqual(a.contract, b.contract) &&
+        a.preservationNote === b.preservationNote
+      );
+    // These kinds carry no evidence beyond the message the two already agree on.
+    case "harness-error":
+    case "idle-timeout":
+    case "unexpected-head-movement":
+    case "git-policy-violation":
+    case "commit-error":
+      return true;
+  }
 }
 
 function referenceEquals(a: AttemptReference, b: AttemptReference): boolean {
@@ -662,8 +671,7 @@ function recoveryEquals(a: WaitingRecovery, b: WaitingRecovery): boolean {
  * compares unequal to a byte-identical persisted one that happened to be
  * assembled in another order — and every unchanged refresh would then rewrite
  * the checkpoint and restamp `updatedAt`. Key order is not one of the facts a
- * pause carries, and an absent optional field says the same thing as an
- * `undefined` one. Reason *order* is a fact: it is what the pause reads as.
+ * pause carries. Reason *order* is a fact: it is what the pause reads as.
  *
  * A run that is not paused at all is not a pause that says the same thing, so a
  * `null` never compares equal.

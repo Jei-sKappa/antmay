@@ -36,7 +36,6 @@ export async function remainPaused(
 ): Promise<ExecutionResult> {
   const { paused, attempt, directive } = args;
   const facts = directive.facts;
-  const candidateLine = attempt?.terminalResult?.candidateLine ?? undefined;
 
   switch (facts.kind) {
     case "pending-bundles":
@@ -81,7 +80,6 @@ export async function remainPaused(
           paused,
           recovery: directive.recovery,
           message: facts.message,
-          candidateLine,
         }),
         attempt,
       );
@@ -94,7 +92,6 @@ export async function remainPaused(
           recovery: directive.recovery,
           unmet: facts.unmet,
           worktree: facts.worktree,
-          candidateLine,
         }),
         attempt,
       );
@@ -118,7 +115,6 @@ export async function remainPaused(
                   headAtStart: advisory.headAtStart,
                   headAfterAttempt: advisory.headAfterAttempt,
                 }),
-          candidateLine,
         }),
         attempt,
       );
