@@ -214,7 +214,7 @@ const WAITING = {
     {
       kind: "outcome-blocked",
       message: "The stage reported Outcome: BLOCKED and paused for human attention.",
-      detail: "The spec claims a write path the roadmap allocates elsewhere.",
+      agentReason: "The spec claims a write path the roadmap allocates elsewhere.",
     },
   ],
   nextAction:

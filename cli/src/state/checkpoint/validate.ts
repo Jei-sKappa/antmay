@@ -44,108 +44,76 @@ const ATTEMPT_RESULTS: ReadonlySet<string> = new Set<AttemptResult>([
 ]);
 
 /**
- * What each waiting kind carries beyond `message`, and how a raw value of it is
- * checked. The record is total over the kind union, so a sixteenth kind fails to
- * compile here until it states its own evidence and how to read it; `keys` is
- * what makes a reason carrying another kind's evidence a rejection rather than a
- * field nobody looked at.
+ * How one evidence field is read out of an untrusted reason. It is handed the
+ * raw value, so `undefined` is the field being absent and `null` — where a field
+ * admits it — is a value the reason genuinely carries.
+ */
+type EvidenceCheck = (value: unknown, label: string, errors: string[]) => void;
+
+/** A required, nullable string: absent is a rejection, `null` is a real state. */
+function nullableString(value: unknown, label: string, errors: string[]): void {
+  if (value === undefined) {
+    errors.push(`${label} is required (a string or null).`);
+    return;
+  }
+  if (value !== null && typeof value !== "string") {
+    errors.push(`${label} must be a string or null.`);
+  }
+}
+
+/** The diagnostic text a signal or a check that could not run owes its reader. */
+function diagnosticText(value: unknown, label: string, errors: string[]): void {
+  if (!isNonEmptyString(value)) {
+    errors.push(`${label} must be a non-empty string.`);
+  }
+}
+
+/** The artifact mismatches an evaluated contract check found unmet. */
+function artifactMismatches(value: unknown, label: string, errors: string[]): void {
+  if (value === undefined) {
+    errors.push(`${label} is required.`);
+    return;
+  }
+  errors.push(...validateSerializedArtifactMismatches(value, label));
+}
+
+/**
+ * How each waiting kind's own evidence is read out of an untrusted reason: one
+ * check per field the kind declares.
+ *
+ * The pairing itself is stated once, by `WaitingEvidence`; this table is keyed
+ * by it, so the compiler requires a check for every field a kind declares and
+ * refuses one for a field it does not. Being total over the kind union, it is
+ * also what makes a sixteenth kind fail to build until validation says how to
+ * read it, and its key set is what turns another kind's evidence from a field
+ * nobody looked at into a rejection.
  */
 const WAITING_EVIDENCE: {
-  [K in WaitingKind]: {
-    keys: readonly (keyof WaitingEvidence[K] & string)[];
-    validate: (
-      value: Record<string, unknown>,
-      label: string,
-      errors: string[],
-    ) => void;
-  };
+  [K in WaitingKind]: { [F in keyof WaitingEvidence[K]]: EvidenceCheck };
 } = {
-  "outcome-blocked": { keys: ["agentReason"], validate: requireNullableString("agentReason") },
-  "outcome-refused": { keys: ["agentReason"], validate: requireNullableString("agentReason") },
-  "pending-queues": {
-    keys: ["pendingFiles"],
-    validate: (value, label, errors) =>
-      validateSortedUniquePending(value.pendingFiles, `${label}.pendingFiles`, errors),
-  },
-  "malformed-outcome": {
-    keys: ["candidateLine"],
-    validate: requireNullableString("candidateLine"),
-  },
-  "harness-error": { keys: [], validate: noEvidence },
-  "idle-timeout": { keys: [], validate: noEvidence },
-  interrupted: { keys: ["origin"], validate: requireNonEmptyString("origin") },
-  "gate-error": {
-    keys: ["errorMessage"],
-    validate: requireNonEmptyString("errorMessage"),
-  },
-  "unexpected-head-movement": { keys: [], validate: noEvidence },
-  "git-policy-violation": { keys: [], validate: noEvidence },
-  "commit-error": { keys: [], validate: noEvidence },
-  "stage-prerequisite-unmet": { keys: ["contract"], validate: requireContract },
-  "stage-prerequisite-uninspectable": {
-    keys: ["errorMessage"],
-    validate: requireNonEmptyString("errorMessage"),
-  },
+  "outcome-blocked": { agentReason: nullableString },
+  "outcome-refused": { agentReason: nullableString },
+  "pending-queues": { pendingFiles: validateSortedUniquePending },
+  "malformed-outcome": { candidateLine: nullableString },
+  "harness-error": {},
+  "idle-timeout": {},
+  interrupted: { origin: diagnosticText },
+  "gate-error": { errorMessage: diagnosticText },
+  "unexpected-head-movement": {},
+  "git-policy-violation": {},
+  "commit-error": {},
+  "stage-prerequisite-unmet": { contract: artifactMismatches },
+  "stage-prerequisite-uninspectable": { errorMessage: diagnosticText },
   "stage-contract-unmet": {
-    keys: ["contract", "preservationNote"],
-    validate: (value, label, errors) => {
-      requireContract(value, label, errors);
-      requireNullableString("preservationNote")(value, label, errors);
-    },
+    contract: artifactMismatches,
+    preservationNote: nullableString,
   },
-  "stage-contract-uninspectable": {
-    keys: ["errorMessage"],
-    validate: requireNonEmptyString("errorMessage"),
-  },
+  "stage-contract-uninspectable": { errorMessage: diagnosticText },
 };
 
 const WAITING_KINDS: ReadonlySet<string> = new Set<WaitingKind>(
   Object.keys(WAITING_EVIDENCE) as WaitingKind[],
 );
-
-/** A required, nullable string: absent is a rejection, `null` is a real state. */
-function requireNullableString(
-  key: string,
-): (value: Record<string, unknown>, label: string, errors: string[]) => void {
-  return (value, label, errors) => {
-    if (!(key in value)) {
-      errors.push(`${label}.${key} is required (a string or null).`);
-      return;
-    }
-    if (value[key] !== null && typeof value[key] !== "string") {
-      errors.push(`${label}.${key} must be a string or null.`);
-    }
-  };
-}
-
-/** A required, non-empty string: the diagnostic text a check owes its reader. */
-function requireNonEmptyString(
-  key: string,
-): (value: Record<string, unknown>, label: string, errors: string[]) => void {
-  return (value, label, errors) => {
-    if (!isNonEmptyString(value[key])) {
-      errors.push(`${label}.${key} must be a non-empty string.`);
-    }
-  };
-}
-
-/** The artifact mismatches an evaluated contract check found unmet. */
-function requireContract(
-  value: Record<string, unknown>,
-  label: string,
-  errors: string[],
-): void {
-  if (value.contract === undefined) {
-    errors.push(`${label}.contract is required.`);
-    return;
-  }
-  errors.push(
-    ...validateSerializedArtifactMismatches(value.contract, `${label}.contract`),
-  );
-}
-
-/** A kind whose whole evidence is its message has nothing further to check. */
-function noEvidence(): void {}
 
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -721,15 +689,18 @@ function validateWaitingReasons(value: unknown, errors: string[]): void {
       errors.push(`${label}.kind must be a known waiting kind.`);
       return;
     }
-    const evidence = WAITING_EVIDENCE[entry.kind as WaitingKind];
+    const evidence: Record<string, EvidenceCheck> =
+      WAITING_EVIDENCE[entry.kind as WaitingKind];
     validateAllowedKeys(
       entry,
       label,
-      ["kind", "message", ...evidence.keys],
+      ["kind", "message", ...Object.keys(evidence)],
       errors,
       `on a "${entry.kind}" reason`,
     );
-    evidence.validate(entry, label, errors);
+    for (const [field, check] of Object.entries(evidence)) {
+      check(entry[field], `${label}.${field}`, errors);
+    }
   });
 }
 
