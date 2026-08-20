@@ -130,8 +130,6 @@ function malformedMessage(candidateLine: string | null): string {
   return `${opening} No candidate final line was present.`;
 }
 
-
-
 /**
  * Every queue-level reason that holds, scan failure first: a scan that could not
  * complete and a pending list that was observed are separate problems, and a

@@ -348,8 +348,7 @@ function donePendingQueues(args: {
  *
  * An abort replaces the stage's own reason with the interruption, but the
  * queue-level reasons observed alongside it still hold and are still reported.
- * Otherwise the classifier's reasons stand as they are, with the attempt's
- * failure telemetry riding on the one reason that reports that failure.
+ * Otherwise the classifier's reasons stand exactly as it produced them.
  */
 function attemptStopped(args: {
   classified: WaitingReasons;

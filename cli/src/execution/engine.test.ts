@@ -1157,6 +1157,61 @@ describe.concurrent("executeEngine — finalization answers the recorded queue o
       );
     });
   }
+
+  /**
+   * Pause the same promising stage on its contract with a bundle dropped during
+   * the attempt, so the attempt's own scan is what records the observed,
+   * non-empty list — then resolve the bundle and repair the promise, the state a
+   * human leaves behind at this pause. The record says pending work was seen and
+   * the disk says otherwise, which is the divergence finalization answers.
+   */
+  async function pausedOnContractHolding(
+    stage: SyntheticStage,
+  ): Promise<{ fixture: RepoFixture; runDir: string }> {
+    const fixture = await newFixture();
+    const runDir = await makeRunDir();
+    let pendingRel = "";
+    await allocatedRun(fixture, runDir, [stage], [
+      {
+        before: async () => {
+          pendingRel = await dropPendingDecision(fixture, "d1.md");
+        },
+      },
+    ]);
+    const paused = await loadCheckpoint(runDir);
+    expect(paused.waiting?.recovery.kind).toBe("recheck-stage-contract");
+    expect(settlementOf(paused.attempts[0])?.queues).toEqual({
+      kind: "observed",
+      pendingFiles: [pendingRel],
+    });
+    await fs.rm(
+      path.join(fixture.threadPath as string, ".pending-decisions", "d1.md"),
+    );
+    await writeThreadFile(fixture, "spec.md", "# Spec\n");
+    return { fixture, runDir };
+  }
+
+  it("an observed non-empty queue leaves a rerun stage ready and runs it again (AC-3.4)", async () => {
+    const { runDir } = await pausedOnContractHolding(rerunPromisingStage);
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls).toHaveLength(1);
+    const cp = await loadCheckpoint(runDir);
+    expect(attemptsAt(cp, 0).map((a) => a.result)).toEqual(["done", "done"]);
+  });
+
+  it("an observed non-empty queue advances an advancing stage (AC-3.4)", async () => {
+    const { runDir } = await pausedOnContractHolding(promisingStage);
+
+    const { result, harness } = await resumeFromDisk(runDir, [{}]);
+
+    expect(result).toEqual({ kind: "completed" });
+    expect(harness.calls).toHaveLength(0);
+    const cp = await loadCheckpoint(runDir);
+    expect(attemptsAt(cp, 0).map((a) => a.result)).toEqual(["done"]);
+  });
 });
 
 describe.concurrent("executeEngine — Git finalization retry on resume (AC-3.4, AC-4.3)", () => {
