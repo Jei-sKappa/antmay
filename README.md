@@ -54,13 +54,13 @@ Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
 
 ## Skills
 
-Every skill below is **user-invoked**: you (or your harness, routing on the skill's description) start it directly. The [Primitives](#primitives) further down are a separate class — invoked by other skills or the model, never chosen directly.
+Every skill below is **user-invoked**: you start it directly, by name — the model never reaches for one on its own. The [Primitives](#primitives) further down are a separate class — invoked by other skills or the model, never chosen directly.
 
 ### Capture & Discussion
 
 #### [`open-thread`](./suite/skills/capture-discussion/open-thread/SKILL.md)
 
-Open a durable thread on disk — interpret the user's idea and an optional tracker ticket, then compose the seed and hand normalized creation to the thread-creation primitive — use when a unit of work needs a home before any proposal, spec, or plan exists.
+Open a durable thread on disk — interpret the user's idea and an optional tracker ticket, then compose the seed and hand normalized creation to the thread-creation primitive.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-thread
@@ -68,7 +68,7 @@ npx skills add Jei-sKappa/antmay --skill open-thread
 
 #### [`open-ticket`](./suite/skills/capture-discussion/open-ticket/SKILL.md)
 
-Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative — use when an idea should be captured in the tracker rather than started now.
+Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-ticket
@@ -76,7 +76,7 @@ npx skills add Jei-sKappa/antmay --skill open-ticket
 
 #### [`discussion`](./suite/skills/capture-discussion/discussion/SKILL.md)
 
-Conduct an open-ended interview that discovers decision points live and records each settled decision to the thread's decision log — use when the user wants to think a topic through without knowing every question up front.
+Conduct an open-ended interview that discovers decision points live and records each settled decision to the thread's decision log.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill discussion
@@ -84,7 +84,7 @@ npx skills add Jei-sKappa/antmay --skill discussion
 
 #### [`resolve-pending-decisions`](./suite/skills/capture-discussion/resolve-pending-decisions/SKILL.md)
 
-Settle the thread's queued pending decisions interactively and record the outcomes — use when a queue of pending-decision bundles is waiting for a human to work through their open questions and turn each settled choice into a durable decision record.
+Settle the thread's queued pending decisions interactively and record the outcomes.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill resolve-pending-decisions
@@ -94,7 +94,7 @@ npx skills add Jei-sKappa/antmay --skill resolve-pending-decisions
 
 #### [`propose`](./suite/skills/propose/propose/SKILL.md)
 
-Turn a rough prompt or referenced artifact into a freeform, direction-setting proposal.md at a thread root; use when a unit of work needs its direction sketched and written down before it is specified.
+Turn a rough prompt or referenced artifact into a freeform, direction-setting proposal.md at a thread root.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill propose
@@ -104,7 +104,7 @@ npx skills add Jei-sKappa/antmay --skill propose
 
 #### [`spec`](./suite/skills/spec/spec/SKILL.md)
 
-Forward-design a thread's durable inputs (seed, decisions, an optional proposal) or a referenced artifact into a handoff-grade spec.md at a thread root; use when an upstream input needs designing into a complete spec a downstream planner or implementer can build from.
+Forward-design a thread's durable inputs (seed, decisions, an optional proposal) or a referenced artifact into a handoff-grade spec.md at a thread root.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill spec
@@ -114,7 +114,7 @@ npx skills add Jei-sKappa/antmay --skill spec
 
 #### [`plan-brief`](./suite/skills/plan/plan-brief/SKILL.md)
 
-Turn a thread's durable inputs or a referenced artifact into a one-screen plan.md at a thread root — an outcome, a small ordered list of steps, and overall verification; use when lightweight work needs a sensible implementation order without the ceremony of a full multi-file plan.
+Turn a thread's durable inputs or a referenced artifact into a one-screen plan.md at a thread root — an outcome, a small ordered list of steps, and overall verification.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill plan-brief
@@ -122,7 +122,7 @@ npx skills add Jei-sKappa/antmay --skill plan-brief
 
 #### [`plan-strict`](./suite/skills/plan/plan-strict/SKILL.md)
 
-Turn a spec, proposal, decisions, GitHub issue, or raw prompt into a strict-granularity plan — a thread-root plan.md index plus one dispatchable brief per task under plan-tasks/, each with explicit substeps, files modified, verification, and acceptance criteria; use when the downstream implementer is agent-leaning and needs a prescriptive plan.
+Turn a spec, proposal, decisions, GitHub issue, or raw prompt into a strict-granularity plan — a thread-root plan.md index plus one dispatchable brief per task under plan-tasks/, each with explicit substeps, files modified, verification, and acceptance criteria.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill plan-strict
@@ -134,7 +134,7 @@ Reconciliation makes an authored artifact faithful to the decisions or spec that
 
 #### [`reconcile-proposal`](./suite/skills/reconcile/reconcile-proposal/SKILL.md)
 
-Align a thread-root proposal.md with the decisions that govern it — correcting supported discrepancies in place and queueing anything that needs a fresh human decision; use when a proposal should be made faithful to its thread's established intent.
+Align a thread-root proposal.md with the decisions that govern it — correcting supported discrepancies in place and queueing anything that needs a fresh human decision.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill reconcile-proposal
@@ -142,7 +142,7 @@ npx skills add Jei-sKappa/antmay --skill reconcile-proposal
 
 #### [`reconcile-spec`](./suite/skills/reconcile/reconcile-spec/SKILL.md)
 
-Make a thread-root spec.md a lossless, additive-free expression of the decisions that govern it — adding omitted decisions, correcting contradictions, removing invented commitments, and queueing anything that needs a fresh human decision; use when a spec should be made faithful to its thread's established intent.
+Make a thread-root spec.md a lossless, additive-free expression of the decisions that govern it — adding omitted decisions, correcting contradictions, removing invented commitments, and queueing anything that needs a fresh human decision.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill reconcile-spec
@@ -150,7 +150,7 @@ npx skills add Jei-sKappa/antmay --skill reconcile-spec
 
 #### [`reconcile-plan`](./suite/skills/reconcile/reconcile-plan/SKILL.md)
 
-Make a thread's strict plan — its plan.md index and plan-tasks/ briefs — faithfully executable against the spec that governs it, repairing plan faults in place and queueing anything that needs a fresh human decision; use when a plan should be made to satisfy its spec.
+Make a thread's strict plan — its plan.md index and plan-tasks/ briefs — faithfully executable against the spec that governs it, repairing plan faults in place and queueing anything that needs a fresh human decision.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill reconcile-plan
@@ -158,7 +158,7 @@ npx skills add Jei-sKappa/antmay --skill reconcile-plan
 
 #### [`reconcile-roadmap`](./suite/skills/reconcile/reconcile-roadmap/SKILL.md)
 
-Make a thread-root roadmap.md and its decomposition faithful to the decisions that govern the thread — correcting contradictions, adding omitted decisions, removing unsupported commitments, repairing incomplete child briefs, and queueing any decomposition change that alters human intent; use when a roadmap should be brought back in line with its thread's established intent.
+Make a thread-root roadmap.md and its decomposition faithful to the decisions that govern the thread — correcting contradictions, adding omitted decisions, removing unsupported commitments, repairing incomplete child briefs, and queueing any decomposition change that alters human intent.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill reconcile-roadmap
@@ -168,7 +168,7 @@ npx skills add Jei-sKappa/antmay --skill reconcile-roadmap
 
 #### [`roadmap`](./suite/skills/roadmap/roadmap/SKILL.md)
 
-Decompose a settled larger initiative into self-contained child-thread briefs — author a thread-root roadmap.md and an eager roadmap-feedback.md — creating no child threads; use when a thread's direction is agreed and needs breaking into independently executable children.
+Decompose a settled larger initiative into self-contained child-thread briefs — author a thread-root roadmap.md and an eager roadmap-feedback.md — creating no child threads.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill roadmap
@@ -176,7 +176,7 @@ npx skills add Jei-sKappa/antmay --skill roadmap
 
 #### [`materialize-roadmap-threads`](./suite/skills/roadmap/materialize-roadmap-threads/SKILL.md)
 
-Turn a roadmap's child briefs into child threads idempotently — create a thread for each brief that has no materialized reference, skip and verify the ones that do, and stamp each new thread's reference back into its brief; use when a roadmap.md is settled and its children need opening on disk.
+Turn a roadmap's child briefs into child threads idempotently — create a thread for each brief that has no materialized reference, skip and verify the ones that do, and stamp each new thread's reference back into its brief.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill materialize-roadmap-threads
@@ -186,7 +186,7 @@ npx skills add Jei-sKappa/antmay --skill materialize-roadmap-threads
 
 #### [`implement`](./suite/skills/implement/implement/SKILL.md)
 
-Implement a brief plan or a less-structured input (`plan.md`, a seed with its decisions, a code or issue reference, or a raw prompt) end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when the input needs to be carried to working code in a single agent.
+Implement a brief plan or a less-structured input (`plan.md`, a seed with its decisions, a code or issue reference, or a raw prompt) end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill implement
@@ -194,7 +194,7 @@ npx skills add Jei-sKappa/antmay --skill implement
 
 #### [`implement-plan`](./suite/skills/implement/implement-plan/SKILL.md)
 
-Execute a strict multi-file plan artifact — a thread-root `plan.md` index plus its `plan-tasks/` briefs — end-to-end on the current working tree, reading the index then each task file in order, self-reviewing after each task, and auto-committing per task; use when a plan needs to be carried to working code in a single agent.
+Execute a strict multi-file plan artifact — a thread-root `plan.md` index plus its `plan-tasks/` briefs — end-to-end on the current working tree, reading the index then each task file in order, self-reviewing after each task, and auto-committing per task.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill implement-plan
@@ -202,7 +202,7 @@ npx skills add Jei-sKappa/antmay --skill implement-plan
 
 #### [`implement-plan-with-subagents`](./suite/skills/implement/implement-plan-with-subagents/SKILL.md)
 
-Execute a strict multi-file plan artifact — a thread-root `plan.md` index plus its `plan-tasks/` briefs — through an implementer and a merged two-lane reviewer subagent loop with per-cycle commits; use when a plan needs the heavier review path and the runtime supports subagents.
+Execute a strict multi-file plan artifact — a thread-root `plan.md` index plus its `plan-tasks/` briefs — through an implementer and a merged two-lane reviewer subagent loop with per-cycle commits.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill implement-plan-with-subagents
@@ -214,7 +214,7 @@ Reviews are strictly read-only. A clean review passes in chat and writes nothing
 
 #### [`review-spec`](./suite/skills/review/review-spec/SKILL.md)
 
-Read a thread-root spec.md as a downstream handoff and judge whether another agent could plan and implement from it without hidden conversational context, reporting any findings as a single pending-review bundle; use when a spec should be checked for planning readiness before downstream work.
+Read a thread-root spec.md as a downstream handoff and judge whether another agent could plan and implement from it without hidden conversational context, reporting any findings as a single pending-review bundle.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-spec
@@ -222,7 +222,7 @@ npx skills add Jei-sKappa/antmay --skill review-spec
 
 #### [`review-roadmap`](./suite/skills/review/review-roadmap/SKILL.md)
 
-Read a thread-root roadmap.md as a decomposition handoff and judge whether each child brief could become an independently executable thread without inventing intent, reporting any findings as a single pending-review bundle; use when a roadmap should be checked for handoff readiness before its children are materialized.
+Read a thread-root roadmap.md as a decomposition handoff and judge whether each child brief could become an independently executable thread without inventing intent, reporting any findings as a single pending-review bundle.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-roadmap
@@ -230,7 +230,7 @@ npx skills add Jei-sKappa/antmay --skill review-roadmap
 
 #### [`review-implementation`](./suite/skills/review/review-implementation/SKILL.md)
 
-Check delivered work against the thread's durable intent and confirm the implementation report honestly describes what exists — reviewing strictly read-only and recording any findings as a single pending-review bundle; use when an implementation needs a fidelity review before it is accepted.
+Check delivered work against the thread's durable intent and confirm the implementation report honestly describes what exists — reviewing strictly read-only and recording any findings as a single pending-review bundle.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-implementation
@@ -238,7 +238,7 @@ npx skills add Jei-sKappa/antmay --skill review-implementation
 
 #### [`review-code`](./suite/skills/review/review-code/SKILL.md)
 
-Judge code on its own intrinsic merits — quality, safety, idioms, and testability — anchored to the thread's durable intent only where intent decides what "right" means, reviewing strictly read-only and recording any findings as a single pending-review bundle; use when code needs a quality review.
+Judge code on its own intrinsic merits — quality, safety, idioms, and testability — anchored to the thread's durable intent only where intent decides what "right" means, reviewing strictly read-only and recording any findings as a single pending-review bundle.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-code
@@ -248,7 +248,7 @@ npx skills add Jei-sKappa/antmay --skill review-code
 
 #### [`merge-artifacts`](./suite/skills/merge/merge-artifacts/SKILL.md)
 
-Reconcile two or more competing candidate drafts of one artifact into a single canonical thread-root artifact, folding every candidate's unique content and settling genuine design divergences as recorded decisions; use when a multi-draft bake-off must be collapsed into one artifact.
+Reconcile two or more competing candidate drafts of one artifact into a single canonical thread-root artifact, folding every candidate's unique content and settling genuine design divergences as recorded decisions.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill merge-artifacts
@@ -258,7 +258,7 @@ npx skills add Jei-sKappa/antmay --skill merge-artifacts
 
 #### [`finish`](./suite/skills/finish-navigate/finish/SKILL.md)
 
-Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
+Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill finish
@@ -266,7 +266,7 @@ npx skills add Jei-sKappa/antmay --skill finish
 
 #### [`whats-next`](./suite/skills/finish-navigate/whats-next/SKILL.md)
 
-Read a thread's observable state — its location, seed, decisions, canonical artifacts, pending bundles, run state, and branch — then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
+Read a thread's observable state — its location, seed, decisions, canonical artifacts, pending bundles, run state, and branch — then advise plausible next actions without inferring hidden operations or writing anything.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill whats-next
@@ -274,7 +274,7 @@ npx skills add Jei-sKappa/antmay --skill whats-next
 
 #### [`archive-thread`](./suite/skills/finish-navigate/archive-thread/SKILL.md)
 
-Relocate a thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
+Relocate a thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill archive-thread

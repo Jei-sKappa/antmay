@@ -1,10 +1,10 @@
 ---
 name: open-thread
-description: Open a durable thread on disk from a rough idea and an optional tracker ticket — use when a unit of work needs a home before any proposal, spec, or plan exists.
+description: Open a durable thread on disk from a rough idea and an optional tracker ticket.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.2
+  version: 0.2.3
 ---
 
 # Open Thread

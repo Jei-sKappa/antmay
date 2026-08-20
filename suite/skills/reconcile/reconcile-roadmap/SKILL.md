@@ -1,10 +1,10 @@
 ---
 name: reconcile-roadmap
-description: Make a thread-root roadmap.md and its decomposition faithful to the decisions that govern the thread — correcting contradictions, adding omitted decisions, removing unsupported commitments, repairing incomplete child briefs, and queueing any decomposition change that alters human intent; use when a roadmap should be brought back in line with its thread's established intent.
+description: Make a thread-root roadmap.md and its decomposition faithful to the decisions that govern the thread — correcting contradictions, adding omitted decisions, removing unsupported commitments, repairing incomplete child briefs, and queueing any decomposition change that alters human intent.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # Reconcile Roadmap

@@ -1,10 +1,10 @@
 ---
 name: reconcile-proposal
-description: Align a thread-root proposal.md with the decisions that govern it — correcting supported discrepancies in place and queueing anything that needs a fresh human decision; use when a proposal should be made faithful to its thread's established intent.
+description: Align a thread-root proposal.md with the decisions that govern it — correcting supported discrepancies in place and queueing anything that needs a fresh human decision.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # Reconcile Proposal

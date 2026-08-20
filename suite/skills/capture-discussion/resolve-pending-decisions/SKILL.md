@@ -1,10 +1,10 @@
 ---
 name: resolve-pending-decisions
-description: Settle the thread's queued pending decisions interactively and record the outcomes — use when a queue of pending-decision bundles is waiting for a human to work through their open questions and turn each settled choice into a durable decision record.
+description: Settle the thread's queued pending decisions interactively and record the outcomes.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.2.1
 ---
 
 # Resolve Pending Decisions

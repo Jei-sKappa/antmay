@@ -78,7 +78,7 @@ Every skill file starts with YAML frontmatter, then the skill body. Mirror the s
 ```yaml
 ---
 name: <kebab-case, matches directory name>
-description: <one sentence: what it does + when to use it. The "use when…" trigger is what the harness matches against, so make it concrete.>
+description: <one sentence. Entry point: a concise human-facing summary of what the skill does. Primitive: the bounded caller precondition the model routes on.>
 disable-model-invocation: true   # user-invoked entry points ONLY — omit on primitives
 metadata:
   author: https://github.com/Jei-sKappa
@@ -112,8 +112,8 @@ Active skills form a coherently installed suite, not isolated files. They compos
 
 Authoring guidance for every skill body:
 
-- Keep `description` to one sentence (entry points) or one bounded-precondition sentence (primitives) that says what the skill does and when to trigger it. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
-- Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections — routing belongs in the frontmatter description.
+- Keep `description` to one sentence, in the register its role calls for (see "Invocation roles"): an entry point summarizes the capability it delivers, a primitive states the bounded precondition a caller must be in. Do not include history, taxonomy, sibling counts, version names, project roadmap context, or implementation notes.
+- Keep the body focused on instructions for the invoked agent. Do not add "when to use this skill" sections: the body is read only once the skill is already running, so whatever bears on choosing it belongs in the frontmatter description.
 - When a skill body points at one of its own reference files, cite the full direct skill-relative path (e.g. `references/formats/discussion-point.md`) — never an indirect description like "the `discussion-point.md` format under `references/formats/`", and never a bare folder.
 - **Conditional instructions longer than a line belong in a reference file, not in the body.** When a block of instructions applies only in a specific situation — a ticket reference was supplied, the thread has a roadmap parent — and it runs to more than a short single instruction, move it into the skill's own `references/` folder and leave a one-line pointer in the body that names the condition and cites the file. `open-thread`'s ticket input and the roadmap-descendant feedback in the `implement` skills are the pattern to follow. Every invocation then pays one line for a situation most invocations are not in, and the agent reads the detail exactly when the condition holds. Judgement lives in two places: a genuinely one-line conditional stays inline, because a pointer would cost as much as the instruction; and a condition that in practice holds on every invocation is not conditional at all, so it stays in the body. Such a file is an ordinary hand-authored skill-local reference — it only becomes a shared reference when a second skill needs the same content.
 - Do not leak repo-maintenance context into the body: no project-internal planning labels, decision IDs, phase numbers, internal version labels, or explanations of how this repository is organized, unless the invoked agent genuinely needs that fact to do the skill's own job. If a constraint matters at runtime, restate it plainly as behavior the agent must follow. Artifact decision-log IDs such as `DR<N>` are allowed when they are part of the skill's emitted artifact format.

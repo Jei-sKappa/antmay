@@ -1,10 +1,10 @@
 ---
 name: open-ticket
-description: Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative — use when an idea should be captured in the tracker rather than started now.
+description: Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.4.0
+  version: 0.4.1
 ---
 
 # Open Ticket

@@ -1,10 +1,10 @@
 ---
 name: propose
-description: Turn a rough prompt or referenced artifact into a freeform, direction-setting proposal.md at a thread root; use when a unit of work needs its direction sketched and written down before it is specified.
+description: Turn a rough prompt or referenced artifact into a freeform, direction-setting proposal.md at a thread root.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # Propose

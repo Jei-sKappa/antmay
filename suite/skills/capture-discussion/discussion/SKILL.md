@@ -1,10 +1,10 @@
 ---
 name: discussion
-description: Conduct an open-ended interview that discovers decision points live and records each settled decision to the thread's decision log — use when the user wants to think a topic through without knowing every question up front.
+description: Conduct an open-ended interview that discovers decision points live and records each settled decision to the thread's decision log.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.3.0
+  version: 0.3.1
 ---
 
 # Discussion

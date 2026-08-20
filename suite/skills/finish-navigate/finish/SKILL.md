@@ -1,9 +1,9 @@
 ---
 name: finish
-description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
+description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.3.0
+  version: 0.3.1
 disable-model-invocation: true
 ---
 

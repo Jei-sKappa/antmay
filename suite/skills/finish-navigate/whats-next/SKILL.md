@@ -1,9 +1,9 @@
 ---
 name: whats-next
-description: Read a thread's observable state, then advise plausible next actions without inferring hidden operations or writing anything; use when you want a quick, evidence-based read on where a thread stands and what to do next.
+description: Read a thread's observable state, then advise plausible next actions without inferring hidden operations or writing anything.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.1
+  version: 0.1.2
 disable-model-invocation: true
 ---
 
