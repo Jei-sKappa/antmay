@@ -108,9 +108,11 @@ attempt arms, the queue observation, the reason evidence, and the checkpoint's
 pause correlation — verified by `tsc --noEmit`. New validator suites cover the
 attempt union per disposition and every one of the fifteen kinds' evidence,
 accepting its own, rejecting a field another kind declares, and rejecting each
-required field's absence. Four new `engine.test.ts` cases seed each row of the
-finalization table onto a preserved `DONE`. `pause.test.ts` gained a per-kind
-evidence-equality matrix and a split-pair equivalence case, and
+required field's absence. Six new `engine.test.ts` cases cover the finalization
+table: four seed an unavailable or observed-empty observation onto a preserved
+`DONE`, and two drive the observed, non-empty rows from a bundle the attempt's
+own scan saw, resolved before the resume finalizes. `pause.test.ts` gained a
+per-kind evidence-equality matrix and a split-pair equivalence case, and
 `display/terminal.test.ts` a case pinning the uninspectable contract kind to its
 sibling's banner. A shared `reasonOf` helper in `test-helpers/waiting.ts` and a
 `settledHead` helper in `test-helpers/resume-harness.ts` are how the suites read
@@ -118,8 +120,8 @@ a union's own fields.
 
 ## Verification
 
-- `npm --prefix cli run check` — typecheck, 1286 tests across 63 files, and
-  build: passes. Run before each of the five commits.
+- `npm --prefix cli run check` — typecheck, 1288 tests across 63 files, and
+  build: passes. Run before each of the five commits and again on the final tree.
 - `npm --prefix cli run lint` — exit 0. Run before each commit.
 - `npm --prefix cli run demo:all` — 43/43 scenarios green. Run at the close; it
   caught one shape the unit gate could not, a seeded pause in `43-list.mjs` still
@@ -169,11 +171,12 @@ No check was skipped.
 
 ## Remaining concerns
 
-- **The two unavailable rows of the finalization table are tested by seeding the
-  observation onto a preserved `DONE`, not end to end.** That branch is reachable
-  only with an observation made by a run that has since ended — the same reason
-  DR2 gives for reading the record rather than rescanning. The observed rows are
-  additionally covered end to end by the two pre-existing resolution cases.
+- **The unavailable and observed-empty rows of the finalization table are tested
+  by seeding the observation onto a preserved `DONE` rather than producing it.**
+  The unavailable branch is reachable only with an observation made by a run that
+  has since ended — the same reason DR2 gives for reading the record rather than
+  rescanning. The observed, non-empty rows are covered end to end, by an
+  observation the attempt's own scan made.
 - **The display's per-section helpers are not total over the kind union.**
   `detailOf` and the pending, artifacts, and candidate-line blocks in
   `display/execution.ts` would compile against a sixteenth kind and simply render
