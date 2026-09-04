@@ -9,7 +9,7 @@ Every thread is a folder under `docs/threads/`, named `<YYMMDDHHMMSSZ-slug>` whe
 ```text
 docs/threads/<YYMMDDHHMMSSZ-slug>/        (archived: docs/threads/archive/<...>/)
 ├── seed.md                       eager
-├── decisions.md                  eager
+├── decision-log.md               eager
 ├── proposal.md                   optional
 ├── spec.md                       optional
 ├── plan.md                       optional; brief plan or strict-plan index
@@ -22,7 +22,7 @@ docs/threads/<YYMMDDHHMMSSZ-slug>/        (archived: docs/threads/archive/<...>/
 └── .implementation-runs/         gitignored; invocation-scoped implementation state
 ```
 
-`seed.md` and `decisions.md` are created eagerly when the thread opens; everything else is created on demand. A brief plan is contained entirely in `plan.md`; a strict plan uses `plan.md` as its authoritative index and adds dispatchable task briefs under `plan-tasks/`. `implementation-report.md` is a single current-outcome artifact, not a per-run history. These are the only folders a thread has — there is no generic drafts or working-material folder.
+`seed.md` and `decision-log.md` are created eagerly when the thread opens; everything else is created on demand. A brief plan is contained entirely in `plan.md`; a strict plan uses `plan.md` as its authoritative index and adds dispatchable task briefs under `plan-tasks/`. `implementation-report.md` is a single current-outcome artifact, not a per-run history. These are the only folders a thread has — there is no generic drafts or working-material folder.
 
 ## Seed
 
@@ -41,15 +41,15 @@ The folder timestamp records opening time, so the seed does not duplicate it. No
 
 ## Decisions
 
-`decisions.md` is the one thread-wide log of human decisions. It is created eagerly when the thread opens (header-only is fine) and appended to as decisions are settled. Each record uses sequential thread-local `DR<N>` numbering and carries a Title, an optional Scope, a mandatory Context, the Decision, and its Rationale.
+`decision-log.md` is the one thread-wide log of human decisions. It is created eagerly when the thread opens (header-only is fine) and appended to as decisions are settled. Each record uses sequential thread-local `DR<N>` numbering and carries a Title, an optional Scope, a mandatory Context, the Decision, and its Rationale.
 
-The log is append-only. A changed decision is recorded by appending a new superseding record that names the record it supersedes; prior records are never rewritten. `seed.md` plus `decisions.md` are designed to be sufficient on their own to author the next artifact without recovering the original chat.
+The log is append-only. A changed decision is recorded by appending a new superseding record that names the record it supersedes; prior records are never rewritten. `seed.md` plus `decision-log.md` are designed to be sufficient on their own to author the next artifact without recovering the original chat.
 
-Any skill — regardless of its interaction posture — that obtains a new human decision during execution appends it to `decisions.md` as an ordinary `DR<N>` record **before** acting on it. A genuine decision is an answer that settles product or process intent; trivial input clarifications (such as which file was meant) need no record. This holds equally whether the decision was elicited in an interactive dialogue or settled through a pending-decision bundle: every human decision that shapes an artifact exists in `decisions.md` before the artifact depends on it.
+Any skill — regardless of its interaction posture — that obtains a new human decision during execution appends it to `decision-log.md` as an ordinary `DR<N>` record **before** acting on it. A genuine decision is an answer that settles product or process intent; trivial input clarifications (such as which file was meant) need no record. This holds equally whether the decision was elicited in an interactive dialogue or settled through a pending-decision bundle: every human decision that shapes an artifact exists in `decision-log.md` before the artifact depends on it.
 
 ## Historical artifacts versus living documentation
 
-Thread artifacts — the seed, `decisions.md`, any proposal, the spec, the plan, and implementation or outcome reports — record how one change was understood and delivered at a particular moment. They are not the current description of the product.
+Thread artifacts — the seed, `decision-log.md`, any proposal, the spec, the plan, and implementation or outcome reports — record how one change was understood and delivered at a particular moment. They are not the current description of the product.
 
 **Living project documentation** — README content, user documentation, architecture references, API or protocol documentation, operational runbooks, and repository conventions — describes the system as it currently exists and is expected to evolve across threads. When implementation changes documented behavior, updating the affected living documentation is part of that implementation. Where no separate living documentation exists, none is invented for the occasion; code and tests remain authoritative where appropriate.
 
@@ -58,7 +58,7 @@ Thread artifacts — the seed, `decisions.md`, any proposal, the spec, the plan,
 Skills own narrow, purpose-shaped write boundaries. These are conventions realized through skill design rather than filesystem access controls:
 
 - The thread-opening operation alone writes the current thread's `seed.md`.
-- Decision-eliciting operations append to the current thread's `decisions.md`; a changed decision appends a superseding record rather than rewriting a prior one.
+- Decision-eliciting operations append to the current thread's `decision-log.md`; a changed decision appends a superseding record rather than rewriting a prior one.
 - Proposal, spec, and plan authoring operations may edit their respective current-thread target, as may a reconciliation or targeted fix operation when existing durable decisions make the correction mechanical.
 - An implementation operation reads its input spec and plan but does not edit either to justify or retroactively describe its work; a plan is implementation input and is not rewritten after the fact to make completed work look planned. If implementation exposes a spec problem, it proceeds only within a granted degree of freedom, records an honest deviation that stays within accepted intent, or stops and surfaces a human decision when intended behavior must change.
 - Implementation and outcome reports are written by the operation that performed the work.
@@ -67,7 +67,7 @@ Skills own narrow, purpose-shaped write boundaries. These are conventions realiz
 
 Every skill writes only its declared outputs, current-thread targets it explicitly owns, and current project files within its authorized implementation scope.
 
-There is a single exception to the no-other-threads rule: a Roadmap descendant may append a feedback record to its parent's `roadmap-feedback.md`. That authority is narrow — a descendant may append a feedback record but may not rewrite `roadmap.md`, edit the parent's `decisions.md`, modify a sibling's artifacts, declare a new parent-level decision, or mark another child blocked or complete. Appending feedback does not reactivate an archived Roadmap thread or turn it into a coordinator.
+There is a single exception to the no-other-threads rule: a Roadmap descendant may append a feedback record to its parent's `roadmap-feedback.md`. That authority is narrow — a descendant may append a feedback record but may not rewrite `roadmap.md`, edit the parent's `decision-log.md`, modify a sibling's artifacts, declare a new parent-level decision, or mark another child blocked or complete. Appending feedback does not reactivate an archived Roadmap thread or turn it into a coordinator.
 
 ## Archive lifecycle
 
@@ -76,7 +76,7 @@ Archive location is the only terminal lifecycle signal. A thread directly under 
 Completed and abandoned threads are distinguished by their durable content:
 
 - **Completed** work carries its recipe's final deliverable — the implementation report for Quick and Standard, or the roadmap and its materialized children for Roadmap.
-- **Abandonment** is recorded as a decision in `decisions.md`, with its rationale.
+- **Abandonment** is recorded as a decision in `decision-log.md`, with its rationale.
 
 Archiving is the explicit act that ends a thread's active lifecycle. Before moving a thread, the archival operation inspects the three temporary workspaces and, if any are non-empty, names their contents — bundle titles or headers, interrupted run identifiers — and asks the user to confirm archival anyway. This is an advisory warning and a single meaningful confirmation, not a gate. On confirmed archival the workspaces are carried along untouched; archival never deletes them or their contents. In an archived thread these folders are inert local residue with no operational meaning — the pending-state semantics below apply only to active threads. The user may delete the residue manually at any time.
 
@@ -110,7 +110,7 @@ The bridge from in-progress completion-oriented work back to human judgment. It 
 
 One file is a **resumption bundle**: one or more human decisions produced by the same operation that share a coherent target and should be settled before the same follow-up action runs once. The normal case is one bundle per producing invocation; an invocation emits separate bundles only when subsets of its questions have meaningfully different targets or follow-ups. Each bundle opens with a routing header naming the producing skill, the target artifact or operation, the originating user request, the creation time, the point count, and a one-line summary — the originating request is carried so a clarification is answerable from the file alone — followed by a required `## Suggested action after resolving the decisions` paragraph — advisory follow-up written by the producer while it still holds the domain context — and then one canonical discussion point per unresolved question. The bundle carries no executable resume contract.
 
-Resolving a bundle is an interactive, user-invoked operation: it selects one bundle (reading only routing headers to choose when several exist), discusses its points one at a time, and records each point's outcome — appending genuine new intent to `decisions.md` as a decision, while a mere request-repair answer that only clarifies which input was meant settles the point without being recorded. The clarification-versus-decision call is made here, at resolution time, not when the bundle was emitted. It removes each settled point and deletes the bundle when no unresolved points remain. It then reassesses the producer's suggested action against the decisions just made, offers its own recommended next action, and waits for the user's choice; an accepted continuation runs once and does not open an automatic loop.
+Resolving a bundle is an interactive, user-invoked operation: it selects one bundle (reading only routing headers to choose when several exist), discusses its points one at a time, and records each point's outcome — appending genuine new intent to `decision-log.md` as a decision, while a mere request-repair answer that only clarifies which input was meant settles the point without being recorded. The clarification-versus-decision call is made here, at resolution time, not when the bundle was emitted. It removes each settled point and deletes the bundle when no unresolved points remain. It then reassesses the producer's suggested action against the decisions just made, offers its own recommended next action, and waits for the user's choice; an accepted continuation runs once and does not open an automatic loop.
 
 The absence of `.pending-decisions/` means there are no known pending human decisions. It is not a review-status system.
 

@@ -36,7 +36,7 @@ Read the roadmap against these axes; each weakness you find maps to the axis it 
 
 A roadmap's section names, ordering, and structure are the author's discretion; what you check is that the substance behind these axes is present and coherent.
 
-You do not perform a decision-by-decision fidelity mapping between the roadmap and the thread's `decisions.md`. You may, however, report an **obvious contradiction** with `decisions.md` when you notice one, because a roadmap that visibly commits to the opposite of a settled decision harms readiness — whoever opens the child would act on intent the thread has already overruled. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
+You do not perform a decision-by-decision fidelity mapping between the roadmap and the thread's `decision-log.md`. You may, however, report an **obvious contradiction** with `decision-log.md` when you notice one, because a roadmap that visibly commits to the opposite of a settled decision harms readiness — whoever opens the child would act on intent the thread has already overruled. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
 
 ## Recording findings
 
@@ -46,7 +46,7 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 - `roadmap.md` as the target.
 - Each finding with its severity (`blocker` / `issue` / `nit`), a category, the finding statement, the evidence (the child ID or roadmap section and a short quote showing the weakness), and the downstream impact.
 
-Use the readiness axes above as your category vocabulary — `decomposition`, `self-containment`, `dependencies`, `shared-constraints`, and `fidelity` for an obvious `decisions.md` contradiction — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
+Use the readiness axes above as your category vocabulary — `decomposition`, `self-containment`, `dependencies`, `shared-constraints`, and `fidelity` for an obvious `decision-log.md` contradiction — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
 
 ## After the review
 

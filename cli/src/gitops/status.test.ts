@@ -29,7 +29,7 @@ describe("collectBoundaryStatus", () => {
       "utf8",
     );
     // Unstaged deletion of a tracked file.
-    await fs.rm(path.join(fixture.threadPath as string, "decisions.md"));
+    await fs.rm(path.join(fixture.threadPath as string, "decision-log.md"));
     // Staged brand-new file.
     await fs.writeFile(path.join(fixture.root, "staged.txt"), "x", "utf8");
     await fixture.git(["add", "--", "staged.txt"]);
@@ -38,7 +38,7 @@ describe("collectBoundaryStatus", () => {
 
     const status = await collectBoundaryStatus(fixture.root);
     expect(status).toContain(`${rel}/seed.md`);
-    expect(status).toContain(`${rel}/decisions.md`);
+    expect(status).toContain(`${rel}/decision-log.md`);
     expect(status).toContain("staged.txt");
     expect(status).toContain("untracked.txt");
     // Deduplicated and sorted.

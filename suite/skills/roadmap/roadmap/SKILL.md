@@ -20,7 +20,7 @@ Run a mandatory preflight before any substantive execution (authoring the artifa
 Read the thread's authoritative inputs and let them drive the decomposition:
 
 - `seed.md` — why the thread exists and its intended outcome.
-- `decisions.md` — every settled human decision that governs the direction.
+- `decision-log.md` — every settled human decision that governs the direction.
 - `proposal.md`, when present — the sketched direction the roadmap refines.
 
 ## Author `roadmap.md`

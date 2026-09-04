@@ -30,7 +30,7 @@ Read all of the following read-only:
 
 - **Location** — active tree versus `docs/threads/archive/` (above).
 - **`seed.md`** — why the thread exists and its intended outcome.
-- **`decisions.md`** — the settled human decisions.
+- **`decision-log.md`** — the settled human decisions.
 - **The published recipes** — `references/recipes/quick.md`, `references/recipes/standard.md`, and `references/recipes/roadmap.md` — the known-good progressions to orient advice against. They are advisory orientation, not a checklist and not a compliance standard.
 - **Existing canonical artifacts** — `proposal.md`, `spec.md`, `plan.md` (and `plan-tasks/` if present), `roadmap.md`. Each present artifact proves that its authoring step occurred; an absent one does not prove a step failed to run — it may simply not have been reached.
 - **Roadmap child briefs and their `Materialized thread:` references** — see `## Roadmap threads`.

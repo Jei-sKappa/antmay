@@ -17,7 +17,7 @@ The one question you answer throughout: **is this specification a lossless, addi
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority.** Read the thread's `decisions.md` (what has been settled), `seed.md` (why the thread exists), and the relevant upstream artifacts the spec was built from (for example `proposal.md`), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the spec is measured against. Then read the thread-root `spec.md`, your one editable target. If no `spec.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no spec.md to reconcile`.
+2. **Load the authority.** Read the thread's `decision-log.md` (what has been settled), `seed.md` (why the thread exists), and the relevant upstream artifacts the spec was built from (for example `proposal.md`), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the spec is measured against. Then read the thread-root `spec.md`, your one editable target. If no `spec.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no spec.md to reconcile`.
 
 3. **Inventory the decisions the spec should carry.** Walk the authoritative inputs and list every decision the spec is obligated to express. Then read the spec against that inventory once, end to end, and locate three kinds of discrepancy:
    - **Omissions** — a governing decision the inventory holds that the spec fails to express.
@@ -34,7 +34,7 @@ The one question you answer throughout: **is this specification a lossless, addi
 
 ## Authority boundary
 
-The spec is the only artifact you may edit. Never edit `decisions.md`, `seed.md`, or an upstream artifact to make the spec appear consistent: if the spec is right and a source is wrong, or two sources conflict, that mismatch is itself a decision a human must make — queue it, do not patch the source. You correct the artifact toward its authority, never the authority toward the artifact.
+The spec is the only artifact you may edit. Never edit `decision-log.md`, `seed.md`, or an upstream artifact to make the spec appear consistent: if the spec is right and a source is wrong, or two sources conflict, that mismatch is itself a decision a human must make — queue it, do not patch the source. You correct the artifact toward its authority, never the authority toward the artifact.
 
 ## Queueing decisions
 

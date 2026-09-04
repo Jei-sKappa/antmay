@@ -31,7 +31,7 @@ On confirmed archival these folders move along with the thread, **untouched**. N
 
 ## Recording an abandonment first
 
-When the user is archiving work that was never finished, suggest they first record the abandonment as a decision in the thread's `decisions.md` — what was abandoned and why. This is guidance, not a requirement: the user may decline and you archive regardless. Its purpose is that the thread's own durable content then distinguishes a completed thread from an abandoned one, rather than leaving the reason to memory.
+When the user is archiving work that was never finished, suggest they first record the abandonment as a decision in the thread's `decision-log.md` — what was abandoned and why. This is guidance, not a requirement: the user may decline and you archive regardless. Its purpose is that the thread's own durable content then distinguishes a completed thread from an abandoned one, rather than leaving the reason to memory.
 
 ## The move
 

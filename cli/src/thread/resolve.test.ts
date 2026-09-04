@@ -119,7 +119,7 @@ describe("AC-5.2: thread-resolution rejections, each with a distinct message and
     await fs.mkdir(threadPath, { recursive: true });
     await fs.writeFile(path.join(threadPath, "seed.md"), "seed\n", "utf8");
     await fs.writeFile(
-      path.join(threadPath, "decisions.md"),
+      path.join(threadPath, "decision-log.md"),
       "decisions\n",
       "utf8",
     );
@@ -141,7 +141,7 @@ describe("AC-5.2: thread-resolution rejections, each with a distinct message and
     await fs.mkdir(threadPath, { recursive: true });
     await fs.writeFile(path.join(threadPath, "seed.md"), "seed\n", "utf8");
     await fs.writeFile(
-      path.join(threadPath, "decisions.md"),
+      path.join(threadPath, "decision-log.md"),
       "decisions\n",
       "utf8",
     );
@@ -163,7 +163,7 @@ describe("AC-5.2: thread-resolution rejections, each with a distinct message and
     );
     await fs.mkdir(nested, { recursive: true });
     await fs.writeFile(path.join(nested, "seed.md"), "seed\n", "utf8");
-    await fs.writeFile(path.join(nested, "decisions.md"), "decisions\n", "utf8");
+    await fs.writeFile(path.join(nested, "decision-log.md"), "decisions\n", "utf8");
 
     const result = await resolveThreadTarget(nested, f.root);
     expect(result.ok).toBe(false);
@@ -192,7 +192,7 @@ describe("AC-5.2: thread-resolution rejections, each with a distinct message and
   });
 });
 
-describe("AC-5.3: genesis validation of seed.md and decisions.md only", () => {
+describe("AC-5.3: genesis validation of seed.md and decision-log.md only", () => {
   it("rejects a missing seed.md", async () => {
     const f = await fixture({ thread: { createSeed: false } });
     const result = await resolveThreadTarget(f.threadFolder!, f.root);
@@ -201,12 +201,12 @@ describe("AC-5.3: genesis validation of seed.md and decisions.md only", () => {
     expect(result.message).toContain("seed.md");
   });
 
-  it("rejects a missing decisions.md", async () => {
+  it("rejects a missing decision-log.md", async () => {
     const f = await fixture({ thread: { createDecisions: false } });
     const result = await resolveThreadTarget(f.threadFolder!, f.root);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.message).toContain("decisions.md");
+    expect(result.message).toContain("decision-log.md");
   });
 
   it("rejects an empty seed.md", async () => {
@@ -217,17 +217,17 @@ describe("AC-5.3: genesis validation of seed.md and decisions.md only", () => {
     expect(result.message).toContain("seed.md");
   });
 
-  it("rejects a whitespace-only decisions.md", async () => {
+  it("rejects a whitespace-only decision-log.md", async () => {
     const f = await fixture({ thread: { decisions: "   \n\t  \n" } });
     const result = await resolveThreadTarget(f.threadFolder!, f.root);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.message).toContain("decisions.md");
+    expect(result.message).toContain("decision-log.md");
   });
 
   it("does not require any other artifact (no spec.md/plan.md check)", async () => {
     const f = await fixture({ thread: {} });
-    // Thread has only seed.md and decisions.md — no spec.md or plan.md.
+    // Thread has only seed.md and decision-log.md — no spec.md or plan.md.
     const result = await resolveThreadTarget(f.threadFolder!, f.root);
     expect(result.ok).toBe(true);
   });

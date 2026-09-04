@@ -19,7 +19,7 @@ export type ThreadResult =
     }
   | { ok: false; message: string };
 
-const GENESIS_FILES = ["seed.md", "decisions.md"] as const;
+const GENESIS_FILES = ["seed.md", "decision-log.md"] as const;
 
 /**
  * Split an absolute path into its segments, dropping a trailing empty segment
@@ -178,7 +178,7 @@ function containsSeparator(value: string): boolean {
  * canonical target must be exactly one direct child of that root's
  * `docs/threads/`. Symlink escapes, nested suffixes, archived paths, bare
  * repositories, and mismatched worktree roots each fail with a distinct
- * message. Finally `seed.md` and `decisions.md` must both exist as regular
+ * message. Finally `seed.md` and `decision-log.md` must both exist as regular
  * files inside the thread and each contain non-whitespace text; no other
  * artifact is checked. Any failure returns `{ ok: false }` and performs no
  * writes.
@@ -265,7 +265,7 @@ export async function resolveThreadTarget(
       };
     }
 
-    // Genesis validation: seed.md and decisions.md must be regular files with
+    // Genesis validation: seed.md and decision-log.md must be regular files with
     // non-whitespace content. Nothing else is checked.
     for (const name of GENESIS_FILES) {
       const filePath = path.join(canonicalTarget, name);

@@ -53,4 +53,4 @@ Never rewrite, renumber, reorder, or edit any existing record, and never touch t
 
 ## Authority boundary
 
-Appending this record is legitimate even when the parent Roadmap thread sits under `docs/threads/archive/` — this append is the one narrow write permitted into an archived thread, and it neither reactivates the thread nor turns it into a coordinator. The append grants no other write into the parent: never edit the parent's `roadmap.md` or `decisions.md`, and never modify any sibling thread's seed, spec, plan, or other artifact.
+Appending this record is legitimate even when the parent Roadmap thread sits under `docs/threads/archive/` — this append is the one narrow write permitted into an archived thread, and it neither reactivates the thread nor turns it into a coordinator. The append grants no other write into the parent: never edit the parent's `roadmap.md` or `decision-log.md`, and never modify any sibling thread's seed, spec, plan, or other artifact.

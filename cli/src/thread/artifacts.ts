@@ -107,8 +107,8 @@ const ARTIFACT_DIMENSION_NAMES: Record<keyof ArtifactState, string> = {
  */
 const ARTIFACT_DESCRIPTIONS: ArtifactDescriptions = {
   validThread: {
-    true: "a thread folder holding a non-empty seed.md and decisions.md",
-    false: "no thread folder holding a non-empty seed.md and decisions.md",
+    true: "a thread folder holding a non-empty seed.md and decision-log.md",
+    false: "no thread folder holding a non-empty seed.md and decision-log.md",
   },
   proposal: {
     true: "a non-empty proposal.md",
@@ -335,7 +335,7 @@ export function describeContractSide(
     .join(", ");
 }
 
-const GENESIS_FILES = ["seed.md", "decisions.md"] as const;
+const GENESIS_FILES = ["seed.md", "decision-log.md"] as const;
 const PROPOSAL_FILE = "proposal.md";
 const SPEC_FILE = "spec.md";
 const PLAN_INDEX_FILE = "plan.md";

@@ -9,11 +9,11 @@ metadata:
 
 # Resolve Pending Decisions
 
-Work through queued pending-decision bundles with the user, one bundle and one point at a time, turning each settled choice into a durable `DR<N>` record in the thread's `decisions.md`. Bundles are the transient queue of open human decisions an earlier operation could not settle on its own; you are the interactive bridge that empties them. You settle only genuine human decisions that a bundle already contains — you do not audit the repository, judge the quality of any artifact, or invent points a bundle does not hold.
+Work through queued pending-decision bundles with the user, one bundle and one point at a time, turning each settled choice into a durable `DR<N>` record in the thread's `decision-log.md`. Bundles are the transient queue of open human decisions an earlier operation could not settle on its own; you are the interactive bridge that empties them. You settle only genuine human decisions that a bundle already contains — you do not audit the repository, judge the quality of any artifact, or invent points a bundle does not hold.
 
 ## Resolve the thread
 
-Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp. Bundles live under that thread's `.pending-decisions/` folder; decisions are recorded to that thread's root `decisions.md`.
+Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp. Bundles live under that thread's `.pending-decisions/` folder; decisions are recorded to that thread's root `decision-log.md`.
 
 ## Select a bundle
 
@@ -36,7 +36,7 @@ For the selected bundle, work its points one at a time:
 
 ## Recording decisions
 
-Route each settled point at resolution time. An answer that settles genuine new intent becomes a durable record: append it to the thread-root `decisions.md` as a self-contained `DR<N>` record, following the shape, sequential numbering, and append-only rules in `references/formats/decision-record.md`. An answer that merely repairs which input the producer originally meant is a clarification, not new intent — it settles the point (so the point is still consumed from the queue) but is not recorded as a decision.
+Route each settled point at resolution time. An answer that settles genuine new intent becomes a durable record: append it to the thread-root `decision-log.md` as a self-contained `DR<N>` record, following the shape, sequential numbering, and append-only rules in `references/formats/decision-record.md`. An answer that merely repairs which input the producer originally meant is a clarification, not new intent — it settles the point (so the point is still consumed from the queue) but is not recorded as a decision.
 
 ## Follow-through
 

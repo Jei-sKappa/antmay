@@ -302,7 +302,7 @@ npx skills add Jei-sKappa/antmay --skill emit-pending-review
 
 #### [`allocate-thread`](./suite/skills/primitives/allocate-thread/SKILL.md)
 
-Allocate a normalized thread folder from a caller's complete authorization block — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decisions.md`.
+Allocate a normalized thread folder from a caller's complete authorization block — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decision-log.md`.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill allocate-thread

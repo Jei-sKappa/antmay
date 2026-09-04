@@ -130,7 +130,7 @@ async function buildTemplate(spec: TemplateSpec): Promise<string> {
     }
     if (spec.thread.decisions !== null) {
       await fs.writeFile(
-        path.join(threadPath, "decisions.md"),
+        path.join(threadPath, "decision-log.md"),
         spec.thread.decisions,
         "utf8",
       );

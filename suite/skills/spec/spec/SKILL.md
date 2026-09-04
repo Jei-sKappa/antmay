@@ -18,7 +18,7 @@ A handoff-grade spec is one a downstream reader with no prior context can read a
 The spec is forward-designed from the thread's durable inputs plus whatever the invocation points you at:
 
 - **`seed.md`** — why the thread exists and what triggered it; the source of the spec's context.
-- **`decisions.md`** — the settled `DR<N>` decisions the spec must encode and must not contradict.
+- **`decision-log.md`** — the settled `DR<N>` decisions the spec must encode and must not contradict.
 - **`proposal.md`** (when present) — the direction-setting sketch the spec elaborates into expected behavior, constraints, and acceptance guidance.
 - **A referenced artifact or the user's prompt** — an explicit path, a GitHub issue, or the prompt itself when nothing else is referenced. Treat an issue's title and labels as additional context.
 
@@ -33,7 +33,7 @@ The emitted spec MUST cover all SEVEN of the following elements in its body, reg
 3. **Scope / non-scope** — the boundary statement, INCLUDING what is explicitly out.
 4. **Expected behavior** — the observable behaviors a future executor needs.
 5. **Constraints** — tech, repo, harness, and safety constraints that bind the implementation.
-6. **Explicit decisions** — settled trade-offs INLINED into the body where they are operative (in scope, in constraints, in expected behavior, in acceptance). When a settled decision comes from `decisions.md`, cite the source `DR<N>` at the inline location where it becomes operative — e.g. `(per decisions.md DR3)` — rather than copying the decision text.
+6. **Explicit decisions** — settled trade-offs INLINED into the body where they are operative (in scope, in constraints, in expected behavior, in acceptance). When a settled decision comes from `decision-log.md`, cite the source `DR<N>` at the inline location where it becomes operative — e.g. `(per decision-log.md DR3)` — rather than copying the decision text.
 7. **Acceptance guidance** — how a reviewer will know the implementation is right (see `## Acceptance guidance and degrees of freedom`).
 
 The seven elements MAY be presented as a copy-paste template OR interleaved into a freeform structure appropriate to the input — section names and ordering are yours to choose. What is not yours to choose: every one of the seven must appear, the two obligations below must appear, and the spec must read as handoff-grade.
@@ -72,11 +72,11 @@ Pinning an undiscussed decision into expected behavior or a constraint as if it 
 
 1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a spec can be written; do not create the thread or its seed yourself), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
 
-2. **Load context.** Read the thread's `seed.md` and `decisions.md`, any `proposal.md`, and whatever artifact or prompt the invocation points you at. `decisions.md` says what has already been settled, so the spec neither re-litigates a closed decision nor contradicts one without noticing.
+2. **Load context.** Read the thread's `seed.md` and `decision-log.md`, any `proposal.md`, and whatever artifact or prompt the invocation points you at. `decision-log.md` says what has already been settled, so the spec neither re-litigates a closed decision nor contradicts one without noticing.
 
 3. **Draft the body.** Cover all seven semantic-contract elements, inline settled decisions where operative and cite their `DR<N>` records, and add the two obligations. Honor the lossless constraint (`## Lossless authoring`) for any specific the input did not settle. Keep the spec readable end-to-end by a stranger with no prior context. Adapt length to what the input warrants — a tight spec is better than a padded one.
 
-4. **Write the artifact.** Write the single file `docs/threads/<thread>/spec.md` — literally that name at the thread root, with no frontmatter. If `spec.md` already exists, revise it in place: the same file is the stable reference through any review-and-revise cycles. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `proposal.md`), never repo-rooted or absolute; cross-thread references are repo-relative (`docs/threads/<other>/…`).
+4. **Write the artifact.** Write the single file `docs/threads/<thread>/spec.md` — literally that name at the thread root, with no frontmatter. If `spec.md` already exists, revise it in place: the same file is the stable reference through any review-and-revise cycles. Within-thread references in the body are thread-relative (e.g. `decision-log.md`, `proposal.md`), never repo-rooted or absolute; cross-thread references are repo-relative (`docs/threads/<other>/…`).
 
 5. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Spec written: spec.md`.
 

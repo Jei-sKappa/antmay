@@ -18,7 +18,7 @@ A brief plan trades depth for speed: it orders the work and records overall veri
 Draft the plan from the thread's durable inputs plus whatever the invocation points you at:
 
 - **`seed.md`** — why the thread exists and what triggered it.
-- **`decisions.md`** — the settled decisions the plan must honor and must not contradict.
+- **`decision-log.md`** — the settled decisions the plan must honor and must not contradict.
 - **An explicit code or issue reference** — a path, a GitHub issue, or the user's prompt when nothing else is referenced.
 
 The emitted `plan.md` must be self-contained: a fresh reader with only the plan and the thread's durable inputs can execute it. It must not depend on the originating chat.
@@ -69,9 +69,9 @@ If `plan-tasks/` already exists alongside `plan.md`, a fuller plan is in force. 
 ## Procedure
 
 1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a plan can be written), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
-2. **Load context.** Read `seed.md` and `decisions.md`, and whatever code or issue reference the invocation points you at. If `plan-tasks/` already exists, apply the reverse-transition guard above before writing anything.
+2. **Load context.** Read `seed.md` and `decision-log.md`, and whatever code or issue reference the invocation points you at. If `plan-tasks/` already exists, apply the reverse-transition guard above before writing anything.
 3. **Draft the body.** Compose the plan per `## Plan shape`: a title, `Source`, `## Outcome`, a small ordered `## Steps` list, `## Verification`, and `## Notes` only when needed. Keep it to roughly one screen. If the work warrants more rigor, recommend `plan-strict` instead.
-4. **Write the artifact.** Write the single file `docs/threads/<thread>/plan.md` — literally that name at the thread root, no frontmatter. If a brief `plan.md` already exists, revise it in place. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `spec.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`).
+4. **Write the artifact.** Write the single file `docs/threads/<thread>/plan.md` — literally that name at the thread root, no frontmatter. If a brief `plan.md` already exists, revise it in place. Within-thread references in the body are thread-relative (e.g. `decision-log.md`, `spec.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`).
 5. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Plan written: plan.md`.
 
 ## Blocked

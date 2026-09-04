@@ -45,7 +45,7 @@ async function threadFixture(): Promise<{ repoRoot: string; threadAbs: string }>
   const threadAbs = path.join(repoRoot, THREAD_REL);
   await fs.mkdir(threadAbs, { recursive: true });
   await fs.writeFile(path.join(threadAbs, "seed.md"), "# Seed\n");
-  await fs.writeFile(path.join(threadAbs, "decisions.md"), "# Decisions\n");
+  await fs.writeFile(path.join(threadAbs, "decision-log.md"), "# Decisions\n");
   return { repoRoot, threadAbs };
 }
 
@@ -119,10 +119,10 @@ describe("inspectArtifactState — thread and presence dimensions (AC-3.2)", () 
 
   it("reports an invalid thread when a genesis file is missing or empty", async () => {
     const { repoRoot, threadAbs } = await threadFixture();
-    await fs.rm(path.join(threadAbs, "decisions.md"));
+    await fs.rm(path.join(threadAbs, "decision-log.md"));
     expect((await inspect(repoRoot)).validThread).toBe(false);
 
-    await fs.writeFile(path.join(threadAbs, "decisions.md"), "");
+    await fs.writeFile(path.join(threadAbs, "decision-log.md"), "");
     expect((await inspect(repoRoot)).validThread).toBe(false);
   });
 
@@ -245,7 +245,7 @@ describe("inspectArtifactState — plan topology (AC-3.1)", () => {
 describe("inspectArtifactState — semantic blindness (AC-3.3)", () => {
   it("reads no prose, index entry, ordinal, or decision record", async () => {
     const { repoRoot, threadAbs } = await threadFixture();
-    await fs.writeFile(path.join(threadAbs, "decisions.md"), "# Decisions\n");
+    await fs.writeFile(path.join(threadAbs, "decision-log.md"), "# Decisions\n");
     await fs.writeFile(path.join(threadAbs, "spec.md"), "not a spec at all");
     await fs.writeFile(
       path.join(threadAbs, "plan.md"),
@@ -470,8 +470,8 @@ const DESCRIBED_PAIRS: Array<{
   value: boolean | PlanState;
   names: string[];
 }> = [
-  { dimension: "validThread", value: true, names: ["seed.md", "decisions.md"] },
-  { dimension: "validThread", value: false, names: ["seed.md", "decisions.md"] },
+  { dimension: "validThread", value: true, names: ["seed.md", "decision-log.md"] },
+  { dimension: "validThread", value: false, names: ["seed.md", "decision-log.md"] },
   { dimension: "proposal", value: true, names: ["proposal.md"] },
   { dimension: "proposal", value: false, names: ["proposal.md"] },
   { dimension: "spec", value: true, names: ["spec.md"] },

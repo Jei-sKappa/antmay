@@ -15,7 +15,7 @@ Make the thread-root `proposal.md` faithfully reflect the decisions that govern 
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority.** Read the thread's `seed.md` (why the thread exists) and `decisions.md` (what has been settled), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the proposal is measured against. Then read the thread-root `proposal.md`, your one editable target. If no `proposal.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no proposal.md to reconcile`.
+2. **Load the authority.** Read the thread's `seed.md` (why the thread exists) and `decision-log.md` (what has been settled), plus any artifact the invocation explicitly points you at. These are your authoritative inputs — the standard the proposal is measured against. Then read the thread-root `proposal.md`, your one editable target. If no `proposal.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no proposal.md to reconcile`.
 
 3. **Find the discrepancies.** Read the proposal against the authority once, end to end, and identify where they disagree:
    - **Omissions** — a settled decision the proposal should reflect but does not.
@@ -32,7 +32,7 @@ Make the thread-root `proposal.md` faithfully reflect the decisions that govern 
 
 ## Authority boundary
 
-The proposal is the only artifact you may edit. Never edit `decisions.md` or `seed.md` to make the proposal look consistent: if the proposal is right and a source is wrong, or two sources conflict, that mismatch is itself a decision a human must make — queue it, do not patch the source. You correct the artifact toward its authority, never the authority toward the artifact.
+The proposal is the only artifact you may edit. Never edit `decision-log.md` or `seed.md` to make the proposal look consistent: if the proposal is right and a source is wrong, or two sources conflict, that mismatch is itself a decision a human must make — queue it, do not patch the source. You correct the artifact toward its authority, never the authority toward the artifact.
 
 ## Queueing decisions
 

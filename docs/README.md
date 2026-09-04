@@ -16,7 +16,7 @@ The method ships three recipes:
 - **[Standard](recipes/standard.md)** — the normal spec-driven path for one change, from clarified decisions through a handoff-grade specification, a prescriptive plan, implementation, and an outcome report.
 - **[Roadmap](recipes/roadmap.md)** — explores and structures a larger direction, then decomposes it into independently executable child threads.
 
-Every recipe begins with the shared thread-genesis artifacts `seed.md` and `decisions.md`; the artifacts that follow differ by recipe. The shared substrate every recipe builds on — thread layout, decisions, archive lifecycle, write authority, and cross-thread references — is defined in [thread-model.md](thread-model.md). The cross-skill authoring conventions every skill follows are defined in [skill-authoring.md](skill-authoring.md).
+Every recipe begins with the shared thread-genesis artifacts `seed.md` and `decision-log.md`; the artifacts that follow differ by recipe. The shared substrate every recipe builds on — thread layout, decisions, archive lifecycle, write authority, and cross-thread references — is defined in [thread-model.md](thread-model.md). The cross-skill authoring conventions every skill follows are defined in [skill-authoring.md](skill-authoring.md).
 
 A recipe is written for a human to follow. The `antmay` CLI runs a **pipeline** — a separate, enforced stage sequence that automates the automatable core of a recipe. A pipeline is not the recipe in another form: it starts at an existing thread, drops the steps that need a person, and enforces Git boundaries and queue gates that a recipe only ever suggests. The recipe remains authoritative for what the path *is*; the pipeline is one way to drive part of it unattended.
 

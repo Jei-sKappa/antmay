@@ -48,7 +48,7 @@ Delegate creation to `/allocate-thread`, supplying a complete **caller-authoriza
 - **Genesis narrative** — a self-contained account assembled from the brief's `Outcome`, `Context`, `Scope and boundaries`, `Dependencies` (stated as the inputs the child consumes), and `Relevant shared constraints`, written so a reader with no chat history understands why the child exists and what it must produce.
 - **Conditional metadata** — `Parent:` set to the parent thread's repo-relative thread-root directory path (the folder, for example `docs/threads/260714093000Z-auth-boundary/`, never a file inside it) and `Roadmap brief:` set to this brief's `CB<N>` identifier. State explicitly that `External:` and `Supersedes:` do not apply.
 
-`/allocate-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decisions.md`, then returns the created thread's folder path. Do not fabricate that path or write the files yourself.
+`/allocate-thread` allocates the timestamped folder, writes `seed.md` from these fields, and eagerly creates a header-only `decision-log.md`, then returns the created thread's folder path. Do not fabricate that path or write the files yourself.
 
 ## Stamp the reference back into the brief
 

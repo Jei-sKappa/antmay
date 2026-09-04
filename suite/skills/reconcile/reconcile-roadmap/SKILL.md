@@ -17,7 +17,7 @@ The question you answer throughout: **does this roadmap, and the way it divides 
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority.** Read the thread's `decisions.md` (what has been settled), `seed.md` (why the thread exists and its intended outcome), and `proposal.md` when present (the sketched direction the roadmap refines). These are your authoritative inputs — the standard the roadmap is measured against. Then read the thread-root `roadmap.md`, your one editable target. If no `roadmap.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no roadmap.md to reconcile`.
+2. **Load the authority.** Read the thread's `decision-log.md` (what has been settled), `seed.md` (why the thread exists and its intended outcome), and `proposal.md` when present (the sketched direction the roadmap refines). These are your authoritative inputs — the standard the roadmap is measured against. Then read the thread-root `roadmap.md`, your one editable target. If no `roadmap.md` exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no roadmap.md to reconcile`.
 
 3. **Inventory what the roadmap must reflect.** Walk the authoritative inputs and list every decision the roadmap and its briefs are obligated to express — the intended outcome, the settled direction, the scope boundaries, the shared constraints. Then read the roadmap against that inventory once, end to end.
 
@@ -37,7 +37,7 @@ The question you answer throughout: **does this roadmap, and the way it divides 
 
 ## Authority boundary
 
-The roadmap is the only artifact you may edit. Never edit `decisions.md`, `seed.md`, or the proposal to make the roadmap appear consistent: if the roadmap is right and a source is wrong, or two sources conflict, that mismatch is itself a decision a human must make — queue it, do not patch the source. You correct the artifact toward its authority, never the authority toward the artifact.
+The roadmap is the only artifact you may edit. Never edit `decision-log.md`, `seed.md`, or the proposal to make the roadmap appear consistent: if the roadmap is right and a source is wrong, or two sources conflict, that mismatch is itself a decision a human must make — queue it, do not patch the source. You correct the artifact toward its authority, never the authority toward the artifact.
 
 You do not open, seed, or otherwise materialize the child threads the briefs describe — you only repair the briefs. Leave the thread-root `roadmap-feedback.md` and its records untouched; that channel is not yours to edit.
 

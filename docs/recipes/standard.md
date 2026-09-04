@@ -33,7 +33,7 @@ implementation report as the durable outcome.
 
 ## Durable outputs
 
-- `seed.md` and `decisions.md`, written when the thread opens.
+- `seed.md` and `decision-log.md`, written when the thread opens.
 - An optional `proposal.md`, when `propose` runs.
 - `spec.md`, the handoff-grade specification.
 - `plan.md` and the task briefs under `plan-tasks/`.
@@ -42,7 +42,7 @@ implementation report as the durable outcome.
 
 ## Resolving pending decisions
 
-`resolve-pending-decisions` is reactive infrastructure, not a stage in the sequence. Whenever a completion-oriented operation discovers missing human intent it cannot settle on its own once its work is underway — an authoring or reconciliation step that hits an irreducible question — it leaves a pending-decision bundle in the thread's queue and stops. Running `resolve-pending-decisions` then works through the queued points, records each settled outcome in `decisions.md`, and hands back a recommended next action. It has no fixed position in the path; it is available whenever a queue exists and does nothing when the queue is empty.
+`resolve-pending-decisions` is reactive infrastructure, not a stage in the sequence. Whenever a completion-oriented operation discovers missing human intent it cannot settle on its own once its work is underway — an authoring or reconciliation step that hits an irreducible question — it leaves a pending-decision bundle in the thread's queue and stops. Running `resolve-pending-decisions` then works through the queued points, records each settled outcome in `decision-log.md`, and hands back a recommended next action. It has no fixed position in the path; it is available whenever a queue exists and does nothing when the queue is empty.
 
 ## User involvement
 

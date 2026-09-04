@@ -46,7 +46,7 @@ Write the merged result to the single thread-root artifact for its type, replaci
 - a plan → `docs/threads/<thread>/plan.md` (a strict plan also carries its per-task briefs under `docs/threads/<thread>/plan-tasks/`; fold the candidates' task sets into that folder, keeping the index and the task files consistent)
 - a roadmap → `docs/threads/<thread>/roadmap.md`
 
-Compose the merged body in the target type's own format. Add no provenance or source-relation metadata — which candidates you consumed and why one side prevailed is not recorded on the file. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `spec.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`); never absolute.
+Compose the merged body in the target type's own format. Add no provenance or source-relation metadata — which candidates you consumed and why one side prevailed is not recorded on the file. Within-thread references in the body are thread-relative (e.g. `decision-log.md`, `spec.md`); cross-thread references are repo-relative (`docs/threads/<other>/…`); never absolute.
 
 ## Blocked
 

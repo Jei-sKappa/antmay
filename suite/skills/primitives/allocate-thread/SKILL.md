@@ -1,6 +1,6 @@
 ---
 name: allocate-thread
-description: Use only when an invoking caller supplies a complete caller-authorization block for a new thread and a normalized thread folder must be allocated — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decisions.md`.
+description: Use only when an invoking caller supplies a complete caller-authorization block for a new thread and a normalized thread folder must be allocated — create `docs/threads/<YYMMDDHHMMSSZ-slug>/`, write `seed.md` from the supplied fields, and eagerly create a header-only `decision-log.md`.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 0.1.0
@@ -8,7 +8,7 @@ metadata:
 
 # Allocate Thread
 
-Perform normalized thread-folder creation on behalf of a user-facing operation. You allocate the thread folder, write `seed.md` from fields the caller hands you, and eagerly create a header-only `decisions.md`. You own only this bounded filesystem side effect and the refusal below.
+Perform normalized thread-folder creation on behalf of a user-facing operation. You allocate the thread folder, write `seed.md` from fields the caller hands you, and eagerly create a header-only `decision-log.md`. You own only this bounded filesystem side effect and the refusal below.
 
 ## Precondition and refusal
 
@@ -26,7 +26,7 @@ If any required field above is missing, refuse: create nothing, name what is abs
 
 Capture the current UTC time and format it as `YYMMDDHHMMSSZ` (two-digit year, month, day, hour, minute, second, then a literal `Z`). Compose the folder name as that timestamp, a hyphen, and the supplied slug, and create the folder at `docs/threads/<YYMMDDHHMMSSZ-slug>/`.
 
-Create exactly two files inside it — `seed.md` and `decisions.md` — and nothing else. Create no other folders and no placeholder files.
+Create exactly two files inside it — `seed.md` and `decision-log.md` — and nothing else. Create no other folders and no placeholder files.
 
 ## seed.md
 
@@ -51,9 +51,9 @@ Reproduce the genesis narrative exactly as supplied; do not rewrite, summarize, 
 
 Absent metadata is simply absent — no line, no `none`, no justification for its absence.
 
-## decisions.md
+## decision-log.md
 
-Create `decisions.md` eagerly as a header-only file: a single top-level heading naming the thread's decision log and no records. It exists from thread creation onward even though no decision has been recorded yet.
+Create `decision-log.md` eagerly as a header-only file: a single top-level heading naming the thread's decision log and no records. It exists from thread creation onward even though no decision has been recorded yet.
 
 ## Report back
 

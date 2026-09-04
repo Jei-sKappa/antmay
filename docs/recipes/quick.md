@@ -19,14 +19,14 @@ The single unbracketed core path — open, implement, finish — is the document
 
 ## Durable outputs
 
-- `seed.md` and `decisions.md`, written when the thread opens.
+- `seed.md` and `decision-log.md`, written when the thread opens.
 - An optional brief `plan.md`, when `plan-brief` runs.
 - The project changes themselves — code, tests, and any affected living documentation.
 - `implementation-report.md`, the singleton current-outcome record of what was delivered.
 
 ## Resolving pending decisions
 
-`resolve-pending-decisions` is reactive infrastructure, not a stage in the sequence. Whenever a completion-oriented operation discovers missing human intent it cannot settle on its own once its work is underway, it leaves a pending-decision bundle in the thread's queue and stops. Running `resolve-pending-decisions` at that point works through the queued points, records each settled outcome in `decisions.md`, and hands back a recommended next action. It has no fixed position in the path; it exists to be used whenever a queue is present, and does nothing when the queue is empty.
+`resolve-pending-decisions` is reactive infrastructure, not a stage in the sequence. Whenever a completion-oriented operation discovers missing human intent it cannot settle on its own once its work is underway, it leaves a pending-decision bundle in the thread's queue and stops. Running `resolve-pending-decisions` at that point works through the queued points, records each settled outcome in `decision-log.md`, and hands back a recommended next action. It has no fixed position in the path; it exists to be used whenever a queue is present, and does nothing when the queue is empty.
 
 ## User involvement
 

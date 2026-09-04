@@ -18,7 +18,7 @@ This skill is single-agent: the current session is the implementer and runs the 
 This skill accepts ONE of the following input forms. Detect which form was passed before deriving implicit tasks:
 
 1. **The thread-root `plan.md`** — a brief plan whose numbered steps ARE the implementation steps. Treat each numbered step as an implicit task, in order; you have the freedom to derive the obvious substeps a step implies. This is the most structured input this skill takes.
-2. **The thread's `seed.md` plus `decisions.md`** — when no plan exists, the seed's trigger narrative names the intended outcome and `decisions.md` carries the settled decisions that constrain it. Derive the implicit task list from the two together; a settled decision may map to an implicit task or constrain one.
+2. **The thread's `seed.md` plus `decision-log.md`** — when no plan exists, the seed's trigger narrative names the intended outcome and `decision-log.md` carries the settled decisions that constrain it. Derive the implicit task list from the two together; a settled decision may map to an implicit task or constrain one.
 3. **An explicit code or issue reference** — a file path, directory, or git ref, or a GitHub issue (full URL, or the short `owner/repo#NNN` form). For a code reference, read the referenced context and derive implicit tasks from the observed state ("look at this and do the obvious thing"). For an issue, the body becomes the input and the title and labels are additional framing.
 4. **A raw user prompt** — when no artifact or reference is passed, the user's prompt is itself the input; derive implicit tasks directly from its stated intent.
 

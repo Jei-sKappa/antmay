@@ -15,11 +15,11 @@ Turn a rough prompt or a referenced input into a freeform proposal that answers 
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet (a thread must be opened before a proposal can be written; do not create the thread or its seed yourself), or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load context.** Read the thread's `seed.md` and `decisions.md`, plus any artifact or prompt the invocation points you at. `seed.md` says why the thread exists; `decisions.md` says what has already been settled, so the proposal neither re-litigates a closed decision nor contradicts one without noticing.
+2. **Load context.** Read the thread's `seed.md` and `decision-log.md`, plus any artifact or prompt the invocation points you at. `seed.md` says why the thread exists; `decision-log.md` says what has already been settled, so the proposal neither re-litigates a closed decision nor contradicts one without noticing.
 
 3. **Draft the body.** Write freeform markdown using the suggested shape below (see `## Suggested shape`). Adapt to what the input warrants — a short proposal is better than a padded one. The proposal must be self-contained: a later reader understands the direction, what was weighed, and what is still open without this chat.
 
-4. **Write the artifact.** Write the single file `docs/threads/<thread>/proposal.md` — literally that name at the thread root. If `proposal.md` already exists, revise it in place: the same file is the stable reference through any review-and-revise cycles. Within-thread references in the body are thread-relative (e.g. `decisions.md`, `spec.md`), never repo-rooted or absolute.
+4. **Write the artifact.** Write the single file `docs/threads/<thread>/proposal.md` — literally that name at the thread root. If `proposal.md` already exists, revise it in place: the same file is the stable reference through any review-and-revise cycles. Within-thread references in the body are thread-relative (e.g. `decision-log.md`, `spec.md`), never repo-rooted or absolute.
 
 5. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Proposal written: proposal.md`.
 

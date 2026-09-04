@@ -41,7 +41,7 @@ Read the spec against these axes; each weakness you find maps to the axis it con
 
 A spec's section names, ordering, and structure are the author's discretion; what you check is that the substance behind these axes is present and coherent.
 
-You do not perform an exhaustive decision-by-decision fidelity mapping between the spec and the thread's `decisions.md`. You may, however, report an **obvious contradiction** with `decisions.md` when you notice one, because a spec that visibly commits to the opposite of a settled decision harms readiness — a downstream agent would act on a claim the thread has already overruled. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
+You do not perform an exhaustive decision-by-decision fidelity mapping between the spec and the thread's `decision-log.md`. You may, however, report an **obvious contradiction** with `decision-log.md` when you notice one, because a spec that visibly commits to the opposite of a settled decision harms readiness — a downstream agent would act on a claim the thread has already overruled. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
 
 ## Recording findings
 

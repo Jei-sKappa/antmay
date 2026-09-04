@@ -227,7 +227,7 @@ skipped `spec` stage would have produced.
 Artifact state is read from bounded filesystem structure, never from prose:
 
 - **valid thread** — the thread folder holds a non-empty `seed.md` and a
-  non-empty `decisions.md`;
+  non-empty `decision-log.md`;
 - **proposal / spec / implementation report** — `proposal.md`, `spec.md`, and
   `implementation-report.md` count as present when each is a non-empty regular
   file;

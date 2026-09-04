@@ -21,7 +21,7 @@ The definition of intended behavior is the most specific durable intent the thre
 2. else `plan.md` at the thread root — a one-screen brief, or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
-`decisions.md` at the thread root always applies on top of the resolved anchor as a binding constraint source; delivered work that contradicts a settled decision is a finding no matter which anchor you resolved.
+`decision-log.md` at the thread root always applies on top of the resolved anchor as a binding constraint source; delivered work that contradicts a settled decision is a finding no matter which anchor you resolved.
 
 When the resolved anchor is coarse — `seed.md` only, with no acceptance criteria the thread ever recorded — name it explicitly in the bundle's `## Context` and scope every finding to what that anchor actually says. Never invent acceptance criteria the thread never recorded and then fault the work for missing them.
 
@@ -35,7 +35,7 @@ When the resolved anchor is coarse — `seed.md` only, with no acceptance criter
 
 2. **Resolve the delivered work read-only.** The reviewed target is the code the user names — a git ref (commit SHA, branch, tag), a commit range, a saved or inline diff, or a file or directory path. If the reference is unsupplied, vague ("my changes", "the branch" with no name), or matches multiple plausible candidates, the review has no resolvable target: say so, write nothing, and end with `Outcome: REFUSED — <the ambiguity>`; never pick by recency or sort order. Read the diff or the files, but do not check out a branch, run tests, modify the working tree, or mutate any git state.
 
-3. **Resolve the anchor and read the report.** Resolve the authority anchor (`## The authority anchor`) and read it read-only. Read `implementation-report.md` at the thread root, and `decisions.md`. Read everything read-only — you edit none of it and propose no edits into it.
+3. **Resolve the anchor and read the report.** Resolve the authority anchor (`## The authority anchor`) and read it read-only. Read `implementation-report.md` at the thread root, and `decision-log.md`. Read everything read-only — you edit none of it and propose no edits into it.
 
 4. **Judge against the categories.** Walk the delivered work against each category below (`## What you judge`). For every real gap, form a finding: what is wrong, where in the code or report it shows, why it would harm whoever picks up the work next, and a severity — `blocker` (the work does not deliver the intent, or the report materially misstates what exists), `issue` (a real gap that will cause rework or a wrong assumption), or `nit` (minor and survivable). Tether every finding to concrete downstream impact.
 
@@ -46,7 +46,7 @@ When the resolved anchor is coarse — `seed.md` only, with no acceptance criter
 These categories are your own; adapt or extend them when the work warrants, but cover this ground:
 
 - **Acceptance** — every acceptance criterion the anchor records has a corresponding change in the delivered work. A criterion nothing addresses is a total gap; a criterion covered only in part, or covered by something that resembles it but behaves differently, is a partial or misaligned gap. When the anchor records no acceptance criteria, this category narrows to whether the work delivers the intent the anchor does state.
-- **Constraints** — the anchor's and `decisions.md`'s "must" / "must not" / "must use" / "must avoid" statements are honored: technology choices, API and data-shape contracts, safety limits, repository layout. Before flagging a choice as a violation, check whether the anchor explicitly left that choice to the implementer's discretion — a granted freedom is never drift.
+- **Constraints** — the anchor's and `decision-log.md`'s "must" / "must not" / "must use" / "must avoid" statements are honored: technology choices, API and data-shape contracts, safety limits, repository layout. Before flagging a choice as a violation, check whether the anchor explicitly left that choice to the implementer's discretion — a granted freedom is never drift.
 - **Scope** — the work stays inside the intended boundary. Changes to files or behavior the anchor did not call for, refactors done because they seemed cleaner rather than to make the intended work possible, and features named only as a possibility or placed out of scope are findings even when they look like improvements.
 - **Behavior** — the observable behaviors the anchor named are present and correct: state changes, outputs, error surfaces, and side effects. A missing behavior, a behavior that resembles the intended one but differs in inputs, outputs, side effects, or error handling, and an unrequested new behavior are all findings.
 - **Test coverage** — tests exist and exercise the behavior the intent names, at the granularity the surrounding project conventions expect. Behavior the anchor named but no test covers, and tests that assert incidental output rather than the promised behavior, are findings. When the intent is doc-only, configuration-only, or an explicitly behavior-preserving refactor, this category does not apply — say so rather than inventing a missing-test finding.

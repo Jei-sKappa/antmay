@@ -51,8 +51,9 @@ stage leaves the wrong files changed or a pending queue is non-empty.
 | **living project documentation** | Documentation describing the system as it currently exists — READMEs, architecture references, runbooks, conventions. Evolves across threads; updating it is part of the implementation that changes documented behavior. |
 | **seed** | `seed.md`, written once when the thread opens: a title plus a self-contained genesis narrative. |
 | **genesis narrative** | The seed's self-contained explanation of what triggered the work and its intended goal. |
-| **decision** | A settled answer that fixes product or process intent, recorded as a `DR<N>` record in `decisions.md`. A trivial input clarification is not a decision. |
-| **decision log** | `decisions.md`, the one thread-wide append-only record of decisions. A changed decision appends a superseding record; prior records are never rewritten. |
+| **decision** | A settled answer that fixes product or process intent, recorded as a `DR<N>` record in `decision-log.md`. A trivial input clarification is not a decision. |
+| **decision record** | One `DR<N>` entry in `decision-log.md` — the durable projection of a single settled decision, not a transcript of how it was reached. |
+| **decision log** | `decision-log.md`, the one thread-wide append-only record of decisions. A changed decision appends a superseding record; prior records are never rewritten. |
 | **proposal** | `proposal.md`, a freeform sketch of the direction, written before the work is specified. |
 | **spec** | `spec.md`, the handoff-grade description of what to build — complete enough that a downstream planner or implementer needs no conversational context. |
 | **plan** | `plan.md`, the prescriptive implementation plan. A **brief plan** is contained entirely in `plan.md`; a **strict plan** uses `plan.md` as an index plus one dispatchable task brief per task under `plan-tasks/`. |

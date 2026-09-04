@@ -1,10 +1,10 @@
 # Decision-record format
 
-There is exactly one decision store per thread: the thread-root `decisions.md`. Every settled decision is appended to it as a self-contained `DR<N>` record. Do not create per-artifact, per-bundle, or per-topic logs, and do not keep decisions anywhere else.
+There is exactly one decision store per thread: the thread-root `decision-log.md`. Every settled decision is appended to it as a self-contained `DR<N>` record. Do not create per-artifact, per-bundle, or per-topic logs, and do not keep decisions anywhere else.
 
 ## Numbering
 
-Number records sequentially across the whole thread. For your first record, take the next integer after the highest `DR<N>` already in `decisions.md` — `DR1` when the file is header-only. Each record you append after that continues the count. `decisions.md` already exists at the thread root; if it is somehow absent, create it with a short heading before appending.
+Number records sequentially across the whole thread. For your first record, take the next integer after the highest `DR<N>` already in `decision-log.md` — `DR1` when the file is header-only. Each record you append after that continues the count. `decision-log.md` already exists at the thread root; if it is somehow absent, create it with a short heading before appending.
 
 ## Record shape
 
@@ -26,7 +26,7 @@ Field rules:
 
 - **Title** — a short line naming the decision.
 - **Scope** — omit the line when the decision applies to the whole thread; otherwise name a stage, relationship, or thread-relative artifact path (e.g. `specs/001/spec.md`).
-- **Context** — mandatory; normally one short paragraph. It states the question and only the facts necessary to understand it. Write it from the thread's perspective: never "in this chat", "as you said", or "the user chose B", and never rely on conversational memory. It may reference an earlier record by ID (e.g. `DR3`) when that reference resolves within `decisions.md`, and may reference thread artifacts by thread-relative path. It must not introduce a new decision or assumption — normative choices belong in `Decision`. Include a rejected alternative only when the trade-off is needed to understand the rationale.
+- **Context** — mandatory; normally one short paragraph. It states the question and only the facts necessary to understand it. Write it from the thread's perspective: never "in this chat", "as you said", or "the user chose B", and never rely on conversational memory. It may reference an earlier record by ID (e.g. `DR3`) when that reference resolves within `decision-log.md`, and may reference thread artifacts by thread-relative path. It must not introduce a new decision or assumption — normative choices belong in `Decision`. Include a rejected alternative only when the trade-off is needed to understand the rationale.
 - **Decision** — states the complete substantive resolution. Never a bare option letter like "A"; write the substance of what was chosen.
 - **Rationale** — records why the choice was made, its principal trade-off, and any materially conditioning facts.
 

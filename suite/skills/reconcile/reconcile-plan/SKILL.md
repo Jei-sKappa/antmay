@@ -21,7 +21,7 @@ The plan is a multi-file artifact: the index `plan.md` at the thread root plus o
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a pending bundle physically impossible — `.pending-decisions/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Load the authority and the target.** Read the thread-root `spec.md` (the contract the plan must satisfy) and `decisions.md` (the settled decisions), plus any artifact the invocation explicitly points you at. Then read the plan end to end — the index first, then each brief in index order — your one editable target. Also resolve and read the artifact named by the index's `Source:` line; you need it to check the Global Constraints block. If no plan exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no plan to reconcile`.
+2. **Load the authority and the target.** Read the thread-root `spec.md` (the contract the plan must satisfy) and `decision-log.md` (the settled decisions), plus any artifact the invocation explicitly points you at. Then read the plan end to end — the index first, then each brief in index order — your one editable target. Also resolve and read the artifact named by the index's `Source:` line; you need it to check the Global Constraints block. If no plan exists at the thread root, tell the user there is nothing to reconcile, write nothing, and end with `Outcome: REFUSED — no plan to reconcile`.
 
 3. **Check adherence.** Run the check in `## The adherence check` to locate every discrepancy between the plan and its authority, and to decide, for each, whether the fault lies in the plan or in the source.
 
@@ -58,7 +58,7 @@ Preserve legitimate elaboration: plan detail that extends the spec without contr
 
 ## Authority boundary
 
-Never edit `spec.md` or `decisions.md` to make the plan look consistent. If the plan is right and the spec is wrong, or the spec is silent on a fixed point the plan could only guess at, that mismatch is itself a decision a human must make — queue it; do not patch the source, and do not patch the plan around a source fault. You correct the plan toward its authority, never the authority toward the plan.
+Never edit `spec.md` or `decision-log.md` to make the plan look consistent. If the plan is right and the spec is wrong, or the spec is silent on a fixed point the plan could only guess at, that mismatch is itself a decision a human must make — queue it; do not patch the source, and do not patch the plan around a source fault. You correct the plan toward its authority, never the authority toward the plan.
 
 ## Queueing decisions
 
