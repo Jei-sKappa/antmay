@@ -1,0 +1,3 @@
+# Address failure modes from the Leitspace field report
+
+This thread exists to use the Leitspace field report on the Antmay method, copied into this thread as `leitspace-field-report.md`, as the basis for improving the Antmay method. That report documents how the method behaved end-to-end on a real Flutter/Supabase application (Leitspace) — spec drift after design changes, roadmap and child-thread behavior, and a comparison against an independent skill set — and lists non-binding suggestions for discussion, not decisions. The goal of this thread is to work through those findings and turn the ones that hold up into concrete changes to the Antmay method.
