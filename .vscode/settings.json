@@ -5,6 +5,7 @@
     "allocate-thread",
     "check-plan",
     "cli",
+    "close-thread",
     "discussion",
     "emit-pending-decisions",
     "emit-pending-review",

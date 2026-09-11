@@ -192,6 +192,14 @@ npx skills add Jei-sKappa/antmay --skill review-code
 
 ### Finish & Navigate
 
+#### [`close-thread`](./suite/skills/finish-navigate/close-thread/SKILL.md)
+
+Close the active thread by checking it, landing its draft ADRs and glossary entries into the project layer, updating its roadmap entry, and archiving it; use when a thread's work is delivered and its records are ready to become the project's current decisions.
+
+```sh
+npx skills add Jei-sKappa/antmay --skill close-thread
+```
+
 #### [`finish`](./suite/skills/finish-navigate/finish/SKILL.md)
 
 Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.

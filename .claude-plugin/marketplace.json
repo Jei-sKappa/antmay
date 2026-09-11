@@ -8,6 +8,7 @@
         "./skills/capture-discussion/open-thread",
         "./skills/capture-discussion/open-ticket",
         "./skills/capture-discussion/resolve-pending-decisions",
+        "./skills/finish-navigate/close-thread",
         "./skills/finish-navigate/finish",
         "./skills/finish-navigate/whats-next",
         "./skills/implement/implement",

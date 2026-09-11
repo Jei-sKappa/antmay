@@ -19,6 +19,12 @@ skills/finish-navigate/finish:
   - formats/implementation-report.md
   - formats/roadmap-index.md
 
+skills/finish-navigate/close-thread:
+  - formats/adr.md
+  - formats/log-line.md
+  - formats/roadmap-index.md
+  - formats/implementation-report.md
+
 skills/finish-navigate/whats-next:
   - recipes/quick.md
   - recipes/standard.md

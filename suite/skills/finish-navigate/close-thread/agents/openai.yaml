@@ -1,0 +1,5 @@
+interface:
+  display_name: Close Thread
+  short_description: Land a thread's records and archive it
+policy:
+  allow_implicit_invocation: false
