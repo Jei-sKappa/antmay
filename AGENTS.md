@@ -52,7 +52,8 @@ skills by name — `spec`, `reconcile-spec`, `review-spec`, `plan-brief`,
 `implement-plan-with-subagents` — points each at a thread artifact, and
 classifies the terminal outcome those skills emit. Renaming or retiring one of
 them, or changing the outcome protocol, breaks the CLI even though no path
-changes. That shared contract is documented in `docs/`.
+changes. The `suite/CLI contract` entry of `docs/glossary.md` fixes what that
+coupling is; `cli/README.md` publishes which skills run as stages.
 
 ## Keep the CLI stage support reference current
 
@@ -81,7 +82,7 @@ restate it in `cli/AGENTS.md` or `suite/AGENTS.md`.
 ```
 suite/           the skill suite and its maintenance tooling  → suite/AGENTS.md
 cli/             the Antmay CLI                              → cli/AGENTS.md
-docs/            canonical method reference + docs/threads/
+docs/            the project layer: adr/, glossary.md, roadmaps/, threads/
 .claude-plugin/  marketplace.json — load-bearing for skill distribution
 .github/         the workflow that classifies issues from their title
 assets/          logos and banner
@@ -146,11 +147,13 @@ documentation to maintain in any file. Point at the command rather than copying
 its rows into prose, and keep the runtime source of that listing accurate
 instead.
 
-A thread's own identifiers do not travel with what they explain. Every thread
-numbers its decisions from `DR1`, so a bare `DR<N>` in code or in living
-documentation names nothing a future reader can resolve. Keep the constraint or
-rationale the record settled, stated in full where it applies, and leave the tag
-in the thread.
+Thread-local material stays in its thread. Log entries, spec sections, plan
+tasks, and plan or implementation folders are never cited outside the thread
+that holds them: each is one thread's record of one moment, and a reader outside
+it cannot resolve the reference. Keep the constraint or rationale such a record
+settled, stated in full where it applies. An ADR may be cited by its stem —
+never by its path — from code, tests, commit messages, and living documentation,
+and no citation is ever required.
 
 README files are user-facing. Include only information an end user needs to
 understand, choose, configure, or operate the software; do not expose internal
@@ -168,28 +171,50 @@ structure that are immediately apparent from reading it.
 
 Never commit unless explicitly asked to do so.
 
-This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(propose): …`, `fix(reconcile-spec): …`. A change scoped to the CLI uses `cli` — e.g. `feat(cli): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" in `suite/AGENTS.md`).
+This repo follows [Conventional Commits](https://www.conventionalcommits.org/). When the change is scoped to a single skill, the commit scope MUST be that skill's folder name — e.g. `refactor(discussion): …`, `fix(check-plan): …`. A change scoped to the CLI uses `cli` — e.g. `feat(cli): …`. The list of valid skill scopes lives in `conventionalCommits.scopes` inside `.vscode/settings.json`; if a new skill exists on disk but is missing from that array, add it there in the same commit (see "When adding a new skill" in `suite/AGENTS.md`).
 
 Changes that span modules or touch shared root files (`README.md`, `.claude-plugin/`, `AGENTS.md`, etc.) should omit the scope: `chore: …`, `docs: …`, `feat: …`.
 
-## Method Conventions
+## Method
 
-This repository is the reference home of the Antmay method, the ruleset for newly opened threads and their artifacts.
+This repository is the reference home of the Antmay method, and it runs on the
+method itself: its threads live under `docs/threads/`, and its project layer is
+the one the method defines. Read this section before working on the repository
+without invoking an Antmay skill — it is what a session needs to know to respect
+the decisions already made here.
 
-The canonical reference — the skill catalog and recipe model, thread layout, decisions, archive lifecycle, write authority, cross-thread references, and skill-authoring conventions — lives at `docs/README.md`, which links the companion documents `docs/glossary.md`, `docs/thread-model.md`, `docs/skill-authoring.md`, and the three recipe docs under `docs/recipes/`. Read it before editing the method itself or writing/editing an artifact that belongs to an existing thread.
+- `docs/adr/` holds this project's current decisions, one per file; a record
+  that a later one replaced or retired sits in `docs/adr/superseded/`. The
+  folder carries no index — print the catalog of stems, names, and descriptions
+  with:
 
-This section is a POINTER — it intentionally does NOT duplicate the rules. Edit the canonical docs under `docs/` for any rule change; this section only changes if the reference doc set itself moves or splits.
+  ```sh
+  for f in docs/adr/*.md; do awk -v stem="$(basename "$f" .md)" '/^---$/{n++; next} n==1 && /^name: /{sub(/^name: /,""); name=$0} n==1 && /^description: /{sub(/^description: /,""); desc=$0} n==2{print stem "\t" name "\t" desc; exit}' "$f"; done
+  ```
+
+- `docs/glossary.md` holds this project's terms; see `## Vocabulary` below.
+
+The repository's authoritative living documents, by path:
+
+| Path | Authoritative for |
+| --- | --- |
+| `README.md` | The user-facing index of the installable skills, the recipes, and the terminal-outcome protocol. |
+| `suite/method.md` | The method itself: the thread layout, the project layer, the lifecycle, and the three recipes. |
+| `suite/skill-authoring.md` | The conventions every skill in the suite is authored to. |
+| `cli/README.md` | Operating the CLI and the stages a pipeline may hold. |
+| `CONTRIBUTING.md` | Issue classification, effort bands, commits, and pull requests, for contributors. |
+| `AGENTS.md`, `suite/AGENTS.md`, `cli/AGENTS.md` | Durable working memory for agents, one file per level. |
+
+Everything else under `docs/threads/` is thread-local: it records how one unit
+of work was understood at one moment, and it is history rather than authority.
 
 ## Vocabulary
 
-`docs/glossary.md` is the naming authority for this repository: it fixes one meaning per term across the suite, the CLI, and the docs. Consult it before introducing a term, and update it in the same change whenever a term's meaning changes or a new canonical term appears.
+`docs/glossary.md` is this repository's project glossary and its naming
+authority: it fixes one meaning per term across the suite, the CLI, and these
+documents. Consult it before introducing a term, and write the term it fixes
+rather than a synonym.
 
-These names carry the most weight, because each sits next to a plausible wrong one:
-
-| Term | Means | Not |
-| --- | --- | --- |
-| **method** | the whole Antmay approach to SDD | a recipe |
-| **recipe** | one of the three documented, advisory paths — Quick, Standard, Roadmap | the method, or a pipeline |
-| **pipeline** | the CLI's enforced stage sequence, automating the automatable core of a recipe | a recipe |
-| **step** / **stage** | a step is one entry in a recipe; a stage is one entry in a pipeline | interchangeable |
-| **thread artifact** | a durable file inside a thread, as opposed to source code | any file a skill writes |
+Terms are settled through threads — a thread drafts new or changed terms in its
+own `glossary.md`, and `close-thread` merges that delta into the project
+glossary when the thread closes.

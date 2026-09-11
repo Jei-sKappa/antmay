@@ -123,9 +123,9 @@ where it applies, never its absence elsewhere.
 
 ## Internal progress and local return contracts
 
-The three-token terminal outcome is the only project-wide status protocol. A
-single agent executing sequential internal tasks has no caller at each task
-boundary, so it defines no formal per-task status vocabulary: its internal
+The three-token terminal outcome is the one outcome vocabulary the whole suite
+shares. A single agent executing sequential internal tasks has no caller at each
+task boundary, so it defines no formal per-task status vocabulary: its internal
 progress is recorded as factual prose or ordinary structured fields — the task
 attempted, the changes made, the verification performed, any concerns, the
 commit, and the next action — in its run state and its implementation report,
@@ -138,11 +138,11 @@ A skill defines skill-local return tokens only where its own caller/callee
 topology genuinely consumes them — as when an orchestrator dispatches subagents
 and must quickly classify each untrusted reply. Those return contracts stay
 inside the owning skill: they are not promoted into these canonical conventions
-and are not restated as a second project-wide status protocol. Their generic name
-is fixed as well: prose calls them **skill-local return tokens** — a skill may
-name each role more narrowly inside its own body (a reply token, a lane verdict)
-— and never calls them statuses or outcomes; a return token never appears in a
-terminal outcome.
+and are not restated as a second suite-wide outcome vocabulary. Their generic
+name is fixed as well: prose calls them **skill-local return tokens** — a skill
+may name each role more narrowly inside its own body (a reply token, a lane
+verdict) — and never calls them statuses or outcomes; a return token never
+appears in a terminal outcome.
 
 ## Composition
 
@@ -430,9 +430,9 @@ descriptor carried purely for human readability. Because each invocation gets it
 own directory, a later run never inherits stale progress, and a new invocation
 never silently adopts an existing directory — an explicit instruction to continue
 is what identifies the run to resume. A run directory's progress file records
-factual run traces as prose or ordinary structured fields; it is not a second
-status layer and defines no formal task-status tokens beside the run's terminal
-outcome. At a terminal outcome the run directory remains in place as the run's
-operational trace, and durable information is synthesized into the
+factual run traces as prose or ordinary structured fields; it defines no formal
+task-status tokens, and the run's terminal outcome stays the only fixed
+vocabulary it carries. At a terminal outcome the run directory remains in place
+as the run's operational trace, and durable information is synthesized into the
 implementation's `report.md`. No durable artifact refers to a path inside
 `.runs/`.

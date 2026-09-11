@@ -88,7 +88,7 @@ which clears as soon as one is applied; an issue carrying two gets
 
 This repository follows [Conventional Commits](https://www.conventionalcommits.org/).
 A change scoped to one skill uses that skill's folder name as the commit scope
-(`fix(reconcile-spec): …`), a change scoped to the CLI uses `cli`
+(`fix(check-plan): …`), a change scoped to the CLI uses `cli`
 (`feat(cli): …`), and a change spanning modules or touching shared root files
 omits the scope (`docs: …`). The valid scopes are listed in
 `conventionalCommits.scopes` in `.vscode/settings.json`.
@@ -105,7 +105,7 @@ default branch.
 
 `AGENTS.md` at the root is the entry point — it explains the two modules and
 points at `suite/AGENTS.md` and `cli/AGENTS.md` for the rules that apply inside
-each. The method itself is documented under [`docs/`](./docs/README.md).
+each. The method itself is documented in [`suite/method.md`](./suite/method.md).
 
 The CLI has a build and test gate, and a lint pass beside it; run both from
 `cli/` before proposing a change there:
