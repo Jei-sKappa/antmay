@@ -4,7 +4,7 @@ description: Read a thread-root spec.md as a downstream handoff and judge whethe
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Review Spec
@@ -13,11 +13,21 @@ Assess a thread-root `spec.md` as a downstream handoff, strictly read-only. The 
 
 This is a quality-of-handoff and planning-readiness review; your concern is whether the document, as written, is fit for someone else to act on safely.
 
+## Inputs
+
+Gather all of these before judging; the procedure below works from what you gather here. Every one of them is read and none is written.
+
+- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the spec's subject. Authoritative.
+- `docs/glossary.md` — the project's terms. Authoritative.
+- The thread's `spec.md` — the reviewed target, and the review's only target; it comes in that one form, at the thread root. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. Material for the judgment.
+- The thread's `seed.md` — why the thread exists. Authoritative for intent.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources a spec must not contradict. Authoritative within the thread.
+
 ## Procedure
 
 1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
 
-2. **Read the spec read-only.** The target is the thread-root `spec.md`. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. If no `spec.md` exists at the thread root, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no spec.md to review`.
+2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. If no `spec.md` exists at the thread root, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no spec.md to review`.
 
 3. **Judge against the readiness axes.** Assess the spec on each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where in the spec it shows, why it would leave a downstream agent guessing or blocked, and a severity — `blocker` (planning cannot proceed safely), `issue` (a real gap that will cause rework or a wrong guess), or `nit` (soft or imprecise, but survivable). Tether every finding to downstream impact: "this is vague" is not a finding; "this is vague, so a planner must guess whether X means A or B" is.
 
@@ -41,7 +51,7 @@ Read the spec against these axes; each weakness you find maps to the axis it con
 
 A spec's section names, ordering, and structure are the author's discretion; what you check is that the substance behind these axes is present and coherent.
 
-You do not perform an exhaustive decision-by-decision fidelity mapping between the spec and the thread's `decisions.md`. You may, however, report an **obvious contradiction** with `decisions.md` when you notice one, because a spec that visibly commits to the opposite of a settled decision harms readiness — a downstream agent would act on a claim the thread has already overruled. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
+You do not perform an exhaustive claim-by-claim fidelity mapping between the spec and the records that bind it. You may, however, report an **obvious contradiction** with the thread's `adr/` or `glossary.md`, or with a project ADR or a term in `docs/glossary.md`, when you notice one, because a spec that visibly commits to the opposite of a record authoritative over it harms readiness — a downstream agent would act on a claim that has already been overruled. A contradiction the thread has deliberately taken on is not one of these; `references/formats/adr.md` states what makes a contradiction intentional. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
 
 ## Recording findings
 
@@ -52,6 +62,8 @@ When you hold one or more findings, hand them to `/emit-pending-review` as a sin
 - Each finding with its severity (`blocker` / `issue` / `nit`), a category, the finding statement, the evidence (the spec section or a short quote showing the weakness), and the downstream impact.
 
 Use the readiness axes above as your category vocabulary — `clarity`, `completeness`, `consistency`, `scope`, `behavior`, `constraints`, `freedom`, `acceptance`, `readiness` — assigning each finding the axis it concerns. The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
+
+That bundle is the one thing a review run writes, and only when it holds findings. Nothing else you touch is written: `spec.md` itself, `seed.md`, the thread's `adr/` and `glossary.md`, `docs/adr/`, and `docs/glossary.md` are read here and never written.
 
 ## After the review
 
