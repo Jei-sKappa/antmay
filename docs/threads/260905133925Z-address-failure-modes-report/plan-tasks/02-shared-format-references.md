@@ -1,0 +1,72 @@
+### Task 2: Author the shared format references and rewrite the sync manifest
+
+**Objective:** Put every artifact format more than one skill touches into `suite/shared/references/formats/`, authored once, and map each skill to the formats it reads or writes so later skill rewrites can cite their synced copies.
+
+**Input / context:** Starts from task 1's tree. `spec.md` `### The thread log`, `### The thread's ADR and glossary delta` (ADR file), `### The project layer` (catalog command, identifiers), `### Self-contained skills, inputs, and conflicts` (conflict rule, shared references), `### Pending decisions and their resolution` (bundle shape), `### Roadmap` (index shape), `### Planning, the plan check, and implementation` (report header and deviations); decisions.md DR3, DR7, DR9, DR10, DR12, DR16, DR20, DR26, DR28. The sync tooling is `suite/scripts/sync-shared-references.mjs` driven by `suite/shared/manifest.yaml` (a flat map, skill path to list of source files relative to `shared/references/`); the script rewrites exactly the files the manifest names and leaves orphans of removed entries behind, so orphans are deleted by hand. Field names fixed in `plan.md` `## Choices this plan fixes` apply: `Blocked:` / `Why undecidable:` / `Evidence:` / `Suggestion:`; `Plan:` header line; `## Deviations`; `Closed:` line.
+
+**Steps:**
+
+1. Create `suite/shared/references/formats/log-line.md`. State: `log.md` sits at the thread root and opens with the single header line `# Thread log`; each entry is one line of the form `- (type) gist with the reason folded in`; the type is exactly one of the seven `decision`, `constraint`, `assumption`, `question`, `capability`, `direction`, `event`, with one sentence on what each type covers; no identifiers, no timestamps, order is the only structure; a later entry supersedes an earlier one on the same point; a terminal moment is an `event`; the file is append-only and a skill appends with a single-line shell append (`>>`) and never opens the file with a file-editing tool; one writer per session, so a skill that fans out to subagents appends only from the orchestrator. Include one example line per type.
+2. Create `suite/shared/references/formats/adr.md`. Sections, in this order:
+   - **File and identifier.** Name `<yymmddhhmm>-<slug>.md`, stamp the record's creation time in UTC at minute resolution; the stem is the record's global identifier, assigned when the record is first written into the thread's `adr/`, never changes, and the file moves unaltered at close. Location: a draft in the thread's `adr/`, authoritative for that thread from the moment it is written and editable in place until close, the only in-place editing of a record the method permits; landed records in `docs/adr/`; superseded and retired records in `docs/adr/superseded/`. Location is the status.
+   - **Frontmatter and body.** Pin the frontmatter with a code block: `name` (a short title written as a full decision sentence), `description` (one sentence for the catalog), optional `supersedes` (one or more stems of project ADRs this record replaces or retires). Body: free form; required content is the context needed without the thread, the decision in full, and the reason; one paragraph satisfies it; further sections only when they carry something more (considered options, consequences, scope).
+   - **Citing.** Code, tests, commit messages, and living documentation may cite an ADR by its stem, never by path, and are never required to. Thread-local material is never cited outside its thread.
+   - **Catalog.** `docs/adr/` is the whole authoritative surface for project decisions and has no index file; print the catalog with this single command, exactly:
+
+     ```sh
+     for f in docs/adr/*.md; do awk -v stem="$(basename "$f" .md)" '/^---$/{n++; next} n==1 && /^name: /{sub(/^name: /,""); name=$0} n==1 && /^description: /{sub(/^description: /,""); desc=$0} n==2{print stem "\t" name "\t" desc; exit}' "$f"; done
+     ```
+
+   - **Conflicts.** A contradiction between the thread's material and a project ADR or glossary term is intentional, and raised by no skill, when the thread's `adr/` holds a draft naming that ADR in `supersedes` or the thread's `glossary.md` redefines the term. Every other contradiction is an unnoticed conflict: an interactive skill puts it to the user; a completion-oriented skill queues a pending decision; no skill resolves it by overriding the project record. Writing the superseding draft is how the user's confirmation is recorded.
+3. Create `suite/shared/references/formats/pending-decision-bundle.md`. Pin with a code block: filename `<UTC>-<suffix>-<slug>.md` under the thread's `.pending-decisions/`; header `# Pending decisions: <title>` followed by the lines `Producer: /<skill-name>`, `Target: <thread-relative artifact or operation>`, `Request: <originating user request>`, `Created: <UTC>`, `Points: <count>`; then `## Points`, and one `### <short title>` per point carrying `Blocked:` (what is blocked), `Why undecidable:` (why the producer could not derive the answer), `Evidence:` (what it weighed, in the producer's words), and optional `Suggestion:` (free text, when the producer sees an immediate fix). State that a point carries no options, no recommendation, and no other structure, and that the bundle has no section beyond the header and `## Points`.
+4. Create `suite/shared/references/formats/roadmap-index.md`. Pin with a code block: path `docs/roadmaps/<yymmddhhmm>-<slug>.md`, stamp UTC minute resolution; `# Roadmap: <title>`; `## Destination` (what reaching the direction means); `## Entries`, each entry a `### <kebab-slug>` heading unique within the index, followed by a one-paragraph sketch and a `Scope:` line stating the boundary; `## Out of scope` list; `## Not yet specified` note. Rules: the slug is the entry's identifier; an entry is pinned once a thread is opened from it and its slug is never renamed after that; unstarted entries may be reordered, merged (one slug kept), or dropped by the owner, who edits the file in place; the closing skill writes `Closed: <archive folder name> — <one-line outcome>` as the first line beneath the entry's heading when a thread opened from that entry closes; the owner deletes the index when the destination is reached or abandoned. Constraints on children are ADRs.
+5. Create `suite/shared/references/formats/implementation-report.md`. Pin with a code block: path `implementations/<yymmddhhmm>[-<slug>]/report.md`; `# Implementation report`; one line `Plan: plans/<yymmddhhmm>[-<slug>]/` or `Plan: none`; `## Outcome`; `## Changes`; `## Verification`; `## Deviations`, each entry naming what was built, the spec section or ADR stem it departs from, and why; `## Remaining concerns`; `## Follow-ups`. `Plan`, `## Outcome`, `## Changes`, `## Verification` always present; `## Deviations`, `## Remaining concerns`, `## Follow-ups` only when they carry content, never a `none` placeholder. The report describes that folder's current outcome, is rewritten in place on every terminal outcome of the same implementation, and never cites a path under `.runs/`.
+6. Delete `suite/shared/references/formats/decision-record.md` and `suite/shared/references/roadmap-descendant-feedback.md` with `git rm`.
+7. Delete the orphaned generated copies with `git rm`: `suite/skills/capture-discussion/discussion/references/formats/decision-record.md`, `suite/skills/capture-discussion/resolve-pending-decisions/references/formats/decision-record.md`, `suite/skills/primitives/emit-pending-decisions/references/formats/discussion-point.md`, and `references/roadmap-descendant-feedback.md` under each of `suite/skills/implement/implement/`, `suite/skills/implement/implement-plan/`, `suite/skills/implement/implement-plan-with-subagents/`.
+8. Rewrite `suite/shared/manifest.yaml` (keep its header comment) to exactly these entries:
+   - `skills/finish-navigate/finish`: `repository-conventions.md`, `trackers/github.md`, `formats/adr.md`
+   - `skills/finish-navigate/whats-next`: `recipes/quick.md`, `recipes/standard.md`, `recipes/roadmap.md`, `formats/adr.md`
+   - `skills/capture-discussion/open-thread`: `trackers/github.md`, `formats/adr.md`
+   - `skills/capture-discussion/open-ticket`: `repository-conventions.md`, `trackers/github.md`, `formats/adr.md`
+   - `skills/capture-discussion/discussion`: `formats/discussion-point.md`, `formats/adr.md`, `formats/log-line.md`, `formats/roadmap-index.md`
+   - `skills/capture-discussion/resolve-pending-decisions`: `formats/discussion-point.md`, `formats/adr.md`, `formats/log-line.md`, `formats/pending-decision-bundle.md`
+   - `skills/primitives/emit-pending-decisions`: `formats/pending-decision-bundle.md`
+   - `skills/primitives/update-implementation-report`: `formats/adr.md`, `formats/implementation-report.md`
+   - `skills/spec/spec`: `formats/adr.md`, `formats/log-line.md`
+   - `skills/plan/plan-brief` and `skills/plan/plan-strict`: `formats/adr.md`
+   - `skills/implement/implement`, `skills/implement/implement-plan`, `skills/implement/implement-plan-with-subagents`: `formats/adr.md`, `formats/log-line.md`, `formats/implementation-report.md`
+   - `skills/review/review-spec`: `formats/adr.md`
+   - `skills/review/review-implementation` and `skills/review/review-code`: `formats/adr.md`, `formats/implementation-report.md`
+   - `skills/roadmap/roadmap`: `formats/adr.md`, `formats/roadmap-index.md`
+
+   Entries for `skills/plan/check-plan` and `skills/finish-navigate/close-thread` are added by tasks 8 and 13 when those folders exist.
+9. Run `node scripts/sync-shared-references.mjs` from `suite/`, then run it a second time and confirm the second run changes nothing.
+
+**Files modified:** `suite/shared/references/formats/log-line.md` (NEW), `suite/shared/references/formats/adr.md` (NEW), `suite/shared/references/formats/pending-decision-bundle.md` (NEW), `suite/shared/references/formats/roadmap-index.md` (NEW), `suite/shared/references/formats/implementation-report.md` (NEW), `suite/shared/references/formats/decision-record.md` (DELETED), `suite/shared/references/roadmap-descendant-feedback.md` (DELETED), `suite/shared/manifest.yaml`, `suite/skills/capture-discussion/discussion/references/formats/decision-record.md` (DELETED), `suite/skills/capture-discussion/resolve-pending-decisions/references/formats/decision-record.md` (DELETED), `suite/skills/primitives/emit-pending-decisions/references/formats/discussion-point.md` (DELETED), `suite/skills/implement/implement/references/roadmap-descendant-feedback.md` (DELETED), `suite/skills/implement/implement-plan/references/roadmap-descendant-feedback.md` (DELETED), `suite/skills/implement/implement-plan-with-subagents/references/roadmap-descendant-feedback.md` (DELETED); generated copies (NEW): `references/formats/adr.md` under `suite/skills/finish-navigate/finish/`, `suite/skills/finish-navigate/whats-next/`, `suite/skills/capture-discussion/open-thread/`, `suite/skills/capture-discussion/open-ticket/`, `suite/skills/capture-discussion/discussion/`, `suite/skills/capture-discussion/resolve-pending-decisions/`, `suite/skills/primitives/update-implementation-report/`, `suite/skills/spec/spec/`, `suite/skills/plan/plan-brief/`, `suite/skills/plan/plan-strict/`, `suite/skills/implement/implement/`, `suite/skills/implement/implement-plan/`, `suite/skills/implement/implement-plan-with-subagents/`, `suite/skills/review/review-spec/`, `suite/skills/review/review-implementation/`, `suite/skills/review/review-code/`, `suite/skills/roadmap/roadmap/`; `references/formats/log-line.md` under `discussion/`, `resolve-pending-decisions/`, `spec/`, `implement/`, `implement-plan/`, `implement-plan-with-subagents/`; `references/formats/pending-decision-bundle.md` under `emit-pending-decisions/`, `resolve-pending-decisions/`; `references/formats/roadmap-index.md` under `discussion/`, `roadmap/`; `references/formats/implementation-report.md` under `update-implementation-report/`, `implement/`, `implement-plan/`, `implement-plan-with-subagents/`, `review-implementation/`, `review-code/`.
+
+**Verification:**
+
+```sh
+ls suite/shared/references/formats     # adr.md discussion-point.md implementation-report.md log-line.md pending-decision-bundle.md roadmap-index.md
+test ! -e suite/shared/references/roadmap-descendant-feedback.md && test ! -e suite/shared/references/formats/decision-record.md
+find suite/skills -name decision-record.md -o -name roadmap-descendant-feedback.md   # no output
+for t in decision constraint assumption question capability direction event; do grep -q "($t)" suite/shared/references/formats/log-line.md || echo "MISSING $t"; done   # no output
+grep -n "^name:\|^description:\|^supersedes:" suite/shared/references/formats/adr.md  # the three keys appear
+grep -c "for f in docs/adr/\*.md" suite/shared/references/formats/adr.md   # 1
+grep -n "Blocked:\|Why undecidable:\|Evidence:\|Suggestion:" suite/shared/references/formats/pending-decision-bundle.md   # all four
+grep -n "Options\|Recommendation\|Suggested action" suite/shared/references/formats/pending-decision-bundle.md   # no output
+grep -n "^Plan: \|## Deviations" suite/shared/references/formats/implementation-report.md   # both
+grep -n "Closed: " suite/shared/references/formats/roadmap-index.md   # 1 line
+cd suite && node scripts/sync-shared-references.mjs && git status --porcelain > /tmp/s1 && node scripts/sync-shared-references.mjs && git status --porcelain > /tmp/s2 && diff /tmp/s1 /tmp/s2 && echo SYNC-STABLE
+grep -rln "supersedes" skills/*/*/references | grep -v "formats/adr.md"   # no output
+```
+
+**Acceptance criteria:**
+
+- The five new format files exist with the content above; `decision-record.md` and `roadmap-descendant-feedback.md` exist neither as sources nor as generated copies.
+- `formats/adr.md` carries the single catalog command and the intentional-versus-unnoticed conflict rule; no other file under `suite/shared/references/` carries either.
+- `manifest.yaml` maps exactly the entries listed in step 8, the sync script is stable, and every generated copy listed above exists.
+
+**Consumes:** the twenty-skill tree from task 1.
+
+**Produces:** `references/formats/adr.md`, `references/formats/log-line.md`, `references/formats/pending-decision-bundle.md`, `references/formats/roadmap-index.md`, `references/formats/implementation-report.md` as synced copies inside each mapped skill, which every later skill rewrite cites by that skill-relative path; the manifest shape tasks 8 and 13 extend.
