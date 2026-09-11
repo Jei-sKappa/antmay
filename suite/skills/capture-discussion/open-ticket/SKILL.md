@@ -4,7 +4,7 @@ description: Turn a rough idea into a tracker ticket whose body reads as a threa
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.4.0
+  version: 0.5.0
 ---
 
 # Open Ticket
@@ -19,21 +19,38 @@ thread's genesis narrative unchanged, instead of mining intent out of a
 half-specification.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
-the whole result.
+the whole result; `docs/adr/` and `docs/glossary.md` are read here and never
+written.
 
-## Read the repository's conventions
+## Inputs
 
-Do this first, before composing: a convention can decide the title's shape, and
-a title composed without it has to be rewritten.
+Gather the following before composing; the composition below works from what you
+gather here.
 
-Read `references/repository-conventions.md` and apply what it says about a
-ticket. It carries where a project states such a convention, which parts of it
-bind you, and what to do when it leaves a choice the user's idea does not
-settle.
+- `docs/adr/` — the project ADR catalog, listed with the command in
+  `references/formats/adr.md`; open the records relevant to the target.
+  Authoritative.
+- `docs/glossary.md` — the project's terms. Authoritative.
+- The repository's convention files, found and read as
+  `references/repository-conventions.md` describes — it carries where a project
+  states a ticket convention, which parts of it bind you, and what to do when it
+  leaves a choice the user's idea does not settle. Material. A convention can
+  decide the title's shape, and a title composed without it has to be rewritten.
+- The tracker reference matching the host of the project's git remote — for a
+  `github.com` remote that is `references/trackers/github.md`. It carries the
+  availability check, the repository resolution, and the exact commands for that
+  tracker. Material. When the checkout has several remotes and the target
+  repository is genuinely ambiguous, ask which one is meant; never pick one by
+  order or by name.
+
+The idea itself comes with the invocation: one **rough idea** in prose — what
+triggered the work and what outcome is wanted — given as a sentence, a
+paragraph, or a few lines of notes.
 
 ## Compose the ticket
 
-Compose two things from the user's idea.
+Compose two things from the user's idea, applying what the repository's
+conventions say about a ticket.
 
 **The title** — one human-readable line naming the subject, in the register a
 person would use when speaking about the work. Where the project prescribes no
@@ -52,19 +69,6 @@ deadline, a dependency, a rejected approach — carry it in the narrative.
 Length follows the idea. A one-paragraph body is a good body when the idea is
 one paragraph wide.
 
-## Resolve the tracker and repository
-
-Do this once the title and body exist.
-
-Determine which tracker the project's repository belongs to from the git
-remote's host, then read the matching reference under `references/trackers/` —
-for a `github.com` remote that is `references/trackers/github.md`. It carries
-the availability check, the repository resolution, and the exact commands for
-that tracker.
-
-When the checkout has several remotes and the target repository is genuinely
-ambiguous, ask which one is meant; never pick one by order or by name.
-
 ## Confirm once, then file
 
 Show the user the composed title, body, and any labels required by the
@@ -74,9 +78,10 @@ Where a convention shaped the title or requires a label, this message is also
 where the value you chose for it is visible, and where you ask about any choice
 the idea did not settle.
 
-Invite one round of corrections, fold any adjustment in, and file the ticket.
-This is a brief confirmation, not a drawn-out dialogue — one pass is enough. The
-user's approval here is what authorizes the write; file nothing before it.
+Invite one round of corrections, fold any adjustment in, and file the ticket
+with the command the tracker reference gives. This is a brief confirmation, not
+a drawn-out dialogue — one pass is enough. The user's approval here is what
+authorizes the write; file nothing before it.
 
 Apply the labels the repository's convention requires. When it requires none,
 file the ticket without labels.
