@@ -1,5 +1,5 @@
 interface:
   display_name: Discussion
-  short_description: Interview to settle open decisions
+  short_description: Interview that settles points into the log
 policy:
   allow_implicit_invocation: false
