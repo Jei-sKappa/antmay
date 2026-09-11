@@ -1,28 +1,38 @@
 ---
 name: implement
-description: Implement a brief plan or a less-structured input (`plan.md`, a seed with its decisions, a code or issue reference, or a raw prompt) end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when the input needs to be carried to working code in a single agent.
+description: Implement a plan folder or a less-structured input (a referenced artifact, a code or issue reference, or a raw prompt) end-to-end on the current working tree, deriving implicit tasks, self-reviewing after each task, and auto-committing per task; use when the input needs to be carried to working code in a single agent.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Implement
 
-Execute an input end-to-end on the current working tree. Read the input, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, record a factual progress block per implicit task, and update the thread's singleton implementation report on the way out. Do not pause for clarifying questions at each step and do not ask before committing; the execution posture is identical whether or not a person is present. Do not rewrite history.
+Execute an input end-to-end on the current working tree. You gather the thread's context, create this invocation's implementation folder, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, record a factual progress block per implicit task, and write the folder's report on the way out. Do not pause for clarifying questions at each step and do not ask before committing; the execution posture is identical whether or not a person is present. Do not rewrite history.
 
 This skill is single-agent: the current session is the implementer and runs the self-review pass after each implicit task. No subagents are spawned.
 
 ## Inputs
 
-This skill accepts ONE of the following input forms. Detect which form was passed before deriving implicit tasks:
+Gather all of these before deriving implicit tasks; everything below works from what you gather here.
 
-1. **The thread-root `plan.md`** — a brief plan whose numbered steps ARE the implementation steps. Treat each numbered step as an implicit task, in order; you have the freedom to derive the obvious substeps a step implies. This is the most structured input this skill takes.
-2. **The thread's `seed.md` plus `decisions.md`** — when no plan exists, the seed's trigger narrative names the intended outcome and `decisions.md` carries the settled decisions that constrain it. Derive the implicit task list from the two together; a settled decision may map to an implicit task or constrain one.
-3. **An explicit code or issue reference** — a file path, directory, or git ref, or a GitHub issue (full URL, or the short `owner/repo#NNN` form). For a code reference, read the referenced context and derive implicit tasks from the observed state ("look at this and do the obvious thing"). For an issue, the body becomes the input and the title and labels are additional framing.
-4. **A raw user prompt** — when no artifact or reference is passed, the user's prompt is itself the input; derive implicit tasks directly from its stated intent.
+- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the implementation. Authoritative.
+- `docs/glossary.md` — the project's terms. Authoritative.
+- The thread's `spec.md`, whenever the thread holds one — the thread's design truth, and what the implementation answers to. Authoritative.
+- The thread's `seed.md` — why the thread exists and what triggered it. Authoritative for intent.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread.
+- **The work to carry to code** — the primary input, in one of two accepted forms. When the invocation points at a **plan folder** under `plans/`, that folder is the form: the folder it names, or the newest folder under `plans/` by stamp when it points at `plans/` without naming one. Read its `plan.md`, whose ordered steps are what the run executes, together with the brief each step indexes under `plan-tasks/` when the folder holds them — a brief carries its step's files, verification, and acceptance criteria. Otherwise the form is a **referenced artifact or the user's prompt**: a repository path, a directory, a git ref, a GitHub issue (full URL or the short `owner/repo#NNN` form), an archived thread's artifact read as history, or the user's prompt itself when nothing else is named. Material either way — the run derives its implicit tasks from it.
+- Every `implementations/*/report.md` whose `Plan:` line names the same plan folder, when a plan folder is the form — the record of what earlier passes over that plan already delivered. Material: a task one of them records as completed is skipped once it is verified against the code.
+- The newest folder under `implementations/` by stamp, only when the invocation says explicitly to continue — that folder's `report.md` and its run state are where the continuation resumes from. Material.
 
-If which input is meant is ambiguous — an incomplete issue identifier, a code reference pointing at a directory with multiple in-progress changes, or a prompt naming an artifact with no clear referent — that is a preflight failure, not an in-run decision: refuse before deriving tasks, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency; there is no global "latest input" algorithm. (Which *thread* is meant is resolved the same way — an unresolvable or ambiguous thread also refuses in preflight.)
+If which input is meant is ambiguous — an incomplete issue identifier, a code reference pointing at a directory with multiple in-progress changes, a prompt naming an artifact with no clear referent, or an invocation naming a plan folder that is not under `plans/` — that is a preflight failure, not an in-run decision: refuse before deriving tasks, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency; the newest-by-stamp resolution applies only to an invocation that points at `plans/` without naming a folder. (Which *thread* is meant is resolved the same way — an unresolvable or ambiguous thread also refuses in preflight.)
+
+## Implementation folder
+
+Every invocation writes into its own new folder `implementations/<yymmddhhmm>[-<slug>]/` under the thread root, creating `implementations/` on demand. The stamp is the folder's creation time in UTC at minute resolution. Append `-<slug>`, a short kebab-case name for the implementation's purpose, when the invocation names one, or when a folder carrying that stamp already exists. The folder holds this run's `report.md` and its run state under `.runs/`.
+
+Only an explicit instruction to continue — the user saying in the invocation to carry on the previous implementation — reuses the newest folder under `implementations/` by stamp together with its run state, resuming its `.runs/progress.md` and rewriting its `report.md`. Absent that instruction, allocate a fresh folder and never write into one an earlier invocation created.
 
 ## Factual progress records
 
@@ -33,7 +43,7 @@ One append-only block per attempted implicit task lives in the run workspace's `
 - **Task attempted** — which implicit task, named from the derived task list.
 - **Changes made** — what the diff did.
 - **Verification** — the checks actually run and their results, including failures and justified skips.
-- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call, a possible-but-unverified edge case, a deviation applied per `## Plan Deviation Policy`), or `none`.
+- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call, a possible-but-unverified edge case, a deviation applied per `## Deviations`), or `none`.
 - **Commit** — the SHA + subject for a committed task, else `none`.
 - **Next action** — the suggested follow-up ("ready for next task", "ready for review", "stop and surface this finding", etc.).
 
@@ -63,55 +73,96 @@ When authorization is present, the pre-existing dirty changes are unavoidably pi
 
 ## Procedure
 
-Steps 1–4 are preflight. They complete in full — with no thread artifact written, no run workspace allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–4 are preflight. They complete in full — with no thread artifact written, no implementation folder allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
 
 1. **Safety preflight: dirty worktree.** Run the `## Dirty worktree handling` check first, before any other preflight step; it refuses a dirty tree that lacks valid advance authorization.
 
-2. **Resolve the active thread.** If the input is a path under a thread folder, the thread root (`docs/threads/<thread>/`) is implicit. If the input is a raw prompt or a code reference, identify the active thread root the run's workspace and report will live under. If no active thread resolves, or several thread roots plausibly apply and which is active is ambiguous, that is a preflight failure — refuse, naming what was ambiguous, and never silently pick the most recent. This is the one situation a pending bundle is physically impossible, because `.pending-decisions/` would live inside the very thread that failed to resolve.
+2. **Resolve the active thread.** If the input is a path under a thread folder, the thread root (`docs/threads/<YYMMDDHHMMSSZ-slug>/`) is implicit; if `cwd` already sits inside a thread root, that is the thread. Otherwise identify the active thread root whose `implementations/` this run's folder will live under. If no active thread resolves, or several thread roots plausibly apply and which is active is ambiguous, that is a preflight failure — refuse, naming what was ambiguous, and never silently pick the most recent stamp. This is the one situation a pending bundle is physically impossible, because `.pending-decisions/` would live inside the very thread that failed to resolve.
 
-3. **Resolve and read the input.** Detect which `## Inputs` form was passed and read it READ-ONLY. For a GitHub issue, fetch the body and title. For a code reference, read the referenced files. For a raw prompt, the prompt itself is the input. If several plausible inputs match a reference, that is a preflight failure — refuse per `## Inputs` rather than picking by recency.
+3. **Gather the inputs.** Read everything under `## Inputs` now, in that order, READ-ONLY. For a GitHub issue, fetch the body and title — the body becomes the input, the title and labels additional framing. For a code reference, read the referenced files. For a raw prompt, the prompt itself is the input. If several plausible inputs match a reference, that is a preflight failure — refuse per `## Inputs` rather than picking by recency.
 
-4. **Validate the input and required tooling, and derive the implicit tasks.** Translate the input into an ordered list of implicit tasks. Each implicit task should be implementable in one sitting, observable on completion (a file written, a test passing, a behavior visible), and small enough that the self-review pass after it is meaningful. If the input is fully resolved (e.g., "do X to file Y, then add a test"), the implicit task list may be one or two tasks; if broader, one entry per cohesive implementation unit. Avoid both under-splitting (a single "do the whole thing" task) and over-splitting (a separate task per line touched). Confirm the input is coherent enough to derive tasks from and that any tooling and credentials the run explicitly requires are present. A structural input problem, a garbled invocation, or missing required tooling or credentials caught here is a preflight refusal.
+4. **Validate the input and required tooling, and derive the implicit tasks.** Translate the primary input into an ordered list of implicit tasks. When the input is a plan folder, each of the `plan.md` steps is an implicit task, in order, detailed by the `plan-tasks/` brief it indexes where the folder holds one, and you have the freedom to derive the obvious substeps a step implies. Otherwise derive the tasks from the input's stated intent and the observed code state. Each implicit task should be implementable in one sitting, observable on completion (a file written, a test passing, a behavior visible), and small enough that the self-review pass after it is meaningful. If the input is fully resolved (e.g., "do X to file Y, then add a test"), the implicit task list may be one or two tasks; if broader, one entry per cohesive implementation unit. Avoid both under-splitting (a single "do the whole thing" task) and over-splitting (a separate task per line touched). Confirm the input is coherent enough to derive tasks from and that any tooling and credentials the run explicitly requires are present. A structural input problem, a garbled invocation, or missing required tooling or credentials caught here is a preflight refusal.
 
-5. **Allocate the run workspace.** Preflight has passed; allocate a fresh run directory per `## Run workspace` and record the derived implicit task list and their state in `progress.md` so progress stays legible.
+5. **Allocate the implementation folder.** Preflight has passed; create this invocation's folder per `## Implementation folder`, allocate its run workspace per `## Run workspace`, and record the derived implicit task list and its state in `progress.md` so progress stays legible.
 
-6. **For each implicit task, in order:**
-   a. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the factual progress block per `## Plan Deviation Policy`.
-   b. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent with the input, does not break adjacent code paths the implementer can see, and matches the project's conventions. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the factual progress block and the implementation report. Self-review is in-session — no artifact file is written.
+6. **Honour the earlier reports of the same plan.** When a plan folder is the primary input, take the reports gathered per `## Inputs` — every `implementations/*/report.md` whose `Plan:` line names that folder — and mark as already done each implicit task they record as completed, after verifying against the code that the change is actually in place. A task a report claims but the code does not carry is implemented in this run; note the discrepancy in its factual progress block. Record which tasks were skipped and why in `progress.md`.
+
+7. **For each implicit task still to do, in order:**
+   a. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the factual progress block per `## Deviations`.
+   b. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent with the input, does not break adjacent code paths the implementer can see, and matches the project's conventions. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the factual progress block and the report. Self-review is in-session — no artifact file is written.
    c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, follow `### Failed commit` under `## Commit Policy` — diagnose and fix in-authority causes within the retry cap; only when it cannot be resolved does the run hit an operational defect: record the diagnosis and end the run `BLOCKED` per `## Blocked`.
    d. **Append the factual progress block.** Append exactly one block for this attempted task to `progress.md` per `## Factual progress records` — after the commit for a committed task (carrying its SHA + subject), or with `Commit: none` otherwise. Emit a one-line chat summary for the task.
 
-7. **Update the implementation report.** Once all implicit tasks have run (or the run stopped early per `## Blocked`), update the thread's singleton implementation report per `## Implementation report`.
+8. **Write the report.** Once all implicit tasks have run (or the run stopped early per `## Blocked`), write this folder's report per `## Implementation report`.
 
-8. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted implicit task, the commit SHA + subject for each commit made, and the implementation report that was written or updated. If a discovery with parent-level impact was routed to the parent roadmap, name that too. Close with exactly one terminal line from the closed vocabulary — `Outcome: DONE — <implementation-report pointer>` when the requested operation completed, including completion with non-blocking concerns; `Outcome: BLOCKED — <diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `Outcome: REFUSED — <reason>` when preflight prevented execution (steps 1–4). The line is added to — it never replaces — the summary above.
+9. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted implicit task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, and the report that was written. Name any parent-level discovery surfaced per `## Settled points and discoveries`. Close with exactly one terminal line from the closed vocabulary — `Outcome: DONE — <report path>` when the requested operation completed, including completion with non-blocking concerns; `Outcome: BLOCKED — <diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `Outcome: REFUSED — <reason>` when preflight prevented execution (steps 1–4). The line is added to — it never replaces — the summary above.
 
 ## Run workspace
 
-Keep all operational progress for a run inside an invocation-scoped directory in the active thread:
+Keep all operational progress for a run inside this invocation's implementation folder:
 
 ```text
-.implementation-runs/<UTC>[-<desc>]/
+implementations/<yymmddhhmm>[-<slug>]/.runs/progress.md
 ```
 
-`<UTC>` is the run's start timestamp and is a valid directory name on its own; `<desc>` is an optional short kebab slug of the run's objective, taken from the input's subject purely for human scannability. Allocate a fresh directory unique to THIS invocation — never silently adopt or reuse an existing run directory. Recovery within an invocation reads only this run's own directory. If a previous run was interrupted, its directory survives so it can be resumed later, but only when the user explicitly identifies it; you never adopt it on your own. Name any progress file `progress.md`. This directory is invocation-scoped in meaning: no durable artifact — not the implementation report, not a commit message, nothing — ever references a path inside it. The directory remains in place after the run as the run's operational trace.
+Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it by appending as the run proceeds — the derived implicit task list first, then one factual progress block per attempted task — so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, reads only this folder's own `.runs/progress.md` and resumes from the last block it holds; it never reads another folder's run state and never re-derives the task list from scratch while `progress.md` carries it. A continuation run resumes the newest implementation folder's `.runs/progress.md` and appends to it.
+
+`.runs/` is operational, not durable: no durable artifact — not the report, not a commit message, nothing — ever cites a path inside it. It stays in place after the run as the run's trace.
 
 ## Implementation report
 
-On EVERY normal terminal outcome — success, partial completion, a `BLOCKED` halt, or a no-op where the requested state already existed — update the thread's singleton `implementation-report.md` at the thread root by invoking `/update-implementation-report` with the verified current outcome: what was completed, partially completed, blocked, or found already satisfied; the resulting code, test, and configuration changes; the checks you actually ran and their results, including failures and justified skips; and any deviations, remaining concerns, and follow-ups. The report reflects only the CURRENT outcome — the primitive merges in place, replacing stale content and dropping now-resolved concerns — so pass it the run's end state, not a running log of earlier passes.
+On EVERY terminal outcome an executing run reaches — success, partial completion, a `BLOCKED` halt, or a no-op where the requested state already existed — invoke `/update-implementation-report`, handing it:
 
-The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this outcome: assumptions and forced judgment calls into the deviations content, each with its justification; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
+- **This invocation's implementation folder**, whose `report.md` is the target.
+- **The plan folder executed**, or the statement that no plan was used.
+- **The outcome material**, folded from `progress.md`: what was completed, partially completed, blocked, or found already satisfied; the resulting code, test, configuration, and living-documentation changes; the checks you actually ran and their results, including failures and justified skips; the deviations per `## Deviations`; remaining concerns; and follow-ups.
+
+The report is written at `implementations/<folder>/report.md` per `references/formats/implementation-report.md`, and it describes that folder's current outcome — the primitive merges in place — so hand it the run's end state rather than a running log of earlier passes.
+
+The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this material: assumptions and forced judgment calls into the deviations, each with what it departs from and why; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
+
+## Deviations
+
+The policy is judgment-based and surfaced through the factual progress block and the report — not pre-clearance, not blanket permission.
+
+- **Follow the input or the implicit task list derived from it.** The input is the contract; the implicit task list is the implementer's interpretation. Do not silently invent tasks the input does not call for. Do not silently skip tasks the input does call for.
+- **Use judgment when warranted.** If the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the input's intent. A blocked import path, a missing helper the input assumed existed, a renamed dependency the input did not know about: fix and continue.
+- **A deviation that stays within accepted intent proceeds, and is recorded.** It goes into the task's factual progress block as it happens, and into the report's `## Deviations`, one entry naming what was built, the spec section or ADR stem it departs from, and why. Minor deviations (a missing import added, a `Map` chosen where the input named no structure) carry a one-sentence entry and the run continues. This run is autonomous; it does not stop to pre-clear a judgment call, and the progress block and the report are where the user reads the trail.
+- **A contradiction of a thread ADR or of a spec decision is a change of intent, and is never applied.** Finish everything safely derivable without it, then route it per `## Blocked`: the run ends `BLOCKED` once the report is written.
+- **Never edit the input to justify the run.** If you discover the input itself is wrong — a step contradicts the observed code, a settled decision names a change already applied — surface it in the factual progress block and in the report, and let the surrounding session decide. You modify source code, configuration, tests, build files, and the living documentation within this implementation's scope; you do not edit the spec, the seed, the plan folder, or the issue you were handed, and you author no new such artifact inside this run. A decision settled with the user mid-run is the one thing that changes `spec.md`, under `## Settled points and discoveries`.
+
+## Settled points and discoveries
+
+**A decision settled with the user during the run.** The moment the point settles, and before acting on it, append exactly one line to the thread's `log.md`, formatted per `references/formats/log-line.md`:
+
+```sh
+printf '%s\n' '- (decision) retries stay in the worker, because the request path cannot hold them' >> docs/threads/<thread>/log.md
+```
+
+Use the shell append (`>>`) of a single line; never open `log.md` with a file-editing tool. Then amend `spec.md` in place wherever the decision lands: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed.
+
+**A discovery with parent- or sibling-level impact** — something that would change a project decision, or that belongs to a direction wider than this thread — is a proposed ADR or a proposed roadmap entry. Surface it to the user in chat and carry it into the report's follow-ups. Proposing it is the whole action.
+
+**Write boundary.** You write the project's code, tests, configuration, and living documentation within this implementation's scope; this invocation's implementation folder, its `report.md` and its `.runs/`; lines appended to the thread's `log.md`; and amendments to `spec.md` for a decision settled during the run. Nothing else you touch is written — `docs/adr/`, `docs/glossary.md`, the thread's `adr/`, `glossary.md`, and `plans/`, other implementation folders, and any other thread are read here and never written.
 
 ## Blocked
 
-Two situations stop the run once substantive execution has begun (step 5 onward), and both end `BLOCKED`. Neither is reachable from preflight — an invocation, thread, input, or tooling failure caught in steps 1–4 is a `REFUSED`, not this path. Distinguish a genuine missing-intent question from an operational defect before choosing between them.
+Three situations stop the run once substantive execution has begun (step 5 onward), and all three end `BLOCKED`. None is reachable from preflight — an invocation, thread, input, or tooling failure caught in steps 1–4 is a `REFUSED`, not this path. Distinguish a genuine missing-intent question, a change of intent, and an operational defect before choosing between them.
 
-**Missing human intent.** This applies whenever completing an implicit task requires a genuine human decision you cannot settle yourself from the input and the observed code state. Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat. First finish everything the run can safely derive without that decision, then hand the indispensable open decision(s) to `/emit-pending-decisions`, giving it `/implement` as the producer, the thread's `implementation-report.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the implementation. Update the implementation report per `## Implementation report` to reflect the blocked outcome, then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+**Missing human intent.** This applies whenever completing an implicit task requires a genuine human decision you cannot settle yourself from the gathered inputs and the observed code state. Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat.
 
-**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed input detail not caught by preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, update the implementation report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`. A structural input problem that preflight should have caught is a preflight `REFUSED`, not this path.
+**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a term in `docs/glossary.md` is the same situation; the rule, and what makes a contradiction intentional instead, is stated in full in `references/formats/adr.md`.
 
-## Roadmap-descendant feedback
+Both take the same route. First finish everything the run can safely derive without the decision, then hand the open decision(s) to `/emit-pending-decisions`, giving it:
 
-When the run's thread carries a `Parent:` roadmap reference in its seed and you discover something with parent- or sibling-level impact, route it to the parent through `/append-roadmap-feedback`; `references/roadmap-descendant-feedback.md` spells out what qualifies as parent-level impact, what to hand the primitive, and what stays local in this run's implementation report.
+- `/implement` as the producing skill.
+- This invocation's implementation folder's `report.md` as the target.
+- The originating user request.
+- One point per open decision, each stating what the decision blocks, why you could not derive the answer from the gathered inputs, and the evidence you weighed — in your own words. Add a free-text suggestion to a point only when you see an immediate fix.
+
+Write the report per `## Implementation report` reflecting the blocked outcome, then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+
+**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed input detail not caught by preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, write the report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`. A structural input problem that preflight should have caught is a preflight `REFUSED`, not this path.
 
 ## Commit Policy
 
@@ -139,13 +190,3 @@ A failed commit is diagnosed and fixed within the current task before it is ever
 **This skill does NOT rewrite history — no `--amend`, no rebase, no force-push.** The git history this skill produces is append-only. The implementer does not amend commits (no `commit --amend`, even for typos in commit subjects), does not rebase in any form, does not force-push (neither the `--force` flag nor its `-f` shorthand to any remote), and does not delete commits the skill made earlier in the same run. If a commit needs revising after the fact, that is the surrounding session's decision and the user's command — not this skill's responsibility.
 
 This rule pairs with the failed-commit → `BLOCKED` rule above: a failed commit cannot be "recovered" by rewriting an earlier commit or by amending the failed attempt. The recovery path is to surface the failure and let the user resolve it explicitly.
-
-## Plan Deviation Policy
-
-The policy is judgment-based and surfaced via the factual progress block — not pre-clearance, not blanket permission.
-
-- **Follow the input or the implicit task list derived from it.** The input is the contract; the implicit task list is the implementer's interpretation. Do not silently invent tasks the input does not call for. Do not silently skip tasks the input does call for.
-- **Use judgment when warranted.** If the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the input's intent. A blocked import path, a missing helper the input assumed existed, a renamed dependency the input did not know about: fix and continue.
-- **Surface deviations in the factual progress block.** Every deviation, assumption, forced judgment call, and unverified check goes into the block's Concerns as plain facts — no status token is assigned. Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the input did not specify) are recorded with a one-sentence note and the run continues. A deviation that would require inventing genuine human intent is never applied silently: finish what is safely derivable, then route the open decision per `## Blocked`.
-- **Do not pre-clear minor deviations.** This run is autonomous; it does not stop for every judgment call. The factual progress block is where the user reads the trail.
-- **Never edit the input to justify the run.** If you discover the input itself is wrong — a step contradicts the observed code, a decision names a change already applied — surface it in the factual progress block and in the implementation report and let the surrounding session decide. The implementer modifies source code, configuration, tests, and build files; it does not edit the spec, plan, seed, decision log, or issue it was handed, and it does not author new such artifacts inside this run.
