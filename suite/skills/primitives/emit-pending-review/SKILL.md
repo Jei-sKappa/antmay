@@ -3,7 +3,7 @@ name: emit-pending-review
 description: Use only when an invoking caller supplies already-validated, evidenced review findings for a target and needs them recorded for later attention — allocate a uniquely named bundle under the active thread's `.pending-reviews/` folder and write its routing header and severity-ordered findings.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Emit Pending Review
@@ -14,7 +14,7 @@ Record a review's findings in a single self-contained bundle. You take the findi
 
 Act only when the caller supplies both of:
 
-- **Target** — the thread-relative code or artifact reference the review assessed.
+- **Target** — what the review assessed: the implementation folder `implementations/<yymmddhhmm>[-<slug>]/` when the review assessed an implementation, and the thread-relative artifact path otherwise.
 - **Findings** — one or more actionable findings, each carrying a severity, a review-specific category, a finding statement, precise evidence, and an impact.
 
 When the caller reports zero actionable findings, write no file and tell the caller to return its concise pass result in chat. Never create an empty bundle.
@@ -37,7 +37,7 @@ The routing header contains exactly these fields:
 # Pending review: <review title>
 
 Reviewer: /<review-skill>
-Target: <thread-relative code or artifact reference>
+Target: <the implementation folder, or the thread-relative artifact path>
 Created: <UTC>
 Findings: <count>
 ```
