@@ -1,48 +1,53 @@
 ---
 name: implement-plan
-description: Execute a strict multi-file plan artifact — a thread-root `plan.md` index plus its `plan-tasks/` briefs — end-to-end on the current working tree, reading the index then each task file in order, self-reviewing after each task, and auto-committing per task; use when a plan needs to be carried to working code in a single agent.
+description: Execute a strict plan folder — a `plans/<stamp>/plan.md` index plus its `plan-tasks/` briefs — end to end on the current working tree into a new implementation folder, walking the tasks in index order, self-reviewing after each, and auto-committing per task; use when a strict plan needs to be carried to working code in a single agent.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.2.0
 ---
 
 # Implement Plan
 
-Execute a plan artifact end-to-end on the current working tree. This skill reads the plan artifact READ-ONLY, reads the plan index, walks its task files in plan order, implements each task, self-reviews after each task, auto-commits per plan task, records a factual progress block per plan task in a run progress file, and updates the thread's singleton **implementation report** on the way out. It does not pause for clarifying questions at each step and does not ask before committing; the execution posture is identical whether or not a person is present. It does not rewrite history.
+Execute a strict plan folder end to end on the current working tree. You gather the thread's context, create this invocation's implementation folder, read the plan's index, walk its task list in order, implement each task, self-review after each task, auto-commit per plan task, record a factual progress block per plan task, and write the folder's report on the way out. Do not pause for clarifying questions at each step and do not ask before committing; the execution posture is identical whether or not a person is present. Do not rewrite history.
+
+This skill is single-agent: the current session is the implementer and runs the self-review pass after each plan task. No subagents are spawned.
 
 ## Inputs
 
-This skill accepts a plan artifact. The plan is a **multi-file** artifact rooted in the active thread folder:
+Gather all of these before executing the first task; everything below works from what you gather here.
 
-```text
-docs/threads/<YYMMDDHHMMSSZ-slug>/
-├── plan.md                 # the index, at the thread root
-└── plan-tasks/
-    ├── 01-<kebab-slug>.md
-    ├── 02-<kebab-slug>.md
-    └── …
-```
+- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the plan. Authoritative.
+- `docs/glossary.md` — the project's terms. Authoritative.
+- The thread's `spec.md` — the thread's design truth, and what the implementation answers to. Authoritative.
+- **The plan folder to execute** — the primary input and the artifact this run carries to code, in one of two accepted forms. When the invocation **names a folder** under `plans/`, that folder is the form; otherwise the form is the **newest folder under `plans/` by stamp**. It resolves to `plans/<folder>/plan.md` — the index, authoritative for task count and order — together with the `plan-tasks/NN-<kebab-slug>.md` brief each index entry points at. When the index's `Source:` line names an artifact other than the thread's `spec.md`, read that artifact too: it holds the intent the plan was compiled from. Authoritative for what this run builds.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread; these are the records the spec cites by stem.
+- Every `implementations/*/report.md` whose `Plan:` line names that same plan folder — the record of what earlier passes over the plan already delivered. Material: a task one of them records as completed is skipped once it is verified against the code.
+- The newest folder under `implementations/` by stamp, only when the invocation says explicitly to continue — that folder's `report.md` and its run state are where the continuation resumes from. Material.
 
-The index plus its `plan-tasks/` folder together are the plan artifact. `plan.md` is the **index**: it carries the plan-level objective and context, a `Source:` line naming the upstream artifact the plan was compiled from (a thread-relative pointer, a repo-relative path, an issue URL, or `none — raw prompt`), a Global Constraints block, and an **ordered task list** that is authoritative for task count and order. Each `plan-tasks/NN-<kebab-slug>.md` file is one task, carrying the six mandatory fields — Objective; Input / context; Steps / substeps; Files modified; Verification; Acceptance criteria — plus two hand-off lines, `Consumes:` (what this task uses from earlier tasks) and `Produces:` (what later tasks rely on), where `none` is a legal value for either. Every task must be **sequential, isolated, independently implementable, and independently reviewable**, and the tasks are executed in index order.
+The plan folder's shape is strict: an index named exactly `plan.md` at the folder root; a `plan-tasks/` folder beside it; a two-digit ordinal `NN` on every brief matching the index's ordered task list; and on every brief the six mandatory fields — Objective; Input / context; Steps / substeps; Files modified; Verification; Acceptance criteria — plus the two hand-off lines `Consumes:` (what this task uses from earlier tasks) and `Produces:` (what later tasks rely on), where `none` is a legal value for either. Every task is sequential, isolated, independently implementable, and independently reviewable, and the tasks run in index order. A plan folder that does not match this shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a brief missing its mandatory fields — fails preflight (`## Procedure`); the remedy is to correct the plan upstream, and this run infers no missing structure.
 
-`NN` is a two-digit task ordinal matching the index's task list. The index is named exactly `plan.md` at the thread root, and neither it nor the task files carry a UTC stamp or `v<N>`. The user MAY pass either the thread root or the index path — both resolve to the same artifact.
+The invocation MAY carry a SPECIFIC plan task identifier alongside the plan reference (for example, "task 3" or "tasks 2 and 4"). When it does, execute only the named task(s); when it does not, execute every task the index lists, in order. A single named task runs under every rule below unchanged — read the plan READ-ONLY, implement the task, self-review, commit per `## Commit Policy`, and append the factual progress block.
 
-The user MAY pass a SPECIFIC plan task identifier alongside the plan path (for example, "task 3" or "tasks 2 and 4"). When passed, the skill executes only the named task(s); when omitted, the skill executes every task in the index in order. Even when only one task is named, the rule still applies — read the plan READ-ONLY, run the task, self-review, commit per `## Commit Policy`, and append the factual progress block.
+If which input is meant is ambiguous — an invocation naming a plan folder that is not under `plans/`, or a plan reference with no clear referent — that is a preflight failure, not an in-run decision: refuse before executing anything, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency; the newest-by-stamp resolution applies only to an invocation that points at `plans/` without naming a folder. (Which *thread* is meant is resolved the same way — an unresolvable or ambiguous thread also refuses in preflight.)
 
-A plan that does not match this shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a task file missing its mandatory fields — fails the mechanical preflight (`## Procedure`). The remedy is to recompile the plan from its source, not to tolerate the mismatched shape.
+## Implementation folder
+
+Every invocation writes into its own new folder `implementations/<yymmddhhmm>[-<slug>]/` under the thread root, creating `implementations/` on demand. The stamp is the folder's creation time in UTC at minute resolution. Append `-<slug>`, a short kebab-case name for the implementation's purpose, when the invocation names one, or when a folder carrying that stamp already exists. The folder holds this run's `report.md` and its run state under `.runs/`.
+
+Only an explicit instruction to continue — the user saying in the invocation to carry on the previous implementation — reuses the newest folder under `implementations/` by stamp together with its run state, resuming its `.runs/progress.md` and rewriting its `report.md`. Absent that instruction, allocate a fresh folder and never write into one an earlier invocation created.
 
 ## Factual progress records
 
 This skill defines no formal per-task status token. The only status protocol is the run's terminal outcome (`## Procedure`, final step). Each attempted plan task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
 
-One append-only block per attempted plan task is **appended to the run progress file** (see `## Run workspace`), and — for a committed cycle — carried in that task's commit message body per `## Run workspace`. Chat output carries only a one-line summary per task; the full block lives in the progress file, not a per-task artifact file. The progress file and the git history together are the audit trail. Each block records:
+One append-only block per attempted plan task lives in the run workspace's `progress.md` (see `## Run workspace`), and — for a committed task — the same facts ride in the commit message body. Chat output carries only a one-line summary per task. The progress blocks and the git history together are the audit trail. Each block records:
 
 - **Task attempted** — which plan task (`NN`), named from the index.
 - **Changes made** — what the diff did.
-- **Verification** — the task file's verification block and any project gate actually run, and their results, including failures and justified skips.
-- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call on an ambiguous plan area, a possible-but-unverified edge case, a deviation applied per `## Plan Deviation Policy`), verbatim, or `none`; resolved findings are not restated.
-- **Commit** — the SHA + subject for a committed cycle, else `none`.
+- **Verification** — the brief's verification block and any project gate actually run, and their results, including failures and justified skips.
+- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call on an ambiguous area of the brief, a possible-but-unverified edge case, a deviation applied per `## Deviations`), or `none`.
+- **Commit** — the SHA + subject for a committed task, else `none`.
 - **Next action** — the suggested follow-up ("ready for next task", "ready for review", "stop and surface this finding", etc.).
 
 Suggested block shape (exact wording is at the implementer's discretion; keep it in the 5–10 line range):
@@ -51,33 +56,16 @@ Suggested block shape (exact wording is at the implementer's discretion; keep it
 Task <NN> — <short label>
 Changes made: <what the diff did>
 Verification: <checks run and their results>
-Concerns: <non-blocking concerns verbatim, or "none">
-Commit: <SHA + subject for a committed cycle, else "none">
+Concerns: <non-blocking concerns, or "none">
+Commit: <SHA + subject, or "none">
 Next action: <suggested follow-up>
 ```
 
-The one-line chat summary per task names the task and the commit (e.g. `Task 04: done, commit abc1234`). The final out-message folds every attempted plan task from the progress file, plus the commit SHA + subject for every commit made during the run. This is the implementation audit trail; the user reads it to understand what the plan accomplished and what to do next.
-
-## Run workspace
-
-Keep all operational progress for a run inside an invocation-scoped directory in the active thread:
-
-```text
-docs/threads/<thread>/.implementation-runs/<UTC>[-<desc>]/
-└── progress.md
-```
-
-`<UTC>` is the run's start timestamp and is a valid directory name on its own; `<desc>` is an optional short kebab slug of the run's objective, taken from the plan's title purely for human scannability. Allocate a fresh directory unique to THIS invocation — never silently adopt or reuse an existing run directory. `progress.md` is the only file in the directory. Recovery within an invocation reads only this run's own directory. If a previous run was interrupted, its directory survives so it can be resumed later, but only when the user explicitly identifies it; you never adopt it on your own. This directory is invocation-scoped in meaning: no durable artifact — not the implementation report, not a commit message, nothing — ever references a path inside it. The directory remains in place after the run as the run's operational trace.
-
-**The progress file.** `progress.md` is the authoritative in-flight record for the blocks defined in `## Factual progress records`; chat carries only a one-line summary per task. The commit message body carries the same block for committed cycles, minus the cycle's own SHA — the body is composed before the commit lands, so the cycle's SHA is not yet known and is present only in the progress file, appended post-commit.
-
-**Append discipline (cycle-gated, not commit-gated).** Here a cycle is the work of one plan task. The progress file is append-only. Every cycle that reaches an outcome appends its block — a committed cycle appends once the commit lands (carrying that commit's SHA + subject); a cycle that produces no commit (an empty-diff completion, or a run stopped per `## Blocked`) appends with `Commit: none` before advancing or stopping. A preflight halt appends nothing — no cycle started.
-
-**Compaction recovery.** The progress file plus `git log` are the resume state after a context compaction — never conversation recollection. The implementation report is folded from the progress file re-read from disk at the end of the run, not from memory.
+The one-line chat summary per task names the task and the commit (e.g. `Task 04: done, commit abc1234`).
 
 ## Dirty worktree handling
 
-This skill runs on the current working tree and uses no `git worktree` isolation, so the worktree state is the FIRST safety preflight — checked ONCE at the very start of the run, before reading the plan artifact. The check is non-skippable.
+This skill runs on the current working tree and uses no `git worktree` isolation, so the worktree state is the FIRST safety preflight — checked ONCE at the very start of the run, before any other work. The check is non-skippable.
 
 1. Inspect the worktree (`git status --porcelain` or equivalent).
 2. If clean, proceed to the rest of preflight.
@@ -86,77 +74,116 @@ This skill runs on the current working tree and uses no `git worktree` isolation
 
 When authorization is present, the pre-existing dirty changes are unavoidably picked up by the first `git commit` this skill makes once staged; the authorization is consent to that outcome.
 
-## Single-Agent Topology
-
-This skill is SINGLE-AGENT. The current session reads the plan, executes each plan task in order, and self-reviews after each task. NO subagents are spawned. There is no `Task` tool invocation, no implementer/reviewer separation, no orchestrator role distinct from the implementer role — the single session IS both, and the self-review pass after each task is the only review layer in this topology.
-
 ## Procedure
 
-Steps 1–4 are preflight. They complete in full — with no thread artifact written, no run workspace allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–4 are preflight. They complete in full — with no thread artifact written, no implementation folder allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
 
-1. **Safety preflight: dirty worktree.** Per `## Dirty worktree handling`, run this check first. On a dirty tree without valid advance authorization, refuse now — write nothing, name the dirty paths, give the exact re-invocation authorization, and end `Outcome: REFUSED — <…>`. Do not ask, do not wait.
+1. **Safety preflight: dirty worktree.** Run the `## Dirty worktree handling` check first, before any other preflight step; it refuses a dirty tree that lacks valid advance authorization.
 
-2. **Resolve the active thread.** Identify the active thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If the plan path the user passed is already thread-rooted, the thread is implicit. If no thread resolves, or multiple thread roots exist and which one the plan path belongs to is ambiguous, refuse — write nothing and end `Outcome: REFUSED — <reason>`. This is the one situation a pending bundle is physically impossible, because `.pending-decisions/` would live inside the very thread that failed to resolve; never silently pick the most recent timestamp.
+2. **Resolve the active thread.** If the plan reference is a path under a thread folder, the thread root (`docs/threads/<YYMMDDHHMMSSZ-slug>/`) is implicit; if `cwd` already sits inside a thread root, that is the thread. Otherwise identify the active thread root whose `implementations/` this run's folder will live under. If no active thread resolves, or several thread roots plausibly apply and which is active is ambiguous, that is a preflight failure — refuse, naming what was ambiguous, and never silently pick the most recent stamp. This is the one situation a pending bundle is physically impossible, because `.pending-decisions/` would live inside the very thread that failed to resolve.
 
-3. **Resolve the plan artifact path.** The plan is the thread-root `plan.md` index and its `plan-tasks/` folder; the thread root and the index path resolve to the same artifact. If the thread holds no `plan.md`, there is no plan to implement: refuse — write nothing and end `Outcome: REFUSED — no plan.md in the resolved thread`.
+3. **Gather the inputs.** Read everything under `## Inputs` now, in that order, READ-ONLY. The index is read in full here; each `plan-tasks/NN-<kebab-slug>.md` brief is read when the run reaches its task (step 7a), because the session that reads a brief is the one that implements it. If several plausible plan folders match the reference, that is a preflight failure — refuse per `## Inputs` rather than picking by recency.
 
-4. **Run the structural preflight, verify required tooling, then read the index and its `Source:` artifact.** The plan artifact is IMMUTABLE — open everything READ-ONLY. Run the **structural preflight** on the plan:
+4. **Run the structural preflight and verify required tooling.** Confirm the plan folder matches the strict shape `## Inputs` defines: (a) every task-list entry in the index resolves to an existing `plan-tasks/NN-<kebab-slug>.md` file; (b) every file under `plan-tasks/` is listed in the index; (c) ordinals are contiguous and match the filenames. If any check fails, end `Outcome: REFUSED — malformed plan folder: <mismatch>` before beginning the run — no task was attempted, and the remedy is correcting the plan upstream. Also confirm any tooling and credentials the run explicitly requires are present; a missing required tool or credential caught here is likewise a preflight refusal. If the invocation named a task identifier, narrow the run to that subset of the index's task list; otherwise execute every task the index lists, in order.
 
-   a. every task-list entry in the index resolves to an existing `plan-tasks/NN-<kebab-slug>.md` file;
-   b. every file under `plan-tasks/` is listed in the index;
-   c. ordinals are contiguous and match the filenames.
+5. **Allocate the implementation folder.** Preflight has passed; create this invocation's folder per `## Implementation folder`, allocate its run workspace per `## Run workspace`, and record the task list to execute and its state in `progress.md` so progress stays legible.
 
-   If any check fails, the plan is a **malformed artifact**: end `Outcome: REFUSED — malformed plan artifact: <mismatch>` before beginning the run. No task was attempted; the remedy is recompiling the plan from its source. Also confirm any tooling and credentials the run explicitly requires are present; a missing required tool or credential caught here is likewise a preflight refusal.
+6. **Honour the earlier reports of the same plan.** Take the reports gathered per `## Inputs` — every `implementations/*/report.md` whose `Plan:` line names this plan folder — and mark as already done each plan task they record as completed, after verifying against the code that the change is actually in place. A task a report claims but the code does not carry is implemented in this run; note the discrepancy in its factual progress block. Record which tasks were skipped and why in `progress.md`.
 
-   Then read the **index** (`plan.md`) and, when its `Source:` line names an artifact (anything other than `none — raw prompt`), read that source artifact too — it holds the intent the plan was compiled from. The individual task files are read **lazily**: the session itself reads each `plan-tasks/NN-<kebab-slug>.md` as it reaches that task — it IS the implementer, so there is no dispatch indirection. If the user passed a specific task identifier, narrow to that subset; otherwise execute every task in index order.
+7. **For each plan task still to do, IN ORDER:** (Sequential execution — there are no waves; the implicit dependency is "the previous numbered plan task ran first".)
 
-5. **Allocate the run workspace.** Preflight has passed; allocate this run's workspace directory per `## Run workspace`. Keep a running task list of the tasks to execute and their state, so progress stays legible.
+   a. **Read the brief and implement.** Read this task's `plan-tasks/NN-<kebab-slug>.md` READ-ONLY, then execute its Steps / substeps literally. Make the code changes the task calls for. Use judgment if the brief is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the factual progress block per `## Deviations`.
 
-6. **For each plan task IN ORDER:** (Sequential execution — there are no waves; the implicit dependency is "the previous numbered plan task ran first".)
-
-   a. **Read the task file and implement.** Read this task's `plan-tasks/NN-<kebab-slug>.md` READ-ONLY, then execute its Steps / substeps literally. Make the code changes the task calls for. Use judgment if the task file is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the factual progress block per `## Plan Deviation Policy`.
-
-   b. **Self-review the implementation.** Re-read the diff against the task file's stated objective + verification + acceptance criteria. Check that the change is coherent with the task, does not break adjacent code paths the implementer can see, and matches the project's conventions. The diff is the review *target*; the rest of the repo is readable *context* — reading unchanged code to confirm a criterion is in-scope and expected. If the task has a mechanical verification block (a `grep` check, a `test -f` check, a `npm test` invocation), run it and record the result. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the factual progress block and the implementation report. Two rules shape this pass:
+   b. **Self-review the implementation.** Re-read the diff against the brief's stated objective, verification, and acceptance criteria. Check that the change is coherent with the task, does not break adjacent code paths you can see, and matches the project's conventions. The diff is the review *target*; the rest of the repo is readable *context* — reading unchanged code to confirm a criterion is in-scope and expected. If the brief has a mechanical verification block (a `grep` check, a `test -f` check, a test invocation), run it and record the result. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the factual progress block and the report. Two rules shape this pass:
       - **Unverified concerns.** A criterion you cannot verify from within the run — external config, runtime-only behavior, credentials nobody has — is recorded as a named "unverified" concern. It is non-blocking by default and stays factual in the progress block; escalate to `## Blocked` only where a genuine human decision is required or proceeding without the answer would be reckless (your judgment).
-      - **Positive focus.** The current task's diff is the focus of this pass. Discoveries outside it are not prohibited — record them (in the factual progress block, and as implementation-report follow-ups) without letting them stop THIS task; blocking stays defined against the current task. There is no out-of-task prohibition.
+      - **Positive focus.** The current task's diff is the focus of this pass. Record discoveries outside it — in the factual progress block, and as report follow-ups — without letting them stop THIS task; blocking stays defined against the current task.
 
-      Self-review is in-session — no separate review artifact file is written.
+      Self-review is in-session — no review artifact file is written.
 
-   c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, follow the failed-commit branch in `## Commit Policy` — diagnose and fix in-authority causes within the retry cap; only when it cannot be resolved does the run hit an operational defect: append this cycle's block to the run progress file with `Commit: none` (per `## Run workspace`) recording the diagnosis, and stop the entire run `BLOCKED` per `## Blocked`.
+   c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, follow `### Failed commit` under `## Commit Policy` — diagnose and fix in-authority causes within the retry cap; only when it cannot be resolved does the run hit an operational defect: append this task's block with `Commit: none` recording the diagnosis, and stop the entire run `BLOCKED` per `## Blocked`.
 
-   d. **Append the factual progress block.** Per `## Run workspace` and `## Factual progress records`, append exactly one block for this attempted task — after the commit for a committed cycle (carrying its SHA + subject), or with `Commit: none` for an empty-diff completion or a cycle stopped per `## Blocked` — then emit the one-line chat summary for the task. The commit message body carries the same block for committed cycles per `## Run workspace`.
+   d. **Append the factual progress block.** Append exactly one block for this attempted task to `progress.md` per `## Factual progress records` — after the commit for a committed task (carrying its SHA + subject), or with `Commit: none` for an empty-diff completion or a task stopped per `## Blocked`. Emit the one-line chat summary for the task.
 
-7. **Update the implementation report.** Once every plan task has run (or the run stopped early per `## Blocked`), re-read `progress.md` from disk and fold it into the implementation report per `## Implementation report`.
+8. **Write the report.** Once every plan task has run (or the run stopped early per `## Blocked`), write this folder's report per `## Implementation report`.
 
-8. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted plan task (one line per task), the commit SHA + subject for each commit made, and the thread-relative path of the implementation report just written. If follow-ups were discovered, name where they were routed per `## Implementation report`. Close with exactly one terminal line from the closed vocabulary — `Outcome: DONE — <implementation-report pointer>` when the requested operation completed, including completion with non-blocking concerns; `Outcome: BLOCKED — <diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `Outcome: REFUSED — <reason>` when preflight prevented execution (steps 1–4). The line is added to — it never replaces — the summary above.
+9. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted plan task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, and the report that was written. Name any parent-level discovery surfaced per `## Settled points and discoveries`. Close with exactly one terminal line from the closed vocabulary — `Outcome: DONE — <report path>` when the requested operation completed, including completion with non-blocking concerns; `Outcome: BLOCKED — <diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `Outcome: REFUSED — <reason>` when preflight prevented execution (steps 1–4). The line is added to — it never replaces — the summary above.
+
+## Run workspace
+
+Keep all operational progress for a run inside this invocation's implementation folder:
+
+```text
+implementations/<yymmddhhmm>[-<slug>]/.runs/progress.md
+```
+
+Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it by appending as the run proceeds — the task list to execute first, then one factual progress block per attempted task — so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, reads only this folder's own `.runs/progress.md` together with `git log`, and resumes from the last block it holds; it never reads another folder's run state and never relies on conversation recollection. A continuation run resumes the newest implementation folder's `.runs/progress.md` and appends to it.
+
+`.runs/` is operational, not durable: no durable artifact — not the report, not a commit message, nothing — ever cites a path inside it. Anything a durable record needs (a concern, a deviation, a finding) is copied into that record. It stays in place after the run as the run's trace.
 
 ## Implementation report
 
-On EVERY normal terminal outcome — every plan task completed, a partial run, a `BLOCKED` halt, or a no-op where the requested state already existed — update the thread's singleton `implementation-report.md` at the thread root by invoking `/update-implementation-report` with the verified current outcome: which plan tasks were completed, partially completed, blocked, or found already satisfied; the resulting code, test, and configuration changes; the checks you actually ran and their results, including failures and justified skips; every place the implementation diverged from what a plan task called for, each with a one-or-two-sentence reason; remaining concerns; and follow-ups. The report reflects only the CURRENT outcome — the primitive merges in place, replacing stale content and dropping now-resolved concerns — so pass it the run's end state, folded from `progress.md` re-read from disk, not a running log of earlier passes.
+On EVERY terminal outcome an executing run reaches — every plan task completed, a partial run, a `BLOCKED` halt, or a no-op where the requested state already existed — invoke `/update-implementation-report`, handing it:
 
-The per-task self-review is deliberately a task-scoped gate: it confirms each task against its own objective and verification, not the whole change, and the implementation as a whole is expected to receive a broader review afterward — so write this report to be that review's starting point. The assumptions, forced judgment calls, and known risks the per-task self-review surfaced feed this outcome: assumptions and forced judgment calls into the deviations content, each with its justification; known risks into remaining concerns, or into problems already hit where the risk was realized during the run. Pull the deviations from the factual progress blocks where they were surfaced.
+- **This invocation's implementation folder**, whose `report.md` is the target.
+- **The plan folder executed**, as `Plan: plans/<folder>/`.
+- **The outcome material**, folded from `progress.md` re-read from disk: which plan tasks were completed, partially completed, blocked, or found already satisfied; the resulting code, test, configuration, and living-documentation changes; the checks you actually ran and their results, including failures and justified skips; the deviations per `## Deviations`; remaining concerns; and follow-ups.
+
+The report is written at `implementations/<folder>/report.md` per `references/formats/implementation-report.md`, and it describes that folder's current outcome — the primitive merges in place — so hand it the run's end state rather than a running log of earlier passes.
+
+The per-task self-review is deliberately a task-scoped gate: it confirms each task against its own objective and verification, not the whole change, and the implementation as a whole is expected to receive a broader review afterward — so write this report to be that review's starting point. The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this material: assumptions and forced judgment calls into the deviations, each with what it departs from and why; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
+
+## Deviations
+
+The policy is judgment-based and surfaced through the factual progress block and the report — not pre-clearance, not blanket permission.
+
+- **Follow the plan.** The plan is the contract; execute the tasks in index order, applying each brief's substeps literally. Do not silently invent plan tasks the plan does not call for. Do not silently skip plan tasks the plan does call for. Do not silently re-order plan tasks.
+- **Use judgment when warranted.** If a brief is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the task's objective. A blocked import path, a missing helper the brief assumed existed, a renamed dependency the plan did not know about: fix and continue.
+- **A deviation that stays within accepted intent proceeds, and is recorded.** It goes into the task's factual progress block as it happens, and into the report's `## Deviations`, one entry naming what was built, the spec section or ADR stem it departs from, and why. Minor deviations (a missing import added, a `Map` chosen where the brief named no structure) carry a one-sentence entry and the run continues. This run is autonomous; it does not stop to pre-clear a judgment call, and the progress block and the report are where the user reads the trail.
+- **A contradiction of a thread ADR or of a spec decision is a change of intent, and is never applied.** Finish everything safely derivable without it, then route it per `## Blocked`: the run ends `BLOCKED` once the report is written.
+- **A fault in the plan is surfaced, never patched.** If a task contradicts the observed code, rests on a wrong premise, or names a target that has gone, record it in the factual progress block and in the report and route the required human decision per `## Blocked`. Correcting the plan happens upstream, per `## Immutability`.
+
+## Settled points and discoveries
+
+**A decision settled with the user during the run.** The moment the point settles, and before acting on it, append exactly one line to the thread's `log.md`, formatted per `references/formats/log-line.md`:
+
+```sh
+printf '%s\n' '- (decision) retries stay in the worker, because the request path cannot hold them' >> docs/threads/<thread>/log.md
+```
+
+Use the shell append (`>>`) of a single line; never open `log.md` with a file-editing tool. Then amend `spec.md` in place wherever the decision lands: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed.
+
+**A discovery with parent- or sibling-level impact** — something that would change a project decision, or that belongs to a direction wider than this thread — is a proposed ADR or a proposed roadmap entry. Surface it to the user in chat and carry it into the report's follow-ups. Proposing it is the whole action.
+
+**Write boundary.** You write the project's code, tests, configuration, and living documentation within this implementation's scope; this invocation's implementation folder, its `report.md` and its `.runs/`; lines appended to the thread's `log.md`; and amendments to `spec.md` for a decision settled during the run. Nothing else you touch is written — `docs/adr/`, `docs/glossary.md`, the thread's `adr/`, `glossary.md`, and `plans/`, other implementation folders, and any other thread are read here and never written.
 
 ## Blocked
 
-Two situations stop the run once substantive execution has begun (step 5 onward), and both end `BLOCKED`. Neither is reachable from preflight — a dirty-tree, thread, plan-resolution, structural, or tooling failure caught in steps 1–4 is a `REFUSED`, not this path. Distinguish a genuine missing-intent question from an operational defect before choosing between them.
+Three situations stop the run once substantive execution has begun (step 5 onward), and all three end `BLOCKED`. None is reachable from preflight — a dirty-tree, thread, plan-resolution, structural, or tooling failure caught in steps 1–4 is a `REFUSED`, not this path. Distinguish a genuine missing-intent question, a change of intent, and an operational defect before choosing between them.
 
-**Missing human intent.** This applies whenever completing a plan task requires a genuine human decision you cannot settle yourself from the plan and the observed code state. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat. First finish everything the run can safely derive without that decision, then hand the indispensable open decision(s) to `/emit-pending-decisions`, giving it `/implement-plan` as the producer, the thread's `implementation-report.md` as the target, the context you gathered as evidence, the originating user request, the open decision(s), and a suggested follow-up: settle the decisions, then re-invoke the plan. Update the implementation report per `## Implementation report` to reflect the blocked outcome, then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+**Missing human intent.** This applies whenever completing a plan task requires a genuine human decision you cannot settle yourself from the gathered inputs and the observed code state. Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat.
 
-**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed task detail not covered by the completed structural preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, update the implementation report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`.
+**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a term in `docs/glossary.md` is the same situation; the rule, and what makes a contradiction intentional instead, is stated in full in `references/formats/adr.md`.
 
-## Roadmap-descendant feedback
+Both take the same route. First finish everything the run can safely derive without the decision, then hand the open decision(s) to `/emit-pending-decisions`, giving it:
 
-When the run's thread carries a `Parent:` roadmap reference in its seed and you discover something with parent- or sibling-level impact, route it to the parent through `/append-roadmap-feedback`; `references/roadmap-descendant-feedback.md` spells out what qualifies as parent-level impact, what to hand the primitive, and what stays local in this run's implementation report.
+- `/implement-plan` as the producing skill.
+- This invocation's implementation folder's `report.md` as the target.
+- The originating user request.
+- One point per open decision, each stating what the decision blocks, why you could not derive the answer from the gathered inputs, and the evidence you weighed — in your own words. Add a free-text suggestion to a point only when you see an immediate fix.
+
+Write the report per `## Implementation report` reflecting the blocked outcome, then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+
+**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed task detail not covered by the structural preflight and discovered only when the brief is read — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, write the report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`. A structural plan problem that preflight should have caught is a preflight `REFUSED`, not this path.
 
 ## Commit Policy
 
 This skill auto-commits.
 
-- **Cadence:** ONE commit per plan task that the agent executes from the plan — **per plan task** (one commit per successful plan task). The boundary is the plan task; after the implement → self-review pair for a task succeeds, commit the diff that constitutes the task. Do not bundle multiple plan tasks into one commit. Do not split one plan task across multiple commits.
+- **Cadence:** ONE commit per plan task that the run executes — one commit per successful plan task. The boundary is the plan task; after the implement → self-review pair for a task succeeds, commit the diff that constitutes the task. Do not bundle multiple plan tasks into one commit. Do not split one plan task across multiple commits.
 - **Override:** If the user's invocation contains an EXPLICIT Git instruction (for example, "commit at the end as one commit", "do not commit, just leave the changes staged"), honor the explicit instruction over the default per-plan-task cadence. The user's explicit instruction wins.
-- **Baseline gate (before each commit):** A plan task's verification block is task-specific — it confirms THAT task's objective, and it does not necessarily capture the project's *standing* required gates: the bar a project enforces on any code allowed to land (discoverable from the project's tooling or conventions — for example a `check` / `lint` / `format` / `typecheck` script, a documented pre-commit command, or a CI gate). **A project may define no such gate**, in which case there is nothing to run beyond the plan's verification and this clause is a no-op. When the project DOES define standing gates, run them on the changed code and resolve any failure BEFORE committing the task — independent of, and even when omitted by, the plan task's verification block. Scope the gate to the changed code where the project's tooling allows it, so an unrelated pre-existing failure elsewhere does not block this task. Only genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) are legitimately deferred to a closing task — a cheap standing commit-gate is not one of those and is not deferred.
+- **Baseline gate (before each commit):** A brief's verification block is task-specific — it confirms THAT task's objective, and it does not necessarily capture the project's *standing* required gates: the bar a project enforces on any code allowed to land (discoverable from the project's tooling or conventions — for example a `check` / `lint` / `format` / `typecheck` script, a documented pre-commit command, or a CI gate). **A project may define no such gate**, in which case there is nothing to run beyond the brief's verification and this clause is a no-op. When the project DOES define standing gates, run them on the changed code and resolve any failure BEFORE committing the task — independent of, and even when omitted by, the brief's verification block. Scope the gate to the changed code where the project's tooling allows it, so an unrelated pre-existing failure elsewhere does not block this task. Only genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) are legitimately deferred to a closing task — a cheap standing commit-gate is not one of those and is not deferred.
 
-Commits use the project's conventional-commit shape where applicable; follow the project's contribution guidelines for scope rules. Stage only the files the plan task touched — the task file's `Files modified` list is unconditionally authoritative; use it. Never run `git add -A` blindly. Commit subjects are descriptive of the plan task's objective, not its substeps. Commit message bodies carry the task's progress-file block per `## Run workspace`, so the audit trail lives in git history as well as the progress file.
+Commits use the project's conventional-commit shape where applicable; follow the project's contribution guidelines for scope rules. Stage only the files the plan task touched — the brief's `Files modified` list is unconditionally authoritative; use it. Never run `git add -A` blindly. Commit subjects are descriptive of the plan task's objective, not its substeps. Commit message bodies carry the task's factual progress block from `## Factual progress records` — minus the commit's own SHA — so the audit trail lives in git history as well as the progress file.
 
 ### Failed commit
 
@@ -164,29 +191,18 @@ A failed commit is diagnosed and fixed within the current plan task before it is
 
 - **Diagnose first.** Read the actual error the commit emitted; never retry blind. What failed — a pre-commit hook, a lint or format check, a test, a commit-message linter, a missing sign-off — determines whether it is yours to fix.
 - **Fix in-authority causes as part of the current task.** When the cause sits inside the task's own footprint — a lint or format violation in the task's files, a hook that auto-modified files that now need re-staging, a test the task's own diff broke, a commit subject a message linter rejected — fix it, re-run the failed check, and retry the commit.
-- **Bounded retries.** Make at most 3 fix-and-retry attempts for the task. Past the cap, or when the cause is outside the task's authority (missing sign-off configuration, credentials, failures in files the task does not own, infrastructure errors), the run has hit an operational defect: append this cycle's block to the run progress file with `Commit: none` (per `## Run workspace`), recording the diagnosis in the block — the specific failure and what was tried, not a bare "commit failed" — and stop the entire run `BLOCKED` per `## Blocked`. Subsequent plan tasks are NOT attempted.
-- **Guardrails (never traded for a green commit).** Never bypass hooks (`--no-verify` or any equivalent), never weaken, delete, or skip a check to make it pass, and never stash-and-retry. A fix addresses the real cause inside the task's footprint, or the task becomes a `BLOCKED` report.
+- **Bounded retries.** Make at most 3 fix-and-retry attempts for the task. Past the cap, or when the cause is outside the task's authority (missing sign-off configuration, credentials, failures in files the task does not own, infrastructure errors), the run has hit an operational defect: append this task's block to `progress.md` with `Commit: none` (per `## Run workspace`), recording the diagnosis in the block — the specific failure and what was tried, not a bare "commit failed" — and stop the entire run `BLOCKED` per `## Blocked`. Subsequent plan tasks are NOT attempted.
+- **Guardrails (never traded for a green commit).** Never bypass hooks (`--no-verify` or any equivalent), never weaken, delete, or skip a check to make it pass, and never stash-and-retry. A fix addresses the real cause inside the task's footprint, or the run stops `BLOCKED`.
 - **Audit trail.** The task's progress block and the commit body note that the commit failed N times and what was fixed, so the retries stay visible in the history.
 
 ### No history rewriting
 
-**This skill does NOT rewrite history — no `--amend`, no rebase, no force-push.** The git history this skill produces is append-only. The implementer does not amend commits (no `commit --amend`, even for typos in commit subjects), does not rebase (no `rebase` invocation in any form, even to clean up the local branch), does not force-push (neither the `--force` flag nor its `-f` shorthand to any remote, even when the remote is behind), and does not delete commits the skill made earlier in the same run. If a commit needs revising after the fact, that is the surrounding session's decision and the user's command — not this skill's responsibility, and not within this skill's mandate.
+**This skill does NOT rewrite history — no `--amend`, no rebase, no force-push.** The git history this skill produces is append-only. The implementer does not amend commits (no `commit --amend`, even for typos in commit subjects), does not rebase in any form, does not force-push (neither the `--force` flag nor its `-f` shorthand to any remote), and does not delete commits the skill made earlier in the same run. If a commit needs revising after the fact, that is the surrounding session's decision and the user's command — not this skill's responsibility.
 
 This rule pairs with the failed-commit → `BLOCKED` rule above: a failed commit cannot be "recovered" by rewriting an earlier commit or by amending the failed attempt. The recovery path is to surface the failure and let the user resolve it explicitly.
 
-## Plan Deviation Policy
-
-The policy is judgment-based and surfaced via the factual progress block — not pre-clearance, not blanket permission.
-
-- **Follow the plan.** The plan is the contract; the implementer executes the tasks in index order, applying each task file's substeps literally. Do not silently invent plan tasks the plan does not call for. Do not silently skip plan tasks the plan does call for. Do not silently re-order plan tasks.
-- **Use judgment when warranted.** If the plan task is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the plan task's objective. A blocked import path, a missing helper the plan assumed existed, a renamed dependency the plan did not know about: fix and continue.
-- **Surface deviations in the factual progress block.** Every deviation, assumption, forced judgment call, and unverified check goes into the block's Concerns as plain facts — no status token is assigned. Minor deviations (the implementer added a missing import, the implementer used `Map` instead of an object literal because the plan did not specify) are recorded with a one-sentence note and the run continues. A deviation that would require inventing genuine human intent — a structural choice the plan did not anticipate, a sub-step unsafe to apply blindly, a read of the observed code that conflicts with the plan task's input field — is never applied silently: finish what is safely derivable, then route the open decision per `## Blocked`.
-- **Do not pre-clear minor deviations.** This run is autonomous; it does not stop for every judgment call. The factual progress block is where the user reads the trail.
-
-If the plan itself needs revision (the plan calls for an outdated approach, a target file no longer exists, an entire task is built on a wrong premise), the implementer does NOT edit the plan artifact as a side effect of this run. The implementer records the finding in the factual progress block, captures it in the implementation report, routes the required human decision per `## Blocked`, and stops the run — plan revision happens upstream, not inside this run. A **spec fault** (the plan faithfully implements an ambiguous or incomplete spec) is fixed by correcting the spec and recompiling the plan from it. A **plan fault** (the plan itself is wrong while its source is sound) is fixed by revising the living plan — re-running planning against the source, or editing the plan in place as a living document. Either way the revised plan is handed back on a fresh run; this run's mandate is to surface the fault and stop, never to silently patch the plan.
-
 ## Immutability
 
-Plan artifacts are IMMUTABLE. The implementer reads the index and every task file READ-ONLY. Nothing in the plan is edited in place — not for typo fixes, not for "add a missing acceptance criterion", not to mark tasks as done, not for any reason. Implementation output goes to SOURCE CODE — application code, configuration files, tests, build files, any file that is not a thread artifact — not to the plan.
+The plan folder is IMMUTABLE. Read its index and every brief READ-ONLY. Nothing inside it is edited in place — not for typo fixes, not to add a missing acceptance criterion, not to mark tasks as done, not for any reason. Implementation output goes to source code and to this invocation's implementation folder, per the write boundary in `## Settled points and discoveries`.
 
-What the implementer DOES modify is source code, plus the thread's singleton implementation report per `## Implementation report`; it also writes the run progress file per `## Run workspace`. The implementer does NOT create new spec, proposal, plan, or decision-log artifacts inside this run; those require a separate authoring pass.
+When the plan itself needs revision — it calls for an outdated approach, a target file has gone, a whole task rests on a wrong premise — this run's mandate is to surface the fault and stop, per `## Deviations`. A **spec fault** (the plan faithfully implements an ambiguous or incomplete spec) is fixed by amending the spec and writing a fresh plan from it. A **plan fault** (the plan is wrong while the spec is sound) is fixed by running the plan check against the plan folder, or by writing a fresh plan. Either way the corrected plan is handed to a fresh run.

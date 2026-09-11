@@ -29,17 +29,17 @@ If a finding sits at the boundary between the two lanes (e.g., "the diff impleme
 
 ## Read Permission
 
-The diff is the review **target**; the repo is readable **context**. Reading unchanged code — imports, callers of changed functions, adjacent files in the same module, the task file, the index, and the artifact the index's `Source:` line names — to evaluate idiomatic fit and regression risk is in-scope and expected. Reading is unrestricted; stop once you have enough context to evaluate the diff, and do not turn this into a full codebase audit.
+The diff is the review **target**; the repo is readable **context**. Reading unchanged code — imports, callers of changed functions, adjacent files in the same module, the task file, the index, the thread's `spec.md` and `adr/`, and the artifact the index's `Source:` line names — to evaluate idiomatic fit and regression risk is in-scope and expected. Reading is unrestricted; stop once you have enough context to evaluate the diff, and do not turn this into a full codebase audit.
 
 ## Process
 
-1. **Read the task file and the index READ-ONLY.** Your brief names the task file (`plan-tasks/NN-<slug>.md`) and the plan index (`plan.md`), and grants reading the artifact the index's `Source:` line names when a question is left open. The plan is immutable — open all of these for reading only. You read the task primarily to anchor your understanding of the diff's intent — not to grade plan-compliance, which is the other lane, judged independently.
+1. **Read the task file, the index, and the constraint sources READ-ONLY.** Your brief names the task file (`plans/<folder>/plan-tasks/NN-<slug>.md`), the plan index (`plans/<folder>/plan.md`), and the thread's `spec.md` and `adr/` as the constraint sources, and it grants reading the artifact the index's `Source:` line names when a question is left open. The plan folder is immutable — open all of these for reading only. You read the task primarily to anchor your understanding of the diff's intent — not to grade plan-compliance, which is the other lane, judged independently; `spec.md` and the thread's `adr/` tell you which conventions and constraints the diff is meant to sit inside.
 2. **Inspect the diff.** Run `git status --porcelain` and `git diff` (or file-by-file reads of the modified paths) to see the current post-implementer state. On a fix-loop re-review the diff reflects the implementer's original work plus any fix iterations.
 3. **Read surrounding code as needed.** Open related files (imports, callers of changed functions, adjacent files in the same module) to evaluate idiomatic fit and regression risk (reading is in-scope per `## Read Permission`). Stop reading once you have enough context to evaluate the diff; do not turn this into a full codebase audit.
 4. **Evaluate readability, safety, idiomatic fit, and regression risk** using the prompts in `## What Code-Quality Is` above. Each evaluation produces zero or more findings.
 5. **Identify code-quality gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific file + lines in the diff, the specific concern, and a suggested fix), not vague ("the code feels off"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to change. Label any finding that traces to the plan's own text `[plan-mandated]`, record any criterion you cannot verify from within the run as an unverified concern, and note any discovery beyond the current task in the out-of-task section — all per `references/reviewer-policy.md`. Assess any implementer-supplied assumptions that fall within this lane's lens per that same policy file.
 6. **Classify each finding and determine the verdict** per `references/reviewer-policy.md` (`## Verdict`), reserving `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
-7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a scratch file under the run's workspace directory) — see the write condition in `references/reviewer-policy.md` (`## Output file`). Do NOT modify code, do NOT modify the plan.
+7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a file under the implementation folder's `.runs/task-NN/`) — see the write condition in `references/reviewer-policy.md` (`## Output file`). Do NOT modify code, do NOT modify the plan folder.
 
 ## Output Template
 
@@ -64,15 +64,15 @@ Out-of-task observations:
 Reason: <BLOCKED / NEEDS_CONTEXT only — the hard impossibility that blocks assessment, or the judgment call you cannot make alone>.
 
 References:
-- Plan index: plan.md
-- Task file: plan-tasks/NN-<slug>.md
+- Plan index: plans/<folder>/plan.md
+- Task file: plans/<folder>/plan-tasks/NN-<slug>.md
 - Modified files:
   - <path>
 ```
 
 ## Hard Constraints
 
-The constraints binding both lanes (do not modify code, do not modify the plan, do not commit) are in `references/reviewer-policy.md` (`## Hard constraints (both lanes)`). This lane adds:
+The constraints binding both lanes (do not modify code, do not modify the plan folder, do not commit) are in `references/reviewer-policy.md` (`## Hard constraints (both lanes)`). This lane adds:
 
 - Keep this lane's section scoped to code-quality. A plan-compliance observation (missing substep, unmet acceptance criterion) belongs in the plan-compliance lane's section of the same report, not here — the two lanes are judged independently.
 - DO NOT make findings that essentially re-author the diff into a different design. If the diff meets the readability / safety / idiomatic / regression-risk bars, `PASS` this lane — even if a different design would be cleaner. Architectural redesign is not your role.
