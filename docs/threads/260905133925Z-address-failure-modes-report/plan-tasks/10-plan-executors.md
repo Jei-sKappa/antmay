@@ -30,6 +30,7 @@ grep -in "verif.*before skipping\|verify against the code\|verifying against the
 grep -n "references/formats/implementation-report.md\|references/formats/log-line.md" $P $W    # both files, both refs
 grep -in "only the orchestrator" $W                                     # present
 grep -n ">>" $P $W; grep -in "contradiction" $P $W; grep -n "emit-pending-decisions" $P $W   # all present
+grep -in "editing tool\|file-editing" $P $W                             # both
 ```
 
 **Acceptance criteria:**
