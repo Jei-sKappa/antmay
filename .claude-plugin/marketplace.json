@@ -15,6 +15,7 @@
         "./skills/implement/implement-plan-with-subagents",
         "./skills/plan/plan-brief",
         "./skills/plan/plan-strict",
+        "./skills/plan/check-plan",
         "./skills/primitives/allocate-thread",
         "./skills/primitives/emit-pending-decisions",
         "./skills/primitives/emit-pending-review",

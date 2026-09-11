@@ -118,6 +118,14 @@ Turn a spec, proposal, decisions, GitHub issue, or raw prompt into a strict-gran
 npx skills add Jei-sKappa/antmay --skill plan-strict
 ```
 
+#### [`check-plan`](./suite/skills/plan/check-plan/SKILL.md)
+
+Check the newest or a named plan folder against the thread's spec and correct in place every fault the spec settles, queueing the rest as pending decisions; use when a plan has been written and must be made to match the spec before implementation starts.
+
+```sh
+npx skills add Jei-sKappa/antmay --skill check-plan
+```
+
 ### Roadmap
 
 #### [`roadmap`](./suite/skills/roadmap/roadmap/SKILL.md)

@@ -1,0 +1,5 @@
+interface:
+  display_name: Check Plan
+  short_description: Correct a plan against its spec
+policy:
+  allow_implicit_invocation: false

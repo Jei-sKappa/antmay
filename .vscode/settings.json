@@ -3,6 +3,7 @@
   "conventionalCommits.promptFooter": false,
   "conventionalCommits.scopes": [
     "allocate-thread",
+    "check-plan",
     "cli",
     "discussion",
     "emit-pending-decisions",
