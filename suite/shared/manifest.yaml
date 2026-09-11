@@ -15,35 +15,87 @@
 skills/finish-navigate/finish:
   - repository-conventions.md
   - trackers/github.md
+  - formats/adr.md
+  - formats/implementation-report.md
+  - formats/roadmap-index.md
 
 skills/finish-navigate/whats-next:
   - recipes/quick.md
   - recipes/standard.md
   - recipes/roadmap.md
+  - formats/adr.md
+  - formats/implementation-report.md
+  - formats/roadmap-index.md
+  - formats/pending-decision-bundle.md
 
 skills/capture-discussion/open-thread:
   - trackers/github.md
+  - formats/adr.md
+  - formats/roadmap-index.md
 
 skills/capture-discussion/open-ticket:
   - repository-conventions.md
   - trackers/github.md
+  - formats/adr.md
+
+skills/primitives/allocate-thread:
+  - formats/log-line.md
 
 skills/capture-discussion/discussion:
   - formats/discussion-point.md
-  - formats/decision-record.md
+  - formats/adr.md
+  - formats/log-line.md
+  - formats/roadmap-index.md
 
 skills/capture-discussion/resolve-pending-decisions:
   - formats/discussion-point.md
-  - formats/decision-record.md
+  - formats/adr.md
+  - formats/log-line.md
+  - formats/pending-decision-bundle.md
 
 skills/primitives/emit-pending-decisions:
-  - formats/discussion-point.md
+  - formats/pending-decision-bundle.md
+
+skills/primitives/update-implementation-report:
+  - formats/adr.md
+  - formats/implementation-report.md
+
+skills/spec/spec:
+  - formats/adr.md
+  - formats/log-line.md
+
+skills/plan/plan-brief:
+  - formats/adr.md
+
+skills/plan/plan-strict:
+  - formats/adr.md
 
 skills/implement/implement:
-  - roadmap-descendant-feedback.md
+  - formats/adr.md
+  - formats/log-line.md
+  - formats/implementation-report.md
 
 skills/implement/implement-plan:
-  - roadmap-descendant-feedback.md
+  - formats/adr.md
+  - formats/log-line.md
+  - formats/implementation-report.md
 
 skills/implement/implement-plan-with-subagents:
-  - roadmap-descendant-feedback.md
+  - formats/adr.md
+  - formats/log-line.md
+  - formats/implementation-report.md
+
+skills/review/review-spec:
+  - formats/adr.md
+
+skills/review/review-implementation:
+  - formats/adr.md
+  - formats/implementation-report.md
+
+skills/review/review-code:
+  - formats/adr.md
+  - formats/implementation-report.md
+
+skills/roadmap/roadmap:
+  - formats/adr.md
+  - formats/roadmap-index.md
