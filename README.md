@@ -50,7 +50,7 @@ Every completion-oriented skill ends its final message with exactly one **termin
 Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
 ```
 
-`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the suite's only shared status vocabulary. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills (such as `discussion`, `open-thread`, and `archive-thread`) and the primitives emit no terminal outcome — their questions or their narrow written artifact are the output.
+`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the suite's only shared status vocabulary. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills (such as `discussion` and `open-thread`) and the primitives emit no terminal outcome — their questions or their narrow written artifact are the output.
 
 ## Skills
 
@@ -90,16 +90,6 @@ Settle the thread's queued pending decisions interactively and record the outcom
 npx skills add Jei-sKappa/antmay --skill resolve-pending-decisions
 ```
 
-### Propose
-
-#### [`propose`](./suite/skills/propose/propose/SKILL.md)
-
-Turn a rough prompt or referenced artifact into a freeform, direction-setting proposal.md at a thread root; use when a unit of work needs its direction sketched and written down before it is specified.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill propose
-```
-
 ### Spec
 
 #### [`spec`](./suite/skills/spec/spec/SKILL.md)
@@ -128,42 +118,6 @@ Turn a spec, proposal, decisions, GitHub issue, or raw prompt into a strict-gran
 npx skills add Jei-sKappa/antmay --skill plan-strict
 ```
 
-### Reconcile
-
-Reconciliation makes an authored artifact faithful to the decisions or spec that govern it — correcting supported discrepancies in place and queueing anything that needs a fresh human decision. It is ordinary maintenance, not a review, and produces no review report.
-
-#### [`reconcile-proposal`](./suite/skills/reconcile/reconcile-proposal/SKILL.md)
-
-Align a thread-root proposal.md with the decisions that govern it — correcting supported discrepancies in place and queueing anything that needs a fresh human decision; use when a proposal should be made faithful to its thread's established intent.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill reconcile-proposal
-```
-
-#### [`reconcile-spec`](./suite/skills/reconcile/reconcile-spec/SKILL.md)
-
-Make a thread-root spec.md a lossless, additive-free expression of the decisions that govern it — adding omitted decisions, correcting contradictions, removing invented commitments, and queueing anything that needs a fresh human decision; use when a spec should be made faithful to its thread's established intent.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill reconcile-spec
-```
-
-#### [`reconcile-plan`](./suite/skills/reconcile/reconcile-plan/SKILL.md)
-
-Make a thread's strict plan — its plan.md index and plan-tasks/ briefs — faithfully executable against the spec that governs it, repairing plan faults in place and queueing anything that needs a fresh human decision; use when a plan should be made to satisfy its spec.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill reconcile-plan
-```
-
-#### [`reconcile-roadmap`](./suite/skills/reconcile/reconcile-roadmap/SKILL.md)
-
-Make a thread-root roadmap.md and its decomposition faithful to the decisions that govern the thread — correcting contradictions, adding omitted decisions, removing unsupported commitments, repairing incomplete child briefs, and queueing any decomposition change that alters human intent; use when a roadmap should be brought back in line with its thread's established intent.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill reconcile-roadmap
-```
-
 ### Roadmap
 
 #### [`roadmap`](./suite/skills/roadmap/roadmap/SKILL.md)
@@ -172,14 +126,6 @@ Decompose a settled larger initiative into self-contained child-thread briefs �
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill roadmap
-```
-
-#### [`materialize-roadmap-threads`](./suite/skills/roadmap/materialize-roadmap-threads/SKILL.md)
-
-Turn a roadmap's child briefs into child threads idempotently — create a thread for each brief that has no materialized reference, skip and verify the ones that do, and stamp each new thread's reference back into its brief; use when a roadmap.md is settled and its children need opening on disk.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill materialize-roadmap-threads
 ```
 
 ### Implement
@@ -220,14 +166,6 @@ Read a thread-root spec.md as a downstream handoff and judge whether another age
 npx skills add Jei-sKappa/antmay --skill review-spec
 ```
 
-#### [`review-roadmap`](./suite/skills/review/review-roadmap/SKILL.md)
-
-Read a thread-root roadmap.md as a decomposition handoff and judge whether each child brief could become an independently executable thread without inventing intent, reporting any findings as a single pending-review bundle; use when a roadmap should be checked for handoff readiness before its children are materialized.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill review-roadmap
-```
-
 #### [`review-implementation`](./suite/skills/review/review-implementation/SKILL.md)
 
 Check delivered work against the thread's durable intent and confirm the implementation report honestly describes what exists — reviewing strictly read-only and recording any findings as a single pending-review bundle; use when an implementation needs a fidelity review before it is accepted.
@@ -242,16 +180,6 @@ Judge code on its own intrinsic merits — quality, safety, idioms, and testabil
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-code
-```
-
-### Merge
-
-#### [`merge-artifacts`](./suite/skills/merge/merge-artifacts/SKILL.md)
-
-Reconcile two or more competing candidate drafts of one artifact into a single canonical thread-root artifact, folding every candidate's unique content and settling genuine design divergences as recorded decisions; use when a multi-draft bake-off must be collapsed into one artifact.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill merge-artifacts
 ```
 
 ### Finish & Navigate
@@ -270,14 +198,6 @@ Read a thread's observable state — its location, seed, decisions, canonical ar
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill whats-next
-```
-
-#### [`archive-thread`](./suite/skills/finish-navigate/archive-thread/SKILL.md)
-
-Relocate a thread into docs/threads/archive/ so the active docs/threads/ listing shows only live work; use when the user explicitly asks to archive a finished or abandoned thread and declutter the listing.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill archive-thread
 ```
 
 ## Primitives
@@ -314,14 +234,6 @@ Create or merge the thread's singleton `implementation-report.md` in place to de
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill update-implementation-report
-```
-
-#### [`append-roadmap-feedback`](./suite/skills/primitives/append-roadmap-feedback/SKILL.md)
-
-Record a descendant thread's parent- or sibling-level discovery — the affected briefs or direction, self-contained evidence, the impact, and a recommendation — as the next append-only record in the parent thread's `roadmap-feedback.md`.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill append-roadmap-feedback
 ```
 
 For the method — the glossary, the thread model, the seed and decision-log contracts, the three recipes, and the skill-authoring rules — see [`docs/`](./docs/README.md), the reference for all new threads.

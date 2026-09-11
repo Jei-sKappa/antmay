@@ -1,5 +1,0 @@
-interface:
-  display_name: Archive Thread
-  short_description: Archive a completed or abandoned thread
-policy:
-  allow_implicit_invocation: false
