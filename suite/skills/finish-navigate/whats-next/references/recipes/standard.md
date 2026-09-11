@@ -1,14 +1,15 @@
 # Standard recipe
 
-1. Discuss the change with `discussion` to settle open questions.
-2. Sketch the direction with `propose`, then align it against existing decisions with `reconcile-proposal`. *(optional)*
-3. Write the specification with `spec`.
-4. Reconcile the specification against the thread's decisions with `reconcile-spec`.
-5. Review the specification with `review-spec` before downstream work. *(optional)*
-6. Produce the strict plan with `plan-strict`.
-7. Reconcile the plan against the specification with `reconcile-plan`.
-8. Implement the plan with `implement-plan`.
-9. Review the delivered work with `review-implementation` if the risk warrants it. *(optional)*
-10. Review the code quality with `review-code` if the risk warrants it. *(optional)*
-11. Finish the thread with `finish` and choose how to handle the branch.
-12. Archive the thread with `archive-thread` when it no longer needs to remain active. *(optional)*
+1. Open the thread with `open-thread`.
+2. Discuss the change with `discussion` to settle open questions.
+3. Write the thread's design truth with `spec`.
+4. Review the specification with `review-spec` before downstream work. *(optional)*
+5. Produce the plan with `plan-strict`, or with `plan-brief` when the work fits on one screen.
+6. Check the plan against the specification with `check-plan`.
+7. Implement the plan with `implement-plan`.
+8. Review the delivered work with `review-implementation` if the risk warrants it. *(optional)*
+9. Review the code quality with `review-code` if the risk warrants it. *(optional)*
+10. Finish the thread with `finish` and choose how to handle the branch.
+11. Close the thread with `close-thread`, which lands the thread's draft ADRs and glossary entries into the project layer and archives the thread.
+
+Steps 5 to 7 may run more than once in one thread. Each further plan is a new folder under `plans/`, and each further implementation is a new folder under `implementations/`.
