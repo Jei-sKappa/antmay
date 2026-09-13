@@ -15,9 +15,9 @@ temp/
 .worktreeinclude
 
 # Thread-local WIP scratch
-docs/threads/**/.wip/
+.wip/threads/**/.wip/
 
 # Thread-local workspaces (pending-decision bundles, pending-review bundles, run state under implementation folders)
-docs/threads/**/.pending-decisions/
-docs/threads/**/.pending-reviews/
-docs/threads/**/.runs/
+.wip/threads/**/.pending-decisions/
+.wip/threads/**/.pending-reviews/
+.wip/threads/**/.runs/
