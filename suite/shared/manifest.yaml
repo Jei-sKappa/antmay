@@ -24,6 +24,9 @@ skills/finish-navigate/close-thread:
   - formats/log-line.md
   - formats/roadmap-index.md
   - formats/implementation-report.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/emit-terminal-outcome.md
 
 skills/finish-navigate/whats-next:
   - recipes/quick.md
@@ -38,6 +41,7 @@ skills/capture-discussion/open-thread:
   - trackers/github.md
   - formats/adr.md
   - formats/roadmap-index.md
+  - instructions/create-thread.md
 
 skills/capture-discussion/open-ticket:
   - repository-conventions.md
@@ -52,12 +56,15 @@ skills/capture-discussion/discussion:
   - formats/adr.md
   - formats/log-line.md
   - formats/roadmap-index.md
+  - instructions/append-log-line.md
 
 skills/capture-discussion/resolve-pending-decisions:
   - formats/discussion-point.md
   - formats/adr.md
   - formats/log-line.md
   - formats/pending-decision-bundle.md
+  - instructions/append-log-line.md
+  - instructions/emit-pending-decisions.md
 
 skills/primitives/emit-pending-decisions:
   - formats/pending-decision-bundle.md
@@ -69,42 +76,76 @@ skills/primitives/update-implementation-report:
 skills/spec/spec:
   - formats/adr.md
   - formats/log-line.md
+  - formats/pending-decision-bundle.md
+  - instructions/append-log-line.md
+  - instructions/emit-pending-decisions.md
+  - instructions/emit-terminal-outcome.md
 
 skills/plan/plan-brief:
   - formats/adr.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/emit-terminal-outcome.md
 
 skills/plan/plan-strict:
   - formats/adr.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/emit-terminal-outcome.md
 
 skills/plan/check-plan:
   - formats/adr.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/emit-terminal-outcome.md
 
 skills/implement/implement:
   - formats/adr.md
   - formats/log-line.md
   - formats/implementation-report.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/write-implementation-report.md
+  - instructions/emit-terminal-outcome.md
 
 skills/implement/implement-plan:
   - formats/adr.md
   - formats/log-line.md
   - formats/implementation-report.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/write-implementation-report.md
+  - instructions/emit-terminal-outcome.md
 
 skills/implement/implement-plan-with-subagents:
   - formats/adr.md
   - formats/log-line.md
   - formats/implementation-report.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/write-implementation-report.md
+  - instructions/emit-terminal-outcome.md
 
 skills/review/review-spec:
   - formats/adr.md
+  - instructions/emit-pending-review.md
+  - instructions/emit-terminal-outcome.md
 
 skills/review/review-implementation:
   - formats/adr.md
   - formats/implementation-report.md
+  - instructions/emit-pending-review.md
+  - instructions/emit-terminal-outcome.md
 
 skills/review/review-code:
   - formats/adr.md
   - formats/implementation-report.md
+  - instructions/emit-pending-review.md
+  - instructions/emit-terminal-outcome.md
 
 skills/roadmap/roadmap:
   - formats/adr.md
   - formats/roadmap-index.md
+  - formats/pending-decision-bundle.md
+  - instructions/emit-pending-decisions.md
+  - instructions/emit-terminal-outcome.md
