@@ -105,7 +105,10 @@ default branch.
 
 `AGENTS.md` at the root is the entry point — it explains the two modules and
 points at `suite/AGENTS.md` and `cli/AGENTS.md` for the rules that apply inside
-each. The method itself is documented in [`suite/method.md`](./suite/method.md).
+each. [`docs/working-with-threads.md`](./docs/working-with-threads.md) explains
+how this repository carries its own work in the threads the suite defines, and
+[`suite/authoring/`](./suite/authoring/) holds the conventions every skill is
+authored to.
 
 The CLI has a build and test gate, and a lint pass beside it; run both from
 `cli/` before proposing a change there:
