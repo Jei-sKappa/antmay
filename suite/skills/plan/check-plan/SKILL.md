@@ -4,7 +4,7 @@ description: Check the newest or a named plan folder against the thread's spec a
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.1.0
+  version: 0.0.0
 ---
 
 # Check Plan

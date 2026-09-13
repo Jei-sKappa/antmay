@@ -4,7 +4,7 @@ description: Read a thread-root spec.md as a downstream handoff and judge whethe
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.0.0
 ---
 
 # Review Spec

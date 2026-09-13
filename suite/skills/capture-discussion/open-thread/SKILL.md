@@ -4,7 +4,7 @@ description: Open a durable thread on disk from a rough idea, a tracker ticket, 
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.3.0
+  version: 0.0.0
 ---
 
 # Open Thread

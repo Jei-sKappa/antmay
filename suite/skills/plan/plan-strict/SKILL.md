@@ -4,7 +4,7 @@ description: Turn a thread's spec or a referenced artifact into a strict-granula
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.0.0
 ---
 
 # Plan Strict

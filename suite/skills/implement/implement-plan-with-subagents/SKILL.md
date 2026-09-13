@@ -4,7 +4,7 @@ description: Execute a strict plan folder — a `plans/<stamp>/plan.md` index pl
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.0.0
 ---
 
 # Implement Plan With Subagents

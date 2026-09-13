@@ -4,7 +4,7 @@ description: Check delivered work against the thread's durable intent and confir
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.0.0
 ---
 
 # Review Implementation

@@ -4,7 +4,7 @@ description: Implement a plan folder or a less-structured input (a referenced ar
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.2.0
+  version: 0.0.0
 ---
 
 # Implement

@@ -4,7 +4,7 @@ description: Settle the thread's queued pending decisions live with the user and
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.3.0
+  version: 0.0.0
 ---
 
 # Resolve Pending Decisions

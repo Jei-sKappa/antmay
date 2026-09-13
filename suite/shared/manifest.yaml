@@ -12,14 +12,7 @@
 # rerun the script; never hand-edit the generated copies. Removing an entry
 # below does not delete its previously generated copy — delete that by hand.
 
-skills/finish-navigate/finish:
-  - repository-conventions.md
-  - trackers/github.md
-  - formats/adr.md
-  - formats/implementation-report.md
-  - formats/roadmap-index.md
-
-skills/finish-navigate/close-thread:
+skills/close/close-thread:
   - formats/adr.md
   - formats/log-line.md
   - formats/roadmap-index.md
@@ -27,29 +20,20 @@ skills/finish-navigate/close-thread:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
-
-skills/finish-navigate/whats-next:
-  - recipes/quick.md
-  - recipes/standard.md
-  - recipes/roadmap.md
-  - formats/adr.md
-  - formats/implementation-report.md
-  - formats/roadmap-index.md
-  - formats/pending-decision-bundle.md
+  - formats/thread.md
+  - formats/glossary.md
 
 skills/capture-discussion/open-thread:
   - trackers/github.md
   - formats/adr.md
   - formats/roadmap-index.md
   - instructions/create-thread.md
+  - formats/thread.md
 
 skills/capture-discussion/open-ticket:
   - repository-conventions.md
   - trackers/github.md
   - formats/adr.md
-
-skills/primitives/allocate-thread:
-  - formats/log-line.md
 
 skills/capture-discussion/discussion:
   - formats/discussion-point.md
@@ -57,6 +41,7 @@ skills/capture-discussion/discussion:
   - formats/log-line.md
   - formats/roadmap-index.md
   - instructions/append-log-line.md
+  - formats/glossary.md
 
 skills/capture-discussion/resolve-pending-decisions:
   - formats/discussion-point.md
@@ -65,13 +50,7 @@ skills/capture-discussion/resolve-pending-decisions:
   - formats/pending-decision-bundle.md
   - instructions/append-log-line.md
   - instructions/emit-pending-decisions.md
-
-skills/primitives/emit-pending-decisions:
-  - formats/pending-decision-bundle.md
-
-skills/primitives/update-implementation-report:
-  - formats/adr.md
-  - formats/implementation-report.md
+  - formats/glossary.md
 
 skills/spec/spec:
   - formats/adr.md
@@ -101,7 +80,6 @@ skills/plan/check-plan:
 
 skills/implement/implement:
   - formats/adr.md
-  - formats/log-line.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
@@ -110,7 +88,6 @@ skills/implement/implement:
 
 skills/implement/implement-plan:
   - formats/adr.md
-  - formats/log-line.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
@@ -119,7 +96,6 @@ skills/implement/implement-plan:
 
 skills/implement/implement-plan-with-subagents:
   - formats/adr.md
-  - formats/log-line.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
@@ -149,3 +125,9 @@ skills/roadmap/roadmap:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
+
+skills/model-invoked/consult-adrs:
+  - formats/adr.md
+
+skills/model-invoked/consult-glossary:
+  - formats/glossary.md

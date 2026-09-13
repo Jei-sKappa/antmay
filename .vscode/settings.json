@@ -2,14 +2,12 @@
   "conventionalCommits.gitmoji": false,
   "conventionalCommits.promptFooter": false,
   "conventionalCommits.scopes": [
-    "allocate-thread",
     "check-plan",
     "cli",
     "close-thread",
+    "consult-adrs",
+    "consult-glossary",
     "discussion",
-    "emit-pending-decisions",
-    "emit-pending-review",
-    "finish",
     "implement",
     "implement-plan",
     "implement-plan-with-subagents",
@@ -22,8 +20,6 @@
     "review-implementation",
     "review-spec",
     "roadmap",
-    "spec",
-    "update-implementation-report",
-    "whats-next"
+    "spec"
   ]
 }

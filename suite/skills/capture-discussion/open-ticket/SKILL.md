@@ -4,7 +4,7 @@ description: Turn a rough idea into a tracker ticket whose body reads as a threa
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.5.0
+  version: 0.0.0
 ---
 
 # Open Ticket
