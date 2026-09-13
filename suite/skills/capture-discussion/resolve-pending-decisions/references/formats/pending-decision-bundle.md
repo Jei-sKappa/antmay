@@ -2,33 +2,33 @@
 
 A bundle queues the human decisions one run could not derive, so they can be settled later. It lives under the thread's `.pending-decisions/` and is named `<UTC>-<suffix>-<slug>.md`, where `<UTC>` is the creation time, `<suffix>` distinguishes bundles created in the same instant, and `<slug>` names the subject in kebab case.
 
-## Bundle shape
+## Shape
 
-```markdown
-# Pending decisions: <title>
+  ```markdown
+  # Pending decisions: <title>
 
-Producer: /<skill-name>
-Target: <thread-relative artifact or operation the decisions block>
-Request: <the originating user request, in one line>
-Created: <UTC>
-Points: <count>
+  Producer: /<skill-name>
+  Target: <thread-relative artifact or operation the decisions block>
+  Request: <the originating user request, in one line>
+  Created: <UTC>
+  Points: <count>
 
-## Points
+  ## Points
 
-### <short title>
+  ### <short title>
 
-Blocked: <what is blocked, stated concretely>
+  Blocked: <what is blocked, stated concretely>
 
-Why undecidable: <why the producer could not derive the answer from its inputs>
+  Why undecidable: <why the producer could not derive the answer from its inputs>
 
-Evidence: <what the producer weighed, in its own words>
+  Evidence: <what the producer weighed, in its own words>
 
-Suggestion: <free text, only when the producer sees an immediate fix>
+  Suggestion: <free text, only when the producer sees an immediate fix>
 
-### <short title of the next point>
+  ### <short title of the next point>
 
-…
-```
+  …
+  ```
 
 ## Rules
 
