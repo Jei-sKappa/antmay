@@ -14,7 +14,7 @@ temp/
 .config/wt.toml
 .worktreeinclude
 
-# Thread-local WIP scratch (per docs/workflow/v1/thread-layout.md)
+# Thread-local WIP scratch
 docs/threads/**/.wip/
 
 # Thread-local workspaces (pending-decision bundles, pending-review bundles, run state under implementation folders)

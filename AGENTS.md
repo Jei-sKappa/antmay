@@ -46,13 +46,10 @@ under `cli/`.
 
 The two are independent on disk — the executor reads no file inside `suite/` at
 runtime, and no skill knows the CLI exists — but they are coupled by contract.
-The CLI's trusted stage catalog (`cli/src/pipeline/catalog.ts`) invokes nine
-skills by name — `spec`, `reconcile-spec`, `review-spec`, `plan-brief`,
-`plan-strict`, `reconcile-plan`, `implement`, `implement-plan`, and
-`implement-plan-with-subagents` — points each at a thread artifact, and
-classifies the terminal outcome those skills emit. Renaming or retiring one of
-them, or changing the outcome protocol, breaks the CLI even though no path
-changes. The `suite/CLI contract` entry of `docs/glossary.md` fixes what that
+The CLI's trusted stage catalog (`cli/src/pipeline/catalog.ts`) invokes suite
+skills by name, points each at a thread artifact, and classifies the terminal
+outcome those skills emit. Renaming or retiring a skill the catalog names, or
+changing the outcome protocol, breaks the CLI even though no path changes. The `suite/CLI contract` entry of `docs/glossary.md` fixes what that
 coupling is; `cli/README.md` publishes which skills run as stages.
 
 ## Keep the CLI stage support reference current

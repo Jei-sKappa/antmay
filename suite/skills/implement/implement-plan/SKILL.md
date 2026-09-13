@@ -39,7 +39,7 @@ Only an explicit instruction to continue — the user saying in the invocation t
 
 ## Factual progress records
 
-This skill defines no formal per-task status token. The only status protocol is the run's terminal outcome (`## Procedure`, final step). Each attempted plan task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
+This skill defines no per-task status token. The run's terminal outcome (`## Procedure`, final step) is the only closing signal it emits. Each attempted plan task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
 
 One append-only block per attempted plan task lives in the run workspace's `progress.md` (see `## Run workspace`), and — for a committed task — the same facts ride in the commit message body. Chat output carries only a one-line summary per task. The progress blocks and the git history together are the audit trail. Each block records:
 

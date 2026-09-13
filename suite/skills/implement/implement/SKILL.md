@@ -36,7 +36,7 @@ Only an explicit instruction to continue — the user saying in the invocation t
 
 ## Factual progress records
 
-This skill defines no formal per-task status token. The only status protocol is the run's terminal outcome (`## Procedure`, final step). Each attempted implicit task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
+This skill defines no per-task status token. The run's terminal outcome (`## Procedure`, final step) is the only closing signal it emits. Each attempted implicit task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
 
 One append-only block per attempted implicit task lives in the run workspace's `progress.md` (see `## Run workspace`). Each block records:
 

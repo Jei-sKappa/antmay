@@ -3,7 +3,7 @@ name: finish
 description: Inspect what a thread has produced, surface any unresolved delivery signals, then hand the current branch off the way the user chooses — create a PR, merge into a confirmed target, or leave as-is; use when work is ready to deliver and you want an evidence-backed branch handoff.
 metadata:
   author: https://github.com/Jei-sKappa
-  version: 0.4.0
+  version: 0.4.1
 disable-model-invocation: true
 ---
 
@@ -40,7 +40,6 @@ Work from what you gathered and report what it shows.
 - **`.pending-decisions/`** — bundles of unresolved decisions awaiting a human.
 - **`.pending-reviews/`** — recorded review findings not yet acted on.
 - **Surviving run state** — `implementations/<folder>/.runs/` directories left by interrupted runs.
-- **Unresolved conflict markers** — a literal `<!-- CONFLICT:` left in `spec.md` or in a plan under `plans/`.
 - **Living documentation currency** — whether the project's evergreen docs appear to still reflect how the system works after this thread's changes.
 - **Git state** — the current branch name, a brief summary of recent commits, and the working-tree state.
 - **Verification evidence already recorded** — what the reports say was run and what it showed.
