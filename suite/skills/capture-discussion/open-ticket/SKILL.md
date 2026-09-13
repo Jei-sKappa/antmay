@@ -19,7 +19,7 @@ thread's genesis narrative unchanged, instead of mining intent out of a
 half-specification.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
-the whole result; the project's decisions and terms are read here and never
+the whole result; `docs/adr/` and `docs/glossary.md` are read here and never
 written.
 
 ## Inputs

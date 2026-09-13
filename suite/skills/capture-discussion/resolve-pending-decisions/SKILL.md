@@ -55,7 +55,7 @@ Every other answer is written the moment it settles, in this order:
 
 3. **Write the project-level record when the point passes the binding test** — a later thread could build against the settled point incorrectly if not told, and could not read it off the code. Show the user the `name`, the `description`, and the body text first; once they confirm or redirect it, write the draft at `adr/<yymmddhhmm>-<slug>.md` inside the thread, per `references/formats/adr.md`, creating `adr/` on demand. When the answer reverses a draft this thread already holds, edit that draft in place rather than adding a second record. A project term the answer introduces or changes is written to the thread's `glossary.md` per `references/formats/glossary.md` the same way, with the same confirmation of the wording.
 
-You write exactly these: lines appended to the thread's `log.md`, in-place amendments to the thread's `spec.md`, files under the thread's `adr/`, entries in the thread's `glossary.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — the project's decisions and terms are read here and never written.
+You write exactly these: lines appended to the thread's `log.md`, in-place amendments to the thread's `spec.md`, files under the thread's `adr/`, entries in the thread's `glossary.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — `docs/adr/` and `docs/glossary.md` are read here and never written.
 
 ## Follow-through
 

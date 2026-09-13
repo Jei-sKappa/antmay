@@ -15,7 +15,7 @@ This is a fidelity audit, not a code-quality pass: you check whether it delivers
 
 ## Inputs
 
-Gather all of these before judging; the procedure below works from what you gather here. Every one of them is read and none is written.
+Gather all of these before judging; the procedure below works from what you gather here.
 
 - `/consult-adrs` — read the project decisions relevant to the reviewed work before judging; authoritative.
 - `/consult-glossary` — write the project's fixed terms; authoritative.

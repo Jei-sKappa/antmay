@@ -57,7 +57,7 @@ Commit: <SHA + subject, or "none">
 Next action: <suggested follow-up>
 ```
 
-For a committed task, the same facts — with no status field, which does not exist — ride in the commit message body where applicable. The `progress.md` blocks and the git history together are the audit trail; no separate per-task status artifact is written.
+For a committed task, the same facts — with no status field — ride in the commit message body where applicable. The `progress.md` blocks and the git history together are the audit trail; no separate per-task status artifact is written.
 
 ## Dirty worktree handling
 

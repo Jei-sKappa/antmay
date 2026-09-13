@@ -25,14 +25,16 @@ model-invoked skill whose whole body is the act of consulting one source: its
 reading is the procedure, so there is no gathered state for a section to
 declare.
 
-**`## Procedure`.** A skill with an end-to-end execution sequence carries it
-under a single heading, `## Procedure`. This is a naming rule and not a presence
-mandate: an all-reference skill whose behaviour is fully carried by its format
-and guideline sections carries no procedure section at all rather than a ritual
-read-draft-output sequence. `## Workflow` is never used as a section heading, so
-that cross-references and greps for the procedure stay unambiguous. Headings that
-belong to an emitted artifact — the `**Steps:**` field inside a plan task brief,
-say — are part of that artifact's format and are untouched by this rule.
+**`## Procedure`.** A body that gathers its execution sequence into one numbered
+list heads that list exactly `## Procedure`. This is a naming rule and not a
+presence mandate: a body whose acts each carry their own named section needs no
+such list, and an all-reference skill whose behaviour is fully carried by its
+format and guideline sections carries no procedure section at all rather than a
+ritual read-draft-output sequence. `## Workflow` is never used as a section
+heading, so that cross-references and greps for the procedure stay unambiguous.
+Headings that belong to an emitted artifact — the `**Steps:**` field inside a
+plan task brief, say — are part of that artifact's format and are untouched by
+this rule.
 
 ## The three-part body
 

@@ -50,7 +50,7 @@ Then create the thread from those fields per `references/instructions/create-thr
 
 ## What you write
 
-The new thread folder with its `seed.md` and `log.md` is the whole result; `references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and the project's decisions, the project's terms, and the roadmap index are read here and never written.
+The new thread folder with its `seed.md` and `log.md` is the whole result; `references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and `docs/adr/`, `docs/glossary.md`, and the roadmap index are read here and never written.
 
 ## Report
 

@@ -15,7 +15,7 @@ This is the quality pass. The quality, safety, idiom, and testability axes apply
 
 ## Inputs
 
-Gather all of these before judging; the procedure below works from what you gather here. Every one of them is read and none is written.
+Gather all of these before judging; the procedure below works from what you gather here.
 
 - `/consult-adrs` — read the project decisions relevant to the code under review before judging; authoritative.
 - `/consult-glossary` — write the project's fixed terms; authoritative.

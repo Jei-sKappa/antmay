@@ -18,11 +18,11 @@ skill interactive.
   not failure.
 - **Completion-oriented** — the skill consumes supplied and durable inputs and
   produces an outcome without ongoing conversation: `spec`, the plan skills,
-  `check-plan`, the implement skills, the reviews, `close-thread`. It finishes
-  autonomously whenever that is safe. Asking is exceptional, justified only when
-  the inputs are insufficient and proceeding would invent intent, exceed
-  authority, or choose outside a granted freedom; discovering a missing human
-  decision mid-run does not change the posture.
+  `check-plan`, the implement skills, the reviews, `roadmap`, and `close-thread`.
+  It finishes autonomously whenever that is safe. Asking is exceptional,
+  justified only when the inputs are insufficient and proceeding would invent
+  intent, exceed authority, or choose outside a granted freedom; discovering a
+  missing human decision mid-run does not change the posture.
 - **One-shot deliverable** — the skill consumes an input and returns a finished
   message or handoff, as `open-ticket` does. Reading, copying, or forwarding the
   result afterwards does not make the operation a dialogue: its shape is input →

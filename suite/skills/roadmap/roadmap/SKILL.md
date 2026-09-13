@@ -40,8 +40,6 @@ What the file holds:
 - **The out-of-scope list** — what the direction deliberately excludes.
 - **The not-yet-specified note** — what cannot yet be seen well enough to become an entry.
 
-The index carries no shared-constraints section, no status field or checkbox on an entry, no brief for the work an entry names, and no companion file for feedback from the threads its entries open. Constraints that bind those threads are ADRs, which reach them through `docs/adr/`; the detail of an entry's work is produced by the discussion in the thread opened from it; and an entry's outcome is written beneath its heading by `close-thread` when that thread closes.
-
 ## Boundaries
 
 - **You create the index file and write nothing else.** Creating an index file is this skill's alone. Everything else you touch is read and never written: the thread's `seed.md`, `spec.md`, `adr/`, and `glossary.md`, and the project's `docs/adr/` and `docs/glossary.md`.

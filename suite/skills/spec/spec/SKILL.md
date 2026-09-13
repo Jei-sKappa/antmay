@@ -89,7 +89,7 @@ The material for the pass is the live conversation when this session holds one; 
 
 Amend in place every passage that material affects: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. Leave every other passage untouched — a passage the new material does not touch is not rewritten, re-worded, or re-derived.
 
-Amending in place under these rules, with one line appended to `log.md` per `references/formats/log-line.md` recording the change, is the one way the spec changes once it is authored — whether this skill performs the amendment or the user asks the agent to amend the spec directly.
+Amending in place under these rules, with one line appended to `log.md` per `references/instructions/append-log-line.md` recording the change, is the one way the spec changes once it is authored — whether this skill performs the amendment or the user asks the agent to amend the spec directly.
 
 ## Procedure
 

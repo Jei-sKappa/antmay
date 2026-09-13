@@ -77,9 +77,10 @@ There are no statuses, dispositions, or automatic retry loops.
 `.runs/`, inside an implementation folder, holds that run's working material:
 progress tracking, recovery after a context compaction, and, for the subagent
 executor, the scratch files agents hand to one another. One implementation folder
-belongs to one run, so its `.runs/` belongs to that run alone, and every producer
-writing into it is given a uniquely named, write-once path. What it records is
-factual run trace, in the form `interaction-posture.md` fixes for internal
-progress. It remains in place after the run as the run's operational trace, and
-durable information is carried into the implementation's `report.md`. No durable
-artifact cites a path inside it.
+belongs to one run, so its `.runs/` belongs to that run alone: the run appends
+its progress record as it goes, and every subagent writing into it is given a
+uniquely named, write-once path. What it records is factual run trace, in the
+form `interaction-posture.md` fixes for internal progress. It remains in place
+after the run as the run's operational trace, and durable information is carried
+into the implementation's `report.md`. No durable artifact cites a path inside
+it.

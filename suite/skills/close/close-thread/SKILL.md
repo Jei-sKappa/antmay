@@ -58,7 +58,7 @@ Re-invocation after either block is a plain re-run: this skill starts from `## I
 
 ## Writes
 
-Once every check passes, run these in order, without asking further questions. Every one of them writes into the project layer or the roadmap index.
+Once every check passes, run these in order, without asking further questions.
 
 1. **Land the ADRs.** When the thread's `adr/` holds drafts, create `docs/adr/` if it is not there, and move every file in `adr/` into it unaltered, with `git mv` — the filename is the record's identifier and the content is not touched. For each landed record whose `supersedes` names project ADRs, move those named files into `docs/adr/superseded/` (created on demand) in the same act, content untouched.
 
