@@ -1,6 +1,6 @@
 ---
 name: plan-strict
-description: Turn a thread's spec or a referenced artifact into a strict-granularity plan inside a fresh stamped plan folder — a plan.md index plus one dispatchable brief per task under plan-tasks/, each with explicit substeps, files modified, verification, and acceptance criteria; use when the downstream implementer is agent-leaning and needs a prescriptive plan.
+description: Turn the thread's design into a strict-granularity plan: an index plus one dispatchable brief per task.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -15,9 +15,9 @@ Forward-design a strict-granularity plan for the active thread. You gather the t
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the target. Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
-- **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form whenever the thread holds one, and it is the plan's authority: its intended outcome, expected behavior, and constraints drive the task list directly, its acceptance criteria map cleanly onto per-task acceptance criteria, and its degrees-of-freedom section tells the plan which *hows* are open. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue (a full `https://github.com/<owner>/<repo>/issues/<NNN>` URL or the short `owner/repo#NNN` form), an archived thread's artifact, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
+- `/consult-adrs` — read the project decisions relevant to the target before drafting; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
+- **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form whenever the thread holds one, and it is the plan's authority: its intended outcome, expected behavior, and constraints drive the task list directly, its acceptance criteria map cleanly onto per-task acceptance criteria, and its degrees-of-freedom section tells the plan which *hows* are open. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue (a full `https://github.com/<owner>/<repo>/issues/<NNN>` URL or the short `owner/repo#NNN` form), another thread's artifact read as history, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
 - The thread's `seed.md` — why the thread exists and what triggered it. Authoritative for intent.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread. A task cites a record by its stem where it rests on one, rather than restating it.
 
@@ -59,7 +59,7 @@ The index MUST contain:
 1. **Plan-level objective and context** — a short statement of what the whole plan achieves and the context a reader needs before opening any task file.
 2. **A `Source:` line** — names the upstream artifact this plan was compiled from, in exactly one of four legal value forms:
    - a **thread-relative pointer** to the upstream artifact within the active thread (e.g. `spec.md`, `adr/<stem>.md`);
-   - a **repo-relative path** for a cross-thread or project-level artifact (e.g. `docs/threads/<other>/spec.md`);
+   - a **repo-relative path** for a cross-thread or project-level artifact (e.g. `.wip/threads/<other>/spec.md`);
    - an **issue URL** (e.g. `https://github.com/<owner>/<repo>/issues/<NNN>`);
    - `none — raw prompt` when the plan was forward-designed directly from a user prompt with no artifact.
 3. **A Global Constraints block** — the project-wide requirements the plan must honor, copied **verbatim** from the source artifact's stated constraints, one line each. When the source states no constraints, or there is no source (`Source: none — raw prompt`), the block still appears and says so explicitly (e.g. `The source states no constraints.`) — never an omitted block.
@@ -92,7 +92,7 @@ The index and task files use freeform markdown. Use section headings that help t
 - **No frontmatter, no status markers** anywhere in the plan — not in the index, not in any task file. The index `plans/<folder>/plan.md` and every `plans/<folder>/plan-tasks/NN-<slug>.md` file opens directly with its body, with no `---` YAML block. Execution state lives in the implementation's commits and its report, not in the plan; the index never needs updating mid-run.
 - **The index is authoritative** for task count and order. A consumer that finds the index and the `plan-tasks/` folder disagreeing (an index entry with no file, a file not listed, ordinals that skip or collide) must flag the mismatch rather than guess.
 - **Task ordering is implicit in the numbering** — `01` runs before `02`, and so on. `NN` is a two-digit zero-padded ordinal matching the task's position in the index's ordered task list. There is no separate ordering field.
-- **Pointers carry their own frame.** A pointer from one plan file to another is relative to the plan folder (`plan-tasks/01-…md`); a pointer to a thread file is thread-relative (`spec.md`, `adr/<stem>.md`); a cross-thread or project-level pointer is repo-relative (`docs/adr/<stem>.md`, `docs/threads/<other>/…`).
+- **Pointers carry their own frame.** A pointer from one plan file to another is relative to the plan folder (`plan-tasks/01-…md`); a pointer to a thread file is thread-relative (`spec.md`, `adr/<stem>.md`); a cross-thread or project-level pointer is repo-relative (`docs/adr/<stem>.md`).
 - **No parallelization**, index and task files alike — the sequential contract of `## No Parallelization` binds every file.
 
 ## Self-Review
@@ -108,27 +108,20 @@ Run the four checks against the drafted plan (index + task files). If any check 
 
 ## Procedure
 
-1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a plan can be written), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
+1. **Preflight before any drafting (substantive execution).** A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when which input is meant is ambiguous per `## Inputs`.
 2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. Where the primary input's form is a GitHub issue, fetch the issue body and title (the invocation context is responsible for credentials); where it is the user's prompt, the prompt itself is that material. This picture is what keeps the plan from contradicting a project record or a record the thread has already settled.
 3. **Draft the index and task files.** Compose the plan per `## Strict Plan Body Shape`: an index `plan.md` (plan-level objective and context, the `Source:` line, the verbatim Global Constraints block, and the ordered task list) plus one `plan-tasks/NN-<kebab-slug>.md` brief per task, each carrying the six labeled fields plus the `Consumes:`/`Produces:` hand-off lines. Before writing the first task file, look at `references/worked-example.md` for the complete shape of a task file and the matching index excerpt. No parallelization markers and no frontmatter anywhere.
 4. **Run self-review.** Execute the four checks from `## Self-Review` across the whole drafted plan (index + task files) until all four pass. The emitted files do not contain self-review notes.
 5. **Write the plan.** Create this invocation's plan folder per `## Plan folder`, then write its `plan.md` (the index) and its `plan-tasks/NN-<kebab-slug>.md` files together in one pass. The index is named exactly `plan.md`; each task file is `NN-<kebab-slug>.md` under the folder's `plan-tasks/` — no UTC stamp, no `v<N>`, and no YAML frontmatter anywhere. The `plan-tasks/` folder is created on demand on the first task file written; do not pre-create it empty.
-6. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Plan written: plans/<folder>/plan.md`.
+6. **Confirm.** End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — Plan written: plans/<folder>/plan.md`, and nothing before it — no preamble, no summary, no closing remark.
 
 ## Blocked
 
-This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation, thread-resolution, and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
+This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-A task that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that task, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a term in `docs/glossary.md` is another; the rule, and what makes a contradiction intentional instead, is stated in full in `references/formats/adr.md`.
+A task that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that task, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a project glossary term is another: classify it by the conflict rule `/consult-adrs` carries, and queue it rather than overriding the project record.
 
-Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it:
-
-- `/plan-strict` as the producing skill.
-- The plan folder as the target.
-- The originating user request.
-- One point per open decision, each stating what the decision blocks, why you could not derive the answer from the gathered inputs, and the evidence you weighed — in your own words. Add a free-text suggestion to a point only when you see an immediate fix.
-
-Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Finish everything safely derivable first, then queue the open decision(s) per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, the plan folder as the target, the originating user request, and one point per open decision. Then stop with a concise notification of where the bundle was written, whose final line is `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 A blocked run still writes the plan — the index and every task file — as complete as the settled inputs allow, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.
 

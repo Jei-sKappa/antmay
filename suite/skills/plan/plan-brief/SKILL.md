@@ -1,6 +1,6 @@
 ---
 name: plan-brief
-description: Turn a thread's spec or a referenced artifact into a one-screen plan.md inside a fresh stamped plan folder — an outcome, a small ordered list of steps, and overall verification; use when lightweight work needs a sensible implementation order without the ceremony of a full multi-file plan.
+description: Turn the thread's design into a one-screen plan.md inside a fresh stamped plan folder.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -17,9 +17,9 @@ A brief plan trades depth for speed: it orders the work and records overall veri
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the target. Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
-- **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form whenever the thread holds one, and it is the plan's authority. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue, an archived thread's artifact, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
+- `/consult-adrs` — read the project decisions relevant to the target before drafting; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
+- **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form whenever the thread holds one, and it is the plan's authority. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue, another thread's artifact read as history, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
 - The thread's `seed.md` — why the thread exists and what triggered it. Authoritative for intent.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread. The plan cites a record by its stem where a step rests on it, rather than restating it.
 
@@ -65,7 +65,7 @@ Source: <thread-relative source>
 - **Steps** are a small numbered list in execution order, each step one short paragraph. They order the work; the implementer derives the obvious substeps.
 - **Verification** records the overall checks that demonstrate the change works — not a separate verification contract for every step.
 - The plan should normally fit on one screen: a single flat markdown file containing only the sections above.
-- Within-thread references in the body are thread-relative (`spec.md`, `adr/<stem>.md`); cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `docs/threads/<other>/…`).
+- Within-thread references in the body are thread-relative (`spec.md`, `adr/<stem>.md`); cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.wip/threads/<other>/…`).
 
 ## When to recommend plan-strict
 
@@ -73,25 +73,18 @@ When safe planning requires detailed substeps, per-task verification, explicit f
 
 ## Procedure
 
-1. **Preflight before any drafting (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet (a thread must be opened before a plan can be written), when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), or when which input is meant is ambiguous per `## Inputs`.
+1. **Preflight before any drafting (substantive execution).** A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when which input is meant is ambiguous per `## Inputs`.
 2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. That picture is what keeps the plan from contradicting a project record or a record the thread has already settled.
 3. **Draft the body.** Compose the plan per `## Plan shape`: a title, `Source`, `## Outcome`, a small ordered `## Steps` list, `## Verification`, and `## Notes` only when needed. Keep it to roughly one screen. If the work warrants more rigor, recommend `plan-strict` instead.
 4. **Write the artifact.** Create this invocation's plan folder per `## Plan folder` and write `plan.md` inside it — literally that name, no frontmatter.
-5. **Confirm.** End with exactly this line, and nothing before it — no preamble, no summary, no closing remark: `Outcome: DONE — Plan written: plans/<folder>/plan.md`.
+5. **Confirm.** End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — Plan written: plans/<folder>/plan.md`, and nothing before it — no preamble, no summary, no closing remark.
 
 ## Blocked
 
-This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation, thread-resolution, and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
+This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-A step that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that step, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a term in `docs/glossary.md` is another; the rule, and what makes a contradiction intentional instead, is stated in full in `references/formats/adr.md`.
+A step that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that step, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a project glossary term is another: classify it by the conflict rule `/consult-adrs` carries, and queue it rather than overriding the project record.
 
-Finish everything safely derivable first, then hand the open decision(s) to `/emit-pending-decisions`, giving it:
-
-- `/plan-brief` as the producing skill.
-- The plan folder as the target.
-- The originating user request.
-- One point per open decision, each stating what the decision blocks, why you could not derive the answer from the gathered inputs, and the evidence you weighed — in your own words. Add a free-text suggestion to a point only when you see an immediate fix.
-
-Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Finish everything safely derivable first, then queue the open decision(s) per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, the plan folder as the target, the originating user request, and one point per open decision. Then stop with a concise notification of where the bundle was written, whose final line is `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 A blocked run still writes `plan.md` as complete as the settled inputs allow — every derivable step and the overall verification in place, each blocked specific marked inline at its exact location pointing at the pending bundle. The only permitted gaps are those marked ones tied to queued decisions.

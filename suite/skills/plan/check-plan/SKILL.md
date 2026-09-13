@@ -1,6 +1,6 @@
 ---
 name: check-plan
-description: Check the newest or a named plan folder against the thread's spec and correct in place every fault the spec settles, queueing the rest as pending decisions; use when a plan has been written and must be made to match the spec before implementation starts.
+description: Check a plan folder against the thread's spec and correct in place every fault the spec settles.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -15,8 +15,8 @@ Check one plan folder against the thread's spec and correct it in place, end to 
 
 Gather all of these before checking; everything below works from what you gather here.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the plan. Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
+- `/consult-adrs` — read the project decisions relevant to the plan before checking; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
 - The thread's **`spec.md`** — the sole authority for every correction you make. A fault is a fault only because the spec says so, and a fix is available only because the spec settles it. Required: the check does not run on a thread that holds no spec.
 - **The plan folder to check** — the edit target, in one of two accepted forms. When the invocation **names a folder** under `plans/`, that folder is the form. Otherwise the form is the **newest folder under `plans/` by stamp**. Read everything in it: its index `plan.md`, and the task briefs under `plan-tasks/` when the plan is strict.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread; these are the records the spec cites by stem.
@@ -47,25 +47,18 @@ You write files inside the checked plan folder only: its `plan.md`, and its `pla
 
 ## Procedure
 
-1. **Preflight before any editing (substantive execution).** Resolve the thread: work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`; if `cwd` already sits inside a thread root, that is the thread. A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when no thread exists yet, when several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp), and when `spec.md` or the plan folder does not resolve per `## Inputs`.
+1. **Preflight before any editing (substantive execution).** A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when `spec.md` or the plan folder does not resolve per `## Inputs`.
 2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. This picture is what lets you tell a fault from a choice the spec granted.
 3. **Walk the plan against the spec, task by task.** Take the tasks in plan order. For each, hold it against the spec's intended outcome, scope, expected behavior, constraints, and settled decisions, and record the faults of `## What is corrected` you find. Then walk the spec's acceptance criteria and record each one no task covers. Distinguish a fault from an elaboration the plan is entitled to and from a choice the spec's degrees of freedom leave open; neither is a fault.
 4. **Apply the corrections in place.** Edit the plan folder's files directly, per `## What is corrected` and within `## Write boundary`. Keep each edit to the smallest change that makes the plan match the spec.
 5. **Keep a strict plan self-consistent.** When the plan has an index plus task briefs, every correction lands in both places it shows: a task's objective, ordinal, or title changed in a brief is changed in the index's ordered task list too, and coverage added to a brief is reflected in whatever index line describes it. The index stays authoritative for task count and order.
 6. **Report.** List the corrections you applied, one line each, naming the file and what changed; say plainly when the plan needed none.
-7. **Confirm.** End with exactly this line as the last line of your reply: `Outcome: DONE — Plan checked: plans/<folder>/`. That is the outcome whether you corrected many faults or none.
+7. **Confirm.** End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — Plan checked: plans/<folder>/`. That is the outcome whether you corrected many faults or none.
 
 ## Blocked
 
-This path is reachable only after preflight has passed and checking against otherwise-valid inputs has begun — substantive execution. Invocation, thread-resolution, spec, and plan-folder failures are preflight refusals (`## Procedure` step 1), not this path. It applies to anything the spec does not settle: a fault whose fix the spec gives no basis for, a gap whose coverage belongs to no task the plan has, or a contradiction between two readings of the spec that you cannot resolve from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
+This path is reachable only after preflight has passed and checking against otherwise-valid inputs has begun — substantive execution. Invocation, spec, and plan-folder failures are preflight refusals (`## Procedure` step 1), not this path. It applies to anything the spec does not settle: a fault whose fix the spec gives no basis for, a gap whose coverage belongs to no task the plan has, or a contradiction between two readings of the spec that you cannot resolve from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-A task resting on a thread ADR or a spec decision that you find wrong is one of these: the check does not correct that task, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a term in `docs/glossary.md` is another; the rule, and what makes a contradiction intentional instead, is stated in full in `references/formats/adr.md`.
+A task resting on a thread ADR or a spec decision that you find wrong is one of these: the check does not correct that task, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a project glossary term is another: classify it by the conflict rule `/consult-adrs` carries, and queue it rather than overriding the project record.
 
-Apply every derivable correction first, then hand the open decision(s) to `/emit-pending-decisions`, giving it:
-
-- `/check-plan` as the producing skill.
-- The plan folder as the target.
-- The originating user request.
-- One point per open decision, each stating what the decision blocks, why you could not derive the answer from the gathered inputs, and the evidence you weighed — in your own words. Add a free-text suggestion to a point only when you see an immediate fix.
-
-Then stop with a concise notification of where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Apply every derivable correction first, then queue the open decision(s) per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, the plan folder as the target, the originating user request, and one point per open decision. Then stop with a concise notification of where the bundle was written, whose final line is `Outcome: BLOCKED — pending decisions at <bundle path>`.

@@ -51,7 +51,6 @@ skills/capture-discussion/resolve-pending-decisions:
   - formats/glossary.md
 
 skills/spec/spec:
-  - formats/adr.md
   - formats/log-line.md
   - formats/pending-decision-bundle.md
   - instructions/append-log-line.md
@@ -59,19 +58,16 @@ skills/spec/spec:
   - instructions/emit-terminal-outcome.md
 
 skills/plan/plan-brief:
-  - formats/adr.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
 
 skills/plan/plan-strict:
-  - formats/adr.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
 
 skills/plan/check-plan:
-  - formats/adr.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
@@ -118,7 +114,6 @@ skills/review/review-code:
   - instructions/emit-terminal-outcome.md
 
 skills/roadmap/roadmap:
-  - formats/adr.md
   - formats/roadmap-index.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
