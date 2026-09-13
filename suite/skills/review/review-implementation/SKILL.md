@@ -1,6 +1,6 @@
 ---
 name: review-implementation
-description: Check delivered work against the thread's durable intent and confirm the implementation's report honestly describes what exists — reviewing strictly read-only and recording any findings as a single pending-review bundle; use when an implementation needs a fidelity review before it is accepted.
+description: Check delivered work against the thread's durable intent and test the report's account of it.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -17,8 +17,8 @@ This is a fidelity audit, not a code-quality pass: you check whether it delivers
 
 Gather all of these before judging; the procedure below works from what you gather here. Every one of them is read and none is written.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the reviewed work. Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
+- `/consult-adrs` — read the project decisions relevant to the reviewed work before judging; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers. Material.
 - That folder's `report.md` — the implementer's account of the delivered work and the claim under test, in the shape `references/formats/implementation-report.md` defines. Material.
 - The plan folder the report's `Plan:` line names, when it names one — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan. Authoritative for what this implementation set out to build.
@@ -35,7 +35,7 @@ The definition of intended behavior is the most specific durable intent the thre
 2. else the plan folder the report's `Plan:` line names — `plans/<folder>/plan.md`, a one-screen brief or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
-The thread's `adr/` applies on top of the resolved anchor as a binding constraint source: delivered work that contradicts a thread ADR is a finding no matter which anchor you resolved, and so is work that contradicts a project ADR under `docs/adr/` or a term in `docs/glossary.md` that the thread's delta does not redefine. `references/formats/adr.md` states what makes a contradiction intentional.
+The thread's `adr/` applies on top of the resolved anchor as a binding constraint source: delivered work that contradicts a thread ADR is a finding no matter which anchor you resolved, and so is work that contradicts a project ADR or a project glossary term the thread's delta does not redefine. What makes such a contradiction intentional rather than a finding is the conflict rule `/consult-adrs` carries.
 
 When the resolved anchor is coarse — `seed.md` only, with no acceptance criteria the thread ever recorded — name it explicitly in the bundle's `## Context` and scope every finding to what that anchor actually says. Never invent acceptance criteria the thread never recorded and then fault the work for missing them.
 
@@ -49,15 +49,13 @@ Read the report to learn what the implementer claims, then judge the claim, not 
 
 ## Procedure
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. Two situations make a findings bundle physically impossible — `.pending-reviews/` would live inside the very thread that failed to resolve — so in both, refuse in chat, write nothing, and end with `Outcome: REFUSED — <reason>`: no thread exists yet, or several thread roots exist and which is active is ambiguous (never silently pick the most recent stamp).
+1. **Resolve the implementation folder under review.** When the invocation names a folder under `implementations/`, that folder is the target. When it names none, the target is the newest folder under `implementations/` by stamp; when several folders exist, say in chat which one you resolved before judging, so the user can redirect you. If the thread holds no implementation folder, or the invocation names one that does not exist, there is nothing to review: say so, write nothing, and end with `Outcome: REFUSED — <reason>`.
 
-2. **Resolve the implementation folder under review.** When the invocation names a folder under `implementations/`, that folder is the target. When it names none, the target is the newest folder under `implementations/` by stamp; when several folders exist, say in chat which one you resolved before judging, so the user can redirect you. If the thread holds no implementation folder, or the invocation names one that does not exist, there is nothing to review: say so, write nothing, and end with `Outcome: REFUSED — <reason>`.
+2. **Gather the inputs.** Read everything under `## Inputs` now, in that order, read-only, and resolve the authority anchor (`## The authority anchor`) from what you gathered. If the user named a code reference that is vague ("my changes", "the branch" with no name) or matches several plausible candidates, the review has no resolvable target: say so, write nothing, and end with `Outcome: REFUSED — <the ambiguity>`; never pick by recency or sort order.
 
-3. **Gather the inputs.** Read everything under `## Inputs` now, in that order, read-only, and resolve the authority anchor (`## The authority anchor`) from what you gathered. If the user named a code reference that is vague ("my changes", "the branch" with no name) or matches several plausible candidates, the review has no resolvable target: say so, write nothing, and end with `Outcome: REFUSED — <the ambiguity>`; never pick by recency or sort order.
+3. **Judge against the categories.** Walk the delivered work against each category below (`## What you judge`). For every real gap, form a finding: what is wrong, where in the code or report it shows, why it would harm whoever picks up the work next, and a severity — `blocker` (the work does not deliver the intent, or the report materially misstates what exists), `issue` (a real gap that will cause rework or a wrong assumption), or `nit` (minor and survivable). Tether every finding to concrete downstream impact.
 
-4. **Judge against the categories.** Walk the delivered work against each category below (`## What you judge`). For every real gap, form a finding: what is wrong, where in the code or report it shows, why it would harm whoever picks up the work next, and a severity — `blocker` (the work does not deliver the intent, or the report materially misstates what exists), `issue` (a real gap that will cause rework or a wrong assumption), or `nit` (minor and survivable). Tether every finding to concrete downstream impact.
-
-5. **Report.** A clean review returns a concise fidelity judgment in chat and writes no file, ending `Outcome: DONE — <the fidelity judgment>`. A review with findings emits exactly one bundle (`## Recording findings`), reports its path, and ends `Outcome: DONE — findings at <bundle path>`. No preamble, no closing remark.
+4. **Report.** A clean review returns a concise fidelity judgment in chat and writes no file; a review with findings records exactly one bundle (`## Recording findings`) and reports its path. End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — <the fidelity judgment>` for a clean review, or `Outcome: DONE — findings at <bundle path>` when a bundle was written. No preamble, no closing remark.
 
 ## What you judge
 
@@ -73,14 +71,9 @@ Findings that are purely about code quality on its own merits — readability, n
 
 ## Recording findings
 
-When you hold one or more findings, hand them to `/emit-pending-review` as a single bundle. Give it:
+When you hold one or more findings, record them as a single bundle per `references/instructions/emit-pending-review.md`, naming yourself as the reviewer and the implementation folder you reviewed, `implementations/<folder>/`, as the target. When the resolved anchor is coarse, add a `## Context` note naming that anchor so a reader knows what the findings are scoped to.
 
-- `review-implementation` as the reviewer.
-- The implementation folder you reviewed, `implementations/<folder>/`, as the target.
-- When the resolved anchor is coarse, a `## Context` note naming that anchor so a reader knows what the findings are scoped to.
-- Each finding with its severity (`blocker` / `issue` / `nit`), a category (`acceptance`, `constraints`, `scope`, `behavior`, `test-coverage`, or the variation you used), the finding statement, the evidence (the code location and the anchor section or report claim it fails against), and the downstream impact.
-
-The primitive allocates one uniquely named file under the thread's `.pending-reviews/` folder, orders the findings, and reports the path; you emit one bundle per review run — that bundle is the only place findings go, and recording them there is where your job ends.
+Your category vocabulary is `acceptance`, `constraints`, `scope`, `behavior`, `test-coverage`, or the variation you used, and the evidence for a finding is the code location together with the anchor section or report claim it fails against. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 
 That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the delivered code, the implementation folder and its `report.md`, the plan folder the report names, `spec.md`, `seed.md`, the thread's `adr/` and `glossary.md`, `docs/adr/`, and `docs/glossary.md`. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
 

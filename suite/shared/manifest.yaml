@@ -14,7 +14,6 @@
 
 skills/close/close-thread:
   - formats/adr.md
-  - formats/log-line.md
   - formats/roadmap-index.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
@@ -94,18 +93,15 @@ skills/implement/implement-plan-with-subagents:
   - instructions/emit-terminal-outcome.md
 
 skills/review/review-spec:
-  - formats/adr.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
 
 skills/review/review-implementation:
-  - formats/adr.md
   - formats/implementation-report.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
 
 skills/review/review-code:
-  - formats/adr.md
   - formats/implementation-report.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
