@@ -1,6 +1,6 @@
 ---
 name: implement-plan
-description: Execute a strict plan folder — a `plans/<stamp>/plan.md` index plus its `plan-tasks/` briefs — end to end on the current working tree into a new implementation folder, walking the tasks in index order, self-reviewing after each, and auto-committing per task; use when a strict plan needs to be carried to working code in a single agent.
+description: Execute a strict plan folder task by task on the current working tree, committing per task.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -17,25 +17,24 @@ This skill is single-agent: the current session is the implementer and runs the 
 
 Gather all of these before executing the first task; everything below works from what you gather here.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the plan. Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
+- `/consult-adrs` — read the project decisions relevant to the plan before executing it; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
 - The thread's `spec.md` — the thread's design truth, and what the implementation answers to. Authoritative.
 - **The plan folder to execute** — the primary input and the artifact this run carries to code, in one of two accepted forms. When the invocation **names a folder** under `plans/`, that folder is the form; otherwise the form is the **newest folder under `plans/` by stamp**. It resolves to `plans/<folder>/plan.md` — the index, authoritative for task count and order — together with the `plan-tasks/NN-<kebab-slug>.md` brief each index entry points at. When the index's `Source:` line names an artifact other than the thread's `spec.md`, read that artifact too: it holds the intent the plan was compiled from. Authoritative for what this run builds.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread; these are the records the spec cites by stem.
 - Every `implementations/*/report.md` whose `Plan:` line names that same plan folder — the record of what earlier passes over the plan already delivered. Material: a task one of them records as completed is skipped once it is verified against the code.
-- The newest folder under `implementations/` by stamp, only when the invocation says explicitly to continue — that folder's `report.md` and its run state are where the continuation resumes from. Material.
 
 The plan folder's shape is strict: an index named exactly `plan.md` at the folder root; a `plan-tasks/` folder beside it; a two-digit ordinal `NN` on every brief matching the index's ordered task list; and on every brief the six mandatory fields — Objective; Input / context; Steps / substeps; Files modified; Verification; Acceptance criteria — plus the two hand-off lines `Consumes:` (what this task uses from earlier tasks) and `Produces:` (what later tasks rely on), where `none` is a legal value for either. Every task is sequential, isolated, independently implementable, and independently reviewable, and the tasks run in index order. A plan folder that does not match this shape — a missing index, a `plan-tasks/` folder that disagrees with the index, a brief missing its mandatory fields — fails preflight (`## Procedure`); the remedy is to correct the plan upstream, and this run infers no missing structure.
 
 The invocation MAY carry a SPECIFIC plan task identifier alongside the plan reference (for example, "task 3" or "tasks 2 and 4"). When it does, execute only the named task(s); when it does not, execute every task the index lists, in order. A single named task runs under every rule below unchanged — read the plan READ-ONLY, implement the task, self-review, commit per `## Commit Policy`, and append the factual progress block.
 
-If which input is meant is ambiguous — an invocation naming a plan folder that is not under `plans/`, or a plan reference with no clear referent — that is a preflight failure, not an in-run decision: refuse before executing anything, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency; the newest-by-stamp resolution applies only to an invocation that points at `plans/` without naming a folder. (Which *thread* is meant is resolved the same way — an unresolvable or ambiguous thread also refuses in preflight.)
+If which input is meant is ambiguous — an invocation naming a plan folder that is not under `plans/`, or a plan reference with no clear referent — that is a preflight failure, not an in-run decision: refuse before executing anything, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency; the newest-by-stamp resolution applies only to an invocation that points at `plans/` without naming a folder.
 
 ## Implementation folder
 
 Every invocation writes into its own new folder `implementations/<yymmddhhmm>[-<slug>]/` under the thread root, creating `implementations/` on demand. The stamp is the folder's creation time in UTC at minute resolution. Append `-<slug>`, a short kebab-case name for the implementation's purpose, when the invocation names one, or when a folder carrying that stamp already exists. The folder holds this run's `report.md` and its run state under `.runs/`.
 
-Only an explicit instruction to continue — the user saying in the invocation to carry on the previous implementation — reuses the newest folder under `implementations/` by stamp together with its run state, resuming its `.runs/progress.md` and rewriting its `report.md`. Absent that instruction, allocate a fresh folder and never write into one an earlier invocation created.
+Every invocation allocates its own folder and is that folder's only writer; a folder an earlier invocation created is read, never written.
 
 ## Factual progress records
 
@@ -76,21 +75,19 @@ When authorization is present, the pre-existing dirty changes are unavoidably pi
 
 ## Procedure
 
-Steps 1–4 are preflight. They complete in full — with no thread artifact written, no implementation folder allocated, no project file edited, and no commit made — before execution begins at step 5. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–3 are preflight. They complete in full — with no thread artifact written, no implementation folder allocated, no project file edited, and no commit made — before execution begins at step 4. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
 
 1. **Safety preflight: dirty worktree.** Run the `## Dirty worktree handling` check first, before any other preflight step; it refuses a dirty tree that lacks valid advance authorization.
 
-2. **Resolve the active thread.** If the plan reference is a path under a thread folder, the thread root (`docs/threads/<YYMMDDHHMMSSZ-slug>/`) is implicit; if `cwd` already sits inside a thread root, that is the thread. Otherwise identify the active thread root whose `implementations/` this run's folder will live under. If no active thread resolves, or several thread roots plausibly apply and which is active is ambiguous, that is a preflight failure — refuse, naming what was ambiguous, and never silently pick the most recent stamp. This is the one situation a pending bundle is physically impossible, because `.pending-decisions/` would live inside the very thread that failed to resolve.
+2. **Gather the inputs.** Read everything under `## Inputs` now, in that order, READ-ONLY. The index is read in full here; each `plan-tasks/NN-<kebab-slug>.md` brief is read when the run reaches its task (step 6a), because the session that reads a brief is the one that implements it. If several plausible plan folders match the reference, that is a preflight failure — refuse per `## Inputs` rather than picking by recency.
 
-3. **Gather the inputs.** Read everything under `## Inputs` now, in that order, READ-ONLY. The index is read in full here; each `plan-tasks/NN-<kebab-slug>.md` brief is read when the run reaches its task (step 7a), because the session that reads a brief is the one that implements it. If several plausible plan folders match the reference, that is a preflight failure — refuse per `## Inputs` rather than picking by recency.
+3. **Run the structural preflight and verify required tooling.** Confirm the plan folder matches the strict shape `## Inputs` defines: (a) every task-list entry in the index resolves to an existing `plan-tasks/NN-<kebab-slug>.md` file; (b) every file under `plan-tasks/` is listed in the index; (c) ordinals are contiguous and match the filenames. If any check fails, end `Outcome: REFUSED — malformed plan folder: <mismatch>` before beginning the run — no task was attempted, and the remedy is correcting the plan upstream. Also confirm any tooling and credentials the run explicitly requires are present; a missing required tool or credential caught here is likewise a preflight refusal. If the invocation named a task identifier, narrow the run to that subset of the index's task list; otherwise execute every task the index lists, in order.
 
-4. **Run the structural preflight and verify required tooling.** Confirm the plan folder matches the strict shape `## Inputs` defines: (a) every task-list entry in the index resolves to an existing `plan-tasks/NN-<kebab-slug>.md` file; (b) every file under `plan-tasks/` is listed in the index; (c) ordinals are contiguous and match the filenames. If any check fails, end `Outcome: REFUSED — malformed plan folder: <mismatch>` before beginning the run — no task was attempted, and the remedy is correcting the plan upstream. Also confirm any tooling and credentials the run explicitly requires are present; a missing required tool or credential caught here is likewise a preflight refusal. If the invocation named a task identifier, narrow the run to that subset of the index's task list; otherwise execute every task the index lists, in order.
+4. **Allocate the implementation folder.** Preflight has passed; create this invocation's folder per `## Implementation folder`, allocate its run workspace per `## Run workspace`, and record the task list to execute and its state in `progress.md` so progress stays legible.
 
-5. **Allocate the implementation folder.** Preflight has passed; create this invocation's folder per `## Implementation folder`, allocate its run workspace per `## Run workspace`, and record the task list to execute and its state in `progress.md` so progress stays legible.
+5. **Honour the earlier reports of the same plan.** Take the reports gathered per `## Inputs` — every `implementations/*/report.md` whose `Plan:` line names this plan folder — and mark as already done each plan task they record as completed, after verifying against the code that the change is actually in place. A task a report claims but the code does not carry is implemented in this run; note the discrepancy in its factual progress block. Record which tasks were skipped and why in `progress.md`.
 
-6. **Honour the earlier reports of the same plan.** Take the reports gathered per `## Inputs` — every `implementations/*/report.md` whose `Plan:` line names this plan folder — and mark as already done each plan task they record as completed, after verifying against the code that the change is actually in place. A task a report claims but the code does not carry is implemented in this run; note the discrepancy in its factual progress block. Record which tasks were skipped and why in `progress.md`.
-
-7. **For each plan task still to do, IN ORDER:** (Sequential execution — there are no waves; the implicit dependency is "the previous numbered plan task ran first".)
+6. **For each plan task still to do, IN ORDER:** (Sequential execution — there are no waves; the implicit dependency is "the previous numbered plan task ran first".)
 
    a. **Read the brief and implement.** Read this task's `plan-tasks/NN-<kebab-slug>.md` READ-ONLY, then execute its Steps / substeps literally. Make the code changes the task calls for. Use judgment if the brief is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the factual progress block per `## Deviations`.
 
@@ -104,9 +101,9 @@ Steps 1–4 are preflight. They complete in full — with no thread artifact wri
 
    d. **Append the factual progress block.** Append exactly one block for this attempted task to `progress.md` per `## Factual progress records` — after the commit for a committed task (carrying its SHA + subject), or with `Commit: none` for an empty-diff completion or a task stopped per `## Blocked`. Emit the one-line chat summary for the task.
 
-8. **Write the report.** Once every plan task has run (or the run stopped early per `## Blocked`), write this folder's report per `## Implementation report`.
+7. **Write the report.** Once every plan task has run (or the run stopped early per `## Blocked`), write this folder's report per `## Implementation report`.
 
-9. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted plan task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, and the report that was written. Name any parent-level discovery surfaced per `## Settled points and discoveries`. Close with exactly one terminal line from the closed vocabulary — `Outcome: DONE — <report path>` when the requested operation completed, including completion with non-blocking concerns; `Outcome: BLOCKED — <diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `Outcome: REFUSED — <reason>` when preflight prevented execution (steps 1–4). The line is added to — it never replaces — the summary above.
+8. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted plan task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, and the report that was written. Name any parent-level discovery surfaced per `## Discoveries`. End per `references/instructions/emit-terminal-outcome.md`, with `<report path>` as the reason when the requested operation completed, including completion with non-blocking concerns; `<diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `<reason>` when preflight prevented execution (steps 1–3).
 
 ## Run workspace
 
@@ -116,19 +113,13 @@ Keep all operational progress for a run inside this invocation's implementation 
 implementations/<yymmddhhmm>[-<slug>]/.runs/progress.md
 ```
 
-Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it by appending as the run proceeds — the task list to execute first, then one factual progress block per attempted task — so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, reads only this folder's own `.runs/progress.md` together with `git log`, and resumes from the last block it holds; it never reads another folder's run state and never relies on conversation recollection. A continuation run resumes the newest implementation folder's `.runs/progress.md` and appends to it.
+Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it by appending as the run proceeds — the task list to execute first, then one factual progress block per attempted task — so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, reads only this folder's own `.runs/progress.md` together with `git log`, and resumes from the last block it holds; it never reads another folder's run state and never relies on conversation recollection.
 
 `.runs/` is operational, not durable: no durable artifact — not the report, not a commit message, nothing — ever cites a path inside it. Anything a durable record needs (a concern, a deviation, a finding) is copied into that record. It stays in place after the run as the run's trace.
 
 ## Implementation report
 
-On EVERY terminal outcome an executing run reaches — every plan task completed, a partial run, a `BLOCKED` halt, or a no-op where the requested state already existed — invoke `/update-implementation-report`, handing it:
-
-- **This invocation's implementation folder**, whose `report.md` is the target.
-- **The plan folder executed**, as `Plan: plans/<folder>/`.
-- **The outcome material**, folded from `progress.md` re-read from disk: which plan tasks were completed, partially completed, blocked, or found already satisfied; the resulting code, test, configuration, and living-documentation changes; the checks you actually ran and their results, including failures and justified skips; the deviations per `## Deviations`; remaining concerns; and follow-ups.
-
-The report is written at `implementations/<folder>/report.md` per `references/formats/implementation-report.md`, and it describes that folder's current outcome — the primitive merges in place — so hand it the run's end state rather than a running log of earlier passes.
+At every terminal outcome an executing run reaches — every plan task completed, a partial run, a `BLOCKED` halt, or a no-op where the requested state already held — write this folder's `report.md` once, per `references/instructions/write-implementation-report.md`, folding in the outcome material from `progress.md` re-read from disk: which plan tasks completed, partially completed, were blocked, or were already satisfied; the resulting code, test, configuration, and living-documentation changes; the checks actually run and their results, including failures and justified skips; the deviations per `## Deviations`; remaining concerns; and follow-ups.
 
 The per-task self-review is deliberately a task-scoped gate: it confirms each task against its own objective and verification, not the whole change, and the implementation as a whole is expected to receive a broader review afterward — so write this report to be that review's starting point. The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this material: assumptions and forced judgment calls into the deviations, each with what it departs from and why; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
 
@@ -142,36 +133,21 @@ The policy is judgment-based and surfaced through the factual progress block and
 - **A contradiction of a thread ADR or of a spec decision is a change of intent, and is never applied.** Finish everything safely derivable without it, then route it per `## Blocked`: the run ends `BLOCKED` once the report is written.
 - **A fault in the plan is surfaced, never patched.** If a task contradicts the observed code, rests on a wrong premise, or names a target that has gone, record it in the factual progress block and in the report and route the required human decision per `## Blocked`. Correcting the plan happens upstream, per `## Immutability`.
 
-## Settled points and discoveries
-
-**A decision settled with the user during the run.** The moment the point settles, and before acting on it, append exactly one line to the thread's `log.md`, formatted per `references/formats/log-line.md`:
-
-```sh
-printf '%s\n' '- (decision) retries stay in the worker, because the request path cannot hold them' >> docs/threads/<thread>/log.md
-```
-
-Use the shell append (`>>`) of a single line; never open `log.md` with a file-editing tool. Then amend `spec.md` in place wherever the decision lands: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed.
+## Discoveries
 
 **A discovery with parent- or sibling-level impact** — something that would change a project decision, or that belongs to a direction wider than this thread — is a proposed ADR or a proposed roadmap entry. Surface it to the user in chat and carry it into the report's follow-ups. Proposing it is the whole action.
 
-**Write boundary.** You write the project's code, tests, configuration, and living documentation within this implementation's scope; this invocation's implementation folder, its `report.md` and its `.runs/`; lines appended to the thread's `log.md`; and amendments to `spec.md` for a decision settled during the run. Nothing else you touch is written — `docs/adr/`, `docs/glossary.md`, the thread's `adr/`, `glossary.md`, and `plans/`, other implementation folders, and any other thread are read here and never written.
+**Write boundary.** You write the project's code, tests, configuration, and living documentation within this implementation's scope, and this invocation's implementation folder with its `report.md` and its `.runs/`. Nothing else you touch is written — `spec.md`, `docs/adr/`, `docs/glossary.md`, the thread's `adr/`, `glossary.md`, and `plans/`, other implementation folders, and any other thread are read here and never written.
 
 ## Blocked
 
-Three situations stop the run once substantive execution has begun (step 5 onward), and all three end `BLOCKED`. None is reachable from preflight — a dirty-tree, thread, plan-resolution, structural, or tooling failure caught in steps 1–4 is a `REFUSED`, not this path. Distinguish a genuine missing-intent question, a change of intent, and an operational defect before choosing between them.
+Three situations stop the run once substantive execution has begun (step 4 onward), and all three end `BLOCKED`. None is reachable from preflight — a dirty-tree, plan-resolution, structural, or tooling failure caught in steps 1–3 is a `REFUSED`, not this path. Distinguish a genuine missing-intent question, a change of intent, and an operational defect before choosing between them.
 
 **Missing human intent.** This applies whenever completing a plan task requires a genuine human decision you cannot settle yourself from the gathered inputs and the observed code state. Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat.
 
-**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a term in `docs/glossary.md` is the same situation; the rule, and what makes a contradiction intentional instead, is stated in full in `references/formats/adr.md`.
+**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it by the conflict rule `/consult-adrs` carries, and route it here rather than overriding the project record.
 
-Both take the same route. First finish everything the run can safely derive without the decision, then hand the open decision(s) to `/emit-pending-decisions`, giving it:
-
-- `/implement-plan` as the producing skill.
-- This invocation's implementation folder's `report.md` as the target.
-- The originating user request.
-- One point per open decision, each stating what the decision blocks, why you could not derive the answer from the gathered inputs, and the evidence you weighed — in your own words. Add a free-text suggestion to a point only when you see an immediate fix.
-
-Write the report per `## Implementation report` reflecting the blocked outcome, then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Both take the same route. First finish everything the run can safely derive without the decision, then write the report per `## Implementation report` reflecting the blocked outcome, and queue the open decision(s) per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, this invocation's implementation folder's `report.md` as the target, the originating user request, and one point per open decision. Then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
 
 **Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed task detail not covered by the structural preflight and discovered only when the brief is read — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, write the report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`. A structural plan problem that preflight should have caught is a preflight `REFUSED`, not this path.
 
@@ -203,6 +179,6 @@ This rule pairs with the failed-commit → `BLOCKED` rule above: a failed commit
 
 ## Immutability
 
-The plan folder is IMMUTABLE. Read its index and every brief READ-ONLY. Nothing inside it is edited in place — not for typo fixes, not to add a missing acceptance criterion, not to mark tasks as done, not for any reason. Implementation output goes to source code and to this invocation's implementation folder, per the write boundary in `## Settled points and discoveries`.
+The plan folder is IMMUTABLE. Read its index and every brief READ-ONLY. Nothing inside it is edited in place — not for typo fixes, not to add a missing acceptance criterion, not to mark tasks as done, not for any reason. Implementation output goes to source code and to this invocation's implementation folder, per the write boundary in `## Discoveries`.
 
 When the plan itself needs revision — it calls for an outdated approach, a target file has gone, a whole task rests on a wrong premise — this run's mandate is to surface the fault and stop, per `## Deviations`. A **spec fault** (the plan faithfully implements an ambiguous or incomplete spec) is fixed by amending the spec and writing a fresh plan from it. A **plan fault** (the plan is wrong while the spec is sound) is fixed by running the plan check against the plan folder, or by writing a fresh plan. Either way the corrected plan is handed to a fresh run.

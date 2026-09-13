@@ -73,7 +73,6 @@ skills/plan/check-plan:
   - instructions/emit-terminal-outcome.md
 
 skills/implement/implement:
-  - formats/adr.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
@@ -81,7 +80,6 @@ skills/implement/implement:
   - instructions/emit-terminal-outcome.md
 
 skills/implement/implement-plan:
-  - formats/adr.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
@@ -89,7 +87,6 @@ skills/implement/implement-plan:
   - instructions/emit-terminal-outcome.md
 
 skills/implement/implement-plan-with-subagents:
-  - formats/adr.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
