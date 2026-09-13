@@ -1,6 +1,6 @@
 ---
 name: open-ticket
-description: Turn a rough idea into a tracker ticket whose body reads as a thread's genesis narrative — use when an idea should be captured in the tracker rather than started now.
+description: File a rough idea as a tracker ticket whose body reads as a thread's genesis narrative.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -19,7 +19,7 @@ thread's genesis narrative unchanged, instead of mining intent out of a
 half-specification.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
-the whole result; `docs/adr/` and `docs/glossary.md` are read here and never
+the whole result; the project's decisions and terms are read here and never
 written.
 
 ## Inputs
@@ -27,10 +27,9 @@ written.
 Gather the following before composing; the composition below works from what you
 gather here.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in
-  `references/formats/adr.md`; open the records relevant to the target.
-  Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
+- `/consult-adrs` — read the project decisions relevant to the target before
+  starting; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
 - The repository's convention files, found and read as
   `references/repository-conventions.md` describes — it carries where a project
   states a ticket convention, which parts of it bind you, and what to do when it

@@ -25,7 +25,6 @@ skills/close/close-thread:
 
 skills/capture-discussion/open-thread:
   - trackers/github.md
-  - formats/adr.md
   - formats/roadmap-index.md
   - instructions/create-thread.md
   - formats/thread.md
@@ -33,7 +32,6 @@ skills/capture-discussion/open-thread:
 skills/capture-discussion/open-ticket:
   - repository-conventions.md
   - trackers/github.md
-  - formats/adr.md
 
 skills/capture-discussion/discussion:
   - formats/discussion-point.md

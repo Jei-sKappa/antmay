@@ -1,6 +1,6 @@
 ---
 name: discussion
-description: Conduct an open-ended interview that discovers decision points live, appends each settled point to the thread log, and drafts the thread's ADRs and glossary entries with the user — use when the user wants to think a topic through without knowing every question up front.
+description: Interview the user to settle decisions into the thread's log, ADRs, and glossary.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
@@ -32,37 +32,29 @@ Hold these together:
 
 Gather all of these once, before interviewing; the procedure below works from what you gather here.
 
-- `docs/adr/` — the project ADR catalog, listed with the command in `references/formats/adr.md`; open the records relevant to the topic. Authoritative.
-- `docs/glossary.md` — the project's terms. Authoritative.
+- `/consult-adrs` — read the project decisions relevant to the topic before starting; authoritative.
+- `/consult-glossary` — write the project's fixed terms; authoritative.
 - The thread's `seed.md` — why the thread exists. Authoritative for intent.
 - The thread's `log.md` — the thread's memory, read once here at session start when it has entries, and never re-read for the rest of the session. Material.
 - The thread's `spec.md`, when the file exists — the thread's design truth. Authoritative.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands. Authoritative within the thread.
-- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `docs/roadmaps/`. Material: locate the entry whose heading text is the seed's `Entry:` slug per `references/formats/roadmap-index.md`, and read its sketch and scope boundary.
+- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.wip/roadmaps/`. Material: locate the entry whose heading text is the seed's `Entry:` slug per `references/formats/roadmap-index.md`, and read its sketch and scope boundary.
 
 ## Procedure
 
-1. **Resolve the thread.** Work inside one thread root at `docs/threads/<YYMMDDHHMMSSZ-slug>/`. If `cwd` already sits inside a thread root, that is the thread. If several thread roots exist and which is active is ambiguous, ASK — never silently pick the most recent stamp. If no thread exists yet, tell the user a thread must be opened first, and stop; do not create the thread or its seed yourself.
+1. **Gather the inputs.** Read everything under `## Inputs` now, in that order. That picture is what keeps you from re-opening a point already settled or contradicting the thread's design without noticing. Carry it through the session and keep it current from the conversation itself.
 
-2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. That picture is what keeps you from re-opening a point already settled or contradicting the thread's design without noticing. Carry it through the session and keep it current from the conversation itself.
+2. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
 
-3. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
+3. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term the project glossary fixes, classify it against the thread's delta by the conflict rule `/consult-adrs` carries. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
 
-4. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term in `docs/glossary.md`, classify it against the thread's delta by the conflict rule in `references/formats/adr.md`. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
+4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per `references/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
-5. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per `references/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
+5. **Append the log line the moment a point settles**, before doing anything else with the point, per `references/instructions/append-log-line.md`. One line, one of the seven types, with the reason folded into the gist, per `references/formats/log-line.md`. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
 
-6. **Append the log line the moment a point settles**, before doing anything else with the point. One line, one of the seven types, with the reason folded into the gist, per `references/formats/log-line.md`:
+6. **Apply the binding test** to the settled point, per `## Binding test and drafts` below.
 
-   ```sh
-   printf '%s\n' '- (decision) exports go through the queue worker, because the request path cannot hold a multi-minute job' >> docs/threads/<thread>/log.md
-   ```
-
-   Use the shell append (`>>`) of a single line; never open `log.md` with a file-editing tool, and never re-read it after the start-of-session read. The framing that produced the choice — the options menu, the recommendation, the deliberation — is transient and never copied into the line. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
-
-7. **Apply the binding test** to the settled point, per `## Binding test and drafts` below.
-
-8. **Continue until closure.** There is no fixed limit on questions or points. Ask "shall we keep going or finish here?" whenever you sense natural closure — the user's pace slows, the topic feels exhausted, or the conversation repeats itself. The choice to stop is the user's; the prompt is your job.
+7. **Continue until closure.** There is no fixed limit on questions or points. Ask "shall we keep going or finish here?" whenever you sense natural closure — the user's pace slows, the topic feels exhausted, or the conversation repeats itself. The choice to stop is the user's; the prompt is your job.
 
 ## Binding test and drafts
 
@@ -72,7 +64,7 @@ When a point passes, propose the record in chat: show the `name`, the `descripti
 
 When the same discussion later reverses a draft it wrote, edit that draft in place rather than adding a second record, and append the reversal's own log line.
 
-A project term this discussion introduces or changes is written to the thread's `glossary.md` as a term and its definition, created on demand, with the same confirmation of the wording before the write.
+A project term this discussion introduces or changes is written to the thread's `glossary.md` as a term and its definition, per `references/formats/glossary.md`, created on demand, with the same confirmation of the wording before the write.
 
 You write exactly three things: lines appended to `log.md`, files under the thread's `adr/`, and entries in the thread's `glossary.md`. Nothing else you touch is written — `spec.md`, `docs/adr/`, and `docs/glossary.md` are read here and never written, and the roadmap index is read and never written.
 
