@@ -56,4 +56,4 @@ awk '/^[^ #]/{k=$1; sub(/:$/,"",k)} /^  - /{print k"\t"$2}' suite/shared/manifes
 
 **Consumes:** synced instruction copies `references/instructions/{emit-pending-review,emit-pending-decisions,emit-terminal-outcome}.md` from task 2; `references/formats/thread.md` and `references/formats/glossary.md` copies and the `suite/skills/close/close-thread/` path from task 3.
 
-**Produces:** none
+**Produces:** the three `review` bodies and `close-thread` in their structural final shape — free of primitive names, thread-resolution steps, archive moves, and `docs/threads` paths — which task 9 reads for the expects/leaves lines, task 10 relies on for a clean `docs/threads` search, and task 11 sweeps.

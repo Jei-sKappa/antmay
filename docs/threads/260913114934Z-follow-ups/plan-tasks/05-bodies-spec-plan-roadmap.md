@@ -48,4 +48,4 @@ awk '/^[^ #]/{k=$1; sub(/:$/,"",k)} /^  - /{print k"\t"$2}' suite/shared/manifes
 
 **Consumes:** synced instruction copies `references/instructions/{append-log-line,emit-pending-decisions,emit-terminal-outcome}.md` from task 2; `/consult-adrs` and `/consult-glossary` from task 3.
 
-**Produces:** none
+**Produces:** the `spec`, `plan-brief`, `plan-strict`, `check-plan`, and `roadmap` bodies and `plan-strict/references/worked-example.md` in their structural final shape — free of primitive names, thread-resolution steps, and `docs/threads` paths — which task 9 reads for the expects/leaves lines, task 10 relies on for a clean `docs/threads` search, and task 11 sweeps.

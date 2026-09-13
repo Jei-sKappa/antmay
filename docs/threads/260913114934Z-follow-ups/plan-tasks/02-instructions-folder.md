@@ -23,7 +23,7 @@ Register for every instruction file: imperative, addressed to whoever performs t
 7. Declare the instructions in `suite/shared/manifest.yaml`, adding `instructions/<file>` entries under the existing keys:
    - `instructions/create-thread.md` → `skills/capture-discussion/open-thread`
    - `instructions/append-log-line.md` → `skills/capture-discussion/discussion`, `skills/capture-discussion/resolve-pending-decisions`, `skills/spec/spec`
-   - `instructions/emit-pending-decisions.md` → `skills/spec/spec`, `skills/plan/plan-brief`, `skills/plan/plan-strict`, `skills/plan/check-plan`, `skills/implement/implement`, `skills/implement/implement-plan`, `skills/implement/implement-plan-with-subagents`, `skills/roadmap/roadmap`, `skills/finish-navigate/close-thread`
+   - `instructions/emit-pending-decisions.md` → `skills/capture-discussion/resolve-pending-decisions`, `skills/spec/spec`, `skills/plan/plan-brief`, `skills/plan/plan-strict`, `skills/plan/check-plan`, `skills/implement/implement`, `skills/implement/implement-plan`, `skills/implement/implement-plan-with-subagents`, `skills/roadmap/roadmap`, `skills/finish-navigate/close-thread`
    - `instructions/emit-pending-review.md` → `skills/review/review-spec`, `skills/review/review-implementation`, `skills/review/review-code`
    - `instructions/write-implementation-report.md` → the three `skills/implement/*`
    - `instructions/emit-terminal-outcome.md` → `skills/spec/spec`, the three `skills/plan/*`, the three `skills/implement/*`, the three `skills/review/*`, `skills/roadmap/roadmap`, `skills/finish-navigate/close-thread`
@@ -42,13 +42,13 @@ grep -nE '/(allocate-thread|emit-pending-decisions|emit-pending-review|update-im
 grep -niE 'precondition|refus|primitive|\bcaller' suite/shared/references/instructions/*.md
 grep -n 'docs/threads\|docs/roadmaps' suite/shared/references/instructions/*.md
 grep -n '\.wip/threads/yyyy/mm/dd-hhmm-slug' suite/shared/references/instructions/create-thread.md
-grep -c 'instructions/' suite/shared/manifest.yaml     # >= 31
+grep -c 'instructions/' suite/shared/manifest.yaml     # >= 32
 (cd suite && node scripts/sync-shared-references.mjs) >/dev/null
 awk '/^[^ #]/{k=$1; sub(/:$/,"",k)} /^  - /{print k"\t"$2}' suite/shared/manifest.yaml | while IFS=$'\t' read k src; do cmp -s "suite/shared/references/$src" "suite/$k/references/$src" || echo "OUT OF SYNC $k $src"; done   # nothing
 find suite/skills -path '*/references/instructions/*.md' | wc -l
 ```
 
-The first `ls` prints exactly the six names. The two `grep -n`/`grep -niE` scans of the instruction files print nothing except the `Reviewer: /<…>` and `Producer: /<…>` placeholder lines, which name no skill. The `docs/threads` grep prints nothing. The `create-thread.md` grep prints at least one line. The manifest count is at least 31. The `find` count equals the number of manifest instruction entries.
+The first `ls` prints exactly the six names. The two `grep -n`/`grep -niE` scans of the instruction files print nothing except the `Reviewer: /<…>` and `Producer: /<…>` placeholder lines, which name no skill. The `docs/threads` grep prints nothing. The `create-thread.md` grep prints at least one line. The manifest count is at least 32. The `find` count equals the number of manifest instruction entries.
 
 **Acceptance criteria:**
 

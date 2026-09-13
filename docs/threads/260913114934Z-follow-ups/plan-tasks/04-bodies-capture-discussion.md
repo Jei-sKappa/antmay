@@ -19,7 +19,7 @@ Rules applied in every body task:
 2. `open-thread/SKILL.md`: apply the Inputs rule. Remove the sentence "persist no recipe name, no progress markers, and no lifecycle values" — replace with the positive statement that the seed carries the title, the narrative, and the applicable metadata lines only (the "Add no owner field…" sentence already says it). Replace every `/allocate-thread` invocation and the "caller-authorization block" framing: the body composes slug, title, genesis narrative, and conditional metadata (with `Roadmap:` in the form `.wip/roadmaps/<yymmddhhmm>-<slug>.md`), shows them once for correction, then creates the thread per `references/instructions/create-thread.md` and reports the created path. The section `## Delegate creation to /allocate-thread` becomes `## Create the thread` (or folds into the procedure); no sentence says "you do the judgment; the primitive does the write" or "has no update path". The thread's layout is `references/formats/thread.md` (cite it where the body describes what the thread holds). Rewrite the description.
 3. `open-thread/references/supplied-ticket.md`: the existing-thread check searches the seeds of threads under `.wip/threads/` (all of them — a closed thread stays in place), with no archive mention.
 4. `open-ticket/SKILL.md`: apply the Inputs rule; rewrite the description. Check the body for a thread path or an archive mention and rewrite any found.
-5. `resolve-pending-decisions/SKILL.md`: apply the Inputs rule. Delete the `## Resolve the thread` section. The log-line step in `## Writing a settled point` points at `references/instructions/append-log-line.md` and loses its `printf` block and shell-append sentences, keeping the "framing is transient" sentence. Glossary writes cite `references/formats/glossary.md`. Rewrite the description.
+5. `resolve-pending-decisions/SKILL.md`: apply the Inputs rule. Delete the `## Resolve the thread` section. The log-line step in `## Writing a settled point` points at `references/instructions/append-log-line.md` and loses its `printf` block and shell-append sentences, keeping the "framing is transient" sentence. Glossary writes cite `references/formats/glossary.md`. In the accept branch of the disposition step, the sentence that emits a new bundle via `/emit-pending-decisions` when the continuation uncovers new human judgment instead queues it per `references/instructions/emit-pending-decisions.md`, naming yourself as producer, and stops. Rewrite the description.
 6. For each of the four skills, run the conflict-rule pass: every `references/formats/adr.md` citation that is about the catalog or the conflict rule → `/consult-adrs`.
 7. Prune undeclared or uncited formats per the manifest rule above; run `cd suite && node scripts/sync-shared-references.mjs && cd ..`.
 8. Run the verification block.
@@ -39,6 +39,7 @@ for s in discussion open-thread open-ticket resolve-pending-decisions; do awk '/
 grep -n 'printf' $G/*/SKILL.md                       # nothing
 grep -c 'references/instructions/append-log-line.md' $G/discussion/SKILL.md $G/resolve-pending-decisions/SKILL.md   # >= 1 each
 grep -c 'references/instructions/create-thread.md' $G/open-thread/SKILL.md   # >= 1
+grep -c 'references/instructions/emit-pending-decisions.md' $G/resolve-pending-decisions/SKILL.md   # >= 1
 grep -h '^description:' $G/*/SKILL.md | awk '{ if (length($0) > 140 || $0 ~ /use when|— use/) print "LONG/ROUTING: "$0 }'
 (cd suite && node scripts/sync-shared-references.mjs) >/dev/null
 awk '/^[^ #]/{k=$1; sub(/:$/,"",k)} /^  - /{print k"\t"$2}' suite/shared/manifest.yaml | while IFS=$'\t' read k src; do cmp -s "suite/shared/references/$src" "suite/$k/references/$src" || echo "OUT OF SYNC $k $src"; done   # nothing
@@ -54,6 +55,6 @@ Every scan prints nothing except the two expected `Inputs` items per skill and t
 - Every description is one short phrase with no routing clause.
 - The sync script leaves the tree unchanged and no orphan copies remain.
 
-**Consumes:** the synced instruction copies `references/instructions/create-thread.md` and `references/instructions/append-log-line.md` from task 2; `references/formats/thread.md` and `references/formats/glossary.md` copies from task 3; the invocation names `/consult-adrs` and `/consult-glossary` from task 3.
+**Consumes:** the synced instruction copies `references/instructions/create-thread.md`, `references/instructions/append-log-line.md`, and `references/instructions/emit-pending-decisions.md` from task 2; `references/formats/thread.md` and `references/formats/glossary.md` copies from task 3; the invocation names `/consult-adrs` and `/consult-glossary` from task 3.
 
-**Produces:** none
+**Produces:** the four `capture-discussion` bodies and `open-thread/references/supplied-ticket.md` in their structural final shape — free of primitive names, thread-resolution steps, and `docs/threads` paths — which task 9 reads for the expects/leaves lines, task 10 relies on for a clean `docs/threads` search, and task 11 sweeps.
