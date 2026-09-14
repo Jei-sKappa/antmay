@@ -20,7 +20,7 @@
    1. append a line containing ``see `references/formats/x.md` `` to `skills/spec/spec/SKILL.md`; run the script; expect exit 1 and the line `skills/spec/spec/SKILL.md:<N>: bare-reference`; `git checkout -- skills/spec/spec/SKILL.md`;
    2. append a line containing ``per `<skill_path>/references/formats/x.md` `` to `skills/plan/plan-brief/SKILL.md`; expect exit 1 and `…: per-before-path`; revert the same way;
    3. insert a two-space-indented ```` ```text ```` line into `shared/references/formats/thread.md`; expect exit 1 and `shared/references/formats/thread.md:<N>: indented-fence`; revert; run the script once more and expect exit 0.
-5. `.github/workflows/ci.yml`, job `suite`: add the step `- run: node scripts/check-skill-text.mjs` directly after `- run: node scripts/check-marketplace-skills.mjs`, under the job's existing `working-directory: suite` default; change the job's display `name:` from `suite manifest` to `suite checks`, since it now runs two. Touch no other job.
+5. `.github/workflows/ci.yml`, job `suite`: add the step `- run: node scripts/check-skill-text.mjs` directly after `- run: node scripts/check-marketplace-skills.mjs`, under the job's existing `working-directory: suite` default. Change nothing else in the file — not the job's `name:`, not any other job.
 6. `CONTRIBUTING.md`, § "Working in the repository": replace the paragraph "The skill suite has no build. Its one mechanical gate guards the distribution manifest, and runs from `suite/`:" and its one-command block with a paragraph stating that the suite has no build and two mechanical gates that run from `suite/` — one guards the distribution manifest, the other the text of every skill body and shared reference (skill-local pointers carry `<skill_path>/`, no `per` precedes one, no fence is indented) — followed by one `sh` block listing both commands:
 
    ```sh
@@ -54,6 +54,7 @@ node scripts/check-skill-text.mjs; echo "exit=$?"                         # → 
 # Wiring (AC-8.4, AC-8.5)
 awk '/^  suite:/,0' ../.github/workflows/ci.yml | grep -n 'run: node scripts/check-marketplace-skills.mjs' -A1 | grep -c 'run: node scripts/check-skill-text.mjs'   # → 1
 awk '/^  suite:/,0' ../.github/workflows/ci.yml | grep -c 'working-directory: suite'   # → 1
+git diff $BASE --numstat -- ../.github/workflows/ci.yml                  # → 1 addition, 0 deletions (the one step; nothing else in the file moved)
 grep -c 'node scripts/check-skill-text.mjs' ../CONTRIBUTING.md AGENTS.md  # → CONTRIBUTING.md:1 (or more), AGENTS.md:≥1
 grep -n 'one mechanical gate' ../CONTRIBUTING.md                          # → no output
 grep -n 'no build or lint pass' AGENTS.md                                 # → no output
@@ -69,7 +70,7 @@ for f in $(grep -rl '^## Inputs' skills --include='SKILL.md'); do awk -v F="$f" 
 grep -rn "write the project's fixed terms" .                             # → no output (AC-2.2)
 grep -rn 'consult-adrs` carries' skills                                   # → no output (AC-2.3)
 grep -rn 'docs/adrs' . ../docs ../README.md ../CONTRIBUTING.md ../AGENTS.md   # → no output (AC-2.4)
-test ! -e shared/references/instructions/conflict-rule.md && grep -c 'contradict' skills/model-invoked/consult-adrs/SKILL.md   # → ≥ 1 (AC-2.5: the rule still lives in consult-adrs; no new instruction file)
+git diff $BASE --name-status -- shared/references | grep -v '^M'; grep -c 'contradict' skills/model-invoked/consult-adrs/SKILL.md   # → no added file under shared/references, then ≥ 1 (AC-2.5: no new instruction file; the rule still lives in consult-adrs)
 grep -rnE '(; authoritative\.|\. Authoritative\.|\. Material\.|\. Material:|Authoritative for intent\.|Authoritative within the thread\.)' skills   # → no output (AC-3.1)
 grep -rnE 'when (the thread holds one|the invocation (carries one|names an entry)|it names one|the thread.s owner authored one|a plan folder is the form)|whenever the thread holds one' skills --include='SKILL.md'   # → no output (AC-3.2)
 grep -c 'A freshly opened thread holds only `seed.md` and a header-only `log.md`' skills/capture-discussion/discussion/SKILL.md   # → 1 (AC-3.3)

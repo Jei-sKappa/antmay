@@ -2,7 +2,7 @@
 
 **Objective:** Make `suite/authoring/body-structure.md`, `shared-references.md`, and `interaction-posture.md` state the conventions the sweep just applied — the `<skill_path>/` prefix, the project-layer input items, the one Inputs shape with its presence clauses and early-life rule, the directive intent with its two strict rules and the heading/path distinction, and the every-exit pointer — so a future author writes bodies the way tasks 3–6 left them.
 
-**Input / context:** `spec.md` § "The `<skill_path>` prefix" (the `body-structure.md` sentence to replace and the `shared-references.md` addition), § "Project-layer inputs" (the "The list opens with the same two items" block), § "One shape for Inputs items" (the "authoritative or material" sentence to replace), § "Reference pointers as directives" (both documents state the directive intent, the two strict rules, and the DR9 sentence), § "Every exit points at the terminal-outcome instruction" (the `interaction-posture.md` sentence), § "Same-body section pointers"; AC-1.3, AC-3.5, AC-4.5, AC-5.5, AC-6.5 (the format skeleton in `shared-references.md` is untouched). Settled decisions: `decisions.md DR1`, `DR2`, `DR3`, `DR4`, `DR5`, `DR9`. These documents are written to whoever authors the suite, not to an invoked agent; they may quote forbidden forms as negative examples (the check in task 8 does not walk `suite/authoring/`). They still carry no decision identifiers and no thread paths. Starts from the swept tree tasks 3–6 left; read two or three swept bodies before writing, so the rules describe what is on disk.
+**Input / context:** `spec.md` § "The `<skill_path>` prefix" (the `body-structure.md` sentence to replace and the `shared-references.md` addition), § "Project-layer inputs" (the "The list opens with the same two items" block), § "One shape for Inputs items" (the "authoritative or material" sentence to replace), § "Reference pointers as directives" (both documents state the directive intent, the two strict rules, and the DR9 sentence), § "Every exit points at the terminal-outcome instruction" (the `interaction-posture.md` sentence), § "Same-body section pointers"; AC-1.3, AC-3.5, AC-4.5, AC-5.5, AC-6.5 (the format skeleton in `shared-references.md` is untouched). Settled decisions: `decisions.md DR1`, `DR2`, `DR3`, `DR4`, `DR5`, `DR9`. These documents are written to whoever authors the suite, not to an invoked agent; they may quote forbidden forms as negative examples (the check in task 8 does not walk `suite/authoring/`). They still carry no decision identifiers and no thread paths. All three wrap their prose at about 80 columns; keep that wrapping (a fenced block's lines are not wrapped — the two opening-item lines in step 1.5 each stay on one line). Starts from the swept tree tasks 3–6 left; read two or three swept bodies before writing, so the rules describe what is on disk.
 
 **Steps:**
 
@@ -26,7 +26,7 @@
    2. the directive intent — a pointer is a directive to open the file and act on it: an instruction is followed and the pointer is the step ("Follow `<skill_path>/references/instructions/append-log-line.md`"); a format is what a write or read conforms to ("following `<skill_path>/references/formats/adr.md`", "in the shape `<skill_path>/references/formats/thread.md` defines"); other verbs are fine where they read better, provided the intent stays plain;
    3. the two strict rules — **no leak**: a body never restates what the pointed file holds; the text around a pointer is limited to the skill-specific parameters the file leaves open (the producer name, what the line states, which folder, the token), and anything the body needs for its own judgment at that step is written as the skill's own rule, not as a paraphrase with a citation; **no `per` before a path**: `per` before a heading of the same body is fine; `per` before a file path is the defect;
    4. the weaving sentence, kept — the pointer is woven into the prose of the step as ordinary flowing instruction rather than a mechanical "IF X READ Y" construction.
-3. `suite/authoring/shared-references.md`. In `## The canonical folder`, after the **Instructions** paragraph (or as a short paragraph of its own before `## The manifest`), add prose stating that a pointer inside a shared reference file — an instruction naming the format it writes, say — carries the same `<skill_path>/` prefix a body uses and reads as the same directive: the pointed file is followed or conformed to, never cited with `per` and never restated around the pointer. Do not touch the format skeleton bullets (title, one paragraph, `## Shape`, `## Rules`) or the sentence "Vocabulary an artifact fixes — the log's seven entry types, say — is a rule with its enumeration inline."
+3. `suite/authoring/shared-references.md`. In `## The canonical folder`, after the **Instructions** paragraph (or as a short paragraph of its own before `## The manifest`), add prose stating that a pointer inside a shared reference file — an instruction naming the format it writes, say — carries the same `<skill_path>/` prefix a body uses and reads as the same directive: the pointed file is followed or conformed to (the directive intent), the text around the pointer never restates what the pointed file holds (no leak), and the pointer is never cited with `per` — `per` before a heading of the same body is fine; `per` before a file path is the defect (the heading/path distinction, stated here as in `body-structure.md`). Do not touch the format skeleton bullets (title, one paragraph, `## Shape`, `## Rules`) or the sentence "Vocabulary an artifact fixes — the log's seven entry types, say — is a rule with its enumeration inline."
 4. `suite/authoring/interaction-posture.md`, `## The terminal outcome`: replace "which each emitting skill declares and points at from the step where the run ends" with "which each emitting skill declares and points at from every exit the run can reach". Change nothing else in the file.
 5. Re-read the three edited passages against two swept bodies (`discussion` for Inputs and the log-line step, `spec` for exits) and confirm each rule describes what is on disk; adjust the wording, not the bodies.
 
@@ -36,24 +36,27 @@
 
 ```sh
 B=authoring/body-structure.md; S=authoring/shared-references.md; I=authoring/interaction-posture.md
-grep -n 'whether it is authoritative or material' $B                     # → no output (AC-3.5)
+J() { tr '\n' ' ' < "$1" | tr -s ' '; }                                  # the documents wrap at ~80 columns; J joins lines before a phrase grep
+J $B | grep -c 'whether it is authoritative or material'                 # → 0 (AC-3.5)
 grep -n '^1\. `/consult-adrs`\|^2\. `/consult-glossary`' $B              # → no output (old numbered pair gone)
 grep -c -- '- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on <the target>\.' $B   # → 1
 grep -c -- '- `docs/glossary.md`, read via `/consult-glossary` — the project.s fixed terms, to be used in everything you write\.' $B   # → 1
 grep -c 'when present' $B; grep -c 'when the seed carries one' $B; grep -c 'when the file exists' $B   # → each ≥ 1 (AC-3.5)
-grep -c 'header-only `log.md`' $B                                        # → ≥ 1 (early-life rule)
-grep -c 'as `/consult-adrs` instructs' $B                                # → ≥ 1
+J $B | grep -c 'header-only `log.md`'                                    # → ≥ 1 (early-life rule)
+J $B | grep -c 'as `/consult-adrs` instructs'                            # → ≥ 1
 grep -c '<skill_path>/references/formats/adr.md' $B                      # → ≥ 1 (AC-1.3)
-grep -ci 'base directory' $B                                             # → ≥ 1 (what the placeholder resolves to)
-grep -n 'as in `references/formats/adr.md`' $B                           # → no output (old sentence gone)
-grep -ci 'no leak\|never restates' $B                                    # → ≥ 1 (AC-4.5)
-grep -c 'before a heading of the same body' $B                           # → 1 (the heading/path distinction)
+J $B | grep -ci 'base directory'                                         # → ≥ 1 (what the placeholder resolves to)
+J $B | grep -c 'skill-relative path, as in `references/formats/adr.md`'  # → 0 (old sentence gone)
+J $B | grep -ci 'no leak\|never restates'                                # → ≥ 1 (AC-4.5)
+J $B | grep -c 'before a heading of the same body'                       # → 1 (the heading/path distinction)
 grep -c '<skill_path>/' $S                                               # → ≥ 1 (AC-1.3)
 grep -n '`per`' $S                                                       # → ≥ 1 line: the sentence saying a reference file's pointer is never cited with `per` (AC-4.5)
+J $S | grep -ci 'never restate\|no leak'                                 # → ≥ 1 (no-leak rule stated for reference files, AC-4.5)
+J $S | grep -c 'before a heading of the same body'                       # → 1 (the heading/path distinction, AC-4.5)
 diff <(git show $BASE:suite/$S | awk '/^\*\*Formats\*\*/,/^\*\*Instructions\*\*/') <(awk '/^\*\*Formats\*\*/,/^\*\*Instructions\*\*/' $S)   # → no output (format skeleton unchanged, AC-6.5)
-grep -c 'from every exit the run can reach' $I                           # → 1 (AC-5.5)
-grep -c 'from the step where the run ends' $I                            # → 0
-git diff $BASE --numstat -- $I                                           # → 1 addition, 1 deletion
+J $I | grep -c 'from every exit the run can reach'                       # → 1 (AC-5.5)
+J $I | grep -c 'from the step where the run ends'                        # → 0
+git diff $BASE --numstat -- $I                                           # → 1 addition, 1 deletion (the phrase fits the existing last line of that paragraph; rewrap only if it does not)
 grep -rnE '\bDR[0-9]+\b|\.wip/threads' authoring                          # → no output
 node scripts/check-marketplace-skills.mjs                                # → exit 0
 git status --porcelain -- ../cli                                         # → no output

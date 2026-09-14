@@ -93,4 +93,4 @@ git diff $BASE --stat -- skills/model-invoked | tail -1                         
 
 **Consumes:** the prefixed, flush-left synced copies under these skills' `references/` from tasks 1–2, and `append-log-line.md` pointing at `<skill_path>/references/formats/log-line.md` (task 2), which is what lets the bodies drop their own `log-line.md` pointer.
 
-**Produces:** none — later tasks touch other bodies. The `discussion` step 5 wording is the model the other log-appending body (`spec`, task 4) follows.
+**Produces:** the `discussion` step 5 wording — one pointer to `<skill_path>/references/instructions/append-log-line.md` plus the skill's own judgment sentence, no format pointer beside it — which is the model the other log-appending body (`spec`, task 4) follows. No later task edits the seven files this task touches.
