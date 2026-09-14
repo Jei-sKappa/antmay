@@ -91,7 +91,7 @@ The line composes with the skill's own confirmation message: the confirmation
 becomes the reason part, as in `Outcome: DONE — Spec written: spec.md`. The
 emission procedure itself is the shared instruction
 `instructions/emit-terminal-outcome.md`, which each emitting skill declares and
-points at from the step where the run ends.
+points at from every exit the run can reach.
 
 The name is fixed. This protocol — the three-token vocabulary and the closing
 line together — is called the **terminal outcome** wherever it is named, in skill

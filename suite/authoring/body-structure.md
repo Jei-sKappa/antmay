@@ -10,12 +10,27 @@ Two headings are fixed by name.
 
 **`## Inputs`.** A skill whose procedure works from gathered state carries a
 section headed exactly `## Inputs`, listing what it gathers as a list rather than
-as prose. Each item is a path or a source with one clause saying what it is for
-and whether it is authoritative or material. The list opens with the same two
-items in every skill that has it:
+as prose. Every item has one shape: `- <path or source><, presence clause when
+it may be absent> — <what it is and what it is for>.` The presence clause is one
+of exactly three — `when present`, `when the seed carries one`,
+`when the file exists` — and an item carrying none is either always present or
+is the primary input, which keeps its accepted forms inside its own clause. No
+item ends in a trailing tag: where a procedure ranks its sources, the ranking is
+stated once in the prose that uses it, never per item. A body normally invoked
+while the thread holds only `seed.md` and a header-only `log.md` says so in one
+sentence above the list.
 
-1. `/consult-adrs` — the project decisions relevant to the target. Authoritative.
-2. `/consult-glossary` — the project's fixed terms. Authoritative.
+The list opens with the same two project-layer items in every skill that has one:
+
+```markdown
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on <the target>.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+```
+
+The input is the file, the skill is how it is read, and the target clause is
+adapted to the skill. Where a body invokes the conflict rule those decisions come
+with, it names `/consult-adrs` as a procedure — "classify it as `/consult-adrs`
+instructs" — never as a document that carries text.
 
 The thread files the skill reads follow. A skill with one primary input names it
 and its accepted forms in the same section, so a reader learns there what the
@@ -55,11 +70,33 @@ that the pointer would cost as much as the content. A block that moves leaves it
 trigger condition in the body, because that has to be evaluated on every run.
 
 What stays inline is what makes the skill that skill — its posture, its inputs,
-its write boundary, the order of its acts, and the judgment between them. Every
-pointer cites the reference file's full skill-relative path, as in
-`references/formats/adr.md`, never a filename plus a folder description and never
-a bare folder, and it is woven into the prose of the step as ordinary flowing
-instruction rather than a mechanical "IF X READ Y" construction.
+its write boundary, the order of its acts, and the judgment between them.
+
+Every pointer to a file inside the skill's own folder is written with the literal
+prefix `<skill_path>/`, as in `<skill_path>/references/formats/adr.md`, never a
+filename plus a folder description and never a bare folder. The placeholder
+resolves to the skill's base directory as the harness reports it at invocation,
+and it is what tells a skill-local path apart from a project path such as
+`docs/adr/`, which stays bare.
+
+A pointer is a directive to open the file and act on it. An instruction is
+followed, and the pointer is the step: "Follow
+`<skill_path>/references/instructions/append-log-line.md`". A format is what a
+write or a read conforms to: "following
+`<skill_path>/references/formats/adr.md`", "in the shape
+`<skill_path>/references/formats/thread.md` defines". Other verbs are fine where
+they read better, provided the intent stays plain.
+
+Two rules are strict. **No leak**: a body never restates what the pointed file
+holds; the text around a pointer is limited to the skill-specific parameters the
+file leaves open — the producer name, what the line states, which folder, the
+token — and anything the body needs for its own judgment at that step is written
+as the skill's own rule, not as a paraphrase with a citation. **No `per` before a
+path**: `per` before a heading of the same body is fine; `per` before a file path
+is the defect.
+
+A pointer is woven into the prose of the step as ordinary flowing instruction
+rather than a mechanical "IF X READ Y" construction.
 
 ## What becomes an instruction
 

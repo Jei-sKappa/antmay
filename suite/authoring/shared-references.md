@@ -40,6 +40,13 @@ body is an act of this kind.
 `trackers/` and `repository-conventions.md` — describe an environment the skills
 work against.
 
+A pointer inside a shared reference file — an instruction naming the format it
+writes, say — carries the same `<skill_path>/` prefix a body uses and reads as the
+same directive: the pointed file is followed, or conformed to, and the text around
+the pointer never restates what that file holds. It is never cited with `per`;
+`per` before a heading of the same body is fine, `per` before a file path is the
+defect.
+
 ## The manifest
 
 `shared/manifest.yaml` maps each declaring skill's path to the list of shared
