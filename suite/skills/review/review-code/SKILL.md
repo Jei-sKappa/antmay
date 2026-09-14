@@ -17,15 +17,15 @@ This is the quality pass. The quality, safety, idiom, and testability axes apply
 
 Gather all of these before judging; the procedure below works from what you gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the code under review before judging; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers. Material.
-- That folder's `report.md` — the implementer's account of the delivered work, in the shape `references/formats/implementation-report.md` defines; its `## Changes` locates the code and its `## Deviations` says which departures were deliberate. Material.
-- The plan folder the report's `Plan:` line names, when it names one — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan. Authoritative for what the code was meant to do.
-- The thread's `spec.md`, when present — the thread's design truth; its acceptance criteria define what the code is meant to do, which is what an intent-dependent finding rests on. Authoritative.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources the code must not contradict. Authoritative within the thread.
-- The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a spec nor a plan. Authoritative for intent.
-- The code under review — as the user names it (a git ref, a commit range, a saved or inline diff, or a file or directory path) or as the report's `## Changes` describes it, plus the surrounding code it must live with. Read the diff or the files; never check out a branch, run tests, modify the working tree, or mutate any git state. Material.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the code under review.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
+- That folder's `report.md` — the implementer's account of the delivered work, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Changes` locates the code and its `## Deviations` says which departures were deliberate.
+- The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.
+- The thread's `spec.md`, when present — the thread's design truth; its acceptance criteria define what the code is meant to do, which is what an intent-dependent finding rests on.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources the code must not contradict; inside the thread they take precedence over the project records.
+- The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a spec nor a plan.
+- The code under review — as the user names it (a git ref, a commit range, a saved or inline diff, or a file or directory path) or as the report's `## Changes` describes it, plus the surrounding code it must live with. Read the diff or the files; never check out a branch, run tests, modify the working tree, or mutate any git state.
 
 ## The authority anchor
 
@@ -35,19 +35,19 @@ Quality does not require intent to exist, but where a finding turns on what the 
 2. else the plan folder the report's `Plan:` line names — `plans/<folder>/plan.md`, a one-screen brief or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
-The thread's `adr/` applies on top of the resolved anchor as a binding constraint source, alongside the project's ADRs and the project glossary terms the thread's delta does not redefine; code that contradicts one of those records is a finding. What makes such a contradiction intentional rather than a finding is the conflict rule `/consult-adrs` carries.
+The thread's `adr/` applies on top of the resolved anchor as a binding constraint source, alongside the project's ADRs and the project glossary terms the thread's delta does not redefine; code that contradicts one of those records is a finding. Whether such a contradiction is intentional or a finding is classified as `/consult-adrs` instructs.
 
 The anchor matters only at this margin where intent determines what "right" means; the four axes otherwise stand on their own. When the resolved anchor is coarse — `seed.md` only, with no acceptance criteria the thread ever recorded — name it explicitly in the bundle's `## Context` and scope any intent-dependent finding to what that anchor actually says. Never invent acceptance criteria the thread never recorded and then fault the code for missing them. When the thread records no anchor at all, run a pure quality pass and say so.
 
 ## Procedure
 
-1. **Resolve the implementation folder under review.** When the invocation names a folder under `implementations/`, that folder is the target. When it names none, the target is the newest folder under `implementations/` by stamp; when several folders exist, say in chat which one you resolved before judging, so the user can redirect you. If the thread holds no implementation folder, or the invocation names one that does not exist, there is nothing to review: say so, write nothing, and end with `Outcome: REFUSED — <reason>`.
+1. **Resolve the implementation folder under review.** When the invocation names a folder under `implementations/`, that folder is the target. When it names none, the target is the newest folder under `implementations/` by stamp; when several folders exist, say in chat which one you resolved before judging, so the user can redirect you. If the thread holds no implementation folder, or the invocation names one that does not exist, there is nothing to review: say so, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the reason.
 
-2. **Gather the inputs and any focus areas.** Read everything under `## Inputs` now, in that order, read-only, and resolve the authority anchor (`## The authority anchor`) from what you gathered. If the user named a code reference that is vague ("my changes", "the branch" with no name) or matches several plausible candidates, the review has no resolvable target: say so, write nothing, and end with `Outcome: REFUSED — <the ambiguity>`; never pick by recency or sort order. Record any focus areas the user named ("look for race conditions in the caching layer", "check error handling in the auth endpoints") for emphasis. Do not block on a missing anchor or missing focus.
+2. **Gather the inputs and any focus areas.** Read everything under `## Inputs` now, in that order, read-only, and resolve the authority anchor (`## The authority anchor`) from what you gathered. If the user named a code reference that is vague ("my changes", "the branch" with no name) or matches several plausible candidates, the review has no resolvable target: say so, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the ambiguity; never pick by recency or sort order. Record any focus areas the user named ("look for race conditions in the caching layer", "check error handling in the auth endpoints") for emphasis. Do not block on a missing anchor or missing focus.
 
 3. **Walk the code once, then judge.** Read every file or hunk end to end and build a picture of what the code does and what the surrounding code expects before tagging findings — a premature finding from a partial read is a worse signal than a slower review. Then judge against each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where it shows, why it matters for whoever maintains the code next, and a severity — `blocker` (the code is unsafe or broken enough that it should not land as-is), `issue` (a real weakness that will cause bugs or maintenance pain), or `nit` (minor and survivable). Tether every finding to concrete downstream impact.
 
-4. **Report.** A clean review returns a concise quality judgment in chat and writes no file; a review with findings records exactly one bundle (`## Recording findings`) and reports its path. End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — <the quality judgment>` for a clean review, or `Outcome: DONE — findings at <bundle path>` when a bundle was written. No preamble, no closing remark.
+4. **Report.** A clean review returns a concise quality judgment in chat and writes no file; a review with findings records exactly one bundle (`## Recording findings`) and reports its path. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and the quality judgment for a clean review, or `DONE` and `findings at <bundle path>` when a bundle was written. No preamble, no closing remark.
 
 ## What you judge
 
@@ -62,7 +62,7 @@ Findings that are really about whether the code delivers the intended behavior �
 
 ## Recording findings
 
-When you hold one or more findings, record them as a single bundle per `references/instructions/emit-pending-review.md`, naming yourself as the reviewer and the implementation folder whose code you reviewed, `implementations/<folder>/`, as the target. When the resolved anchor is coarse or absent and a finding depends on intent, add a `## Context` note naming that anchor so a reader knows what those findings are scoped to.
+When you hold one or more findings, record them by following `<skill_path>/references/instructions/emit-pending-review.md`, with yourself as the reviewer and the implementation folder whose code you reviewed, `implementations/<folder>/`, as the target. When the resolved anchor is coarse or absent and a finding depends on intent, add a `## Context` note naming that anchor so a reader knows what those findings are scoped to.
 
 Your category vocabulary is `quality`, `safety`, `idioms`, `testability`, or an additional axis you used, and the evidence for a finding is the file-and-line location, plus the anchor section when the finding turns on intent. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 

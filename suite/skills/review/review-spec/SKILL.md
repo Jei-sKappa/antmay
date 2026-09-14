@@ -17,21 +17,21 @@ This is a quality-of-handoff and planning-readiness review; your concern is whet
 
 Gather all of these before judging; the procedure below works from what you gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the spec's subject before judging; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- The thread's `spec.md` — the reviewed target, and the review's only target; it comes in that one form, at the thread root. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it. Material for the judgment.
-- The thread's `seed.md` — why the thread exists. Authoritative for intent.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources a spec must not contradict. Authoritative within the thread.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the spec's subject.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- The thread's `spec.md` — the reviewed target, and the review's only target; it comes in that one form, at the thread root. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it.
+- The thread's `seed.md` — why the thread exists.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources a spec must not contradict; inside the thread they take precedence over the project records.
 
 ## Procedure
 
-1. **Gather the inputs.** Read everything under `## Inputs` now, in that order. If the thread holds no `spec.md`, tell the user there is nothing to review, write nothing, and end with `Outcome: REFUSED — no spec.md to review`.
+1. **Gather the inputs.** Read everything under `## Inputs` now, in that order. If the thread holds no `spec.md`, tell the user there is nothing to review, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED` and `no spec.md to review`.
 
 2. **Judge against the readiness axes.** Assess the spec on each axis below (`## What you judge`). For every real weakness, form a finding: what is wrong, where in the spec it shows, why it would leave a downstream agent guessing or blocked, and a severity — `blocker` (planning cannot proceed safely), `issue` (a real gap that will cause rework or a wrong guess), or `nit` (soft or imprecise, but survivable). Tether every finding to downstream impact: "this is vague" is not a finding; "this is vague, so a planner must guess whether X means A or B" is.
 
 3. **Decide the outcome.** If the spec passes the bar — a downstream agent could plan and implement from it without hidden context — the review is clean. Otherwise you hold one or more findings to record.
 
-4. **Report.** A clean review returns a concise readiness judgment in chat and writes no file; a review with findings records exactly one bundle (`## Recording findings`) and reports its path. End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — <the readiness judgment>` for a clean review, or `Outcome: DONE — findings at <bundle path>` when a bundle was written. No preamble, no closing remark.
+4. **Report.** A clean review returns a concise readiness judgment in chat and writes no file; a review with findings records exactly one bundle (`## Recording findings`) and reports its path. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and the readiness judgment for a clean review, or `DONE` and `findings at <bundle path>` when a bundle was written. No preamble, no closing remark.
 
 ## What you judge
 
@@ -49,11 +49,11 @@ Read the spec against these axes; each weakness you find maps to the axis it con
 
 A spec's section names, ordering, and structure are the author's discretion; what you check is that the substance behind these axes is present and coherent.
 
-You do not perform an exhaustive claim-by-claim fidelity mapping between the spec and the records that bind it. You may, however, report an **obvious contradiction** with the thread's `adr/` or `glossary.md`, or with a project ADR or a project glossary term, when you notice one, because a spec that visibly commits to the opposite of a record authoritative over it harms readiness — a downstream agent would act on a claim that has already been overruled. A contradiction the thread has deliberately taken on is not one of these; classify it by the conflict rule `/consult-adrs` carries. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
+You do not perform an exhaustive claim-by-claim fidelity mapping between the spec and the records that bind it. You may, however, report an **obvious contradiction** with the thread's `adr/` or `glossary.md`, or with a project ADR or a project glossary term, when you notice one, because a spec that visibly commits to the opposite of a record authoritative over it harms readiness — a downstream agent would act on a claim that has already been overruled. A contradiction the thread has deliberately taken on is not one of these; classify it as `/consult-adrs` instructs. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
 
 ## Recording findings
 
-When you hold one or more findings, record them as a single bundle per `references/instructions/emit-pending-review.md`, naming yourself as the reviewer and `spec.md` as the target.
+When you hold one or more findings, record them by following `<skill_path>/references/instructions/emit-pending-review.md`, with yourself as the reviewer and `spec.md` as the target.
 
 Use the readiness axes above as your category vocabulary — `clarity`, `completeness`, `consistency`, `scope`, `behavior`, `constraints`, `freedom`, `acceptance`, `readiness` — assigning each finding the axis it concerns. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 
