@@ -1,6 +1,6 @@
 # Merged reviewer — shared lane policy
 
-> Loaded by the single merged reviewer subagent alongside the two lane method files — `references/plan-compliance-reviewer.md` and `references/code-quality-reviewer.md` — in this same `references/` folder. The orchestrator passes the absolute path of this file together with the two lane files in the reviewer subagent's brief. This file owns the rules that hold IDENTICALLY for both lanes; each lane method file defines only what is distinctive to its lane and points here for these shared rules. The orchestrator itself does not read this file.
+> Loaded by the single merged reviewer subagent alongside the two lane method files — `<skill_path>/references/plan-compliance-reviewer.md` and `<skill_path>/references/code-quality-reviewer.md` — in this same `<skill_path>/references/` folder. The orchestrator passes the absolute path of this file together with the two lane files in the reviewer subagent's brief. This file owns the rules that hold IDENTICALLY for both lanes; each lane method file defines only what is distinctive to its lane and points here for these shared rules. The orchestrator itself does not read this file.
 
 ## Unverified criteria
 

@@ -1,6 +1,6 @@
 # Plan-Compliance Reviewer
 
-> Loaded by the single merged reviewer subagent dispatched by this skill, alongside the code-quality method file and the shared lane policy `references/reviewer-policy.md` in this same `references/` folder. The orchestrator itself does not read this file — it passes the absolute paths of this file, the code-quality file, and the policy file in the reviewer subagent's brief, and the reviewer loads all three. This file defines the plan-compliance lane; the rules common to both lanes live in `references/reviewer-policy.md`.
+> Loaded by the single merged reviewer subagent dispatched by this skill, alongside the code-quality method file and the shared lane policy `<skill_path>/references/reviewer-policy.md` in this same `<skill_path>/references/` folder. The orchestrator itself does not read this file — it passes the absolute paths of this file, the code-quality file, and the policy file in the reviewer subagent's brief, and the reviewer loads all three. This file defines the plan-compliance lane; the rules common to both lanes live in `<skill_path>/references/reviewer-policy.md`.
 
 ## Focus Area
 
@@ -41,13 +41,13 @@ The diff is the review **target**; the repo is readable **context**. Reading unc
 2. **Inspect the diff.** Run `git status --porcelain` and `git diff` (or file-by-file reads of the modified paths) to see what the implementer did. Make sure the working-tree state you are inspecting is the current post-implementer state for THIS task — the orchestrator gave you the cycle's starting state via the brief; the diff is the difference from there.
 3. **Run the task's verification block if present.** If the task file has a mechanical verification (a `grep` invocation, a `test -f` check, a named test, an `npm test` or equivalent invocation), execute it and record the result. PASS / FAIL with the output snippet for the finding.
 4. **Compare against acceptance criteria.** For each criterion in the task file's acceptance criteria block, mark it SATISFIED / MISSING / PARTIAL. When a task file carries no explicit acceptance criteria, evaluate against its objective sentence.
-5. **Identify plan-compliance gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific plan-task statement and the specific diff observation), not vague ("the diff feels incomplete"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to fix. Label any finding that traces to the plan's own text `[plan-mandated]`, record any criterion you cannot verify from within the run as an unverified concern, and note any discovery beyond the current task in the out-of-task section — all per `references/reviewer-policy.md`. Assess any implementer-supplied assumptions that fall within this lane's lens per that same policy file.
-6. **Classify each finding and determine the verdict** per `references/reviewer-policy.md` (`## Verdict`), reserving `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
-7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a file under the implementation folder's `.runs/task-NN/`) — see the write condition in `references/reviewer-policy.md` (`## Output file`). Do NOT modify code, do NOT modify the plan folder.
+5. **Identify plan-compliance gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific plan-task statement and the specific diff observation), not vague ("the diff feels incomplete"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to fix. Label any finding that traces to the plan's own text `[plan-mandated]`, record any criterion you cannot verify from within the run as an unverified concern, and note any discovery beyond the current task in the out-of-task section — all following `<skill_path>/references/reviewer-policy.md`. Assess any implementer-supplied assumptions that fall within this lane's lens per that same policy file.
+6. **Classify each finding and determine the verdict** as `<skill_path>/references/reviewer-policy.md` (`## Verdict`) directs, reserving `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
+7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a file under the implementation folder's `.runs/task-NN/`) — see the write condition in `<skill_path>/references/reviewer-policy.md` (`## Output file`). Do NOT modify code, do NOT modify the plan folder.
 
 ## Output Template
 
-The write condition, the single-file / one-section-per-lane rule, and the reply shape are in `references/reviewer-policy.md` (`## Output file`). This lane contributes the **Plan-Compliance Lane** section below:
+The write condition, the single-file / one-section-per-lane rule, and the reply shape are in `<skill_path>/references/reviewer-policy.md` (`## Output file`). This lane contributes the **Plan-Compliance Lane** section below:
 
 ```markdown
 ## Plan-Compliance Lane
@@ -76,7 +76,7 @@ References:
 
 ## Hard Constraints
 
-The constraints binding both lanes (do not modify code, do not modify the plan folder, do not commit) are in `references/reviewer-policy.md` (`## Hard constraints (both lanes)`). This lane adds:
+The constraints binding both lanes (do not modify code, do not modify the plan folder, do not commit) are in `<skill_path>/references/reviewer-policy.md` (`## Hard constraints (both lanes)`). This lane adds:
 
 - Keep this lane's section scoped to plan-compliance. A code-quality observation (style, safety, idiomatic-fit, regression risk) belongs in the code-quality lane's section of the same report, not here — the two lanes are judged independently.
 - DO NOT run tests beyond what the task's verification block prescribes. Reading unchanged code for context is unrestricted (see `## Read Permission`); running additional tests "for completeness" is out of scope (and risks confusing the diff state for the review).

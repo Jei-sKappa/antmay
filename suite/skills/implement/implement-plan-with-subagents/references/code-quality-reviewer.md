@@ -1,6 +1,6 @@
 # Code-Quality Reviewer
 
-> Loaded by the single merged reviewer subagent dispatched by this skill, alongside the plan-compliance method file and the shared lane policy `references/reviewer-policy.md` in this same `references/` folder. The orchestrator itself does not read this file — it passes the absolute paths of this file, the plan-compliance file, and the policy file in the reviewer subagent's brief, and the reviewer loads all three. This file defines the code-quality lane; the rules common to both lanes live in `references/reviewer-policy.md`.
+> Loaded by the single merged reviewer subagent dispatched by this skill, alongside the plan-compliance method file and the shared lane policy `<skill_path>/references/reviewer-policy.md` in this same `<skill_path>/references/` folder. The orchestrator itself does not read this file — it passes the absolute paths of this file, the plan-compliance file, and the policy file in the reviewer subagent's brief, and the reviewer loads all three. This file defines the code-quality lane; the rules common to both lanes live in `<skill_path>/references/reviewer-policy.md`.
 
 ## Focus Area
 
@@ -22,7 +22,7 @@ Code-quality is the contract between the diff and the codebase. You read the dif
 You do NOT evaluate:
 
 - Whether the diff implements what the plan task said it would — that is the plan-compliance lane's scope. You do not re-grade plan-compliance and you do not assume its verdict; the two lanes are judged independently, and this lane may raise code-quality findings whatever the plan-compliance lane concludes.
-- Whether the plan task is well-conceived. You critique the diff, not the plan. The one exception is the *plan-mandated* label (see `references/reviewer-policy.md`): when the diff faithfully implements something defective the plan itself mandated, surface the diff-level finding and mark it plan-mandated so the orchestrator can route it — you still do not patch or rewrite the plan.
+- Whether the plan task is well-conceived. You critique the diff, not the plan. The one exception is the *plan-mandated* label (see `<skill_path>/references/reviewer-policy.md`): when the diff faithfully implements something defective the plan itself mandated, surface the diff-level finding and mark it plan-mandated so the orchestrator can route it — you still do not patch or rewrite the plan.
 - Whether the codebase as a whole has good code quality. Your review is scoped to the diff for this orchestration cycle.
 
 If a finding sits at the boundary between the two lanes (e.g., "the diff implements the task but the implementation is so unsafe it nearly defeats the task's verification"), record the code-quality side in this lane's section; the plan-compliance side belongs in that lane's section of the same report. Your job here is the safety / structure / idiomatic-fit angle.
@@ -37,13 +37,13 @@ The diff is the review **target**; the repo is readable **context**. Reading unc
 2. **Inspect the diff.** Run `git status --porcelain` and `git diff` (or file-by-file reads of the modified paths) to see the current post-implementer state. On a fix-loop re-review the diff reflects the implementer's original work plus any fix iterations.
 3. **Read surrounding code as needed.** Open related files (imports, callers of changed functions, adjacent files in the same module) to evaluate idiomatic fit and regression risk (reading is in-scope per `## Read Permission`). Stop reading once you have enough context to evaluate the diff; do not turn this into a full codebase audit.
 4. **Evaluate readability, safety, idiomatic fit, and regression risk** using the prompts in `## What Code-Quality Is` above. Each evaluation produces zero or more findings.
-5. **Identify code-quality gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific file + lines in the diff, the specific concern, and a suggested fix), not vague ("the code feels off"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to change. Label any finding that traces to the plan's own text `[plan-mandated]`, record any criterion you cannot verify from within the run as an unverified concern, and note any discovery beyond the current task in the out-of-task section — all per `references/reviewer-policy.md`. Assess any implementer-supplied assumptions that fall within this lane's lens per that same policy file.
-6. **Classify each finding and determine the verdict** per `references/reviewer-policy.md` (`## Verdict`), reserving `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
-7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a file under the implementation folder's `.runs/task-NN/`) — see the write condition in `references/reviewer-policy.md` (`## Output file`). Do NOT modify code, do NOT modify the plan folder.
+5. **Identify code-quality gaps as ACTIONABLE FINDINGS, and assess any supplied assumptions.** Each finding must be concrete (cite the specific file + lines in the diff, the specific concern, and a suggested fix), not vague ("the code feels off"). Vague findings are useless to the fix-iteration implementer; the next implementer needs to know what to change. Label any finding that traces to the plan's own text `[plan-mandated]`, record any criterion you cannot verify from within the run as an unverified concern, and note any discovery beyond the current task in the out-of-task section — all following `<skill_path>/references/reviewer-policy.md`. Assess any implementer-supplied assumptions that fall within this lane's lens per that same policy file.
+6. **Classify each finding and determine the verdict** as `<skill_path>/references/reviewer-policy.md` (`## Verdict`) directs, reserving `BLOCKED` / `NEEDS_CONTEXT` for the rare can't-assess escapes.
+7. **Write this lane's section of the review output** using the `## Output Template` below, to the single `SS-review.md` path the orchestrator named in your brief (a file under the implementation folder's `.runs/task-NN/`) — see the write condition in `<skill_path>/references/reviewer-policy.md` (`## Output file`). Do NOT modify code, do NOT modify the plan folder.
 
 ## Output Template
 
-The write condition, the single-file / one-section-per-lane rule, and the reply shape are in `references/reviewer-policy.md` (`## Output file`). This lane contributes the **Code-Quality Lane** section below:
+The write condition, the single-file / one-section-per-lane rule, and the reply shape are in `<skill_path>/references/reviewer-policy.md` (`## Output file`). This lane contributes the **Code-Quality Lane** section below:
 
 ```markdown
 ## Code-Quality Lane
@@ -72,7 +72,7 @@ References:
 
 ## Hard Constraints
 
-The constraints binding both lanes (do not modify code, do not modify the plan folder, do not commit) are in `references/reviewer-policy.md` (`## Hard constraints (both lanes)`). This lane adds:
+The constraints binding both lanes (do not modify code, do not modify the plan folder, do not commit) are in `<skill_path>/references/reviewer-policy.md` (`## Hard constraints (both lanes)`). This lane adds:
 
 - Keep this lane's section scoped to code-quality. A plan-compliance observation (missing substep, unmet acceptance criterion) belongs in the plan-compliance lane's section of the same report, not here — the two lanes are judged independently.
 - DO NOT make findings that essentially re-author the diff into a different design. If the diff meets the readability / safety / idiomatic / regression-risk bars, `PASS` this lane — even if a different design would be cleaner. Architectural redesign is not your role.

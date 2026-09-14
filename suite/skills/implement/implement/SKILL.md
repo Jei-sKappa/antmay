@@ -17,15 +17,15 @@ This skill is single-agent: the current session is the implementer and runs the 
 
 Gather all of these before deriving implicit tasks; everything below works from what you gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the implementation before deriving tasks; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- The thread's `spec.md`, whenever the thread holds one — the thread's design truth, and what the implementation answers to. Authoritative.
-- The thread's `seed.md` — why the thread exists and what triggered it. Authoritative for intent.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread.
-- **The work to carry to code** — the primary input, in one of two accepted forms. When the invocation points at a **plan folder** under `plans/`, that folder is the form: the folder it names, or the newest folder under `plans/` by stamp when it points at `plans/` without naming one. Read its `plan.md`, whose ordered steps are what the run executes, together with the brief each step indexes under `plan-tasks/` when the folder holds them — a brief carries its step's files, verification, and acceptance criteria. Otherwise the form is a **referenced artifact or the user's prompt**: a repository path, a directory, a git ref, a GitHub issue (full URL or the short `owner/repo#NNN` form), another thread's artifact, read as history, or the user's prompt itself when nothing else is named. Material either way — the run derives its implicit tasks from it.
-- Every `implementations/*/report.md` whose `Plan:` line names the same plan folder, when a plan folder is the form — the record of what earlier passes over that plan already delivered. Material: a task one of them records as completed is skipped once it is verified against the code.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the implementation.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- The thread's `spec.md`, when the file exists — the thread's design truth, and what the implementation answers to.
+- The thread's `seed.md` — why the thread exists and what triggered it.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records.
+- **The work to carry to code** — the primary input, in one of two accepted forms. When the invocation points at a **plan folder** under `plans/`, that folder is the form: the folder it names, or the newest folder under `plans/` by stamp when it points at `plans/` without naming one. Read its `plan.md`, whose ordered steps are what the run executes, together with the brief each step indexes under `plan-tasks/` when the folder holds them — a brief carries its step's files, verification, and acceptance criteria. Otherwise the form is a **referenced artifact or the user's prompt**: a repository path, a directory, a git ref, a GitHub issue (full URL or the short `owner/repo#NNN` form), another thread's artifact, read as history, or the user's prompt itself when nothing else is named; the run derives its implicit tasks from it either way.
+- Every `implementations/*/report.md` whose `Plan:` line names the same plan folder, when present — the record of what earlier passes over that plan already delivered; a task one of them records as completed is skipped once it is verified against the code.
 
-If which input is meant is ambiguous — an incomplete issue identifier, a code reference pointing at a directory with multiple in-progress changes, a prompt naming an artifact with no clear referent, or an invocation naming a plan folder that is not under `plans/` — that is a preflight failure, not an in-run decision: refuse before deriving tasks, name the ambiguous reference and how to disambiguate it, write nothing, and end with `Outcome: REFUSED — <the ambiguity and how to re-invoke>`. Never silently pick by recency; the newest-by-stamp resolution applies only to an invocation that points at `plans/` without naming a folder.
+If which input is meant is ambiguous — an incomplete issue identifier, a code reference pointing at a directory with multiple in-progress changes, a prompt naming an artifact with no clear referent, or an invocation naming a plan folder that is not under `plans/` — that is a preflight failure, not an in-run decision: refuse before deriving tasks, name the ambiguous reference and how to disambiguate it, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the ambiguous reference and how to re-invoke. Never silently pick by recency; the newest-by-stamp resolution applies only to an invocation that points at `plans/` without naming a folder.
 
 ## Implementation folder
 
@@ -66,13 +66,13 @@ This skill runs on the current working tree and uses no `git worktree` isolation
 1. Inspect the worktree (`git status --porcelain` or equivalent).
 2. If clean, proceed to the rest of preflight.
 3. If dirty (any untracked, unstaged, or staged-but-uncommitted changes), proceed only when the invocation carries advance authorization that explicitly acknowledges the existing changes will be preserved and may enter this skill's implementation commits. A bare instruction to ignore the dirty tree does not satisfy the gate.
-4. Otherwise refuse immediately: write nothing, name the dirty paths, give the exact authorization needed to re-invoke, and end with `Outcome: REFUSED — worktree dirty (<dirty paths>); re-invoke with authorization acknowledging the existing changes will be preserved and may enter this skill's commits`. Do not ask, do not wait, do not auto-stash, do not auto-commit the pre-existing changes.
+4. Otherwise refuse immediately: write nothing, name the dirty paths, give the exact authorization needed to re-invoke, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED` and `worktree dirty (<dirty paths>); re-invoke with authorization acknowledging the existing changes will be preserved and may enter this skill's commits`. Do not ask, do not wait, do not auto-stash, do not auto-commit the pre-existing changes.
 
 When authorization is present, the pre-existing dirty changes are unavoidably picked up by the first `git commit` this skill makes once staged; the authorization is consent to that outcome.
 
 ## Procedure
 
-Steps 1–3 are preflight. They complete in full — with no thread artifact written, no implementation folder allocated, no project file edited, and no commit made — before execution begins at step 4. Any preflight failure ends the run `Outcome: REFUSED — <reason and how to re-invoke>` and writes nothing.
+Steps 1–3 are preflight. They complete in full — with no thread artifact written, no implementation folder allocated, no project file edited, and no commit made — before execution begins at step 4. Any preflight failure follows `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the reason and how to re-invoke, and writes nothing.
 
 1. **Safety preflight: dirty worktree.** Run the `## Dirty worktree handling` check first, before any other preflight step; it refuses a dirty tree that lacks valid advance authorization.
 
@@ -92,7 +92,7 @@ Steps 1–3 are preflight. They complete in full — with no thread artifact wri
 
 7. **Write the report.** Once all implicit tasks have run (or the run stopped early per `## Blocked`), write this folder's report per `## Implementation report`.
 
-8. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted implicit task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, and the report that was written. Name any parent-level discovery surfaced per `## Discoveries`. End per `references/instructions/emit-terminal-outcome.md`, with `<report path>` as the reason when the requested operation completed, including completion with non-blocking concerns; `<diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `<reason>` when preflight prevented execution (steps 1–3).
+8. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted implicit task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, and the report that was written. Name any parent-level discovery surfaced per `## Discoveries`. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `<report path>` when the requested operation completed, including completion with non-blocking concerns; `<diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `<reason>` when preflight prevented execution (steps 1–3).
 
 ## Run workspace
 
@@ -108,7 +108,7 @@ Create `.runs/` inside the folder allocated per `## Implementation folder` and n
 
 ## Implementation report
 
-At every terminal outcome an executing run reaches — completion, partial completion, a `BLOCKED` halt, or a no-op where the requested state already held — write this folder's `report.md` once, per `references/instructions/write-implementation-report.md`, folding in the outcome material from `progress.md` re-read from disk: what completed, partially completed, was blocked, or was already satisfied; the resulting code, test, configuration, and living-documentation changes; the checks actually run and their results, including failures and justified skips; the deviations per `## Deviations`; remaining concerns; and follow-ups.
+At every terminal outcome an executing run reaches — completion, partial completion, a `BLOCKED` halt, or a no-op where the requested state already held — follow `<skill_path>/references/instructions/write-implementation-report.md` once, drawing the outcome material from `progress.md` re-read from disk, and the deviations per `## Deviations`.
 
 The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this material: assumptions and forced judgment calls into the deviations, each with what it departs from and why; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
 
@@ -134,11 +134,11 @@ Three situations stop the run once substantive execution has begun (step 4 onwar
 
 **Missing human intent.** This applies whenever completing an implicit task requires a genuine human decision you cannot settle yourself from the gathered inputs and the observed code state. Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat.
 
-**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it by the conflict rule `/consult-adrs` carries, and route it here rather than overriding the project record.
+**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it as `/consult-adrs` instructs, and route it here rather than overriding the project record.
 
-Both take the same route. First finish everything the run can safely derive without the decision, then write the report per `## Implementation report` reflecting the blocked outcome, and queue the open decision(s) per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, this invocation's implementation folder's `report.md` as the target, the originating user request, and one point per open decision. Then stop with a concise notification naming where the bundle was written, whose final line is exactly `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Both take the same route. First finish everything the run can safely derive without the decision, then write the report per `## Implementation report` reflecting the blocked outcome, and follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, this invocation's implementation folder's `report.md` as the target, and the originating user request. Then stop with a concise notification naming where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 
-**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed input detail not caught by preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, write the report per `## Implementation report`, and end with `Outcome: BLOCKED — <diagnosis>`. A structural input problem that preflight should have caught is a preflight `REFUSED`, not this path.
+**Operational defect.** An unfixable in-run failure the run cannot repair on its own — an exhausted commit retry (per `### Failed commit`), an inaccessible external dependency, a runtime failure, or malformed input detail not caught by preflight and discovered only during lazy execution — ends the run `BLOCKED` with a diagnosis and NO decision bundle. Finish any safe work first, write the report per `## Implementation report`, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and the diagnosis. A structural input problem that preflight should have caught is a preflight `REFUSED`, not this path.
 
 ## Commit Policy
 
