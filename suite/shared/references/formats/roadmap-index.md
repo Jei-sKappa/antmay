@@ -4,33 +4,33 @@ A roadmap index holds one direction: where it is going and the entries that get 
 
 ## Shape
 
-  ```markdown
-  # Roadmap: <title>
+```markdown
+# Roadmap: <title>
 
-  ## Destination
+## Destination
 
-  <what reaching this direction means, and how it will be recognised>
+<what reaching this direction means, and how it will be recognised>
 
-  ## Entries
+## Entries
 
-  ### <kebab-slug>
+### <kebab-slug>
 
-  <a one-paragraph sketch of the work this entry covers>
+<a one-paragraph sketch of the work this entry covers>
 
-  Scope: <the boundary of this entry — what it includes and where it stops>
+Scope: <the boundary of this entry — what it includes and where it stops>
 
-  ### <next-kebab-slug>
+### <next-kebab-slug>
 
-  …
+…
 
-  ## Out of scope
+## Out of scope
 
-  - <something deliberately excluded from the direction>
+- <something deliberately excluded from the direction>
 
-  ## Not yet specified
+## Not yet specified
 
-  <what cannot yet be seen well enough to become an entry>
-  ```
+<what cannot yet be seen well enough to become an entry>
+```
 
 ## Rules
 

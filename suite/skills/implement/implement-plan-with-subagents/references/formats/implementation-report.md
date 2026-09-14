@@ -4,35 +4,35 @@ One implementation folder holds one report, at `implementations/<yymmddhhmm>[-<s
 
 ## Shape
 
-  ```markdown
-  # Implementation report
+```markdown
+# Implementation report
 
-  Plan: plans/<yymmddhhmm>[-<slug>]/
+Plan: plans/<yymmddhhmm>[-<slug>]/
 
-  ## Outcome
+## Outcome
 
-  <what the implementation ended up being: what was delivered, and whether it completed or stopped>
+<what the implementation ended up being: what was delivered, and whether it completed or stopped>
 
-  ## Changes
+## Changes
 
-  <the changes made, by area or by path, at the level a reader needs to find them>
+<the changes made, by area or by path, at the level a reader needs to find them>
 
-  ## Verification
+## Verification
 
-  <what was run or checked to confirm the changes hold, and what it showed>
+<what was run or checked to confirm the changes hold, and what it showed>
 
-  ## Deviations
+## Deviations
 
-  - <what was built> — departs from <the spec section or ADR stem> — <why>
+- <what was built> — departs from <the spec section or ADR stem> — <why>
 
-  ## Remaining concerns
+## Remaining concerns
 
-  - <something that holds but is not settled>
+- <something that holds but is not settled>
 
-  ## Follow-ups
+## Follow-ups
 
-  - <work this implementation leaves for later>
-  ```
+- <work this implementation leaves for later>
+```
 
 ## Rules
 
