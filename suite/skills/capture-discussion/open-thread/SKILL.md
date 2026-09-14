@@ -15,10 +15,10 @@ Turn a user's starting point into a durable thread on disk. You interpret the ra
 
 Gather the following before composing any field; the composition below works from what you gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the target before starting; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- The supplied ticket, when the invocation carries one — material for composing the seed. `references/supplied-ticket.md` covers reading it through the right tracker reference, the fallback when the tracker cannot be reached, and the check for a thread that already exists on that ticket.
-- The supplied roadmap index under `.wip/roadmaps/`, when the invocation names an entry — a project-level file, material for composing the seed. Find the entry in it as a heading whose text is the supplied slug, per `references/formats/roadmap-index.md`, and read that entry's sketch and scope boundary. When the index carries no heading with that slug, create nothing: tell the user the slug is absent and name the slugs the index does carry, so they can correct the invocation.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the starting point.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- The supplied ticket, when present — material for composing the seed; read it as `<skill_path>/references/supplied-ticket.md` directs.
+- The supplied roadmap index under `.wip/roadmaps/`, when present — a project-level file for composing the seed. Find the entry in it as a heading whose text is the supplied slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read that entry's sketch and scope boundary. When the index carries no heading with that slug, create nothing: tell the user the slug is absent and name the slugs the index does carry, so they can correct the invocation.
 
 The starting point itself comes with the invocation, in any combination of three forms, at least one of which is present:
 
@@ -46,11 +46,11 @@ From the user's input, and from the ticket or roadmap entry when one is linked, 
 
 Show the user the composed slug, title, genesis narrative, and any `External:`, `Roadmap:`/`Entry:`, or `Supersedes:` values, and invite a single round of corrections. This is a brief confirmation, not a drawn-out dialogue — one pass is enough. Fold any adjustment into the field values before writing anything: creating the thread a second time would mint a separate folder rather than correct the first, so every correction lands here.
 
-Then create the thread from those fields per `references/instructions/create-thread.md`.
+Then follow `<skill_path>/references/instructions/create-thread.md` with those fields.
 
 ## What you write
 
-The new thread folder with its `seed.md` and `log.md` is the whole result; `references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and `docs/adr/`, `docs/glossary.md`, and the roadmap index are read here and never written.
+The new thread folder with its `seed.md` and `log.md` is the whole result; `<skill_path>/references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and `docs/adr/`, `docs/glossary.md`, and the roadmap index are read here and never written.
 
 ## Report
 

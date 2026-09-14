@@ -8,7 +8,7 @@ metadata:
 
 # Consult Glossary
 
-`docs/glossary.md` is the project's naming authority: it fixes one meaning per term so that every document and every agent writes the same word for the same thing. Read it before you write, and read it again whenever a term's meaning is in doubt. The table shape is in `references/formats/glossary.md`.
+`docs/glossary.md` is the project's naming authority: it fixes one meaning per term so that every document and every agent writes the same word for the same thing. Read it before you write, and read it again whenever a term's meaning is in doubt. The table shape is in `<skill_path>/references/formats/glossary.md`.
 
 An absent `docs/glossary.md` means the project has fixed no terms yet.
 

@@ -8,7 +8,7 @@ metadata:
 
 # Consult ADRs
 
-`docs/adr/` holds the project's decisions, one record per file, and it is the whole authoritative surface for them: what is recorded there binds the work until another record supersedes it. The file shape is in `references/formats/adr.md`.
+`docs/adr/` holds the project's decisions, one record per file, and it is the whole authoritative surface for them: what is recorded there binds the work until another record supersedes it. The file shape is in `<skill_path>/references/formats/adr.md`.
 
 ## Print the catalog
 

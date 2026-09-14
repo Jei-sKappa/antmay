@@ -4,7 +4,7 @@ Applies when the invocation carries a ticket reference. Read the ticket before c
 
 ## Read the ticket
 
-Determine which tracker the reference belongs to from its host, then read the matching reference under `references/trackers/` — for a `github.com` ticket that is `references/trackers/github.md`. It carries the availability check, the read command, and the reference forms for that tracker.
+Determine which tracker the reference belongs to from its host, then read the matching reference under `<skill_path>/references/trackers/` — for a `github.com` ticket that is `<skill_path>/references/trackers/github.md`. It carries the availability check, the read command, and the reference forms for that tracker.
 
 Take any ticket the user hands you.
 

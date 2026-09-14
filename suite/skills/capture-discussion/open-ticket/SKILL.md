@@ -27,20 +27,18 @@ written.
 Gather the following before composing; the composition below works from what you
 gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the target before
-  starting; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the
+  idea.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms,
+  to be used in everything you write.
 - The repository's convention files, found and read as
-  `references/repository-conventions.md` describes — it carries where a project
-  states a ticket convention, which parts of it bind you, and what to do when it
-  leaves a choice the user's idea does not settle. Material. A convention can
+  `<skill_path>/references/repository-conventions.md` directs. A convention can
   decide the title's shape, and a title composed without it has to be rewritten.
 - The tracker reference matching the host of the project's git remote — for a
-  `github.com` remote that is `references/trackers/github.md`. It carries the
-  availability check, the repository resolution, and the exact commands for that
-  tracker. Material. When the checkout has several remotes and the target
-  repository is genuinely ambiguous, ask which one is meant; never pick one by
-  order or by name.
+  `github.com` remote that is `<skill_path>/references/trackers/github.md`;
+  follow it for that tracker. When the checkout has several remotes and the
+  target repository is genuinely ambiguous, ask which one is meant; never pick
+  one by order or by name.
 
 The idea itself comes with the invocation: one **rough idea** in prose — what
 triggered the work and what outcome is wanted — given as a sentence, a

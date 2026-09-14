@@ -30,15 +30,15 @@ Hold these together:
 
 ## Inputs
 
-Gather all of these once, before interviewing; the procedure below works from what you gather here.
+Gather all of these once, before interviewing; the procedure below works from what you gather here. A freshly opened thread holds only `seed.md` and a header-only `log.md`; everything else below appears only once later work has produced it.
 
-- `/consult-adrs` — read the project decisions relevant to the topic before starting; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- The thread's `seed.md` — why the thread exists. Authoritative for intent.
-- The thread's `log.md` — the thread's memory, read once here at session start when it has entries, and never re-read for the rest of the session. Material.
-- The thread's `spec.md`, when the file exists — the thread's design truth. Authoritative.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands. Authoritative within the thread.
-- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.wip/roadmaps/`. Material: locate the entry whose heading text is the seed's `Entry:` slug per `references/formats/roadmap-index.md`, and read its sketch and scope boundary.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the topic.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- The thread's `seed.md` — why the thread exists.
+- The thread's `log.md` — the thread's memory, read once here at session start when it has entries, and never re-read for the rest of the session.
+- The thread's `spec.md`, when the file exists — the thread's design truth.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands; inside the thread they take precedence over the project records.
+- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.wip/roadmaps/`; locate the entry whose heading text is the seed's `Entry:` slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read its sketch and scope boundary.
 
 ## Procedure
 
@@ -46,11 +46,11 @@ Gather all of these once, before interviewing; the procedure below works from wh
 
 2. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
 
-3. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term the project glossary fixes, classify it against the thread's delta by the conflict rule `/consult-adrs` carries. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
+3. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term the project glossary fixes, classify it against the thread's delta as `/consult-adrs` instructs. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
 
-4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed per `references/formats/discussion-point.md` — one point at a time, established facts separated from the genuine choice, lettered creative options or a single practical proposed solution — then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
+4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed following `<skill_path>/references/formats/discussion-point.md`, then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
-5. **Append the log line the moment a point settles**, before doing anything else with the point, per `references/instructions/append-log-line.md`. One line, one of the seven types, with the reason folded into the gist, per `references/formats/log-line.md`. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
+5. **Append the log line the moment a point settles**, before doing anything else with the point: follow `<skill_path>/references/instructions/append-log-line.md`. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
 
 6. **Apply the binding test** to the settled point, per `## Binding test and drafts` below.
 
@@ -60,11 +60,11 @@ Gather all of these once, before interviewing; the procedure below works from wh
 
 A settled point passes the binding test when a later thread could build against it incorrectly if not told, and could not read it off the code. Such a point becomes an ADR.
 
-When a point passes, propose the record in chat: show the `name`, the `description`, and the body text you intend to write. The user confirms the text or redirects it, and only then do you write the file at `adr/<yymmddhhmm>-<slug>.md` inside the thread, per `references/formats/adr.md`, creating `adr/` on demand. The user may also ask for a record directly, without the test: write it the same way, with the same confirmation of its text.
+When a point passes, propose the record in chat: show the `name`, the `description`, and the body text you intend to write. The user confirms the text or redirects it, and only then do you write the file at `adr/<yymmddhhmm>-<slug>.md` inside the thread following `<skill_path>/references/formats/adr.md`, creating `adr/` on demand. The user may also ask for a record directly, without the test: write it the same way, with the same confirmation of its text.
 
 When the same discussion later reverses a draft it wrote, edit that draft in place rather than adding a second record, and append the reversal's own log line.
 
-A project term this discussion introduces or changes is written to the thread's `glossary.md` as a term and its definition, per `references/formats/glossary.md`, created on demand, with the same confirmation of the wording before the write.
+A project term this discussion introduces or changes is written to the thread's `glossary.md` following `<skill_path>/references/formats/glossary.md`, created on demand, with the same confirmation of the wording before the write.
 
 You write exactly three things: lines appended to `log.md`, files under the thread's `adr/`, and entries in the thread's `glossary.md`. Nothing else you touch is written — `spec.md`, `docs/adr/`, and `docs/glossary.md` are read here and never written, and the roadmap index is read and never written.
 
