@@ -118,9 +118,12 @@ npm run check
 npm run lint
 ```
 
-The skill suite has no build. Its one mechanical gate guards the distribution
-manifest, and runs from `suite/`:
+The skill suite has no build. It has two mechanical gates, both run from
+`suite/`: the first guards the distribution manifest, the second the text of
+every skill body and shared reference — skill-local pointers carry the
+`<skill_path>/` prefix, no `per` precedes one, and no fence is indented:
 
 ```sh
 node scripts/check-marketplace-skills.mjs
+node scripts/check-skill-text.mjs
 ```

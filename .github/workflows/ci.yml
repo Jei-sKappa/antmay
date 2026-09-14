@@ -78,3 +78,4 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-marketplace-skills.mjs
+      - run: node scripts/check-skill-text.mjs

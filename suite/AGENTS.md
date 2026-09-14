@@ -21,7 +21,7 @@ files.
 
 ## What the suite is
 
-The suite is the reference implementation of the Antmay method: refined `SKILL.md` files that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk, plus the shared references they ship with. It is published content — end users install it from [skills.sh](https://skills.sh) with `npx skills add Jei-sKappa/antmay --skill <skill-name>`, so every file under `skills/` and `shared/references/` is written for the invoked agent in any project. There is no build or lint pass: validation is reading the Markdown and confirming the instructions are coherent. General-purpose, context-agnostic skills live in the separate companion repository `Jei-sKappa/skills`, not here.
+The suite is the reference implementation of the Antmay method: refined `SKILL.md` files that carry a unit of work from a rough idea to shipped code through reviewable Markdown artifacts on disk, plus the shared references they ship with. It is published content — end users install it from [skills.sh](https://skills.sh) with `npx skills add Jei-sKappa/antmay --skill <skill-name>`, so every file under `skills/` and `shared/references/` is written for the invoked agent in any project. There is no build; `scripts/check-skill-text.mjs` is the one mechanical text check, and the rest of validation is reading the Markdown and confirming the instructions are coherent. General-purpose, context-agnostic skills live in the separate companion repository `Jei-sKappa/skills`, not here.
 
 ## Layout
 
@@ -44,7 +44,8 @@ shared/
 └── manifest.yaml                 flat map: skill path → the shared/references/ sources mirrored into it
 scripts/
 ├── sync-shared-references.mjs    mirrors the canonical sources into each declaring skill's references/
-└── check-marketplace-skills.mjs  asserts marketplace.json and skills/ agree
+├── check-marketplace-skills.mjs  asserts marketplace.json and skills/ agree
+└── check-skill-text.mjs          fails on a bare `references/` path, `per` before a `<skill_path>/` pointer, or an indented fence
 authoring/                        the conventions every skill is authored to
 ```
 
@@ -63,5 +64,6 @@ Read the file whose concern you are about to touch before changing any skill:
 - Every skill lives at `skills/<group>/<skill-name>/SKILL.md`, and the leaf directory name MUST match the frontmatter `name:`.
 - The repo-root `.claude-plugin/marketplace.json` holds exactly one plugin entry, `Antmay`, whose `skills` array lists every skill folder as `./skills/<group>/<skill-name>`. That array is what makes the skills installable at all: the `skills` CLI scans a fixed set of root-relative directories and then the parent of every path the array names, so nothing but the manifest finds a suite living under `suite/`. A skill missing from the array silently disappears from `npx skills add`, with no error.
 - Run `node scripts/check-marketplace-skills.mjs` after adding, removing, renaming, or moving a skill. It fails when the manifest and `skills/` disagree in either direction, and when two skills share a frontmatter `name:` (discovery de-duplicates on that field and would silently drop one).
+- Run `node scripts/check-skill-text.mjs` after editing any body or shared reference. It fails on a `references/` path not prefixed `<skill_path>/`, on ``per `<skill_path>``, and on a fence line with leading whitespace. `authoring/` is not walked, because those documents quote those forms as negative examples.
 - NEVER hand-edit a copy under a skill's `references/` — any file `shared/manifest.yaml` declares for that skill. Edit the canonical source under `shared/references/` and run `node scripts/sync-shared-references.mjs`.
 - A new skill starts at `version: 0.0.0` and is registered in three places besides the manifest: the `skills` array in `.claude-plugin/marketplace.json`, a section in the repo-root `README.md` under `## Skills` or `## Model-invoked skills`, and `conventionalCommits.scopes` in the repo-root `.vscode/settings.json` (leaf folder name, array kept sorted).
