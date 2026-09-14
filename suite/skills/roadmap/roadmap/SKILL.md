@@ -17,21 +17,21 @@ The index is a map, not a plan: it records where the direction is going and what
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the direction before drafting; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- The thread's `seed.md` — why the thread exists and what the direction is meant to reach. Authoritative for intent.
-- The thread's `spec.md`, when the thread's owner authored one — the direction's design truth. Authoritative.
-- The thread's `adr/` and `glossary.md` — the direction's settled constraints and terms, authoritative within the thread. These records are the constraints that bind the threads opened from the index's entries, and they reach those threads by landing in `docs/adr/` when this thread closes, so the index restates none of them.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the direction.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- The thread's `seed.md` — why the thread exists and what the direction is meant to reach.
+- The thread's `spec.md`, when the file exists — the direction's design truth.
+- The thread's `adr/` and `glossary.md` — the direction's settled constraints and terms, which inside the thread take precedence over the project records. These records are the constraints that bind the threads opened from the index's entries, and they reach those threads by landing in `docs/adr/` when this thread closes, so the index restates none of them.
 
-Run a mandatory preflight before any substantive execution (authoring the index). Every preflight failure writes nothing, emits no bundle, and ends `Outcome: REFUSED — <reason and how to re-invoke>`. Validate the inputs: refuse when a required authoritative input is missing, or when which input is meant is ambiguous — name the missing or ambiguous input and how to supply it rather than guessing or picking by recency.
+Run a mandatory preflight before any substantive execution (authoring the index). Every preflight failure writes nothing, emits no bundle, and follows `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the reason and how to re-invoke. Validate the inputs: refuse when a required authoritative input is missing, or when which input is meant is ambiguous — name the missing or ambiguous input and how to supply it rather than guessing or picking by recency.
 
 ## Author the index
 
-Write one file, `.wip/roadmaps/<yymmddhhmm>-<slug>.md`, in the shape `references/formats/roadmap-index.md` defines, creating `.wip/roadmaps/` on demand.
+Write one file, `.wip/roadmaps/<yymmddhhmm>-<slug>.md`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, creating `.wip/roadmaps/` on demand.
 
 - **The stamp** is the file's creation time in UTC at minute resolution.
 - **The slug** is the thread's own slug, unless the invocation names one, in which case use that.
-- **When a file of that name already exists**, write nothing and end `Outcome: REFUSED — <the existing path>`: an index is authored once and edited in place from then on.
+- **When a file of that name already exists**, write nothing and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED` and the existing path: an index is authored once and edited in place from then on.
 
 What the file holds:
 
@@ -50,10 +50,10 @@ What the file holds:
 
 This path is reachable only after preflight has passed and authoring the index from otherwise-valid inputs has begun — substantive execution. Ambiguous inputs and missing required artifacts are preflight refusals (`## Inputs`), not this path. It applies to a genuine choice about the direction discovered during authoring that existing durable intent does not settle — an answer that settles product or process intent, such as where an entry's scope boundary falls or how the direction divides, that you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-Queue the open decision(s) as one bundle per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, the index path you were authoring as the target, the originating user request, and one point per open decision.
+Queue the open decision(s): follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, the index path you were authoring as the target, and the originating user request.
 
-A blocked run leaves no index file behind, so the invocation that follows the settled decisions authors the whole map at once. Stop with a concise notification of where the bundle was written, whose final line is `Outcome: BLOCKED — pending decisions at <bundle path>`.
+A blocked run leaves no index file behind, so the invocation that follows the settled decisions authors the whole map at once. Stop with a concise notification of where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After writing the file, report concisely where the index is and what it maps out, and recommend closing the thread with `close-thread`, so the direction's records land in `docs/adr/` before any entry is worked. End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — Roadmap index written: .wip/roadmaps/<file>`. No preamble, no closing remark.
+This is a completion-oriented operation, not a dialogue. After writing the file, report concisely where the index is and what it maps out, and recommend closing the thread with `close-thread`, so the direction's records land in `docs/adr/` before any entry is worked. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Roadmap index written: .wip/roadmaps/<file>`. No preamble, no closing remark.

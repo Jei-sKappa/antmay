@@ -17,15 +17,15 @@ A handoff-grade spec is one a downstream reader with no prior context can read a
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `/consult-adrs` — read the project decisions relevant to the thread's subject before drafting; authoritative.
-- `/consult-glossary` — write the project's fixed terms; authoritative.
-- **The discussion that settled the design** — the primary input, in one of two accepted forms. When the same session ran the discussion, that **live conversation** is the form, and you author from it. Otherwise the form is the thread's **`log.md`**, the thread's memory, which is complete enough to author from; read it in full. Material.
-- The thread's `seed.md` — why the thread exists. Authoritative for intent.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, authoritative within the thread. The spec cites each record by stem where it is operative and does not restate it.
+- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the thread's subject.
+- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- **The discussion that settled the design** — the primary input, in one of two accepted forms. When the same session ran the discussion, that **live conversation** is the form, and you author from it. Otherwise the form is the thread's **`log.md`**, the thread's memory, which is complete enough to author from; read it in full.
+- The thread's `seed.md` — why the thread exists.
+- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records. The spec cites each record by stem where it is operative and does not restate it.
 
 These are the whole of what the spec rests on: the audit pass checks every claim in the draft against the conversation or the log, the seed, and the thread's delta, so no other material feeds the spec.
 
-If the primary input cannot be resolved — this session did not run the discussion and `log.md` carries nothing past its header, or the invocation names a source whose referent is unclear — that is a preflight failure, not an in-run decision: refuse before drafting, name what is missing or ambiguous and how to supply it, write nothing, and end with `Outcome: REFUSED — <the gap and how to re-invoke>`. Never silently pick by recency.
+If the primary input cannot be resolved — this session did not run the discussion and `log.md` carries nothing past its header, or the invocation names a source whose referent is unclear — that is a preflight failure, not an in-run decision: refuse before drafting, name what is missing or ambiguous and how to supply it, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the gap and how to re-invoke. Never silently pick by recency.
 
 ## Semantic contract
 
@@ -89,11 +89,11 @@ The material for the pass is the live conversation when this session holds one; 
 
 Amend in place every passage that material affects: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. Leave every other passage untouched — a passage the new material does not touch is not rewritten, re-worded, or re-derived.
 
-Amending in place under these rules, with one line appended to `log.md` per `references/instructions/append-log-line.md` recording the change, is the one way the spec changes once it is authored — whether this skill performs the amendment or the user asks the agent to amend the spec directly.
+Amending in place under these rules, with one line appended to `log.md` by following `<skill_path>/references/instructions/append-log-line.md`, recording the change, is the one way the spec changes once it is authored — whether this skill performs the amendment or the user asks the agent to amend the spec directly.
 
 ## Procedure
 
-1. **Preflight before any drafting (substantive execution).** A preflight failure writes nothing and ends `Outcome: REFUSED — <reason and how to re-invoke>`, never a pending bundle — refuse when the primary input cannot be resolved per `## Inputs`.
+1. **Preflight before any drafting (substantive execution).** A preflight failure writes nothing and follows `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the reason and how to re-invoke — never a pending bundle — refuse when the primary input cannot be resolved per `## Inputs`.
 
 2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. That picture is what keeps the spec from contradicting a project record or a record the thread has already settled.
 
@@ -103,9 +103,9 @@ Amending in place under these rules, with one line appended to `log.md` per `ref
 
 5. **Write the artifact.** Write the single file `spec.md` at the thread root — literally that name, with no frontmatter. Within-thread references in the body are thread-relative (e.g. `log.md`, `adr/<stem>.md`), never repo-rooted or absolute; cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.wip/threads/<other>/…`).
 
-6. **Append the log line.** Append exactly one `event` line to the thread's `log.md` per `references/instructions/append-log-line.md`, stating that the spec was authored or amended and from which form of the primary input. This line is the position the next amendment pass starts after, so every authoring and every amendment appends one.
+6. **Append the log line.** Follow `<skill_path>/references/instructions/append-log-line.md` with exactly one `event` line stating that the spec was authored or amended and from which form of the primary input. This line is the position the next amendment pass starts after, so every authoring and every amendment appends one.
 
-7. **Confirm.** End per `references/instructions/emit-terminal-outcome.md` with `Outcome: DONE — Spec written: spec.md` after authoring, or `Outcome: DONE — Spec amended: spec.md` after an amendment, and nothing before it — no preamble, no summary, no closing remark.
+7. **Confirm.** Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Spec written: spec.md` after authoring, or `DONE` and `Spec amended: spec.md` after an amendment, and nothing before it — no preamble, no summary, no closing remark.
 
 You write exactly two things: `spec.md` at the thread root, and one line appended to the thread's `log.md`. Nothing else you touch is written — the thread's `adr/` and `glossary.md`, `docs/adr/`, and `docs/glossary.md` are read here and never written.
 
@@ -113,8 +113,8 @@ You write exactly two things: `spec.md` at the thread root, and one line appende
 
 This path is reachable only after preflight has passed and forward-designing from otherwise-valid inputs has begun — substantive execution. Invocation and input-resolution failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound spec — one you cannot settle yourself from the gathered inputs, an open question the audit pass left standing included. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-Finish everything safely derivable first, then queue the open decision(s) per `references/instructions/emit-pending-decisions.md`, naming yourself as the producer, `spec.md` as the target, the originating user request, and one point per open decision. Then stop with a concise notification of where the bundle was written, whose final line is `Outcome: BLOCKED — pending decisions at <bundle path>`.
+Finish everything safely derivable first, then follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, `spec.md` as the target, and the originating user request. Then stop with a concise notification of where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 
-An unnoticed conflict between what the thread settled and a project ADR or a project glossary term is one of these decisions: classify it by the conflict rule `/consult-adrs` carries, and queue it rather than overriding the project record.
+An unnoticed conflict between what the thread settled and a project ADR or a project glossary term is one of these decisions: classify it as `/consult-adrs` instructs, and queue it rather than overriding the project record.
 
 A blocked run still writes `spec.md` as complete as the settled inputs allow — every section fully elaborated, each blocked specific marked inline at its exact location pointing at the pending bundle — and appends its `event` line. The only permitted gaps are those marked ones tied to queued decisions.
