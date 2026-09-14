@@ -1,6 +1,6 @@
 # Append a log line
 
-Append one entry to the thread's `log.md`. What an entry looks like and which seven types it may carry are fixed in `references/formats/log-line.md`.
+Append one entry to the thread's `log.md`. What an entry looks like and which seven types it may carry are fixed in `<skill_path>/references/formats/log-line.md`.
 
 Append it as a single-line shell append:
 

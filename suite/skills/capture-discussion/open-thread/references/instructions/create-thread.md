@@ -1,6 +1,6 @@
 # Create a thread
 
-Allocate a new thread folder, write its `seed.md` from the fields supplied with the request, and create its `log.md`. The layout this act writes into is fixed in `references/formats/thread.md`.
+Allocate a new thread folder, write its `seed.md` from the fields supplied with the request, and create its `log.md`. The layout this act writes into is fixed in `<skill_path>/references/formats/thread.md`.
 
 ## Compose the path and create the folder
 

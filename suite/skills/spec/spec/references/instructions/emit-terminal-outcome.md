@@ -6,6 +6,8 @@ End the run's final chat message with exactly one line:
 Outcome: <TOKEN> — <one-line reason or pointer>
 ```
 
+Follow this at whichever exit the run reaches — a refusal, a block, or a completion — and at that one exit only.
+
 The vocabulary is closed to three tokens:
 
 - `DONE` — the requested job completed, non-blocking concerns included.
