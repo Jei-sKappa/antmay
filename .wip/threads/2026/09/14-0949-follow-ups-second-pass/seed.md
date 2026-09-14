@@ -1,0 +1,23 @@
+# Follow-ups second pass
+
+An agent just implemented `.wip/threads/2026/09/13-1149-follow-ups/spec.md`.
+The work started after the commit `0fc0450141a954d3e5ac9bf54ba4c4b553493bfa`.
+
+I once again something that I wanna improve:
+- All skills' references paths needs to have prefixed with <skill_path> to make it easily distinguishable from project references like `docs/glossary.md` etc... (Es. `<skill_path>/<references/...>`).
+- I don't wanna have `/consult-adrs` nor `/consult-glossary` in any skills' body.
+  The tricks is to write just `docs/adrs/` and `docs/glossary.md` in the body and "link" them by naming them in the respective skill's description so the agent knows by itself that he can use the skill to read the files/folders.
+  Also I think that "- `/consult-glossary` — write the project's fixed terms; authoritative." is weird anyway because that instruction tells the user to write the glossary instead of reading it. It's a bit weird and can let to misunderstandings given that I don't even understand why it's there.
+  Additionally some skills have those skills in the body for example the discussion skill have "... classify it against the thread's delta by the conflict rule `/consult-adrs` carries.". The body treat it like a document but it's a skill. The solution here is to replace it with the actual doc/folder path and let agents infer by themself that for doing something they can use a skill. This is also useful if an user didn't install these 2 skills so it's an advantage for users that have it installed but it's non blocking for the ones that don't.
+  Also we should make clear that some input could be optional because they could not be present like roadmap most of the times. The important one is discussion for example because most of the times it will be invoked when the thread was just opened and therefore the only thing available is the `seed.md` file (and an empty `log.md`). Some other time when there is already some work there could be some other document like spec, etc.. so we just need to make this thing clear.
+- The input section of some skill is weird, for example `suite/skills/capture-discussion/discussion/SKILL.md`:
+  - have "; authoritative." for the first 2 inputs
+  - then ". Authoritative." for another input
+  - then ". Material." for another input
+  - then ". Authoritative within the thread." for another input
+  - then ". Material: ..." for another one
+  This is super confusing it needs to be re-adjusted or removed entirely or collapse this "tag/descriptor" into the input description in natural language.
+- I'm unsure about `instructions/emit-terminal-outcome.md`. This needs to be re thinked maybe because some skills have in the skill body parts of it for example to exit with refused without doing anything. I think the options are either: delete that instruction file and let the skill body to handle it like was before or split it into 3 differnt files for each outcome so it's clear and can be used by any skill's body in any part of the body depending on the need.
+- Some times markdown references in files are "  ```markdown" and sometimes are "```markdown"
+- `suite/shared/references/formats/log-line.md` has lost the `## The seven types` section probabily because we made the format of "format files" too strict. Maybe we can merge examples and descriptions into the same section but I think it's worth re-adding it so that the agent can have a quick overview of the types of log lines. Also maybe it could be helpful (but I need your opinion) to have a generic "note" type or make clear that he can use new types as he wants.
+- I think that `suite/shared/references/instructions/` (but also format files) most of the times are used wrongly. The gets cited in skill most of time times as "do X per `path/to/reference`" or "do Y per '<section in file>' in `path/to/reference`". I think that a well defined instruction should be a clear pointer to an instruction like "follow `path/to/instruction`" and optionally something like "write X following `path/to/format`" instead of do X because the reference file makes use to X. Written in this way could lead to an agent think that is not necessary to read that reference file because the skill is leaking parts of it. This needs to re-adjusted and I'm willing to change approach if needed. The failure mode here is to use use the word "per" like "do X per Y" because it's not a clear pointer to an instruction that must be read. This _could_ be ok if an something above in the skill body already told the agent to read the reference file and therefore later we can just expect the agent to read it as a reference but we need to be carefoul with this, most of the times it's not the case.
