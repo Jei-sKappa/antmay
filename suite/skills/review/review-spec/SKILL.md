@@ -39,7 +39,7 @@ Read the spec against these axes; each weakness you find maps to the axis it con
 
 - **Clarity** — the prose says one thing, not several. Soft language ("robust", "scalable", "clean", "appropriate", "as needed") is the common signal that two agents would read a passage two different ways.
 - **Completeness** — the information a planner needs is present, not left to inference at the boundaries (what is out of scope, which constraints bind, what "done" looks like).
-- **Internal consistency** — no two parts of the spec point in different directions; the intended outcome, scope, constraints, and acceptance guidance agree.
+- **Internal consistency** — no two parts of the spec point in different directions; the intended goal, scope, constraints, and acceptance guidance agree.
 - **Scope boundaries** — what is in and, explicitly, what is out. An open boundary is an invitation to interpretation.
 - **Observable behavior** — the state changes, outputs, error surfaces, and side effects a downstream executor must produce are stated, not implied.
 - **Constraints** — the technical, repository, harness, and safety limits that bind the work are written down, not assumed obvious.

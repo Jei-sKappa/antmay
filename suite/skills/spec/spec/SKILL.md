@@ -31,7 +31,7 @@ If the primary input cannot be resolved — this session did not run the discuss
 
 The emitted spec MUST cover all SEVEN of the following elements in its body, regardless of the section names used:
 
-1. **Intended outcome** — what this spec, when implemented, produces for the user.
+1. **Intended goal** — what this spec, when implemented, produces for the user.
 2. **Context** — why this is being built; what came before; what triggered the spec.
 3. **Scope / non-scope** — the boundary statement, INCLUDING what is explicitly out.
 4. **Expected behavior** — the observable behaviors a future executor needs.
