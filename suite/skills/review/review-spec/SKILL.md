@@ -44,6 +44,7 @@ Read the spec against these axes; each weakness you find maps to the axis it con
 - **Observable behavior** — the state changes, outputs, error surfaces, and side effects a downstream executor must produce are stated, not implied.
 - **Constraints** — the technical, repository, harness, and safety limits that bind the work are written down, not assumed obvious.
 - **Degrees of freedom** — where the spec deliberately leaves choices open, it says so, so a planner knows what is free versus pinned.
+- **Inferences** — every item in the spec's `## Inferences` section is really an inference: a point that follows from the settled material or has one plainly sensible answer. An item reasonable people could settle differently, whose answer would change what a reviewer checks or what the user experiences, is a fork the spec settled on its own, and a finding — a planner would build on a decision nobody made.
 - **Acceptance guidance** — how a reviewer will know the result is right, so the downstream can self-verify without returning to the author for every ambiguous case.
 - **Planning readiness** — taken as a whole, the spec is something a planner or implementer can act on directly.
 
@@ -55,7 +56,7 @@ You do not perform an exhaustive claim-by-claim fidelity mapping between the spe
 
 When you hold one or more findings, record them by following `<skill_path>/references/instructions/emit-pending-review.md`, with yourself as the reviewer and `spec.md` as the target.
 
-Use the readiness axes above as your category vocabulary — `clarity`, `completeness`, `consistency`, `scope`, `behavior`, `constraints`, `freedom`, `acceptance`, `readiness` — assigning each finding the axis it concerns. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
+Use the readiness axes above as your category vocabulary — `clarity`, `completeness`, `consistency`, `scope`, `behavior`, `constraints`, `freedom`, `inference`, `acceptance`, `readiness` — assigning each finding the axis it concerns. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 
 That bundle is the one thing a review run writes, and only when it holds findings. Nothing else you touch is written: `spec.md` itself, `seed.md`, the thread's `adr/` and `glossary.md`, `docs/adr/`, and `docs/glossary.md` are read here and never written.
 

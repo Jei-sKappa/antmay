@@ -9,9 +9,9 @@ metadata:
 
 # Spec
 
-Author the thread's single design truth, end to end. You gather the thread's context, draft a spec body that covers all seven required semantic-contract elements plus the two spec obligations, audit the draft against what the thread actually settled, write the single thread-root `spec.md`, and append one `event` line to the thread's log. On a thread whose `spec.md` already exists you run the amendment pass instead of authoring. You work straight from what the thread settled, without interviewing the user element by element. Writing the file and its log line is where you stop — do not stage, commit, or push.
+Author the thread's single design truth, end to end. You gather the thread's context, draft a spec body that covers all seven required semantic-contract elements plus the three spec obligations, audit the draft against what the thread actually settled, write the single thread-root `spec.md`, and append one `event` line to the thread's log. On a thread whose `spec.md` already exists you run the amendment pass instead of authoring. You work straight from what the thread settled, without interviewing the user element by element. Writing the file and its log line is where you stop — do not stage, commit, or push.
 
-A handoff-grade spec is one a downstream reader with no prior context can read alone and know what to build: what the outcome is, what is in and out of scope, how it must behave, what binds it, what is deliberately left free, and how a reviewer will know it is right.
+A handoff-grade spec is one a downstream reader with no prior context can read alone and know what to build: what the outcome is, what is in and out of scope, how it must behave, what binds it, what is deliberately left free, what the spec settled on its own, and how a reviewer will know it is right.
 
 ## Inputs
 
@@ -37,15 +37,15 @@ The emitted spec MUST cover all SEVEN of the following elements in its body, reg
 4. **Expected behavior** — the observable behaviors a future executor needs.
 5. **Constraints** — tech, repo, harness, and safety constraints that bind the implementation.
 6. **Explicit decisions** — settled trade-offs INLINED into the body where they are operative (in scope, in constraints, in expected behavior, in acceptance). When one of the thread's ADRs carries the settled decision, cite that record by its stem at the inline location where it becomes operative — e.g. `(per adr/2609081420-queue-worker-exports)` — rather than copying its text. Thread-local design that no ADR carries is written out in full, the thread's direction included.
-7. **Acceptance guidance** — how a reviewer will know the implementation is right (see `## Acceptance guidance and degrees of freedom`).
+7. **Acceptance guidance** — how a reviewer will know the implementation is right (see `## Acceptance guidance, degrees of freedom, and inferences`).
 
-The seven elements MAY be presented as a copy-paste template OR interleaved into a freeform structure appropriate to the input — section names and ordering are yours to choose. What is not yours to choose: every one of the seven must appear, the two obligations below must appear, and the spec must read as handoff-grade.
+The seven elements MAY be presented as a copy-paste template OR interleaved into a freeform structure appropriate to the input — section names and ordering are yours to choose. What is not yours to choose: every one of the seven must appear, the three obligations below must appear, and the spec must read as handoff-grade.
 
 There is no mandatory `## Decisions` heading. A separate decisions section is redundant clutter — settled decisions belong inlined into the elements they govern, each carrying its ADR stem where a record holds it. Do not add such a section to satisfy an implicit template.
 
-## Acceptance guidance and degrees of freedom
+## Acceptance guidance, degrees of freedom, and inferences
 
-Two obligations beyond the seven elements make downstream plan autonomy safe rather than hopeful:
+Three obligations beyond the seven elements make downstream plan autonomy safe rather than hopeful:
 
 1. **Machine-checkable acceptance criteria (wherever the work carries a design decision).** Express the acceptance guidance as machine-checkable acceptance criteria following the FR/AC + coverage + traceability model:
    - **FR/AC** — enumerate functional requirements as `FR-<id>` and, under each, one or more acceptance criteria as `AC-<id>.<n>`, each phrased as a concrete, checkable assertion — an observable outcome a reviewer or a test can verify pass/fail, not a vague aspiration.
@@ -58,14 +58,21 @@ Two obligations beyond the seven elements make downstream plan autonomy safe rat
 
    A listed freedom must clear an eligibility bar: it is an implementation-level *how* where (a) every admissible choice satisfies all acceptance criteria unchanged, (b) no choice produces a user-visible behavioral difference the user would plausibly want to weigh in on, and (c) the choice is reversible later without revising the spec. Shorthand: if the choice would change what a reviewer checks or what the user experiences, it is not a degree of freedom — it is an unsettled decision, routed per `## Blocked`.
 
+3. **An `## Inferences` section (every spec).** An **inference** is a specific the thread did not settle that the spec settles on its own, because it follows from the settled points or has one plainly sensible answer. List every inference the spec carries, one bullet each, naming the inference and the passage it shapes — whether the user already saw the point listed and let it pass or you found it while writing, with no distinction between the two. Mark each inference inline as well, at the exact place the spec uses it, so a reader of that passage knows it was not user-settled; write the mark as a bracketed *(Inference: …)* note. If there are genuinely no inferences, say so explicitly rather than omitting the section.
+
+   An inference is neither a degree of freedom nor a settled decision: a freedom is a *how* left open to the implementer, while an inference is pinned; a decision was settled by the user, while an inference binds nothing until the spec pins it. This section is what lets a reviewer and the user see what the spec settled alone, and find among those items the fork the thread never settled.
+
 ## Lossless authoring
 
-The spec must commit to **no decision or assumption** the user did not see and accept in what the thread settled — the conversation or the log, the seed, and the thread's `adr/` and `glossary.md` — **unless the spec explicitly marks it a degree of freedom.** The unit of this bar is a decision or an assumption — never a sentence: a spec freely elaborates settled decisions into prose, structure, and derived acceptance criteria. Elaboration is allowed and expected; introducing a new decision or assumption the user never saw is forbidden.
+The spec must commit to **no decision** the user did not see and accept in what the thread settled — the conversation or the log, the seed, and the thread's `adr/` and `glossary.md` — **unless the spec explicitly marks it a degree of freedom or pins it as an inference.** The unit of this bar is a decision — never a sentence: a spec freely elaborates settled decisions into prose, structure, and derived acceptance criteria. Elaboration is allowed and expected; introducing a new decision the user never saw is forbidden. An inference is by definition not one: either any reader would reach it from the settled material, or the user was shown it and let it pass.
 
-When forward-designing surfaces a specific the thread did not settle, there are exactly two legal moves — never silently bake it in:
+When forward-designing surfaces a specific the thread did not settle, there are exactly three legal moves — never silently bake it in:
 
 1. **Mark it a degree of freedom** — if the specific passes the `## Degrees of freedom` eligibility bar, record it there as a *how* left open to the implementer, so it is visibly granted rather than smuggled in as a pinned commitment.
-2. **Queue it as a decision** — otherwise it is human intent the thread never settled: emit a pending-decisions bundle per `## Blocked` and report the run blocked, so the decision is made before it is committed.
+2. **Pin it as an inference** — if the specific follows from the settled points or has one plainly sensible answer, settle it, mark it inline, and list it in `## Inferences`, so it is visibly agent-settled rather than passed off as user-settled.
+3. **Queue it as a decision** — otherwise it is human intent the thread never settled: emit a pending-decisions bundle per `## Blocked` and report the run blocked, so the decision is made before it is committed.
+
+Which move to try first is your judgment, guided by one test. A specific reasonable people could settle differently, whose answer would change what a reviewer checks or what the user experiences, is a decision to queue. One that follows from the settled points or has one plainly sensible answer is an inference. One where every admissible answer satisfies the settled points equally and the choice belongs to the implementer is a degree of freedom.
 
 Context worth flagging that is neither intent nor freedom lives in the spec body as a stated constraint or risk note — information, not a question.
 
@@ -77,7 +84,7 @@ Authoring runs one audit pass over the draft, after drafting and before the file
 
 Walk the primary input claim by claim — the conversation when you authored from it, otherwise the log — and confirm that each claim landed somewhere in the spec. A settled point that has no home in the draft is one the spec is missing.
 
-Then read the draft back the other way. Anything the spec states that the conversation or the log, the seed, and the thread's delta do not support is labelled inline, at the exact place it appears, as an **assumption** or as an **open question**. Such a claim is never deleted, and it is never left standing as though it were settled.
+Then read the draft back the other way. Anything the spec states that the conversation or the log, the seed, and the thread's delta do not support is labelled inline, at the exact place it appears, as an **inference** or as an **open question**, and an inference so labelled is listed in `## Inferences`. Such a claim is never deleted, and it is never left standing as though it were settled.
 
 A spec is not complete while an open question remains. An open question you can answer from the gathered inputs is answered, and its label goes with the answer. One you cannot answer yourself is a human decision: queue it per `## Blocked` and mark it inline pointing at the bundle.
 
@@ -87,7 +94,7 @@ When `spec.md` already exists at the thread root, the run amends it. Author noth
 
 The material for the pass is the live conversation when this session holds one; otherwise it is the `log.md` entries after the last `event` line stating that the spec was authored or amended. Those entries are exactly what settled since the spec last stood current.
 
-Amend in place every passage that material affects: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. Leave every other passage untouched — a passage the new material does not touch is not rewritten, re-worded, or re-derived.
+Amend in place every passage that material affects: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. An inference the user has since settled is such a passage, and its bullet in `## Inferences` is amended with it. Leave every other passage untouched — a passage the new material does not touch is not rewritten, re-worded, or re-derived.
 
 Amending in place under these rules, with one line appended to `log.md` by following `<skill_path>/references/instructions/append-log-line.md`, recording the change, is the one way the spec changes once it is authored — whether this skill performs the amendment or the user asks the agent to amend the spec directly.
 
@@ -97,7 +104,7 @@ Amending in place under these rules, with one line appended to `log.md` by follo
 
 2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. That picture is what keeps the spec from contradicting a project record or a record the thread has already settled.
 
-3. **Author or amend.** If the thread root holds a `spec.md`, run the `## Amendment pass`. Otherwise draft the body: cover all seven semantic-contract elements, inline settled decisions where they are operative and cite the thread ADRs that carry them by stem, and add the two obligations. Honor the lossless constraint (`## Lossless authoring`) for any specific the thread did not settle. Keep the spec readable end-to-end by a stranger with no prior context, and adapt length to what the thread warrants — a tight spec is better than a padded one.
+3. **Author or amend.** If the thread root holds a `spec.md`, run the `## Amendment pass`. Otherwise draft the body: cover all seven semantic-contract elements, inline settled decisions where they are operative and cite the thread ADRs that carry them by stem, and add the three obligations. Honor the lossless constraint (`## Lossless authoring`) for any specific the thread did not settle. Keep the spec readable end-to-end by a stranger with no prior context, and adapt length to what the thread warrants — a tight spec is better than a padded one.
 
 4. **Audit the draft.** On an authoring run, run the `## Audit pass` before writing.
 

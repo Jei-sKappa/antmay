@@ -16,7 +16,7 @@
   Example: `- (decision) exports go through the queue worker, because the request path cannot hold a multi-minute job`
 - `constraint` — a boundary the work must respect, whether external or chosen.
   Example: `- (constraint) the public API shape stays as published, since three external clients depend on it`
-- `assumption` — something taken as true without confirmation, which later work may need to revisit.
+- `assumption` — something the user and the agent take as true without confirmation, which later work may need to revisit.
   Example: `- (assumption) the nightly batch runs under ten minutes, based on last quarter's timings`
 - `question` — something open that still needs an answer.
   Example: `- (question) whether partial exports should be retained or discarded when a run fails`
