@@ -14,6 +14,14 @@ on:
   issues:
     types: [opened, edited, labeled, unlabeled]
 
+# One edit can fire several of these events at once (a title change together
+# with a label change fires `edited`, `labeled`, and `unlabeled`), and parallel
+# runs for the same issue read the same label snapshot and then race to change
+# it. Queue them per issue so each run sees the previous one's result.
+concurrency:
+  group: issue-classification-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 permissions:
   issues: write
 
@@ -93,12 +101,22 @@ jobs:
               }
             };
 
+            // Removing a label that is already gone is the wanted state, not a
+            // failure; GitHub answers 404 for it.
+            const removeLabel = async (name) => {
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            };
+
             const current = (issue.labels || []).map((label) => label.name);
             const reconcileFamily = async (labels, fallback, wanted) => {
               const managed = [...Object.values(labels), fallback].map((label) => label.name);
               for (const name of current.filter((candidate) =>
                 managed.includes(candidate) && candidate !== wanted.name)) {
-                await github.rest.issues.removeLabel({ owner, repo, issue_number, name });
+                await removeLabel(name);
               }
               if (!current.includes(wanted.name)) {
                 await ensureLabel(wanted);
@@ -111,7 +129,7 @@ jobs:
             const setLabel = async (label, wanted) => {
               if (wanted === current.includes(label.name)) return;
               if (!wanted) {
-                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: label.name });
+                await removeLabel(label.name);
                 return;
               }
               await ensureLabel(label);
