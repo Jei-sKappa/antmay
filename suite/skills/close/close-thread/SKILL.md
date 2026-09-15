@@ -23,7 +23,7 @@ Gather all of these before running the checks; everything below works from what 
 - The thread's `adr/` — the draft records to land, in the shape `<skill_path>/references/formats/adr.md` defines.
 - The thread's `glossary.md`, when the file exists — the terms to merge into the project's, in the shape `<skill_path>/references/formats/glossary.md` defines.
 - Every `implementations/<folder>/report.md` the thread holds — what each implementation delivered, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Deviations` entries and the delivered changes it describes are what the currency check reads.
-- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.wip/roadmaps/`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines; the heading whose text is the seed's `Entry:` slug is where the closing line goes.
+- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.work/roadmaps/`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines; the heading whose text is the seed's `Entry:` slug is where the closing line goes.
 - The contents of `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/` — the thread's workspaces, inspected by listing what each holds. You need their names and whether they are empty, not their contents.
 
 ## Checks before any write
@@ -64,9 +64,9 @@ Once every check passes, run these in order, without asking further questions.
 
 2. **Merge the glossary.** When the thread holds a `glossary.md`, create `docs/glossary.md` if it is not there, and merge the thread's terms into it semantically, term by term, in the shape `<skill_path>/references/formats/glossary.md` defines: a term already present is updated to the thread's definition, and a new term is added under the section it fits. Then list the terms present before the merge and the terms present after, and confirm that no term present before is absent after; a term that went missing is restored before you go on.
 
-3. **Update the roadmap entry.** When the seed carries the `Roadmap:` and `Entry:` pair, insert `Closed: <thread path relative to .wip/threads/> — <one-line outcome>` as the first line beneath that entry's heading in the index, where the outcome is one line saying what the thread settled or delivered. Touch nothing else in the index.
+3. **Update the roadmap entry.** When the seed carries the `Roadmap:` and `Entry:` pair, insert `Closed: <thread path relative to .work/threads/> — <one-line outcome>` as the first line beneath that entry's heading in the index, where the outcome is one line saying what the thread settled or delivered. Touch nothing else in the index.
 
-4. **Report.** State which records landed in `docs/adr/`, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .wip/threads/>`.
+4. **Report.** State which records landed in `docs/adr/`, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
 
 ## Refusals
 

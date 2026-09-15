@@ -29,7 +29,7 @@ skill writes outside its own slice or into another thread's files:
   `docs/adr/`, the records they supersede into `docs/adr/superseded/`, the merged
   `docs/glossary.md`, and the closing line beneath one roadmap entry. It leaves
   the thread folder where it is.
-- `roadmap` alone creates a roadmap index under `.wip/roadmaps/`.
+- `roadmap` alone creates a roadmap index under `.work/roadmaps/`.
 
 An implement skill reads its spec and its plan and edits neither: a plan is
 input, not a record rewritten afterwards to make delivered work look planned. A

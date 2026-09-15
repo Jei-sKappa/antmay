@@ -9,15 +9,15 @@ find the record of what has already been settled, and to respect it.
 ## Where things live
 
 ```text
-.wip/threads/yyyy/mm/dd-hhmm-slug/   one thread — one unit of work, from idea to shipped code
-.wip/roadmaps/<yymmddhhmm>-<slug>.md one roadmap index — one larger direction, as ordered entries
-docs/adr/                            the project's current decisions, one file per record
-docs/glossary.md                     the project's terms, one meaning each
+.work/threads/yyyy/mm/dd-hhmm-slug/   one thread — one unit of work, from idea to shipped code
+.work/roadmaps/<yymmddhhmm>-<slug>.md one roadmap index — one larger direction, as ordered entries
+docs/adr/                             the project's current decisions, one file per record
+docs/glossary.md                      the project's terms, one meaning each
 ```
 
 A thread folder is named by the year, the month, and a leaf carrying the day, the
 creation time in UTC at minute resolution, and a short kebab-case slug. The
-thread's identifier is that path relative to `.wip/threads/` — write it that way
+thread's identifier is that path relative to `.work/threads/` — write it that way
 wherever a thread is named. What a folder holds is whatever the skills that ran
 wrote into it; `README.md` lists those artifacts at overview level.
 
@@ -25,7 +25,7 @@ A thread stays where it is once its work is delivered; what marks it closed is
 that its `adr/` drafts have landed in `docs/adr/` and its glossary terms have
 merged into `docs/glossary.md`.
 
-`.wip/` begins with a dot on purpose. Ripgrep and the agent harnesses skip
+`.work/` begins with a dot on purpose. Ripgrep and the agent harnesses skip
 dot-folders by default, so a search across the repository returns the code and
 the project layer without the accumulated history of every thread. Reading that
 history is a deliberate act: pass `rg --hidden`, or name the path on a `grep`.

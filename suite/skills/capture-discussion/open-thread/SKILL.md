@@ -18,13 +18,13 @@ Gather the following before composing any field; the composition below works fro
 - `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the starting point.
 - `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
 - The ticket, when supplied — material for composing the seed; read it as `<skill_path>/references/supplied-ticket.md` directs.
-- The roadmap index under `.wip/roadmaps/`, when supplied — a project-level file for composing the seed. Find the entry in it as a heading whose text is the supplied slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read that entry's sketch and scope boundary. When the index carries no heading with that slug, create nothing: tell the user the slug is absent and name the slugs the index does carry, so they can correct the invocation.
+- The roadmap index under `.work/roadmaps/`, when supplied — a project-level file for composing the seed. Find the entry in it as a heading whose text is the supplied slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read that entry's sketch and scope boundary. When the index carries no heading with that slug, create nothing: tell the user the slug is absent and name the slugs the index does carry, so they can correct the invocation.
 
 The starting point itself comes with the invocation, in any combination of three forms, at least one of which is present:
 
 - A **rough idea** in prose, describing what the work is.
 - An **external ticket reference** — a tracker URL or identifier.
-- A **roadmap entry** — an index path under `.wip/roadmaps/` together with the entry's slug.
+- A **roadmap entry** — an index path under `.work/roadmaps/` together with the entry's slug.
 
 ## Compose the seed fields
 
@@ -37,7 +37,7 @@ From the user's input, and from the ticket or roadmap entry when one is linked, 
 - **Genesis narrative** — a self-contained account of what triggered the work and its intended goal, written so a reader with no chat history understands why the thread exists. When a ticket is linked, draw this from the ticket's title and body. When a roadmap entry is linked, draw it from the entry's sketch and scope boundary, written out so the thread stands on its own without the index open.
 - **Conditional metadata** — include a line only when it carries real information:
   - `External:` — only when a real tracker URL exists; its value is that URL. Never write `External: none` or any absence marker.
-  - `Roadmap:` and `Entry:` — only when the invocation names a roadmap entry, and then both together: `Roadmap:` carries the index path in the form `.wip/roadmaps/<yymmddhhmm>-<slug>.md`, and `Entry:` carries the entry slug as it reads in that index. They are what later work uses to find the entry this thread answers.
+  - `Roadmap:` and `Entry:` — only when the invocation names a roadmap entry, and then both together: `Roadmap:` carries the index path in the form `.work/roadmaps/<yymmddhhmm>-<slug>.md`, and `Entry:` carries the entry slug as it reads in that index. They are what later work uses to find the entry this thread answers.
   - `Supersedes:` — only when a known supersession relationship is worth recording.
 
   Add no owner field and no empty or placeholder fields. Absent metadata is simply absent.

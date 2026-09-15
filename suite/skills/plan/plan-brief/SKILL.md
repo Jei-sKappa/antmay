@@ -65,7 +65,7 @@ Source: <thread-relative source>
 - **Steps** are a small numbered list in execution order, each step one short paragraph. They order the work; the implementer derives the obvious substeps.
 - **Verification** records the overall checks that demonstrate the change works — not a separate verification contract for every step.
 - The plan should normally fit on one screen: a single flat markdown file containing only the sections above.
-- Within-thread references in the body are thread-relative (`spec.md`, `adr/<stem>.md`); cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.wip/threads/<other>/…`).
+- Within-thread references in the body are thread-relative (`spec.md`, `adr/<stem>.md`); cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.work/threads/<other>/…`).
 
 ## When to recommend plan-strict
 

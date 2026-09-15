@@ -12,6 +12,6 @@ Read the ticket for context only. Perform no tracker writes of any kind — no b
 
 ## Check for an existing thread on the same ticket
 
-Search the seeds of the threads under `.wip/threads/` for an `External:` value denoting the same ticket. Compare references by their meaning rather than as raw strings, following the comparison rule in the tracker reference you read above.
+Search the seeds of the threads under `.work/threads/` for an `External:` value denoting the same ticket. Compare references by their meaning rather than as raw strings, following the comparison rule in the tracker reference you read above.
 
 When a thread already exists for the ticket, name that thread's folder path and ask the user whether to continue. A confirmed continue proceeds through the ordinary creation path, unchanged — a second thread on one ticket is legitimate for follow-up or superseding work. This check informs the user; it never blocks the operation.

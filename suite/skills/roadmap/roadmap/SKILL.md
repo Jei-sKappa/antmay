@@ -9,7 +9,7 @@ metadata:
 
 # Roadmap
 
-Turn a settled direction into a durable map. You read the thread's authoritative inputs, decide how the direction divides into entries that can each be picked up on their own, and write one project-level index file under `.wip/roadmaps/`. Writing that file is where you stop — do not stage, commit, or push.
+Turn a settled direction into a durable map. You read the thread's authoritative inputs, decide how the direction divides into entries that can each be picked up on their own, and write one project-level index file under `.work/roadmaps/`. Writing that file is where you stop — do not stage, commit, or push.
 
 The index is a map, not a plan: it records where the direction is going and what gets there, at the coarsest grain that still tells someone what to pick up next.
 
@@ -27,7 +27,7 @@ Run a mandatory preflight before any substantive execution (authoring the index)
 
 ## Author the index
 
-Write one file, `.wip/roadmaps/<yymmddhhmm>-<slug>.md`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, creating `.wip/roadmaps/` on demand.
+Write one file, `.work/roadmaps/<yymmddhhmm>-<slug>.md`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, creating `.work/roadmaps/` on demand.
 
 - **The stamp** is the file's creation time in UTC at minute resolution.
 - **The slug** is the thread's own slug, unless the invocation names one, in which case use that.
@@ -56,4 +56,4 @@ A blocked run leaves no index file behind, so the invocation that follows the se
 
 ## Report
 
-This is a completion-oriented operation, not a dialogue. After writing the file, report concisely where the index is and what it maps out, and recommend closing the thread with `close-thread`, so the direction's records land in `docs/adr/` before any entry is worked. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Roadmap index written: .wip/roadmaps/<file>`. No preamble, no closing remark.
+This is a completion-oriented operation, not a dialogue. After writing the file, report concisely where the index is and what it maps out, and recommend closing the thread with `close-thread`, so the direction's records land in `docs/adr/` before any entry is worked. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Roadmap index written: .work/roadmaps/<file>`. No preamble, no closing remark.

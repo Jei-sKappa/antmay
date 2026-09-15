@@ -1,11 +1,11 @@
 # Thread format
 
-A thread is the folder holding one unit of work, from the idea that opened it to the code that ships it. It lives at `.wip/threads/yyyy/mm/dd-hhmm-slug/` — a year folder, a month folder, and a leaf named by the day, the creation time in UTC at minute resolution, and a short kebab-case slug. The thread's identifier is that path relative to `.wip/threads/`, and every reference to a thread uses it.
+A thread is the folder holding one unit of work, from the idea that opened it to the code that ships it. It lives at `.work/threads/yyyy/mm/dd-hhmm-slug/` — a year folder, a month folder, and a leaf named by the day, the creation time in UTC at minute resolution, and a short kebab-case slug. The thread's identifier is that path relative to `.work/threads/`, and every reference to a thread uses it.
 
 ## Shape
 
 ```text
-.wip/threads/yyyy/mm/dd-hhmm-slug/
+.work/threads/yyyy/mm/dd-hhmm-slug/
 ├── seed.md                                 what the thread was opened to do
 ├── log.md                                  the thread's memory, one line per entry
 ├── spec.md                                 what the work must do, once it is specified

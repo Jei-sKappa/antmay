@@ -108,7 +108,7 @@ Amending in place under these rules, with one line appended to `log.md` by follo
 
 4. **Audit the draft.** On an authoring run, run the `## Audit pass` before writing.
 
-5. **Write the artifact.** Write the single file `spec.md` at the thread root — literally that name, with no frontmatter. Within-thread references in the body are thread-relative (e.g. `log.md`, `adr/<stem>.md`), never repo-rooted or absolute; cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.wip/threads/<other>/…`).
+5. **Write the artifact.** Write the single file `spec.md` at the thread root — literally that name, with no frontmatter. Within-thread references in the body are thread-relative (e.g. `log.md`, `adr/<stem>.md`), never repo-rooted or absolute; cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.work/threads/<other>/…`).
 
 6. **Append the log line.** Follow `<skill_path>/references/instructions/append-log-line.md` with exactly one `event` line stating that the spec was authored or amended and from which form of the primary input. This line is the position the next amendment pass starts after, so every authoring and every amendment appends one.
 

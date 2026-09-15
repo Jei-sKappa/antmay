@@ -8,7 +8,7 @@
 
 **Antmay** optimizes Spec Driven Development. It offers a thread-based method for SDD, a suite of skills that support that method, and a CLI that automates it.
 
-The method is simple: every unit of work lives in its own thread under `.wip/threads/`, holding a self-contained seed, a running log, the spec that is the work's design truth, the project decisions and terms the work settles, and one folder per plan and per implementation. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log. When a thread closes, the decisions that outlive it land in the project's own layer at `docs/adr/` and `docs/glossary.md`.
+The method is simple: every unit of work lives in its own thread under `.work/threads/`, holding a self-contained seed, a running log, the spec that is the work's design truth, the project decisions and terms the work settles, and one folder per plan and per implementation. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log. When a thread closes, the decisions that outlive it land in the project's own layer at `docs/adr/` and `docs/glossary.md`.
 
 The **skills** are composable and harness-agnostic `SKILL.md` files that work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads them. They are not a runtime or a project-local state file: they are individual capabilities you install and compose, one at a time for a single job or one after another to carry a change end to end.
 
@@ -32,7 +32,7 @@ npx skills add Jei-sKappa/antmay --skill <skill-name>
 
 ## Threads and the project layer
 
-A **thread** is one unit of work as a folder on disk, at `.wip/threads/yyyy/mm/dd-hhmm-slug/` — a year, a month, and a leaf named by the day, the creation time, and a short slug. Inside it:
+A **thread** is one unit of work as a folder on disk, at `.work/threads/yyyy/mm/dd-hhmm-slug/` — a year, a month, and a leaf named by the day, the creation time, and a short slug. Inside it:
 
 ```text
 seed.md            why the thread was opened
@@ -44,7 +44,7 @@ plans/             one folder per plan
 implementations/   one folder per implementation run
 ```
 
-The **project layer** is what outlives any single thread: the project's current decisions as one file per record under `docs/adr/`, its terms at `docs/glossary.md`, and the roadmap indexes under `.wip/roadmaps/` that larger directions are written down as. A thread's `adr/` and `glossary.md` are its draft of that layer, authoritative inside the thread from the moment they are written.
+The **project layer** is what outlives any single thread: the project's current decisions as one file per record under `docs/adr/`, its terms at `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/` that larger directions are written down as. A thread's `adr/` and `glossary.md` are its draft of that layer, authoritative inside the thread from the moment they are written.
 
 Closing a thread lands that draft: the records move into `docs/adr/`, the terms merge into `docs/glossary.md`, and a closing line goes under the roadmap entry the thread came from. The thread folder stays exactly where it is, as the record of how the work was understood while it was being done.
 
@@ -136,7 +136,7 @@ npx skills add Jei-sKappa/antmay --skill check-plan
 
 #### [`roadmap`](./suite/skills/roadmap/roadmap/SKILL.md)
 
-Expects a thread that has agreed where a larger direction is going; leaves a new roadmap index under `.wip/roadmaps/` — a destination, ordered slug-headed entries, an out-of-scope list, and a note for what cannot yet be seen.
+Expects a thread that has agreed where a larger direction is going; leaves a new roadmap index under `.work/roadmaps/` — a destination, ordered slug-headed entries, an out-of-scope list, and a note for what cannot yet be seen.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill roadmap

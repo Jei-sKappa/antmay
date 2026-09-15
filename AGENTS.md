@@ -31,8 +31,8 @@ docs/adr/                    the project's decisions, one file per record
 docs/glossary.md             the project's terms
 docs/documentation-rules.md  how every document here is written
 docs/working-with-threads.md how this repository works on itself
-.wip/threads/                this repository's own threads
-.wip/roadmaps/               its roadmap indexes
+.work/threads/               this repository's own threads
+.work/roadmaps/              its roadmap indexes
 .claude-plugin/              marketplace.json — load-bearing for skill distribution
 .github/                     the workflow that classifies issues from their title
 assets/                      logos and banner

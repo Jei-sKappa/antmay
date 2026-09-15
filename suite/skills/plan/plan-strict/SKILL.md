@@ -59,7 +59,7 @@ The index MUST contain:
 1. **Plan-level objective and context** — a short statement of what the whole plan achieves and the context a reader needs before opening any task file.
 2. **A `Source:` line** — names the upstream artifact this plan was compiled from, in exactly one of four legal value forms:
    - a **thread-relative pointer** to the upstream artifact within the active thread (e.g. `spec.md`, `adr/<stem>.md`);
-   - a **repo-relative path** for a cross-thread or project-level artifact (e.g. `.wip/threads/<other>/spec.md`);
+   - a **repo-relative path** for a cross-thread or project-level artifact (e.g. `.work/threads/<other>/spec.md`);
    - an **issue URL** (e.g. `https://github.com/<owner>/<repo>/issues/<NNN>`);
    - `none — raw prompt` when the plan was forward-designed directly from a user prompt with no artifact.
 3. **A Global Constraints block** — the project-wide requirements the plan must honor, copied **verbatim** from the source artifact's stated constraints, one line each. When the source states no constraints, or there is no source (`Source: none — raw prompt`), the block still appears and says so explicitly (e.g. `The source states no constraints.`) — never an omitted block.

@@ -26,7 +26,7 @@ user-facing overview in [`README.md`](../README.md), or the CLI's
 
 | Term | Meaning |
 | --- | --- |
-| **thread** | One unit of work at one moment, as a durable folder `.wip/threads/yyyy/mm/dd-hhmm-slug/`; the thread's identifier is that path relative to `.wip/threads/`. The method's central object. [suite/shared/references/formats/thread.md](../suite/shared/references/formats/thread.md) |
+| **thread** | One unit of work at one moment, as a durable folder `.work/threads/yyyy/mm/dd-hhmm-slug/`; the thread's identifier is that path relative to `.work/threads/`. The method's central object. [suite/shared/references/formats/thread.md](../suite/shared/references/formats/thread.md) |
 | **unit of work** | The scope one thread covers: a single coherent change, or a single direction to structure. |
 | **thread artifact** | A durable file inside a thread recording how one change was understood and delivered at a moment — the seed, the log, the spec, a plan, an implementation's report. Historical by nature. Use this where the artifact domain is meant, in contrast to source code. |
 | **seed** | `seed.md`, written once when the thread opens: a title, a self-contained genesis narrative, and sparse metadata. |
@@ -51,11 +51,11 @@ user-facing overview in [`README.md`](../README.md), or the CLI's
 
 | Term | Meaning |
 | --- | --- |
-| **project layer** | What the method owns at fixed paths in every project, created lazily and never a prerequisite: `docs/adr/`, `docs/glossary.md`, and the roadmap indexes under `.wip/roadmaps/`. |
+| **project layer** | What the method owns at fixed paths in every project, created lazily and never a prerequisite: `docs/adr/`, `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/`. |
 | **ADR** | One project decision as a file `<yymmddhhmm>-<slug>.md`, carrying `name`, `description`, an optional `supersedes`, and a body giving the context, the decision, and the reason. Its stem is its global identifier and never changes. Files in `docs/adr/` are the whole authoritative surface for project decisions; the catalog is printed from the folder by `/consult-adrs` rather than kept in an index file. [suite/shared/references/formats/adr.md](../suite/shared/references/formats/adr.md) |
 | **superseded ADR** | A record that a later ADR replaced or retired by naming its stem under `supersedes`, moved to `docs/adr/superseded/` with its content untouched. Location is the status — an ADR file carries no status key. |
 | **binding test** | The test a settled point must pass to earn an ADR: a later thread could build against it incorrectly if not told, and could not read it off the code. |
-| **roadmap index** | `.wip/roadmaps/<yymmddhhmm>-<slug>.md`, one per direction: the destination, ordered entries, an out-of-scope list, and a note for what cannot yet be seen. Its owner edits it in place and deletes it when the destination is reached or abandoned. [suite/shared/references/formats/roadmap-index.md](../suite/shared/references/formats/roadmap-index.md) |
+| **roadmap index** | `.work/roadmaps/<yymmddhhmm>-<slug>.md`, one per direction: the destination, ordered entries, an out-of-scope list, and a note for what cannot yet be seen. Its owner edits it in place and deletes it when the destination is reached or abandoned. [suite/shared/references/formats/roadmap-index.md](../suite/shared/references/formats/roadmap-index.md) |
 | **entry** | One item in a roadmap index: a heading whose text is a short kebab-case slug unique within that index, followed by a one-paragraph sketch and a scope boundary. The slug is the entry's identifier, and it is pinned once a thread has been opened from it. |
 | **living documentation** | Documentation describing the system as it currently exists — READMEs, architecture references, runbooks, conventions. It changes within implementation scope, as part of the implementation that changes the behavior it describes. |
 

@@ -47,7 +47,7 @@ A freshly opened thread holds only `seed.md` and a header-only `log.md`; everyth
 - The thread's `log.md` — the thread's memory, read once here at session start when it has entries, and never re-read for the rest of the session.
 - The thread's `spec.md`, when the file exists — the thread's design truth.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands; inside the thread they take precedence over the project records.
-- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.wip/roadmaps/`; locate the entry whose heading text is the seed's `Entry:` slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read its sketch and scope boundary.
+- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.work/roadmaps/`; locate the entry whose heading text is the seed's `Entry:` slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read its sketch and scope boundary.
 
 ## Procedure
 
