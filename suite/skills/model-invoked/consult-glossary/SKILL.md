@@ -1,6 +1,6 @@
 ---
 name: consult-glossary
-description: Read the project's glossary before writing any prose, name, or identifier in a project that holds `docs/glossary.md`, and whenever a term's meaning is in doubt. Invoke it whether or not another skill is running.
+description: Read the project's glossary before writing any prose, name, or identifier in a project that holds `docs/glossary.md`, and whenever a term's meaning is in doubt. Do not invoke it when `docs/glossary.md` is absent or empty, it would be pointless.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 0.0.0
@@ -9,8 +9,6 @@ metadata:
 # Consult Glossary
 
 `docs/glossary.md` is the project's naming authority: it fixes one meaning per term so that every document and every agent writes the same word for the same thing. Read it before you write, and read it again whenever a term's meaning is in doubt. The table shape is in `<skill_path>/references/formats/glossary.md`.
-
-An absent `docs/glossary.md` means the project has fixed no terms yet.
 
 ## Write the fixed term
 

@@ -212,7 +212,7 @@ The two skills below are **model-invoked**: the model may reach for them on its 
 
 #### [`consult-adrs`](./suite/skills/model-invoked/consult-adrs/SKILL.md)
 
-Expects a project holding `docs/adr/`; leaves nothing on disk — it prints the catalog of records, opens the ones that touch the work at hand, and says what to do when the work contradicts one.
+Expects a project whose `docs/adr/` holds at least one record, and is not invoked otherwise; leaves nothing on disk — it prints the catalog of records, opens the ones that touch the work at hand, and says what to do when the work contradicts one.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill consult-adrs
@@ -220,7 +220,7 @@ npx skills add Jei-sKappa/antmay --skill consult-adrs
 
 #### [`consult-glossary`](./suite/skills/model-invoked/consult-glossary/SKILL.md)
 
-Expects a project holding `docs/glossary.md`; leaves nothing on disk — it fixes which term to write for which meaning, so every document and every agent uses the same word for the same thing.
+Expects a project holding `docs/glossary.md`, and is not invoked otherwise; leaves nothing on disk — it fixes which term to write for which meaning, so every document and every agent uses the same word for the same thing.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill consult-glossary

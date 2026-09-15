@@ -1,6 +1,6 @@
 ---
 name: consult-adrs
-description: Read the project's decision records before acting on any work that could rest on a project decision or contradict one — before reading a thread's artifacts, designing, specifying, planning, implementing, reviewing, or closing. Invoke it in any project that holds a `docs/adr/` folder, whether or not another skill is running.
+description: Read the project's decision records before acting on any work that could rest on a project decision or contradict one — before reading a thread's artifacts, designing, specifying, planning, implementing, reviewing, or closing. Do not invoke it when `docs/adr/` is absent or holds no `.md` file, it would be pointless.
 metadata:
   author: https://github.com/Jei-sKappa
   version: 0.0.0
@@ -17,8 +17,6 @@ The folder carries no index. Print the stem, name, and description of every reco
 ```sh
 for f in docs/adr/*.md; do awk -v stem="$(basename "$f" .md)" '/^---$/{n++; next} n==1 && /^name: /{sub(/^name: /,""); name=$0} n==1 && /^description: /{sub(/^description: /,""); desc=$0} n==2{print stem "\t" name "\t" desc; exit}' "$f"; done
 ```
-
-An absent or empty `docs/adr/` prints nothing, which means the project has fixed no decisions yet.
 
 ## Open what bears on the work
 
