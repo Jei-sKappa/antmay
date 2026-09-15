@@ -1,6 +1,6 @@
 ---
 name: plan-strict
-description: Turn the thread's design into a strict-granularity plan: an index plus one dispatchable brief per task.
+description: Turn the thread's design into a strict-granularity plan, an index plus one dispatchable brief per task.
 disable-model-invocation: true
 metadata:
   author: https://github.com/Jei-sKappa
