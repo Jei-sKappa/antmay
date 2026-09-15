@@ -10,7 +10,7 @@ Name it `<UTC>-<suffix>-<slug>.md` — the current UTC timestamp, a short unique
 
 ## Write the bundle
 
-Write the file following `<skill_path>/references/formats/pending-decision-bundle.md`. The `Producer:` line reads `/<your own skill name>`.
+Write the file following the `<skill_path>/references/formats/pending-decision-bundle.md` format. The `Producer:` line reads `/<your own skill name>`.
 
 The header carries the target — the thread-relative artifact or operation the decisions block — and the originating user request, so a later clarification is answerable from the bundle file alone.
 

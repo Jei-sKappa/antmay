@@ -2,7 +2,7 @@
 
 Write `report.md` inside this run's implementation folder, once, at the run's terminal outcome. The folder belongs to this run, and the report describes what this run did.
 
-Write it following `<skill_path>/references/formats/implementation-report.md`. The `Plan:` line names the plan folder executed, or reads `Plan: none` when the run executed no plan.
+Write it following the `<skill_path>/references/formats/implementation-report.md` format. The `Plan:` line names the plan folder executed, or reads `Plan: none` when the run executed no plan.
 
 ## What the report folds in
 

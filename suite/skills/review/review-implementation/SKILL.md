@@ -22,7 +22,7 @@ Gather all of these before judging; the procedure below works from what you gath
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
 - That folder's `report.md` — the implementer's account of the delivered work and the claim under test, in the shape `<skill_path>/references/formats/implementation-report.md` defines.
 - The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.
-- The thread's `spec.md`, when present — the thread's design truth; its acceptance criteria are the contract the delivered work answers to.
+- The thread's `spec.md`, when the file exists — the thread's design truth; its acceptance criteria are the contract the delivered work answers to.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources delivered work must not contradict; inside the thread they take precedence over the project records.
 - The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a spec nor a plan.
 - The delivered code — the files and changes the implementation produced, as the user names them (a git ref, a commit range, a saved or inline diff, or a file or directory path) or as the report's `## Changes` describes them. Read the diff or the files; never check out a branch, run tests, modify the working tree, or mutate any git state.

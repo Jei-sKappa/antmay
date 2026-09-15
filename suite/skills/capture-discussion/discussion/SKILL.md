@@ -49,7 +49,7 @@ A freshly opened thread holds only `seed.md` and a header-only `log.md`; everyth
 
 3. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term the project glossary fixes, classify it against the thread's delta as `/consult-adrs` instructs. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
 
-4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed following `<skill_path>/references/formats/discussion-point.md`, then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
+4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands, present exactly that one fork in chat, framed following the `<skill_path>/references/formats/discussion-point.md` format, then let the user settle it. Otherwise stay conversational; do not force a decision point onto every exchange.
 
 5. **Append the log line the moment a point settles**, before doing anything else with the point: follow `<skill_path>/references/instructions/append-log-line.md`. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
 
@@ -61,11 +61,11 @@ A freshly opened thread holds only `seed.md` and a header-only `log.md`; everyth
 
 A settled point passes the binding test when a later thread could build against it incorrectly if not told, and could not read it off the code. Such a point becomes an ADR.
 
-When a point passes, propose the record in chat: show the `name`, the `description`, and the body text you intend to write. The user confirms the text or redirects it, and only then do you write the file at `adr/<yymmddhhmm>-<slug>.md` inside the thread following `<skill_path>/references/formats/adr.md`, creating `adr/` on demand. The user may also ask for a record directly, without the test: write it the same way, with the same confirmation of its text.
+When a point passes, propose the record in chat: show the `name`, the `description`, and the body text you intend to write. The user confirms the text or redirects it, and only then do you write the file at `adr/<yymmddhhmm>-<slug>.md` inside the thread following the `<skill_path>/references/formats/adr.md` format, creating `adr/` on demand. The user may also ask for a record directly, without the test: write it the same way, with the same confirmation of its text.
 
 When the same discussion later reverses a draft it wrote, edit that draft in place rather than adding a second record, and append the reversal's own log line.
 
-A project term this discussion introduces or changes is written to the thread's `glossary.md` following `<skill_path>/references/formats/glossary.md`, created on demand, with the same confirmation of the wording before the write.
+A project term this discussion introduces or changes is written to the thread's `glossary.md` following the `<skill_path>/references/formats/glossary.md` format, created on demand, with the same confirmation of the wording before the write.
 
 You write exactly three things: lines appended to `log.md`, files under the thread's `adr/`, and entries in the thread's `glossary.md`. Nothing else you touch is written — `spec.md`, `docs/adr/`, and `docs/glossary.md` are read here and never written, and the roadmap index is read and never written.
 

@@ -11,10 +11,15 @@ Two headings are fixed by name.
 **`## Inputs`.** A skill whose procedure works from gathered state carries a
 section headed exactly `## Inputs`, listing what it gathers as a list rather than
 as prose. Every item has one shape: `- <path or source><, presence clause when
-it may be absent> — <what it is and what it is for>.` The presence clause is one
-of exactly three — `when present`, `when the seed carries one`,
-`when the file exists` — and an item carrying none is either always present or
-is the primary input, which keeps its accepted forms inside its own clause. No
+it may be absent> — <what it is and what it is for>.` The presence clause names
+the condition under which the item is there, as narrowly as the skill can know
+it, and takes one of these forms: `when the file exists` for a thread file that
+may not have been written yet; `when supplied` for something the caller passes
+with the invocation and may omit; `when <input> carries one`, such as `when the
+seed carries one`, for an item whose existence another gathered input announces;
+and `when present` only when no narrower condition applies. An item carrying
+none is either always present or is the primary input, which keeps its accepted
+forms inside its own clause. No
 item ends in a trailing tag: where a procedure ranks its sources, the ranking is
 stated once in the prose that uses it, never per item. A body normally invoked
 while the thread holds only `seed.md` and a header-only `log.md` says so in one
@@ -79,13 +84,17 @@ resolves to the skill's base directory as the harness reports it at invocation,
 and it is what tells a skill-local path apart from a project path such as
 `docs/adr/`, which stays bare.
 
-A pointer is a directive to open the file and act on it. An instruction is
-followed, and the pointer is the step: "Follow
-`<skill_path>/references/instructions/append-log-line.md`". A format is what a
-write or a read conforms to: "following
-`<skill_path>/references/formats/adr.md`", "in the shape
-`<skill_path>/references/formats/thread.md` defines". Other verbs are fine where
-they read better, provided the intent stays plain.
+A pointer is a directive to open the file and act on it, and the words around
+it tell the agent what kind of file it is opening. An instruction is followed,
+and the pointer is the step: "Follow
+`<skill_path>/references/instructions/append-log-line.md`", "by following
+`<skill_path>/references/instructions/emit-pending-review.md`". A format is what
+a write or a read conforms to, and is always named as one: "following the
+`<skill_path>/references/formats/adr.md` format", "in the shape
+`<skill_path>/references/formats/thread.md` defines". A bare "following
+`<path>`" is never used for a format, because it leaves the reader to guess
+whether the file is a procedure or a shape. Other verbs are fine where they read
+better, provided the kind stays plain.
 
 Two rules are strict. **No leak**: a body never restates what the pointed file
 holds; the text around a pointer is limited to the skill-specific parameters the
