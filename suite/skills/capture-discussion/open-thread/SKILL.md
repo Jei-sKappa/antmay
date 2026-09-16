@@ -9,7 +9,7 @@ metadata:
 
 # Open Thread
 
-Turn a user's starting point into a durable thread on disk. You interpret the raw input, compose the seed's fields, confirm them with the user in one pass, and create the thread.
+Turn a user's starting point into a durable thread on disk. You interpret the raw input, compose the seed's fields, and create the thread — in one pass, without stopping to confirm anything.
 
 ## Inputs
 
@@ -34,7 +34,7 @@ From the user's input, and from the ticket or roadmap entry when one is linked, 
 
 - **Slug** — a short kebab-case description of the subject (`auth-boundary`, `rate-limit-fix`). When a ticket is linked, derive it from that ticket's subject the same way, and keep the ticket's number out of it: the identifier belongs in `External:`, which is what links the thread to the ticket, so a thread opened from a ticket is named exactly like one opened from prose. When a roadmap entry is linked, the entry's own slug is the natural choice.
 - **Title** — a human-readable one-line title for the thread.
-- **Genesis narrative** — a self-contained account of what triggered the work and its intended goal, written so a reader with no chat history understands why the thread exists. When a ticket is linked, draw this from the ticket's title and body. When a roadmap entry is linked, draw it from the entry's sketch and scope boundary, written out so the thread stands on its own without the index open.
+- **Genesis narrative** — an account of what triggered the work and its intended goal, meant to stand on its own so a reader with no chat history understands why the thread exists. When a ticket is linked, that account is the ticket's body itself: carry it through unchanged, for the create instruction to write under its own heading, and compose nothing of your own around it. Where the invocation adds context of its own alongside the ticket, carry that through as well and keep it separate, so it can sit beneath the ticket's words rather than mixed into them. When a roadmap entry is linked instead, compose the narrative from the entry's sketch and scope boundary, written out so the thread stands on its own without the index open. With neither, compose it from the user's prose.
 - **Conditional metadata** — include a line only when it carries real information:
   - `External:` — only when a real tracker URL exists; its value is that URL. Never write `External: none` or any absence marker.
   - `Roadmap:` and `Entry:` — only when the invocation names a roadmap entry, and then both together: `Roadmap:` carries the index path in the form `.work/roadmaps/<yymmddhhmm>-<slug>.md`, and `Entry:` carries the entry slug as it reads in that index. They are what later work uses to find the entry this thread answers.
@@ -44,9 +44,7 @@ From the user's input, and from the ticket or roadmap entry when one is linked, 
 
 ## Create the thread
 
-Show the user the composed slug, title, genesis narrative, and any `External:`, `Roadmap:`/`Entry:`, or `Supersedes:` values, and invite a single round of corrections. This is a brief confirmation, not a drawn-out dialogue — one pass is enough. Fold any adjustment into the field values before writing anything: creating the thread a second time would mint a separate folder rather than correct the first, so every correction lands here.
-
-Then follow `<skill_path>/references/instructions/create-thread.md` with those fields.
+Follow `<skill_path>/references/instructions/create-thread.md` with those fields as soon as they are composed. Do not show them for approval first and do not ask anything on the way: a thread is a folder in the user's own repository that nothing has read yet, so a field that came out wrong is an edit to `seed.md` or a rename of the folder, and a confirming pass costs more than it saves. Nothing here leaves the repository, which is what a write to a tracker could not say.
 
 ## What you write
 
@@ -54,4 +52,6 @@ The new thread folder with its `seed.md` and `log.md` is the whole result; `<ski
 
 ## Report
 
-Report the created thread's path to the user, and keep the successful response focused on that path.
+Report the created thread's path, and with it the composed slug, the title, and the metadata lines the seed carries. Where the ticket already had a thread, name that thread's path too.
+
+Do not print the genesis narrative. A linked ticket's body is text the user already holds in the tracker and can read in `seed.md`, and reciting it back spends output on the one part of the seed you did not decide. The report names what you chose, not what you copied.
