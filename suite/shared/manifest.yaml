@@ -76,6 +76,7 @@ skills/implement/implement:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/write-implementation-report.md
+  - instructions/commit-the-implementation-report.md
   - instructions/emit-terminal-outcome.md
 
 skills/implement/implement-plan:
@@ -83,6 +84,7 @@ skills/implement/implement-plan:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/write-implementation-report.md
+  - instructions/commit-the-implementation-report.md
   - instructions/emit-terminal-outcome.md
 
 skills/implement/implement-plan-with-subagents:
@@ -90,6 +92,7 @@ skills/implement/implement-plan-with-subagents:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/write-implementation-report.md
+  - instructions/commit-the-implementation-report.md
   - instructions/emit-terminal-outcome.md
 
 skills/review/review-spec:
