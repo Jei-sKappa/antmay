@@ -74,7 +74,7 @@ npx skills add Jei-sKappa/antmay --skill open-thread
 
 #### [`open-ticket`](./suite/skills/capture-discussion/open-ticket/SKILL.md)
 
-Expects a rough idea worth capturing rather than starting now; leaves a ticket in your tracker whose body becomes, unchanged, the genesis narrative of any thread opened from it, and leaves nothing on disk.
+Expects a rough idea worth capturing rather than starting now; leaves a ticket in your tracker whose body becomes, unchanged, the quoted ticket section of any thread opened from it, and leaves nothing on disk.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-ticket

@@ -14,10 +14,10 @@ the raw input, compose a title and a body, confirm both with the user, and file
 the ticket.
 
 What makes this worth a deliberate operation is the body. The body you compose
-here **is** the genesis narrative of any thread later opened from this ticket:
-`open-thread` reproduces it as it stands rather than rewriting it, so this is the
-one moment the wording is chosen. Write it as the seed's opening account, not as
-a note toward one.
+here **is** the ticket section of any thread later opened from this ticket:
+`open-thread` quotes it as it stands rather than rewriting it, so this is the one
+moment the wording is chosen. Write it as the seed's opening account, not as a
+note toward one.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
 the whole result; `docs/adr/` and `docs/glossary.md` are read here and never
@@ -55,11 +55,11 @@ person would use when speaking about the work. Where the project prescribes no
 title shape, that register means prose, with no bracketed prefix and no
 kebab-case identifier.
 
-**The body** — a self-contained **problem statement**, and the genesis narrative
-a thread will inherit: what triggered the work and what outcome is wanted,
-written so a reader with no memory of the conversation understands why the ticket
-exists. Nothing downstream will rewrite it, so it has to read as the account a
-thread opens with. Restraint is the point — a
+**The body** — a self-contained **problem statement**, and the account a thread
+will inherit as the ticket section of its genesis narrative: what triggered the
+work and what outcome is wanted, written so a reader with no memory of the
+conversation understands why the ticket exists. Nothing downstream will rewrite
+it, so it has to read as the account a thread opens with. Restraint is the point — a
 problem statement records the need, stops where the need stops, and leaves the
 solution out. Scope, design, and task decisions have not been made yet, and
 inventing them here buries the need under a specification the work has not
