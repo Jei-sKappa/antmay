@@ -15,12 +15,28 @@ Write `seed.md` in this order:
 ```markdown
 # <supplied title>
 
-<supplied genesis narrative, verbatim>
+<the genesis narrative, composed as below>
 
 <applicable conditional metadata lines, one per line>
 ```
 
-Reproduce the genesis narrative exactly as supplied; do not rewrite, summarize, or add to it. The seed carries nothing beyond the title heading, the narrative, and the metadata lines that apply.
+The seed carries nothing beyond the title heading, the narrative, and the metadata lines that apply.
+
+### The genesis narrative
+
+When the request supplies a ticket's body, the narrative is that body under its own heading, reproduced exactly as it reads in the tracker — every line, every list, every code fence, unedited:
+
+```markdown
+## Ticket
+
+<the ticket's body, unchanged>
+```
+
+Do not rewrite it, summarize it, correct it, or trim it, and write no sentence of your own inside the block. When the request also supplies context the invocation carried alongside the ticket, that context follows the block as ordinary prose, beneath everything the block holds, so a reader can always tell the ticket's words from anything added to them. When the request supplies a ticket's body and nothing else, the block is the whole narrative and the seed carries no prose besides it.
+
+When the request supplies no ticket body, the narrative is the composed account supplied with the request, reproduced exactly as supplied — do not rewrite it, summarize it, or add to it.
+
+### Metadata
 
 Write a metadata line only when its value was supplied, in this order:
 
