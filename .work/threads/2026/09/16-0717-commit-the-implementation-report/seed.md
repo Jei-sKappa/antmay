@@ -1,0 +1,11 @@
+# Commit the implementation report as a closing step of an implement run
+
+The three implement skills — `implement`, `implement-plan`, and `implement-plan-with-subagents` — each write their run's `report.md` at the terminal outcome and then stop. Nothing commits it. Each skill's `## Commit Policy` fixes the cadence at one commit per task and stages only that task's files, so the implementation report, written afterwards, is never staged by any commit the run makes. A direct invocation ends with the report sitting uncommitted in the working tree, and the run's own record never reaches Git history.
+
+The same three skills open with a dirty-worktree preflight that refuses an unauthorized dirty tree. A run therefore leaves behind exactly the condition that makes the next run refuse — including the repeated-pass-over-one-plan flow the skills are built for, where a later run reads every `implementations/*/report.md` whose `Plan:` line names the same plan folder.
+
+This thread makes the report's commit an explicit closing step of the auto-committing implementation flow, performed by the implementer or the orchestrator before the final out-message, and settles four points: that the step covers every terminal outcome an executing run can reach and not only completion, since a blocked run is when the report matters most; that a failing report commit never downgrades the run's terminal outcome, while staying visible rather than silently leaving a dirty tree; that the closing commit still honours an explicit user Git instruction under the override clause; and where the step lands, given that the shared instruction `write-implementation-report.md` bounds itself to writing `report.md` alone while every commit rule lives in each skill's own `## Commit Policy`.
+
+`cli/` is on hold and out of scope. Its stage catalog treats an uncommitted report as the implementation stage's required tracked change — an expectation already stale against the current suite, which writes `implementations/<yymmddhhmm>[-slug]/report.md` rather than the thread-root `implementation-report.md` the catalog looks for. Record the drift for the realignment pass; do not repair it here.
+
+External: https://github.com/Jei-sKappa/antmay/issues/6
