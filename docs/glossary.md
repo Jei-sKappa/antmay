@@ -29,8 +29,8 @@ user-facing overview in [`README.md`](../README.md), or the CLI's
 | **thread** | One unit of work at one moment, as a durable folder `.work/threads/yyyy/mm/dd-hhmm-slug/`; the thread's identifier is that path relative to `.work/threads/`. The method's central object. [suite/shared/references/formats/thread.md](../suite/shared/references/formats/thread.md) |
 | **unit of work** | The scope one thread covers: a single coherent change, or a single direction to structure. |
 | **thread artifact** | A durable file inside a thread recording how one change was understood and delivered at a moment — the seed, the log, the spec, a plan, an implementation's report. Historical by nature. Use this where the artifact domain is meant, in contrast to source code. |
-| **seed** | `seed.md`, written once when the thread opens: a title, a self-contained genesis narrative, and sparse metadata. |
-| **genesis narrative** | The seed's self-contained explanation of what triggered the work and its intended goal. |
+| **seed** | `seed.md`, written once when the thread opens: a title, the genesis narrative, and sparse metadata. |
+| **genesis narrative** | The seed's account of what triggered the work and its intended goal, meant to stand on its own without chat history, and reproduced verbatim from the linked ticket's body when the thread was opened from a ticket. |
 | **thread log** | `log.md`, the thread's memory, created when the thread opens and appended to by `discussion`, `resolve-pending-decisions`, and `spec`. Append-only, and memory rather than truth: a later entry supersedes an earlier one on the same point, and history stays intact. [suite/shared/references/formats/log-line.md](../suite/shared/references/formats/log-line.md) |
 | **log entry** | One line of the thread log, of the form `- (type) gist with the reason folded in`. It carries no identifier and no timestamp; order in the file is its only structure. |
 | **log entry type** | The single word that opens a log entry, from a closed vocabulary of exactly seven: `decision`, `constraint`, `assumption`, `question`, `capability`, `direction`, `event`. |

@@ -10,3 +10,4 @@
 - (decision) the seed reproduces the ticket's body inside its own marked block rather than as loose prose, and context the invocation adds sits beneath that block, because dropping typed input on a step the user does not read would lose it silently
 - (decision) an invocation carrying only a ticket reference produces a seed holding the title, the ticket block, and External: with no agent prose of any kind, because stopping the agent from rephrasing a ticket is what the thread exists to do
 - (constraint) the block's marker reads Ticket rather than Issue, because the project glossary reserves ticket as the tracker-neutral term and issue is GitHub-specific wording that belongs only in tracker reference material
+- (decision) the glossary's seed row drops the word self-contained, because the genesis narrative row now carries that property with the nuance a reproduced ticket body forces and stating it twice would re-assert the guarantee the thread removed
