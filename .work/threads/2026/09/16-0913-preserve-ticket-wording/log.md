@@ -1,0 +1,12 @@
+# Thread log
+- (decision) open-thread reproduces a linked ticket's body verbatim as the seed's genesis narrative instead of composing one, because a paraphrase loses the framing its author chose and the seed is what every later artifact in the thread reads
+- (decision) open-thread creates the thread with no confirmation pass, for every starting point and not only a ticket, because the confirmation was accepted unread and a wrong seed costs an edit rather than a lost artifact
+- (decision) open-thread's report carries the thread path and the composed slug, title, and metadata and never the genesis narrative, because the narrative is transcribed rather than decided and echoing it back only spends output the user reads from the file instead
+- (constraint) open-ticket keeps its confirmation pass, because the project glossary authorizes a tracker mutation only through an operation that confirms the specific write
+- (decision) open-ticket authors its body as the seed's genesis narrative outright rather than as prose a thread could reuse, so a thread opened from a ticket this suite filed inherits a narrative already written for the role
+- (decision) a ticket filed outside open-ticket may produce a seed that is not self-contained, and that is accepted rather than guarded, because guarding it would restore the agent judgment verbatim was adopted to remove; such a seed is hand-edited when it happens
+- (decision) the gap between issue #43's body and this thread's final scope is left unreconciled, because the issue is the repository owner's own and reconciling it buys nothing
+- (constraint) this thread drafts no ADR, because the user is holding project decisions until the suite settles and is moving too fast to commit one now
+- (decision) the seed reproduces the ticket's body inside its own marked block rather than as loose prose, and context the invocation adds sits beneath that block, because dropping typed input on a step the user does not read would lose it silently
+- (decision) an invocation carrying only a ticket reference produces a seed holding the title, the ticket block, and External: with no agent prose of any kind, because stopping the agent from rephrasing a ticket is what the thread exists to do
+- (constraint) the block's marker reads Ticket rather than Issue, because the project glossary reserves ticket as the tracker-neutral term and issue is GitHub-specific wording that belongs only in tracker reference material
