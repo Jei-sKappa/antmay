@@ -6,3 +6,4 @@
 - (decision) the report is committed as its own closing commit rather than folded into the last task commit, because the report is written after that commit lands, amending is forbidden, and a blocked run may have no task commit at all
 - (decision) the closing commit stages the run's own report.md and nothing else, so the run's operational trace and any unrelated working-tree change stay out of it
 - (decision) under the subagent orchestrator the orchestrator performs the closing report commit and never a subagent, consistent with it being the only committer and the writer of the report
+- (event) spec authored from the live discussion session, pinning the closing report commit across the three implement skills
