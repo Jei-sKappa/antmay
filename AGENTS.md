@@ -59,7 +59,25 @@ README.md                    the user-facing index of the skills
 - Invoke `/consult-adrs` to read the project decisions bearing on what you are about to do; it is authoritative and carries the rule for a contradiction.
 - Invoke `/consult-glossary` to write the terms the project has fixed. `docs/glossary.md` is this repository's naming authority: one meaning per term across the suite, the CLI, and these documents.
 - Terms are settled through threads — a thread drafts them in its own `glossary.md`, and `close-thread` merges that delta into `docs/glossary.md` at close; do not edit the project glossary by hand outside that merge.
-- `cli/` lags the suite — its thread paths, its stage-support table, and its own check are behind the suite's current shape, and a follow-up `[contract]` thread realigns them in one pass. Do not fix it piecemeal.
+- `cli/` is on hold and out of scope by default — see `## The CLI is on hold`.
+
+## The CLI is on hold
+
+Since September 2026 the suite evolves and `cli/` does not. Keeping the executor
+in step was slowing the skills down, so the CLI was deliberately left behind: its
+thread paths, its stage catalog, its stage-support table, and its own check are
+all behind the suite's current shape, and they stay that way on purpose.
+
+**Do not touch anything under `cli/` unless the user explicitly asks for it.**
+That holds even when a suite change breaks a CLI assumption, even when the
+mismatch is obvious, and even when the fix looks like one line. Noticing that
+`cli/` is now wrong is not authorization to correct it — say so and move on.
+
+When a suite change does invalidate something in `cli/`, name the drift in the
+work's own record (a thread artifact, a report, a follow-up, or an issue) and
+leave the code alone. A single `[contract]` thread realigns the executor with the
+suite in one pass when the user decides it is time; piecemeal repairs in the
+meantime only make that pass harder.
 
 ## Keep the CLI stage support reference current
 
@@ -71,3 +89,5 @@ Update that table in the same change whenever either side of the coupling moves:
 - the CLI's stage catalog, target resolution, artifact-state interpretation, or stage prerequisites change.
 
 Wording, formatting, and internal changes that cannot move either answer need no edit. This rule lives here and only here, because it spans both modules; do not restate it in `cli/AGENTS.md` or `suite/AGENTS.md`.
+
+This rule is **suspended while `## The CLI is on hold` holds**: a suite change that would have moved the table records the drift instead of editing it, and the realignment pass brings the table back in step. The rule applies as written again once the user reopens `cli/`.
