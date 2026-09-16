@@ -56,7 +56,7 @@ Every completion-oriented skill ends its final message with exactly one **termin
 Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
 ```
 
-`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the one outcome vocabulary the whole suite shares. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills such as `discussion` and `open-thread` emit no terminal outcome, and neither do the model-invoked skills below — their questions or their narrow written artifact are the output.
+`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the one outcome vocabulary the whole suite shares. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills such as `discussion` emit no terminal outcome, and neither do the one-shot deliverables `open-thread` and `open-ticket`, nor the model-invoked skills below — their questions, their finished deliverable, or their narrow written artifact are the output.
 
 ## Skills
 
@@ -66,7 +66,7 @@ Every skill below is **user-invoked**: you start it directly, by name.
 
 #### [`open-thread`](./suite/skills/capture-discussion/open-thread/SKILL.md)
 
-Expects a rough idea, a tracker ticket reference, and/or a roadmap entry; leaves a new thread folder on disk holding its `seed.md` and an empty `log.md`.
+Expects a rough idea, a tracker ticket reference, and/or a roadmap entry; leaves a new thread folder on disk holding its `seed.md` and an empty `log.md`, created without a confirming pass and carrying a linked ticket's own body rather than a rewrite of it.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-thread
@@ -74,7 +74,7 @@ npx skills add Jei-sKappa/antmay --skill open-thread
 
 #### [`open-ticket`](./suite/skills/capture-discussion/open-ticket/SKILL.md)
 
-Expects a rough idea worth capturing rather than starting now; leaves a ticket in your tracker whose body reads as a thread's genesis narrative, and leaves nothing on disk.
+Expects a rough idea worth capturing rather than starting now; leaves a ticket in your tracker whose body becomes, unchanged, the genesis narrative of any thread opened from it, and leaves nothing on disk.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill open-ticket

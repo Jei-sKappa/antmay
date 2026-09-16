@@ -12,8 +12,7 @@ skill interactive.
 ## The three postures
 
 - **Dialogue-driven** — the skill exists to obtain human input and settle points
-  with the user, as `discussion` and `resolve-pending-decisions` do, and as the
-  `open-thread` handshake does in its single confirming pass. Questions are
+  with the user, as `discussion` and `resolve-pending-decisions` do. Questions are
   expected output, more than one turn is normal, and needing another answer is
   not failure.
 - **Completion-oriented** — the skill consumes supplied and durable inputs and
@@ -24,9 +23,18 @@ skill interactive.
   intent, exceed authority, or choose outside a granted freedom; discovering a
   missing human decision mid-run does not change the posture.
 - **One-shot deliverable** — the skill consumes an input and returns a finished
-  message or handoff, as `open-ticket` does. Reading, copying, or forwarding the
-  result afterwards does not make the operation a dialogue: its shape is input →
-  finished message.
+  message or handoff, as `open-ticket` and `open-thread` do. Reading, copying, or
+  forwarding the result afterwards does not make the operation a dialogue: its
+  shape is input → finished message.
+
+A one-shot deliverable may still confirm once before it acts, and whether it does
+follows from where its write lands. `open-ticket` confirms, because filing a
+ticket lands outside the repository on a service other people read, and that write
+is authorized by the user approving it. `open-thread` does not, because it writes
+a folder inside the user's own repository that nothing has read yet, where a wrong
+field is an edit rather than something to withdraw. A confirming pass on a
+repository-local write costs a turn and buys nothing, and a pass users learn to
+wave through is worse than none — it looks like a gate while gating nothing.
 
 A completion-oriented skill behaves identically whether a person or a tool
 invoked it, and carries no branch that detects which.
