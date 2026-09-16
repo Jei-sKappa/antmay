@@ -13,10 +13,11 @@ Turn a user's rough idea into one ticket in the project's tracker. You interpret
 the raw input, compose a title and a body, confirm both with the user, and file
 the ticket.
 
-What makes this worth a deliberate operation is the body. A ticket filed here is
-written so that whoever later opens a thread from it can take the body as the
-thread's genesis narrative unchanged, instead of mining intent out of a
-half-specification.
+What makes this worth a deliberate operation is the body. The body you compose
+here **is** the genesis narrative of any thread later opened from this ticket:
+`open-thread` reproduces it as it stands rather than rewriting it, so this is the
+one moment the wording is chosen. Write it as the seed's opening account, not as
+a note toward one.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
 the whole result; `docs/adr/` and `docs/glossary.md` are read here and never
@@ -54,9 +55,11 @@ person would use when speaking about the work. Where the project prescribes no
 title shape, that register means prose, with no bracketed prefix and no
 kebab-case identifier.
 
-**The body** — a self-contained **problem statement**: what triggered the work
-and what outcome is wanted, written so a reader with no memory of the
-conversation understands why the ticket exists. Restraint is the point — a
+**The body** — a self-contained **problem statement**, and the genesis narrative
+a thread will inherit: what triggered the work and what outcome is wanted,
+written so a reader with no memory of the conversation understands why the ticket
+exists. Nothing downstream will rewrite it, so it has to read as the account a
+thread opens with. Restraint is the point — a
 problem statement records the need, stops where the need stops, and leaves the
 solution out. Scope, design, and task decisions have not been made yet, and
 inventing them here buries the need under a specification the work has not
@@ -79,6 +82,13 @@ Invite one round of corrections, fold any adjustment in, and file the ticket
 with the command the tracker reference gives. This is a brief confirmation, not
 a drawn-out dialogue — one pass is enough. The user's approval here is what
 authorizes the write; file nothing before it.
+
+This pass stays even where a skill writing inside the repository would drop it.
+Filing a ticket lands outside the repository, on a service other people read: it
+notifies, it is visible immediately, and it cannot be quietly withdrawn. The
+approval is what authorizes that specific write, and it is also where the body's
+wording is settled for good, since a thread opened from this ticket will carry
+the body as written.
 
 Apply the labels the repository's convention requires. When it requires none,
 file the ticket without labels.
