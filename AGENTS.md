@@ -34,7 +34,7 @@ docs/working-with-threads.md how this repository works on itself
 .work/threads/               this repository's own threads
 .work/roadmaps/              its roadmap indexes
 .claude-plugin/              marketplace.json — load-bearing for skill distribution
-.github/                     the workflow that classifies issues from their title
+.github/                     CI, issue classification, and the `focus: next` cleanup workflows
 assets/                      logos and banner
 README.md                    the user-facing index of the skills
 ```

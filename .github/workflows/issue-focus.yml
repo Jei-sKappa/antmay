@@ -1,0 +1,40 @@
+name: Issue focus
+
+# Keeps the `focus: next` label meaningful. The label marks the issues to pick
+# up next, so a closed issue must not carry it: closing drops the label, and
+# nothing else here touches it. Applying the label is a human decision.
+
+on:
+  issues:
+    types: [closed]
+
+concurrency:
+  group: issue-focus-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+
+jobs:
+  unfocus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const FOCUS_NEXT = 'focus: next';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.issue.number;
+            const current = (context.payload.issue.labels || []).map((label) => label.name);
+            if (!current.includes(FOCUS_NEXT)) {
+              core.info(`Issue #${issue_number} does not carry "${FOCUS_NEXT}"; nothing to do`);
+              return;
+            }
+            // Removing a label that is already gone is the wanted state, not a
+            // failure; GitHub answers 404 for it.
+            try {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name: FOCUS_NEXT });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+            core.info(`Removed "${FOCUS_NEXT}" from closed issue #${issue_number}`);

@@ -84,6 +84,13 @@ how the estimate is set. An issue carrying no estimate gets `effort: unset`,
 which clears as soon as one is applied; an issue carrying two gets
 `needs-effort` until one remains.
 
+## Issues may be marked as next in focus
+
+`focus: next` marks the open issues to pick up next. It is applied by hand and
+means nothing on a closed issue, so a workflow removes it when an issue closes.
+Reopening an issue does not restore it; whether it is still next is a fresh
+decision.
+
 ## Commits
 
 This repository follows [Conventional Commits](https://www.conventionalcommits.org/).
