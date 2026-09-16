@@ -15,26 +15,42 @@ Write `seed.md` in this order:
 ```markdown
 # <supplied title>
 
-<the genesis narrative, composed as below>
+<the genesis narrative: the ticket section, the intent section, or both>
 
 <applicable conditional metadata lines, one per line>
 ```
 
-The seed carries nothing beyond the title heading, the narrative, and the metadata lines that apply.
+The seed carries nothing beyond the title heading, the genesis narrative, and the metadata lines that apply.
 
 ### The genesis narrative
 
-When the request supplies a ticket's body, the narrative is that body under its own heading, reproduced exactly as it reads in the tracker — every line, every list, every code fence, unedited:
+The genesis narrative is carried by up to two sections, and at least one of them is always present. `## Ticket` carries the words of a linked ticket; `## Intent` carries the work as it was composed for this request. When the request supplies both, `## Ticket` comes first and `## Intent` follows it. When it supplies a ticket body and no composed intent, `## Ticket` is the whole narrative. When it supplies composed intent and no ticket body, `## Intent` is.
+
+#### The ticket section
+
+Write the ticket's body under its heading with every line quote-prefixed:
 
 ```markdown
 ## Ticket
 
-<the ticket's body, unchanged>
+> <the ticket's body, content unchanged, every line prefixed>
 ```
 
-Do not rewrite it, summarize it, correct it, or trim it, and write no sentence of your own inside the block. When the request also supplies context the invocation carried alongside the ticket, that context follows the block as ordinary prose, beneath everything the block holds, so a reader can always tell the ticket's words from anything added to them. When the request supplies a ticket's body and nothing else, the block is the whole narrative and the seed carries no prose besides it.
+The content is unchanged — every line, every list, every code fence, exactly as it reads in the tracker. The quote prefix is the only thing added: prefix each line with `> `, write a bare `>` for a blank line inside the body, and nest a blockquote the body already carries as `> >`. Do not rewrite the body, summarize it, correct it, or trim it, and write no sentence of your own inside the quote.
 
-When the request supplies no ticket body, the narrative is the composed account supplied with the request, reproduced exactly as supplied — do not rewrite it, summarize it, or add to it.
+The prefix is what makes the quotation self-terminating: the first line without it ends the ticket's words, whatever headings or code fences the body itself carries. Nothing outside the quote is ever the ticket's.
+
+#### The intent section
+
+Write the composed intent under its heading, as ordinary prose, reproduced exactly as supplied:
+
+```markdown
+## Intent
+
+<the composed intent, as supplied>
+```
+
+Do not rewrite it, summarize it, or add to it, and never quote-prefix it — the absence of the prefix is what tells a reader these words were composed rather than quoted.
 
 ### Metadata
 
