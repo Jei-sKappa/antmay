@@ -1,0 +1,12 @@
+# Thread log
+
+- (decision) the seed carries up to two narrative sections — a verbatim ticket section and an agent-composed section, at least one always present — because a reader with no tracker access must be able to tell the ticket's words from the agent's
+- (decision) the ticket section is written as a blockquote with every line prefixed `> `, because a per-line prefix marks provenance in raw and rendered views alike and self-terminates whatever headings or code fences the ticket body itself contains
+- (constraint) the composed section restructures only what the user supplied and never adds material of its own, and it is written impersonally
+- (decision) a roadmap entry's sketch and scope boundary feed the composed section rather than a verbatim section of their own, because the entry is this project's own prose reachable in-repo and quoting it alone strips the index frame that makes the sketch legible
+- (constraint) composing from a roadmap entry may inline what the index's surrounding frame supplied so the thread stands on its own without the index open; that is the only permitted extension of "never add material of its own"
+- (decision) the composed section is headed `## Intent`, because it fits the addition-on-top, prose-only, and roadmap cases alike where `## Context` misdescribes two of the three, and it inherits the "intended goal" phrasing the project glossary already fixes
+- (decision) the project glossary's `genesis narrative` row is superseded and the terms `ticket section` and `intent section` are added, because the settled two-section shape makes the project definition false and later seed-reading skills need fixed names for the two regions
+- (decision) this thread drafts no ADRs; the records are written by hand once the suite settles and before the stale CLI is realigned, so an empty `adr/` here is intentional rather than an oversight
+- (decision) a thin invocation yields a thin seed with no warning and no nudge toward `discussion`, because a near-empty seed is the accurate record of a near-empty starting point and already signals that the thread needs interviewing before planning
+- (constraint) `cli/` stays untouched while the CLI is on hold, so this thread only records the drift: `cli/README.md`'s stage-support row calls `open-thread` a skill that "interviews you for the thread's founding intent", which was already false for the one-shot skill and is emphatically false once "never add material of its own" lands; the CLI's own seed handling checks only that `seed.md` is non-empty and is unaffected
