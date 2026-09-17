@@ -28,11 +28,11 @@ The starting point itself comes with the invocation, in any combination of three
 
 ## Compose the seed fields
 
-The seed records why the work exists: it carries the thread's title, the genesis narrative, and the metadata lines that apply, and nothing besides.
+The seed records why the work exists: it carries frontmatter for the relationships that apply, the thread's title, and the genesis narrative, and nothing besides.
 
 From the user's input, and from the ticket or roadmap entry when one is linked, assemble these fields:
 
-- **Slug** — a short kebab-case description of the subject (`auth-boundary`, `rate-limit-fix`). When a ticket is linked, derive it from that ticket's subject the same way, and keep the ticket's number out of it: the identifier belongs in `External:`, which is what links the thread to the ticket, so a thread opened from a ticket is named exactly like one opened from prose. When a roadmap entry is linked, the entry's own slug is the natural choice.
+- **Slug** — a short kebab-case description of the subject (`auth-boundary`, `rate-limit-fix`). When a ticket is linked, derive it from that ticket's subject the same way, and keep the ticket's number out of it: the identifier belongs in the frontmatter's `external` field, which is what links the thread to the ticket, so a thread opened from a ticket is named exactly like one opened from prose. When a roadmap entry is linked, the entry's own slug is the natural choice.
 - **Title** — a human-readable one-line title for the thread.
 - **Genesis narrative** — an account of what triggered the work and its intended goal, meant to stand on its own so a reader with no chat history understands why the thread exists. It is carried by up to two pieces, at least one of which is always present:
   - **The ticket's body**, when a ticket is linked — carried through unchanged, for the create instruction to quote under its own heading, with nothing of your own composed around it.
@@ -41,12 +41,11 @@ From the user's input, and from the ticket or roadmap entry when one is linked, 
   The composed intent adds nothing. It reorganizes what the invocation supplied and never supplies a motivation, a constraint, a scope boundary, or an open question of its own; a claim the user did not make does not become true by appearing in a file the work downstream reads as intent. The one permitted extension is a linked roadmap entry, where you may inline what the index's surrounding frame supplied so the thread stands on its own without the index open.
 
   A thin invocation therefore yields a thin seed. Where the whole starting point is one sentence, the composed intent is that sentence restated, even when it says little more than the title does; write it, create the thread, and say nothing anywhere about the seed being sparse. A near-empty seed is the accurate record of a near-empty starting point, and it is read as one.
-- **Conditional metadata** — include a line only when it carries real information:
-  - `External:` — only when a real tracker URL exists; its value is that URL. Never write `External: none` or any absence marker.
-  - `Roadmap:` and `Entry:` — only when the invocation names a roadmap entry, and then both together: `Roadmap:` carries the index path in the form `.work/roadmaps/<yymmddhhmm>-<slug>.md`, and `Entry:` carries the entry slug as it reads in that index. They are what later work uses to find the entry this thread answers.
-  - `Supersedes:` — only when a known supersession relationship is worth recording.
+- **Frontmatter** — include a relationship only when it carries real information:
+  - `external` — only when a real tracker URL exists; its value is that URL.
+  - `roadmap` — only when the invocation names a roadmap entry. It is a mapping whose `path` is the index path in the form `.work/roadmaps/<yymmddhhmm>-<slug>.md` and whose `entry` is the entry slug as it reads in that index. Both values are always present together; they are what later work uses to find the entry this thread answers.
 
-  Add no owner field and no empty or placeholder fields. Absent metadata is simply absent.
+  Add no owner field and no empty or placeholder fields. When no relationship applies, the seed carries no frontmatter block.
 
 ## Create the thread
 
@@ -58,6 +57,6 @@ The new thread folder with its `seed.md` and `log.md` is the whole result; `<ski
 
 ## Report
 
-Report the created thread's path, and with it the composed slug, the title, and the metadata lines the seed carries. Where the ticket already had a thread, name that thread's path too.
+Report the created thread's path, and with it the composed slug, the title, and the frontmatter fields the seed carries. Where the ticket already had a thread, name that thread's path too.
 
 Do not print the genesis narrative. A linked ticket's body is text the user already holds in the tracker and can read in `seed.md`, and the composed intent carries nothing the user did not supply, so reciting either back spends output on words the user already has. The report names what you chose, not what you restated.

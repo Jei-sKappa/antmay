@@ -12,6 +12,6 @@ Read the ticket to reproduce it. Keep its content exactly as the tracker returns
 
 ## Check for an existing thread on the same ticket
 
-Search the seeds of the threads under `.work/threads/` for an `External:` value denoting the same ticket. Compare references by their meaning rather than as raw strings, following the comparison rule in the tracker reference you read above.
+Search the seeds of the threads under `.work/threads/` for an `external` frontmatter value denoting the same ticket. Compare references by their meaning rather than as raw strings, following the comparison rule in the tracker reference you read above.
 
 When a thread already exists for the ticket, create the new thread anyway and name the existing thread's folder path in the report alongside it. A second thread on one ticket is legitimate for follow-up or superseding work, so there is nothing here to decide: this check informs the user, and it neither blocks the operation nor pauses it.

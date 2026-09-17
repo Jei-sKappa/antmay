@@ -13,14 +13,18 @@ Create that folder and, inside it, exactly two files: `seed.md` and `log.md`. Cr
 Write `seed.md` in this order:
 
 ```markdown
+---
+external: "<real external URL>"
+roadmap:
+  path: "<.work/roadmaps/yymmddhhmm-slug.md>"
+  entry: "<entry-slug>"
+---
 # <supplied title>
 
 <the genesis narrative: the ticket section, the intent section, or both>
-
-<applicable conditional metadata lines, one per line>
 ```
 
-The seed carries nothing beyond the title heading, the genesis narrative, and the metadata lines that apply.
+The frontmatter block is present only when at least one relationship applies. The seed carries nothing beyond that block when present, the title heading, and the genesis narrative.
 
 ### The genesis narrative
 
@@ -52,15 +56,14 @@ Write the composed intent under its heading, as ordinary prose, reproduced exact
 
 Do not rewrite it, summarize it, or add to it, and never quote-prefix it — the absence of the prefix is what tells a reader these words were composed rather than quoted.
 
-### Metadata
+### Frontmatter
 
-Write a metadata line only when its value was supplied, in this order:
+Write frontmatter only when at least one value was supplied. Use lowercase keys in this order, and quote every value:
 
-- `External:` — the real external URL the work comes from.
-- `Roadmap:` and `Entry:` — written together, on consecutive lines and in that order, when the thread is opened from a roadmap entry. `Roadmap:` takes the index path in the form `.work/roadmaps/<yymmddhhmm>-<slug>.md`; `Entry:` takes the entry slug exactly as it reads in that index.
-- `Supersedes:` — the supplied reference to the work this thread replaces.
+- `external` — the real external URL the work comes from.
+- `roadmap` — a mapping written when the thread is opened from a roadmap entry. Its `path` value is the index path in the form `.work/roadmaps/<yymmddhhmm>-<slug>.md`, and its `entry` value is the entry slug exactly as it reads in that index. Both child keys are always present together, in that order.
 
-Absent metadata is simply absent: no line, no `none`, no sentence explaining the absence.
+When both relationships apply, `external` comes before `roadmap`. When neither applies, the file starts with the title heading: write no delimiters, empty mapping, `null`, or sentence explaining the absence.
 
 ## log.md
 
