@@ -21,9 +21,9 @@ thread's identifier is that path relative to `.work/threads/` — write it that 
 wherever a thread is named. What a folder holds is whatever the skills that ran
 wrote into it; `README.md` lists those artifacts at overview level.
 
-A thread stays where it is once its work is delivered; what marks it closed is
-that its `adr/` drafts have landed in `docs/adr/` and its glossary terms have
-merged into `docs/glossary.md`.
+A thread stays where it is once its work is delivered. Its closing event in
+`log.md` marks that `close-thread` completed and records whether its ADR and
+glossary delta categories were absent or applied.
 
 `.work/` begins with a dot on purpose. Ripgrep and the agent harnesses skip
 dot-folders by default, so a search across the repository returns the code and

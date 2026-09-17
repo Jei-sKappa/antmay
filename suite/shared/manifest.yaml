@@ -21,6 +21,8 @@ skills/close/close-thread:
   - instructions/emit-terminal-outcome.md
   - formats/thread.md
   - formats/glossary.md
+  - formats/log-line.md
+  - instructions/append-log-line.md
 
 skills/capture-discussion/open-thread:
   - trackers/github.md

@@ -9,7 +9,7 @@ metadata:
 
 # Close Thread
 
-Close one thread, end to end. You gather the thread's material, run every check before the first write, then land the thread's draft ADRs and glossary entries into the project layer and record the thread's outcome on the roadmap entry it answers. The thread folder stays in place: what marks the thread closed is that its drafts and its terms now live in the project layer. Once the checks pass, the writes run without questions. Writing the last record is where you stop — do not stage, commit, or push.
+Close one thread, end to end. You gather the thread's material, run every check before the first write, then land the thread's draft ADRs and glossary entries into the project layer, record the thread's outcome on the roadmap entry it answers, and append its closing event to the thread log. The thread folder stays in place, and the closing event makes the completed operation detectable from that folder. Once the checks pass, the writes run without questions. Writing the closing event is where you stop — do not stage, commit, or push.
 
 ## Inputs
 
@@ -18,6 +18,7 @@ Gather all of these before running the checks; everything below works from what 
 - `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the thread's drafts, which land beside them.
 - `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
 - The thread to close — the folder the invocation names, in the shape `<skill_path>/references/formats/thread.md` defines. Everything below is read inside it.
+- The thread's `log.md` — the thread's memory and the place closure is recorded, in the shape `<skill_path>/references/formats/log-line.md` defines.
 - The thread's `seed.md` — why the thread exists and what it set out to reach. When its frontmatter carries a `roadmap` mapping, `roadmap.path` and `roadmap.entry` name the roadmap index this thread was opened from and the slug of its entry.
 - The thread's `spec.md`, when the file exists — the design claims the currency check reads.
 - The thread's `adr/` — the draft records to land, in the shape `<skill_path>/references/formats/adr.md` defines.
@@ -28,9 +29,11 @@ Gather all of these before running the checks; everything below works from what 
 
 ## Checks before any write
 
-Run all four, in order, and all of them before the first write. They are reads; none of them changes anything.
+Run all five, in order, and all of them before the first write. They are reads; none of them changes anything.
 
-1. **Currency check** — does the thread's design truth still match what the thread produced? Scale it to the material the thread holds:
+1. **Prior closure** — when `log.md` already contains the closing event, refuse per `## Refusals` unless the invocation explicitly says to proceed anyway.
+
+2. **Currency check** — does the thread's design truth still match what the thread produced? Scale it to the material the thread holds:
    - **With implementations and a spec:** read each report's `## Deviations` entries and the delivered changes it describes against the spec's claims and the draft ADRs in `adr/`.
    - **With a spec and no implementations:** read the draft ADRs against the spec.
    - **With implementations and no spec:** read the reports and the delivered changes against the draft ADRs and the seed's intent.
@@ -38,11 +41,11 @@ Run all four, in order, and all of them before the first write. They are reads; 
 
    The check is narrow: it reads recorded deviations and delivered changes, and it is not a review of the implementation at large. Do not open the code to audit it, and do not treat an unrecorded improvement as a divergence. A divergence you cannot settle from the thread's material goes to `## Blocked`.
 
-2. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-adrs` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft is a refusal, per `## Refusals`.
+3. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-adrs` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft is a refusal, per `## Refusals`.
 
-3. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry is written.
+4. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry is written.
 
-4. **Workspaces** — list `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/`. A non-empty `.pending-decisions/` blocks the close: name its bundles and stop per `## Blocked`, unless the invocation says explicitly to close anyway, in which case the close proceeds and the bundles are named in the report. Non-empty `.pending-reviews/` folders and run-state folders never block: leave them in place and name them in the report.
+5. **Workspaces** — list `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/`. A non-empty `.pending-decisions/` blocks the close: name its bundles and stop per `## Blocked`, unless the invocation says explicitly to close anyway, in which case the close proceeds and the bundles are named in the report. Non-empty `.pending-reviews/` folders and run-state folders never block: leave them in place and name them in the report.
 
 ## Blocked
 
@@ -66,14 +69,17 @@ Once every check passes, run these in order, without asking further questions.
 
 3. **Update the roadmap entry.** When the seed frontmatter carries a `roadmap` mapping, insert `Closed: <thread path relative to .work/threads/> — <one-line outcome>` as the first line beneath the `roadmap.entry` heading in the index at `roadmap.path`, where the outcome is one line saying what the thread settled or delivered. Touch nothing else in the index.
 
-4. **Report.** State which records landed in `docs/adr/`, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
+4. **Append the closing event.** Follow `<skill_path>/references/instructions/append-log-line.md` to append `- (event) thread closed; ADRs: <adr result>; glossary: <glossary result>`. The ADR result is `landed` when step 1 landed at least one draft and `none` otherwise; the glossary result is `merged` when step 2 merged at least one term and `none` otherwise.
+
+5. **Report.** State which records landed in `docs/adr/`, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, the closing event appended, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
 
 ## Refusals
 
 Refuse before any write, naming what is wrong and how to re-invoke, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`:
 
 - A draft in `adr/` is structurally malformed — it has no frontmatter block, or its filename cannot be read as a record stem.
+- The thread log already contains the closing event and the invocation does not explicitly say to proceed anyway.
 
 ## Write boundary
 
-You write exactly these: the landed records in `docs/adr/`, the superseded records moved into `docs/adr/superseded/`, the merged `docs/glossary.md`, and one line beneath one entry heading of the roadmap index the seed names. Nothing else you touch is written, and no file of any other thread is written under any circumstance. You do not stage, commit, or push.
+You write exactly these: the landed records in `docs/adr/`, the superseded records moved into `docs/adr/superseded/`, the merged `docs/glossary.md`, one line beneath one entry heading of the roadmap index the seed names, and the closing event in this thread's `log.md`. Nothing else you touch is written, and no file of any other thread is written under any circumstance. You do not stage, commit, or push.

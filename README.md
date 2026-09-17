@@ -36,7 +36,7 @@ A **thread** is one unit of work as a folder on disk, at `.work/threads/yyyy/mm/
 
 ```text
 seed.md            why the thread was opened
-log.md             the thread's memory, one line per settled point
+log.md             the thread's append-only memory, one entry per line
 spec.md            what the work must do, once it is specified
 adr/               this thread's draft project decisions
 glossary.md        the terms this thread fixes, changes, or retires
@@ -46,7 +46,7 @@ implementations/   one folder per implementation run
 
 The **project layer** is what outlives any single thread: the project's current decisions as one file per record under `docs/adr/`, its terms at `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/` that larger directions are written down as. A thread's `adr/` and `glossary.md` are its draft of that layer, authoritative inside the thread from the moment they are written.
 
-Closing a thread lands that draft: the records move into `docs/adr/`, the terms merge into `docs/glossary.md`, and a closing line goes under the roadmap entry the thread came from. The thread folder stays exactly where it is, as the record of how the work was understood while it was being done.
+Closing a thread lands that draft: the records move into `docs/adr/`, the terms merge into `docs/glossary.md`, a closing line goes under the roadmap entry the thread came from, and the thread log records whether each delta category was absent or applied. The thread folder stays exactly where it is, as the record of how the work was understood while it was being done.
 
 ## Terminal outcomes
 
@@ -200,7 +200,7 @@ npx skills add Jei-sKappa/antmay --skill review-code
 
 #### [`close-thread`](./suite/skills/close/close-thread/SKILL.md)
 
-Expects a thread whose work is delivered and whose `adr/` and `glossary.md` drafts are ready to become the project's own; leaves the landed records in `docs/adr/`, the merged `docs/glossary.md`, a closing line beneath the thread's roadmap entry, and the thread folder in place.
+Expects a thread whose work is delivered and whose `adr/` and `glossary.md` drafts are ready to become the project's own; leaves the landed records in `docs/adr/`, the merged `docs/glossary.md`, a closing line beneath the thread's roadmap entry, a closing event in its log, and the thread folder in place.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill close-thread

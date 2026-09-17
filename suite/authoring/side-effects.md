@@ -14,8 +14,8 @@ skill writes outside its own slice or into another thread's files:
 
 - Thread creation writes the new thread folder with `seed.md` and `log.md`, and
   nothing else.
-- `discussion`, `resolve-pending-decisions`, and `spec` append lines to the
-  thread's `log.md`; they are its only writers.
+- `discussion`, `resolve-pending-decisions`, `spec`, and `close-thread` append
+  lines to the thread's `log.md`; they are its only writers.
 - `discussion` and `resolve-pending-decisions` write the thread's `adr/` drafts
   and its `glossary.md`.
 - `spec` writes the thread's `spec.md`, and `resolve-pending-decisions` amends it
@@ -27,8 +27,8 @@ skill writes outside its own slice or into another thread's files:
   own implementation folder with its `report.md` and its `.runs/`.
 - `close-thread` alone writes the project layer: the landed records in
   `docs/adr/`, the records they supersede into `docs/adr/superseded/`, the merged
-  `docs/glossary.md`, and the closing line beneath one roadmap entry. It leaves
-  the thread folder where it is.
+  `docs/glossary.md`, and the closing line beneath one roadmap entry; it also
+  appends the thread's closing event. It leaves the thread folder where it is.
 - `roadmap` alone creates a roadmap index under `.work/roadmaps/`.
 
 An implement skill reads its spec and its plan and edits neither: a plan is
