@@ -5,8 +5,6 @@
 ## Shape
 
 ```text
-# Thread log
-
 - (type) gist with the reason folded in
 ```
 
@@ -29,7 +27,7 @@
 
 ## Rules
 
-- The file opens with the single header line `# Thread log`, and everything after it is a flat sequence of one-line entries.
+- The file is a flat sequence of one-line entries and is empty until its first entry is appended.
 - Each entry is exactly one line, and its gist states what settled and carries its reason in the same sentence.
 - A line has no identifier and no timestamp; order in the file is the only structure.
 - Every line uses one of the seven types listed under `### Types`.

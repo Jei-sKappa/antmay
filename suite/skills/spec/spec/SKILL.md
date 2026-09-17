@@ -25,7 +25,7 @@ Gather all of these before drafting; everything below works from what you gather
 
 These are the whole of what the spec rests on: the audit pass checks every claim in the draft against the conversation or the log, the seed, and the thread's delta, so no other material feeds the spec.
 
-If the primary input cannot be resolved — this session did not run the discussion and `log.md` carries nothing past its header, or the invocation names a source whose referent is unclear — that is a preflight failure, not an in-run decision: refuse before drafting, name what is missing or ambiguous and how to supply it, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the gap and how to re-invoke. Never silently pick by recency.
+If the primary input cannot be resolved — this session did not run the discussion and `log.md` carries no entries, or the invocation names a source whose referent is unclear — that is a preflight failure, not an in-run decision: refuse before drafting, name what is missing or ambiguous and how to supply it, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the gap and how to re-invoke. Never silently pick by recency.
 
 ## Semantic contract
 

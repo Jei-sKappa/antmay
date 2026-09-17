@@ -39,7 +39,7 @@ A point is an **inference** when it follows from the points already settled or h
 ## Inputs
 
 Gather all of these once, before interviewing; the procedure below works from what you gather here.
-A freshly opened thread holds only `seed.md` and a header-only `log.md`; everything else below appears only once later work has produced it.
+A freshly opened thread holds only `seed.md` and an empty `log.md`; everything else below appears only once later work has produced it.
 
 - `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the topic.
 - `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.

@@ -67,10 +67,10 @@ When both relationships apply, `external` comes before `roadmap`. When neither a
 
 ## log.md
 
-Create `log.md` with a single shell write carrying only its header line and no entry:
+Create `log.md` as an empty file:
 
 ```sh
-printf '%s\n' '# Thread log' > <thread root>/log.md
+touch <thread root>/log.md
 ```
 
 The file exists from thread creation onward, ready for the first entry.

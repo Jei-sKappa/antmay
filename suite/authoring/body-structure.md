@@ -22,7 +22,7 @@ none is either always present or is the primary input, which keeps its accepted
 forms inside its own clause. No
 item ends in a trailing tag: where a procedure ranks its sources, the ranking is
 stated once in the prose that uses it, never per item. A body normally invoked
-while the thread holds only `seed.md` and a header-only `log.md` says so in one
+while the thread holds only `seed.md` and an empty `log.md` says so in one
 sentence above the list.
 
 The list opens with the same two project-layer items in every skill that has one:
