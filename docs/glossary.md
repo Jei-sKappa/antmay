@@ -33,7 +33,7 @@ user-facing overview in [`README.md`](../README.md), or the CLI's
 | **genesis narrative** | The seed's account of what triggered the work and its intended goal, meant to stand on its own without chat history, carried by up to two sections — `## Ticket` and `## Intent` — at least one of which is always present. |
 | **ticket section** | The seed's `## Ticket` section: the linked ticket's body with its content unchanged and every line quote-prefixed, present only when the thread was opened from a ticket. |
 | **intent section** | The seed's `## Intent` section: the work restructured from what the invocation supplied — the user's prose, their addition on top of a ticket, or a roadmap entry's sketch and scope boundary — written impersonally and never carrying material the agent added on its own. |
-| **thread log** | `log.md`, the thread's memory, created when the thread opens and appended to by `discussion`, `resolve-pending-decisions`, and `spec`. Append-only, and memory rather than truth: a later entry supersedes an earlier one on the same point, and history stays intact. [suite/shared/references/formats/log-line.md](../suite/shared/references/formats/log-line.md) |
+| **thread log** | `log.md`, the thread's append-only memory: `discussion` and `resolve-pending-decisions` record settled points, `spec` records authoring events, and `close-thread` records successful closure; later entries supersede earlier ones on the same point while history remains intact. |
 | **log entry** | One line of the thread log, of the form `- (type) gist with the reason folded in`. It carries no identifier and no timestamp; order in the file is its only structure. |
 | **log entry type** | The single word that opens a log entry, from a closed vocabulary of exactly seven: `decision`, `constraint`, `assumption`, `question`, `capability`, `direction`, `event`. |
 | **assumption** | Something the user and the agent take as true without confirmation, recorded as a log entry of type `assumption` by a skill that settles points with the user, and which later work may need to revisit. |
@@ -47,7 +47,7 @@ user-facing overview in [`README.md`](../README.md), or the CLI's
 | **deviation** | One entry in a report's deviations section, naming what was built, the spec section or ADR stem it departs from, and why. A deviation stays within accepted intent; a contradiction of a thread ADR or a spec decision is a change of intent and becomes a pending decision instead. |
 | **judgment call** | A choice an implementer makes where the spec pins nothing, inside a granted degree of freedom or in the spec's silence; distinct from a deviation, which departs from something pinned. |
 | **delta** | The thread's own `adr/` and `glossary.md`: the project-level records drafted inside the thread, authoritative within it from the moment they are written, and merged into the project layer at close. |
-| **closing** | The operation that ends a thread: check it, land its delta into the project layer, and write the closing line beneath its roadmap entry. The folder stays where it is. |
+| **closing** | The operation that ends a thread by checking it, landing its delta into the project layer, writing the closing line beneath its roadmap entry when one exists, and appending the closing event to its thread log; the folder stays where it is. |
 | **final deliverable** | What a completed *thread* leaves behind: the code it delivered, the records its delta landed, and its own artifacts in place. Distinct from a terminal outcome. |
 
 ## The project layer
