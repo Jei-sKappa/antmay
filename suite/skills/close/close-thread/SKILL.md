@@ -18,12 +18,12 @@ Gather all of these before running the checks; everything below works from what 
 - `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the thread's drafts, which land beside them.
 - `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
 - The thread to close — the folder the invocation names, in the shape `<skill_path>/references/formats/thread.md` defines. Everything below is read inside it.
-- The thread's `seed.md` — why the thread exists and what it set out to reach. When it carries a `Roadmap:` line and an `Entry:` line, they name the roadmap index this thread was opened from and the slug of its entry.
+- The thread's `seed.md` — why the thread exists and what it set out to reach. When its frontmatter carries a `roadmap` mapping, `roadmap.path` and `roadmap.entry` name the roadmap index this thread was opened from and the slug of its entry.
 - The thread's `spec.md`, when the file exists — the design claims the currency check reads.
 - The thread's `adr/` — the draft records to land, in the shape `<skill_path>/references/formats/adr.md` defines.
 - The thread's `glossary.md`, when the file exists — the terms to merge into the project's, in the shape `<skill_path>/references/formats/glossary.md` defines.
 - Every `implementations/<folder>/report.md` the thread holds — what each implementation delivered, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Deviations` entries and the delivered changes it describes are what the currency check reads.
-- The roadmap index named by the seed's `Roadmap:` line, when the seed carries one — a project-level file under `.work/roadmaps/`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines; the heading whose text is the seed's `Entry:` slug is where the closing line goes.
+- The roadmap index named by the seed frontmatter's `roadmap.path`, when the seed carries a `roadmap` mapping — a project-level file under `.work/roadmaps/`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines; the heading whose text is the `roadmap.entry` slug is where the closing line goes.
 - The contents of `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/` — the thread's workspaces, inspected by listing what each holds. You need their names and whether they are empty, not their contents.
 
 ## Checks before any write
@@ -40,7 +40,7 @@ Run all four, in order, and all of them before the first write. They are reads; 
 
 2. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-adrs` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft is a refusal, per `## Refusals`.
 
-3. **Roadmap reference** — when the seed carries the `Roadmap:` and `Entry:` pair, the index file exists at the path the seed names and a heading whose text is the entry slug exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such pair, this check passes and no entry is written.
+3. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry is written.
 
 4. **Workspaces** — list `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/`. A non-empty `.pending-decisions/` blocks the close: name its bundles and stop per `## Blocked`, unless the invocation says explicitly to close anyway, in which case the close proceeds and the bundles are named in the report. Non-empty `.pending-reviews/` folders and run-state folders never block: leave them in place and name them in the report.
 
@@ -64,7 +64,7 @@ Once every check passes, run these in order, without asking further questions.
 
 2. **Merge the glossary.** When the thread holds a `glossary.md`, create `docs/glossary.md` if it is not there, and merge the thread's terms into it semantically, term by term, in the shape `<skill_path>/references/formats/glossary.md` defines: a term already present is updated to the thread's definition, and a new term is added under the section it fits. Then list the terms present before the merge and the terms present after, and confirm that no term present before is absent after; a term that went missing is restored before you go on.
 
-3. **Update the roadmap entry.** When the seed carries the `Roadmap:` and `Entry:` pair, insert `Closed: <thread path relative to .work/threads/> — <one-line outcome>` as the first line beneath that entry's heading in the index, where the outcome is one line saying what the thread settled or delivered. Touch nothing else in the index.
+3. **Update the roadmap entry.** When the seed frontmatter carries a `roadmap` mapping, insert `Closed: <thread path relative to .work/threads/> — <one-line outcome>` as the first line beneath the `roadmap.entry` heading in the index at `roadmap.path`, where the outcome is one line saying what the thread settled or delivered. Touch nothing else in the index.
 
 4. **Report.** State which records landed in `docs/adr/`, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
 
