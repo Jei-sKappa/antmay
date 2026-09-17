@@ -9,7 +9,7 @@ metadata:
 
 # Close Thread
 
-Close one thread, end to end. You gather the thread's material, run every check before the first write, then land the thread's draft ADRs and glossary entries into the project layer, record the thread's outcome on the roadmap entry it answers, and append its closing event to the thread log. The thread folder stays in place, and the closing event makes the completed operation detectable from that folder. Once the checks pass, the writes run without questions. Writing the closing event is where you stop — do not stage, commit, or push.
+Close one thread, end to end. You gather the thread's material, run every check before the first write, then land the thread's draft ADRs and glossary entries into the project layer, retain the thread's delta as its historical snapshot, record the thread's outcome on the roadmap entry it answers, and append its closing event to the thread log. The thread folder stays in place, and the closing event makes the completed operation detectable from that folder. Once the checks pass, the writes run without questions. Writing the closing event is where you stop — do not stage, commit, or push.
 
 ## Inputs
 
@@ -41,7 +41,7 @@ Run all five, in order, and all of them before the first write. They are reads; 
 
    The check is narrow: it reads recorded deviations and delivered changes, and it is not a review of the implementation at large. Do not open the code to audit it, and do not treat an unrecorded improvement as a divergence. A divergence you cannot settle from the thread's material goes to `## Blocked`.
 
-3. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-adrs` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft is a refusal, per `## Refusals`.
+3. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; its stem exists in neither `docs/adr/` nor `docs/adr/superseded/`; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-adrs` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft or a stem collision is a refusal, per `## Refusals`.
 
 4. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry is written.
 
@@ -63,7 +63,7 @@ Re-invocation after either block is a plain re-run: this skill starts from `## I
 
 Once every check passes, run these in order, without asking further questions.
 
-1. **Land the ADRs.** When the thread's `adr/` holds drafts, create `docs/adr/` if it is not there, and move every file in `adr/` into it unaltered, with `git mv` — the filename is the record's identifier and the content is not touched. For each landed record whose `supersedes` names project ADRs, move those named files into `docs/adr/superseded/` (created on demand) in the same act, content untouched.
+1. **Land the ADRs.** When the thread's `adr/` holds drafts, create `docs/adr/` if it is not there, and copy every file in `adr/` into it unaltered — the filename is the record's identifier, the project-layer copy becomes authoritative, and the thread copy becomes its immutable historical snapshot. For each landed record whose `supersedes` names project ADRs, move those named files into `docs/adr/superseded/` (created on demand) in the same act, content untouched.
 
 2. **Merge the glossary.** When the thread holds a `glossary.md`, create `docs/glossary.md` if it is not there, and merge the thread's terms into it semantically, term by term, in the shape `<skill_path>/references/formats/glossary.md` defines: a term already present is updated to the thread's definition, and a new term is added under the section it fits. Then list the terms present before the merge and the terms present after, and confirm that no term present before is absent after; a term that went missing is restored before you go on.
 
@@ -71,15 +71,16 @@ Once every check passes, run these in order, without asking further questions.
 
 4. **Append the closing event.** Follow `<skill_path>/references/instructions/append-log-line.md` to append `- (event) thread closed; ADRs: <adr result>; glossary: <glossary result>`. The ADR result is `landed` when step 1 landed at least one draft and `none` otherwise; the glossary result is `merged` when step 2 merged at least one term and `none` otherwise.
 
-5. **Report.** State which records landed in `docs/adr/`, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, the closing event appended, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
+5. **Report.** State which records landed in `docs/adr/` and remain as snapshots in the thread, which files moved to `docs/adr/superseded/`, which terms merged into `docs/glossary.md`, which roadmap entry was updated, the closing event appended, and the names of any `.pending-decisions/`, `.pending-reviews/`, or run-state folders left in place. Recommend committing the result. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
 
 ## Refusals
 
 Refuse before any write, naming what is wrong and how to re-invoke, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`:
 
 - A draft in `adr/` is structurally malformed — it has no frontmatter block, or its filename cannot be read as a record stem.
+- A draft's stem already exists in `docs/adr/` or `docs/adr/superseded/`; re-invoke after resolving the duplicate record.
 - The thread log already contains the closing event and the invocation does not explicitly say to proceed anyway.
 
 ## Write boundary
 
-You write exactly these: the landed records in `docs/adr/`, the superseded records moved into `docs/adr/superseded/`, the merged `docs/glossary.md`, one line beneath one entry heading of the roadmap index the seed names, and the closing event in this thread's `log.md`. Nothing else you touch is written, and no file of any other thread is written under any circumstance. You do not stage, commit, or push.
+You write exactly these: the landed copies in `docs/adr/`, the superseded records moved into `docs/adr/superseded/`, the merged `docs/glossary.md`, one line beneath one entry heading of the roadmap index the seed names, and the closing event in this thread's `log.md`. Nothing else you touch is written, and no file of any other thread is written under any circumstance. You do not stage, commit, or push.
