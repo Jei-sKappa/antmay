@@ -7,3 +7,4 @@
 - (constraint) the peer-framing mandate to flag a point the agent believes is wrong stays as it is and the conversational behaviour it produces is unchanged, because the thread changes only what a settled point is recorded as and never how the discussion is conducted
 - (decision) the rejection rule reaches any alternative that was argued against whatever its provenance — a lettered option, a lone practical proposal, or an approach raised mid-conversation — because what triggers the record is the argument and most points settle with no options menu in play
 - (decision) the project term "rejected alternative" is fixed for an option someone argued against before a point settled, because the rule turns entirely on the distinction between argued against and merely mentioned and that distinction has to survive restatement in the log-line format, the append-log-line instruction, and the discussion skill body
+- (event) thread closed; ADRs: none; glossary: merged
