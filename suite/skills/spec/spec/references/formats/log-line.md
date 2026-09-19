@@ -10,8 +10,9 @@
 
 ### Types
 
-- `decision` — a choice that has been settled and that later work rests on.
+- `decision` — a choice that has been settled and that later work rests on. When the point had to overcome a rejected alternative, the same line names that alternative and why it was rejected.
   Example: `- (decision) exports go through the queue worker, because the request path cannot hold a multi-minute job`
+  Example: `- (decision) exports go through the queue worker, because the request path cannot hold a multi-minute job; a background thread was considered and rejected, because a restart would lose in-flight exports`
 - `constraint` — a boundary the work must respect, whether external or chosen.
   Example: `- (constraint) the public API shape stays as published, since three external clients depend on it`
 - `assumption` — something the user and the agent take as true without confirmation, which later work may need to revisit.
@@ -29,6 +30,7 @@
 
 - The file is a flat sequence of one-line entries and is empty until its first entry is appended.
 - Each entry is exactly one line, and its gist states what settled and carries its reason in the same sentence.
+- A `decision` entry that carries a rejected alternative states it after what settled, with the reason it was rejected, and names every alternative the point had to overcome while remaining one line.
 - A line has no identifier and no timestamp; order in the file is the only structure.
 - Every line uses one of the seven types listed under `### Types`.
 - A thought that fits none of the seven types is not a log entry and is left out of the file.
