@@ -1,0 +1,1 @@
+> All the audits were made inside the Leitspace repo with the current copy of the antmay method cloned in its `temp/mirrors/antmay/` folder so the relative paths are to be interpreted as relative to the Leitspace repo.

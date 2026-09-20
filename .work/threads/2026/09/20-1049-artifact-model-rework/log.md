@@ -1,0 +1,1 @@
+- (event) the five Leitspace reports were copied unchanged into reports/ and researches/audit-synthesis.md was written from them, the suite at HEAD 7d3d60d, and the 05-1339 thread, as the coverage base for the discussion
