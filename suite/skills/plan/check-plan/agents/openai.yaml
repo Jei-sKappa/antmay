@@ -1,5 +1,5 @@
 interface:
   display_name: Check Plan
-  short_description: Correct a plan against its spec
+  short_description: Correct a plan against its change document
 policy:
   allow_implicit_invocation: false

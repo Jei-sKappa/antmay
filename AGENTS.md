@@ -27,8 +27,11 @@ lives in exactly one of the three files.
 ```
 suite/                       the skill suite            → suite/AGENTS.md
 cli/                         the Antmay CLI             → cli/AGENTS.md
-docs/adr/                    the project's decisions, one file per record
+docs/adr/                    decisions on how the system is built, created lazily
+docs/pdr/                    decisions on what the product does, created lazily
 docs/glossary.md             the project's terms
+docs/product/                product behavior, one document per capability
+docs/architecture/           architecture description, one document per module
 docs/documentation-rules.md  how every document here is written
 docs/product/method.md       how this repository works on itself
 .work/threads/               this repository's own threads
@@ -46,7 +49,8 @@ README.md                    the user-facing index of the skills
 | `README.md` | The user-facing index of the installable skills and the terminal-outcome protocol. |
 | `CONTRIBUTING.md` | Issue classification, effort bands, commits, and pull requests. |
 | `docs/documentation-rules.md` | The three document kinds and how every document in this repository is written. |
-| `docs/product/method.md` | How this repository runs on the suite it ships, and which skill to reach for. |
+| `docs/product/method.md` | How the method works and how this repository runs it, which skill to reach for. |
+| `docs/architecture/suite.md` | How the suite is put together: shared references, distribution, gates. |
 | `suite/authoring/` | The conventions every skill in the suite is authored to. |
 | `cli/README.md` | Operating the CLI and the stages a pipeline may hold. |
 | `AGENTS.md`, `suite/AGENTS.md`, `cli/AGENTS.md` | Durable working memory for agents, one file per level. |
@@ -56,9 +60,9 @@ README.md                    the user-facing index of the skills
 - Never commit unless explicitly asked to do so.
 - This repo follows [Conventional Commits](https://www.conventionalcommits.org/). A change confined to one skill takes that skill's folder name as the scope (`fix(check-plan): …`); a change confined to the CLI takes `cli`.
 - A change spanning modules or touching shared root files (`README.md`, `docs/`, `.claude-plugin/`, `AGENTS.md`) omits the scope: `chore: …`, `docs: …`, `feat: …`.
-- Invoke `/consult-adrs` to read the project decisions bearing on what you are about to do; it is authoritative and carries the rule for a contradiction.
-- Invoke `/consult-glossary` to write the terms the project has fixed. `docs/glossary.md` is this repository's naming authority: one meaning per term across the suite, the CLI, and these documents.
-- Terms are settled through threads — a thread drafts them in its own `glossary.md`, and `close-thread` merges that delta into `docs/glossary.md` at close; do not edit the project glossary by hand outside that merge.
+- Invoke `/consult-decisions` to read the project decisions bearing on what you are about to do — `docs/adr/` and `docs/pdr/` — and `/consult-descriptions` for the product behavior and architecture description the work touches; both are authoritative and carry the rule for a contradiction.
+- Read `docs/glossary.md` before writing; it is this repository's naming authority: one meaning per term across the suite, the CLI, and these documents.
+- Terms, decisions and descriptions are settled through threads — a thread drafts them as delta documents under its `delta/`, and `close-thread` lands them at close; do not edit the project layer by hand outside that landing.
 - `cli/` is on hold and out of scope by default — see `## The CLI is on hold`.
 
 ## The CLI is on hold

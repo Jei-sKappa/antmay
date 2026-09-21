@@ -28,13 +28,13 @@ The suite is the reference implementation of the Antmay method: refined `SKILL.m
 ```
 skills/
 ├── capture-discussion/  discussion, open-thread, open-ticket, resolve-pending-decisions
+├── change/              change
 ├── close/               close-thread
 ├── implement/           implement, implement-plan, implement-plan-with-subagents
 ├── model-invoked/       consult-decisions, consult-descriptions
 ├── plan/                check-plan, plan-brief, plan-strict
-├── review/              review-code, review-implementation, review-spec
-├── roadmap/             roadmap
-└── spec/                spec
+├── review/              review-code, review-implementation, review-change
+└── roadmap/             roadmap
 shared/
 ├── references/
 │   ├── formats/                  the shape of every artifact more than one skill reads or writes

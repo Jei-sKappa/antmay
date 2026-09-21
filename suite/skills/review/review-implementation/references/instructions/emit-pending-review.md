@@ -8,7 +8,7 @@ When the review produced zero actionable findings, write no file: return the con
 
 Every review run writes its own file: never append to an existing bundle, and never reuse a shared singleton file.
 
-Name it `<UTC>-<suffix>-<slug>.md` — the current UTC timestamp, a short unique suffix, and a kebab-case slug summarizing the review — for example `260712142301Z-a3f9-spec-handoff.md`.
+Name it `<UTC>-<suffix>-<slug>.md` — the current UTC timestamp, a short unique suffix, and a kebab-case slug summarizing the review — for example `260712142301Z-a3f9-change-handoff.md`.
 
 ## Shape
 
@@ -41,7 +41,7 @@ Then write the findings under a single heading, one section per finding:
 ### FND1: <short title>
 
 Severity: <blocker | issue | nit>
-Category: <review-specific category>
+Category: <a category this review defines>
 
 Finding: <what is wrong>
 

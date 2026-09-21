@@ -45,7 +45,7 @@ differs by role.
 ## Group folders
 
 A skill lives at `skills/<group>/<skill-name>/`, and a group folder is named for
-the capability its members share, as `spec/`, `plan/`, `implement/`, and
+the capability its members share, as `change/`, `plan/`, `implement/`, and
 `review/` are. `model-invoked/` is the one group named for a role instead,
 because the role is the only thing its members are guaranteed to share, and
 naming it that way keeps the folder honest as the category grows.

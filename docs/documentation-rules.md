@@ -28,10 +28,13 @@ detail has no practical value to that audience and stays out.
 **Maintainer documentation** — written for whoever works on this repository, and
 reached from the `AGENTS.md` files. `CONTRIBUTING.md` covers issues, effort
 bands, commits, and pull requests; `docs/documentation-rules.md` is this file;
-`docs/product/method.md` covers how the repository uses the suite on
-itself; `suite/authoring/` holds the conventions the skills are authored to; the
-CLI carries its own. Rules, rationale, and constraints belong here — stated once,
-in the file whose concern they are.
+`docs/product/method.md` describes the method as this repository runs it and
+`docs/architecture/suite.md` describes how the suite is put together — both
+maintainer documentation of this repository, held in the shapes the suite's
+product-behavior and architecture-description formats define; `suite/authoring/`
+holds the conventions the skills are authored to; the CLI carries its own.
+Rules, rationale, and constraints belong here — stated once, in the file whose
+concern they are.
 
 ## Describe the current state, never the diff
 
@@ -65,13 +68,19 @@ documentation to maintain in any file. Point at the command rather than copying
 its rows into prose, and keep the runtime source of that listing accurate
 instead.
 
-Thread-local material stays in its thread. Log entries, spec sections, plan
-tasks, and plan or implementation folders are never cited outside the thread
-that holds them: each is one thread's record of one moment, and a reader outside
-it cannot resolve the reference. Keep the constraint or rationale such a record
-settled, stated in full where it applies. An ADR may be cited by its stem —
-never by its path — from code, tests, commit messages, and living documentation,
-and no citation is ever required.
+Citation runs one way, and the direction is fixed by where the cited thing
+lives. Nothing under `.work/` — a thread's log entries, its change document, its
+delta documents, its plans or implementation folders, or a roadmap entry — is
+cited from `docs/` or from code: each is one thread's record of one moment, and
+a reader outside it cannot resolve the reference. A thread path appears outside
+its thread only as commit provenance. A decision record, ADR or PDR, is cited by
+its stem, for the reason behind a choice and never for what the system does. A
+description is cited by path and heading. A roadmap entry is cited by index path
+and entry slug, from thread artifacts only. Code, comments, test names and
+migrations carry no thread reference at all, and a test is named for the
+behavior it proves. What a thread settled reaches a later reader through the
+record or the description it landed in, stated in full where it applies, not
+through the thread that settled it. No citation is ever required.
 
 `AGENTS.md` files are durable working memory for agents that lose session
 context. Use them to make the repository or module structure quickly

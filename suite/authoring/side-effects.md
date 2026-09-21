@@ -14,28 +14,29 @@ skill writes outside its own slice or into another thread's files:
 
 - Thread creation writes the new thread folder with `seed.md` and `log.md`, and
   nothing else.
-- `discussion`, `resolve-pending-decisions`, `spec`, and `close-thread` append
+- `discussion`, `resolve-pending-decisions`, `change`, and `close-thread` append
   lines to the thread's `log.md`; they are its only writers.
-- `discussion` and `resolve-pending-decisions` write the thread's `adr/` drafts
-  and its `glossary.md`.
-- `spec` writes the thread's `spec.md`, and `resolve-pending-decisions` amends it
-  in place.
+- `change` writes the thread's `change.md` and its delta documents under
+  `delta/`, and amends both in place.
 - A plan skill writes the plan folder it creates; `check-plan` writes inside the
   one plan folder it targets.
 - The implement skills write the project's code, tests, configuration, and the
   living documentation within the implementation's scope, plus the invocation's
-  own implementation folder with its `report.md` and its `.runs/`.
-- `close-thread` alone writes the project layer: the landed records in
-  `docs/adr/`, the records they supersede into `docs/adr/superseded/`, the merged
-  `docs/glossary.md`, and the closing line beneath one roadmap entry; it also
-  appends the thread's closing event. It leaves the thread folder where it is.
+  own implementation folder with its `report.md` and its `.runs/`, and nothing
+  in the project layer.
+- `close-thread` alone writes the project layer by landing the thread's delta
+  documents — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`,
+  `docs/glossary.md`, and the `superseded/` folders records move into — plus the
+  closing line beneath one roadmap entry; it also appends the thread's closing
+  event and leaves the thread folder where it is.
 - `roadmap` alone creates a roadmap index under `.work/roadmaps/`.
 
-An implement skill reads its spec and its plan and edits neither: a plan is
-input, not a record rewritten afterwards to make delivered work look planned. A
-deviation that stays within accepted intent proceeds and is recorded in the
-report's deviations section; a contradiction of a thread record or of a spec
-decision is a change of intent and is queued as a pending decision.
+An implement skill reads its change document and its plan and edits neither: a
+plan is input, not a record rewritten afterwards to make delivered work look
+planned. A deviation that stays within accepted intent proceeds and is recorded
+in the report's deviations section; a contradiction of a delta document or of a
+change document decision is a change of intent and is queued as a pending
+decision.
 
 ## Reviews
 
