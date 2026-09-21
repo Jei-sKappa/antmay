@@ -1,0 +1,48 @@
+# Plan: Rework the Antmay artifact model around distinct durable homes
+
+Source: spec.md
+
+## Objective and context
+
+Implement the reworked artifact model the thread's `spec.md` projects: every durable kind of information gets one home, one lifecycle, one drafter, one landing and one citation form. Concretely the plan (1) gives the project layer its new kinds — decision records in `docs/adr/` and `docs/pdr/`, product behavior in `docs/product/`, architecture description in `docs/architecture/` — with shared formats and two model-invoked consult skills; (2) fixes the citation rule and the seven-step read order once and lists the read order in every entry-point skill; (3) replaces the thread's `spec.md`, `adr/` and root `glossary.md` with `change.md` plus a `delta/` folder of literal delta documents; (4) rewrites the role, inputs and write boundary of every affected skill, renaming `spec` to `change`, `review-spec` to `review-change`, `consult-adrs` to `consult-decisions`, retiring `consult-glossary` and adding `consult-descriptions`; (5) makes the roadmap entry the home of planned behavior, the implementation report the home of traceability, and `close-thread` the landing of the delta; and (6) adopts the model in this repository's own maintainer and user documents.
+
+Read `spec.md` in full before the first task; each brief cites the spec section it implements and does not restate it. Every bold term in the spec is fixed by the thread's `glossary.md`, which inside this thread takes precedence over `docs/glossary.md`; write those terms in everything you produce. The thread's `log.md` holds the reasons behind each decision when a brief leaves a question open.
+
+Facts a reader needs before opening any task file:
+
+- **Baseline commit.** The tasks compare against the commit the implementation starts from. At planning time that is `fe83a4f`; if the repository has moved on by then, substitute `git rev-parse HEAD` as read before task 1 wherever a brief writes `fe83a4f`.
+- **Bootstrap.** This thread runs under the method as it stands, so the implementation writes the reference project's own adoption files (`docs/product/method.md`, `docs/architecture/suite.md`) directly. From the next thread on they change only through delta documents landed at close. `docs/glossary.md` is never edited by any task: the thread's `glossary.md` rows land when this thread closes under the currently installed `close-thread`.
+- **Shared references are synced, never hand-edited.** Every task that touches `suite/shared/references/` or `suite/shared/manifest.yaml` ends by running the sync script and both suite checks from `suite/`. The generated copies under each skill's `references/` are committed with the task. Removing a manifest entry leaves an orphaned copy behind that the task deletes by hand.
+- **Standing gates.** The suite's two mechanical gates (`node scripts/check-marketplace-skills.mjs`, `node scripts/check-skill-text.mjs`, run from `suite/`) are cheap and run at the end of every task. Two invariants are also checked at the end of every task: `git diff --quiet fe83a4f -- cli/` (nothing under `cli/` changes) and `git diff --quiet fe83a4f -- docs/glossary.md` (the project glossary is not edited).
+- **Skill registry.** A renamed, added or removed skill is registered in the same task in `suite/shared/manifest.yaml`, `.claude-plugin/marketplace.json`, the repo-root `README.md` skill index, and `conventionalCommits.scopes` in `.vscode/settings.json` (kept sorted), and its leaf folder name equals its frontmatter `name:`. The suite check fails otherwise.
+- **Authoring conventions bind every body.** `suite/authoring/body-structure.md`, `side-effects.md`, `shared-references.md`, `skill-roles.md` and `interaction-posture.md` fix how a `SKILL.md` and a shared reference are written: the `## Inputs` item shape, the `<skill_path>/` pointer prefix, the format skeleton, the write boundary stated inline, the dead-concept test, and the terminal outcome only where a skill emits one. Every body describes the current design with no contrast to the design it replaces.
+- **CLI drift is recorded, not fixed.** The renames and the thread layout invalidate `cli/` (its stage catalog names `spec` and `review-spec`, its thread paths name `spec.md` and `adr/`, its `cli/README.md` stage-support table, and `cli/src/pipeline/documentation.test.ts` which reads this repository's `README.md`). Nothing under `cli/` is touched; task 15 lists the drift for the implementation report, and the `cli check` CI job is expected to fail until the realignment thread.
+- **Interpretation taken for `suite/authoring/side-effects.md`.** The spec allows `suite/authoring/` to differ only in references to retired skills or the `## Inputs` opening pair. The write-boundary map in `side-effects.md` names `spec`, `spec.md`, the thread's `adr/` and `glossary.md` and what `discussion`, `resolve-pending-decisions` and `close-thread` write; that map is what `body-structure.md` says fixes every skill's write boundary, so leaving it stale would contradict the new bodies. The plan reads those map lines as references to the retired skill and the retired thread files and updates them in task 15, touching nothing else in that document.
+
+## Global Constraints
+
+- No hook, script or permission mechanism enforces any boundary; conventions realised by skill design are the enforcement, and the search recipe is published for projects that want a hard gate.
+- Shared references are edited under `suite/shared/references/` and synced; mirrored copies are never hand-edited.
+- Shipped content stays project-free: no thread path of this repository, no decision identifier.
+- Documents describe the current state, never the diff, per `docs/documentation-rules.md`.
+- Nothing under `cli/` is edited. The implementation report records each drift it causes: at least the stage catalog naming `spec`, the thread paths `spec.md` and `adr/`, and the stage-support table in `cli/README.md`.
+- The thread's `glossary.md` here is authoritative for every term this spec uses; its rows land in `docs/glossary.md` when this thread closes under the current `close-thread`.
+- No project-level record is drafted for this thread's decisions.
+
+## Tasks
+
+1. **Decision-record and description formats** — write the shared formats for ADR/PDR, product behavior and architecture description, and narrow the glossary format to the project glossary. → `plan-tasks/01-decision-record-and-description-formats.md`
+2. **Consult skills** — rename `consult-adrs` to `consult-decisions`, add `consult-descriptions`, retire `consult-glossary`, and register the three moves. → `plan-tasks/02-consult-skills.md`
+3. **Read order and citation instruction** — write the shared instruction holding the citation rule and the seven-step read order, and open every entry-point skill's `## Inputs` with that order. → `plan-tasks/03-read-order-and-citation-instruction.md`
+4. **Thread layout and delta formats** — rewrite the thread format around `change.md` and `delta/`, and write the delta-document and change-document formats and the new closing event. → `plan-tasks/04-thread-layout-and-delta-formats.md`
+5. **The `change` skill** — rename `spec` to `change` and make it author `change.md` and every delta document. → `plan-tasks/05-change-skill.md`
+6. **The `review-change` skill** — rename `review-spec` to `review-change` and add the five change-document checks. → `plan-tasks/06-review-change-skill.md`
+7. **Discussion and resolution write only the log** — make `discussion` and `resolve-pending-decisions` append log lines only, and align `open-thread` and `open-ticket` with the new layout. → `plan-tasks/07-discussion-and-resolution-write-only-the-log.md`
+8. **Roadmap entry as the home of planned behavior** — add the `Planned behavior:` list to the roadmap-index format and make the `roadmap` skill write it. → `plan-tasks/08-roadmap-entry-planned-behavior.md`
+9. **Implementation report and the single-agent implement skills** — add the mandatory `## Acceptance` table and rewrite `implement` and `implement-plan` to the deny-list boundary and the commit provenance rule. → `plan-tasks/09-implementation-report-and-single-agent-implement.md`
+10. **`implement-plan-with-subagents`** — apply the same boundary, commit and report rules to the orchestrator and its three reviewer references. → `plan-tasks/10-implement-plan-with-subagents.md`
+11. **Plan skills quote criteria verbatim** — make `plan-brief`, `plan-strict` and `check-plan` work from `change.md`, quote criteria verbatim and cite no other thread. → `plan-tasks/11-plan-skills-quote-criteria.md`
+12. **Review skills and the thread-reference search** — write the shared search instruction, make `review-implementation` read the `## Acceptance` table and run the search, and align `review-code`. → `plan-tasks/12-review-skills-and-thread-reference-search.md`
+13. **`close-thread` lands the delta** — rewrite the closing skill around the six landing steps, the delta dry run and the new closing event. → `plan-tasks/13-close-thread-lands-the-delta.md`
+14. **Reference-project descriptions** — create `docs/product/method.md` and `docs/architecture/suite.md`, remove `docs/working-with-threads.md`, and cut `README.md` back to installation, the skill index, the project-layer overview with the search recipe, and the terminal-outcome protocol. → `plan-tasks/14-reference-project-descriptions.md`
+15. **Maintainer documents and final sweeps** — update `docs/documentation-rules.md`, both `AGENTS.md` files, `CONTRIBUTING.md`, the two remaining authoring documents, run the whole-change sweeps, and list the CLI drift for the report. → `plan-tasks/15-maintainer-documents-and-final-sweeps.md`

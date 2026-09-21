@@ -1,0 +1,47 @@
+### Task 13: `close-thread` lands the delta
+
+**Objective:** Rewrite `close-thread` so it lands the thread's delta documents into the project layer through the six landing steps, asks on every mismatch instead of writing, and records the closing event in its new form.
+
+**Input / context:** `spec.md` `### Landing` (the six steps in order, "blocks" and "asks"), `### Delta documents` (landing rules per type), `### Decision records` (`supersedes` moves records to that folder's `superseded/`), `## Skills whose roles change` (row `close-thread`), `## Inferences` (thread-reference search pattern; closing event `thread closed; delta: <landed|none>`). Thread glossary rows **delta**, **delta document**, **closing**. Current body `suite/skills/close/close-thread/SKILL.md` — keep its prior-closure, roadmap-reference and workspaces checks, its refusal list shape, its all-checks-before-the-first-write posture and its `## Blocked` route; the spec lists only the steps the model changes or adds, so the three existing checks stay and sit around the new ones as ordered below (the plan's reading). Formats from tasks 1 and 4, the search instruction from task 12, the report format from task 9.
+
+**Steps:**
+
+1. Rewrite `suite/skills/close/close-thread/SKILL.md`. Description: "Close a thread by landing its delta documents into the project layer." Opening paragraph: gather, run every check before the first write, then land the thread's delta — every delta document under `delta/` — into the project layer, record the closing line on the roadmap entry, append the closing event, and leave the thread folder and its `delta/` in place.
+2. `## Inputs`: the project-layer block on top (the decision folders read as the ones the thread's records land beside, the descriptions and the glossary as the targets of its `edit` deltas); the thread to close in the shape `<skill_path>/references/formats/thread.md` defines; `log.md`; `seed.md` with its `roadmap` mapping; `change.md`, when the file exists — the change document the currency check reads; `delta/`, when present — every delta document in the shape `<skill_path>/references/formats/delta-document.md` defines, and each `create` under `delta/docs/adr/` or `delta/docs/pdr/` in the shape `<skill_path>/references/formats/decision-record.md` defines; for every `edit` and `delete` delta document, its target file and `git hash-object <target>`; every `implementations/<folder>/report.md`; the roadmap index (already the sixth project-layer item); the workspaces.
+3. `## Checks before any write`, in this order, all before the first write: **Prior closure** (as today, the closing event now `thread closed; delta:`); **Currency check** (as today, extended: every `## Deviations` entry across the reports is read against the delta documents' targets; a deviation touching a delta document's target blocks the close until `change.md` and that delta document are amended — route to `## Blocked`); **Thread-reference search**: follow `<skill_path>/references/instructions/search-for-thread-references.md` over the repository outside `.work/` with this thread's identifier; a hit is put to the user before any write — route to `## Blocked` naming each hit; **Delta dry run** — for each delta document: a `create` whose target exists, an `edit` or `delete` whose recorded `hash` differs from the target's current blob hash, and an `edit` operation whose quoted text is not found and whose new text is not already present each stop the close for that file — route to `## Blocked` naming the file and the mismatch, with nothing written; a malformed delta document is a refusal; **Roadmap reference** (as today); **Workspaces** (as today).
+4. `## Blocked` (as today in route and wording, the target the thread root): a divergence, a thread-reference hit, a hash mismatch, a missing quoted text, an existing `create` target, an unresolved `supersedes` stem, an unnoticed conflict classified as `/consult-decisions` instructs, or a missing roadmap file or heading; nothing has landed and no entry line was written.
+5. `## Writes`, in order, without questions once every check passes: (1) **Land each delta document** in document order — a `create` writes the whole body to the target path, creating folders on demand; an `edit` applies its operations in document order against the target, treating an operation whose new text is already present as done; a `delete` removes the target; (2) **Supersede**: for each landed `create` under `docs/adr/` or `docs/pdr/` whose frontmatter names `supersedes`, move each named record into that folder's `superseded/` (created on demand), content untouched; (3) **Update the roadmap entry** with the `Closed:` line as today; (4) **Append the closing event** by following `<skill_path>/references/instructions/append-log-line.md` with `- (event) thread closed; delta: <landed|none>` — `landed` when at least one delta document was applied, `none` otherwise; (5) **Report**: the targets written, the records moved to `superseded/`, the roadmap entry updated, the event appended, the workspaces left in place; recommend committing; `DONE` and `Thread closed: <thread path relative to .work/threads/>`.
+6. `## Refusals`: a delta document with no frontmatter, a `type` outside `create`/`edit`/`delete`, an `edit` or `delete` without `hash`, a path under `delta/` that does not mirror a project-layer path, or an `edit` whose operations are not literal text; a `create` under `docs/adr/` or `docs/pdr/` whose stem already exists in that folder or its `superseded/`; prior closure without the explicit proceed instruction.
+7. `## Write boundary`: exactly the project-layer files the delta documents target (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and the `superseded/` folders records move into), one `Closed:` line beneath one roadmap entry heading, and the closing event in this thread's `log.md`; nothing else, no file of any other thread, no stage, commit or push; `delta/` stays in place as the thread's historical snapshot.
+8. Update `agents/openai.yaml` short description if it names records; in `suite/shared/manifest.yaml` set `skills/close/close-thread` to `formats/decision-record.md`, `formats/delta-document.md`, `formats/roadmap-index.md`, `formats/implementation-report.md`, `formats/pending-decision-bundle.md`, `formats/thread.md`, `formats/log-line.md`, `instructions/emit-pending-decisions.md`, `instructions/emit-terminal-outcome.md`, `instructions/append-log-line.md`, `instructions/read-and-cite-the-project-layer.md`, `instructions/search-for-thread-references.md`; delete the orphaned `suite/skills/close/close-thread/references/formats/glossary.md`.
+9. Update `README.md`'s `close-thread` entry: expects a thread whose work is delivered and whose `delta/` is ready to land; leaves the delta landed in the project layer, a closing line beneath the thread's roadmap entry, a closing event in its log, and the thread folder in place.
+10. From `suite/`, run the sync script and both checks.
+
+**Files modified:** `suite/skills/close/close-thread/SKILL.md`, `suite/skills/close/close-thread/agents/openai.yaml` (if needed), `suite/skills/close/close-thread/references/formats/glossary.md` (DELETED), `suite/shared/manifest.yaml`, `README.md`.
+
+**Verification:**
+
+```sh
+f=suite/skills/close/close-thread/SKILL.md
+grep -q 'thread closed; delta: <landed|none>' "$f" && ! grep -q 'ADRs:' "$f"
+grep -q 'search-for-thread-references.md' "$f" && grep -q 'formats/delta-document.md' "$f" && grep -q 'git hash-object' "$f"
+grep -c -E 'Currency check|Thread-reference search|Delta dry run|Land each delta|Supersede|Closed:|closing event' "$f"   # every landing step named
+grep -q -i 'already present' "$f" && grep -q 'superseded/' "$f"
+! grep -n -E 'spec\.md|`adr/`|thread.s `glossary.md`|Merge the glossary|Land the ADRs' "$f"
+! test -e suite/skills/close/close-thread/references/formats/glossary.md
+(cd suite && node scripts/sync-shared-references.mjs && node scripts/check-marketplace-skills.mjs && node scripts/check-skill-text.mjs)
+git diff --quiet fe83a4f -- cli/ && git diff --quiet fe83a4f -- docs/glossary.md
+```
+
+Read `## Checks before any write` and `## Writes` once against the spec's `### Landing` list: steps 1 to 6 appear in that relative order, the hash and quoted-text mismatches and an existing `create` target each route to `## Blocked` with nothing written for that file.
+
+**Acceptance criteria:**
+
+- `close-thread` performs the spec's landing steps 1 to 6 in that order — currency check extended to delta targets, thread-reference search, per-document create/edit/delete landing with the already-present rule, supersedes moves, `Closed:` line, closing event — and its `## Writes` lists the project-layer files it lands, the `Closed:` line and the closing event, nothing else.
+- On a hash mismatch, a missing quoted text or an existing `create` target it asks (queues a pending decision) and does not write that file.
+- The closing event reads `thread closed; delta: <landed|none>`.
+- The sync script and both suite checks exit 0; nothing under `cli/` or in `docs/glossary.md` differs from the baseline.
+
+**Consumes:** `instructions/search-for-thread-references.md` (task 12); `formats/delta-document.md`, `formats/thread.md` and the closing-event rule in `formats/log-line.md` (task 4); `formats/decision-record.md` (task 1); the `## Acceptance` deviations wording in `formats/implementation-report.md` (task 9).
+
+**Produces:** none
