@@ -28,7 +28,7 @@ detail has no practical value to that audience and stays out.
 **Maintainer documentation** — written for whoever works on this repository, and
 reached from the `AGENTS.md` files. `CONTRIBUTING.md` covers issues, effort
 bands, commits, and pull requests; `docs/documentation-rules.md` is this file;
-`docs/working-with-threads.md` covers how the repository uses the suite on
+`docs/product/method.md` covers how the repository uses the suite on
 itself; `suite/authoring/` holds the conventions the skills are authored to; the
 CLI carries its own. Rules, rationale, and constraints belong here — stated once,
 in the file whose concern they are.

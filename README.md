@@ -8,7 +8,7 @@
 
 **Antmay** optimizes Spec Driven Development. It offers a thread-based method for SDD, a suite of skills that support that method, and a CLI that automates it.
 
-The method is simple: every unit of work lives in its own thread under `.work/threads/`, holding a self-contained seed, a running log, the spec that is the work's design truth, the project decisions and terms the work settles, and one folder per plan and per implementation. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log. When a thread closes, the decisions that outlive it land in the project's own layer at `docs/adr/` and `docs/glossary.md`.
+The method is simple: every unit of work lives in its own **thread** under `.work/threads/`, where a **change document** records the design of the work and a **delta** drafts whatever that work adds to the project's standing documentation. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log. When a thread closes, its delta lands in the **project layer**, the fixed set of paths that outlive any single thread.
 
 The **skills** are composable and harness-agnostic `SKILL.md` files that work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads them. They are not a runtime or a project-local state file: they are individual capabilities you install and compose, one at a time for a single job or one after another to carry a change end to end.
 
@@ -37,16 +37,32 @@ A **thread** is one unit of work as a folder on disk, at `.work/threads/yyyy/mm/
 ```text
 seed.md            why the thread was opened
 log.md             the thread's append-only memory, one entry per line
-spec.md            what the work must do, once it is specified
-adr/               this thread's draft project decisions
-glossary.md        the terms this thread fixes, changes, or retires
+change.md          the thread's design of the change, once it is authored
+delta/             what the thread drafts for the project layer, one file per target
 plans/             one folder per plan
 implementations/   one folder per implementation run
 ```
 
-The **project layer** is what outlives any single thread: the project's current decisions as one file per record under `docs/adr/`, its terms at `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/` that larger directions are written down as. A thread's `adr/` and `glossary.md` are its draft of that layer, authoritative inside the thread from the moment they are written.
+The **project layer** is what outlives any single thread. It is created lazily, never a prerequisite, and always at the same paths:
 
-Closing a thread lands that draft: the records move into `docs/adr/`, the terms merge into `docs/glossary.md`, a closing line goes under the roadmap entry the thread came from, and the thread log records whether each delta category was absent or applied. The thread folder stays exactly where it is, as the record of how the work was understood while it was being done.
+- `docs/adr/` — the project's current decisions about how the system is structured or built, one file per record.
+- `docs/pdr/` — the same, for decisions about what the product does or for whom.
+- `docs/product/` — what the product does now, one file per capability.
+- `docs/architecture/` — how the system is structured now, one file per module.
+- `docs/glossary.md` — the project's terms, one meaning each.
+- `.work/roadmaps/` — one index per larger direction, as ordered entries carrying the behavior each will build.
+
+A thread's `delta/` is its draft of that layer, authoritative inside the thread from the moment it is written. `close-thread` alone lands it: each delta document is applied to the project-layer file it names, a closing line goes under the roadmap entry the thread came from, and the thread log records whether the delta landed. The thread folder stays exactly where it is, as the record of how the work was understood while it was being done.
+
+[`docs/product/method.md`](./docs/product/method.md) describes the whole method: how the skills relate, what each produces, and how this repository runs on it.
+
+### Keeping thread references out of code
+
+Nothing under `.work/` is cited from `docs/` or from code. A thread path left in a comment, a test name or a migration outlives the thread that wrote it, and a later reader takes it for a standing rule. Nothing in the method enforces this — the skills run the search where the reading already happens — so a project that wants a hard gate wires this one line into its own tooling:
+
+```sh
+git grep -n -e '.work/threads/' -- ':!.work'
+```
 
 ## Terminal outcomes
 
@@ -56,7 +72,7 @@ Every completion-oriented skill ends its final message with exactly one **termin
 Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
 ```
 
-`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the one outcome vocabulary the whole suite shares. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills such as `discussion` emit no terminal outcome, and neither do the one-shot deliverables `open-thread` and `open-ticket`, nor the model-invoked skills below — their questions, their finished deliverable, or their narrow written artifact are the output.
+`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the one outcome vocabulary the whole suite shares. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills such as `discussion` emit no terminal outcome, and neither do the one-shot deliverables `open-thread` and `open-ticket`, nor the two model-invoked skills below — their questions, their finished deliverable, or their narrow written artifact are the output.
 
 ## Skills
 
@@ -228,4 +244,4 @@ npx skills add Jei-sKappa/antmay --skill consult-descriptions
 
 ## Contributing
 
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) covers how issues are classified and estimated, the commit and pull-request conventions, and the checks to run before proposing a change. Beyond it: [`docs/documentation-rules.md`](./docs/documentation-rules.md) is how this repository's documents are written, [`docs/working-with-threads.md`](./docs/working-with-threads.md) is how it uses the suite on itself, and [`suite/authoring/`](./suite/authoring/) holds the conventions every skill is authored to.
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) covers how issues are classified and estimated, the commit and pull-request conventions, and the checks to run before proposing a change. Beyond it: [`docs/documentation-rules.md`](./docs/documentation-rules.md) is how this repository's documents are written, [`docs/product/method.md`](./docs/product/method.md) is the method it runs on itself, and [`suite/authoring/`](./suite/authoring/) holds the conventions every skill is authored to.

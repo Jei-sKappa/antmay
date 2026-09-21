@@ -112,8 +112,8 @@ default branch.
 
 `AGENTS.md` at the root is the entry point — it explains the two modules and
 points at `suite/AGENTS.md` and `cli/AGENTS.md` for the rules that apply inside
-each. [`docs/working-with-threads.md`](./docs/working-with-threads.md) explains
-how this repository carries its own work in the threads the suite defines, and
+each. [`docs/product/method.md`](./docs/product/method.md) explains how this
+repository carries its own work in the threads the suite defines, and
 [`suite/authoring/`](./suite/authoring/) holds the conventions every skill is
 authored to.
 

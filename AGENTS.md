@@ -30,7 +30,7 @@ cli/                         the Antmay CLI             → cli/AGENTS.md
 docs/adr/                    the project's decisions, one file per record
 docs/glossary.md             the project's terms
 docs/documentation-rules.md  how every document here is written
-docs/working-with-threads.md how this repository works on itself
+docs/product/method.md       how this repository works on itself
 .work/threads/               this repository's own threads
 .work/roadmaps/              its roadmap indexes
 .claude-plugin/              marketplace.json — load-bearing for skill distribution
@@ -46,7 +46,7 @@ README.md                    the user-facing index of the skills
 | `README.md` | The user-facing index of the installable skills and the terminal-outcome protocol. |
 | `CONTRIBUTING.md` | Issue classification, effort bands, commits, and pull requests. |
 | `docs/documentation-rules.md` | The three document kinds and how every document in this repository is written. |
-| `docs/working-with-threads.md` | How this repository runs on the suite it ships, and which skill to reach for. |
+| `docs/product/method.md` | How this repository runs on the suite it ships, and which skill to reach for. |
 | `suite/authoring/` | The conventions every skill in the suite is authored to. |
 | `cli/README.md` | Operating the CLI and the stages a pipeline may hold. |
 | `AGENTS.md`, `suite/AGENTS.md`, `cli/AGENTS.md` | Durable working memory for agents, one file per level. |
