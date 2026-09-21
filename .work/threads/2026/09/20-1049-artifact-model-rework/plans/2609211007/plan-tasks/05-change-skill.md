@@ -33,7 +33,7 @@ grep -q -i 'verbatim' suite/skills/change/change/SKILL.md && grep -q 'FR-' suite
 grep -q 'formats/change-document.md' suite/skills/change/change/SKILL.md && grep -q 'formats/delta-document.md' suite/skills/change/change/SKILL.md && grep -q 'formats/decision-record.md' suite/skills/change/change/SKILL.md
 grep -q -i 'routing' suite/skills/change/change/SKILL.md && grep -q -i 'delta index' suite/skills/change/change/SKILL.md
 grep -q 'Change document written: change.md' suite/skills/change/change/SKILL.md
-! grep -n -E 'spec\.md|`spec`|Spec written|adr/|thread.s `glossary.md`' suite/skills/change/change/SKILL.md
+! grep -n -E 'spec\.md|`spec`|Spec written|`adr/`|thread.s `glossary.md`' suite/skills/change/change/SKILL.md
 grep -q 'skills/change/change' .claude-plugin/marketplace.json && ! grep -q 'skills/spec/spec' .claude-plugin/marketplace.json
 grep -q '"change"' .vscode/settings.json && ! grep -q '"spec"' .vscode/settings.json
 grep -q 'suite/skills/change/change/SKILL.md' README.md && ! grep -q 'suite/skills/spec/spec' README.md

@@ -247,7 +247,9 @@ Two model-invoked skills remain: **consult-decisions** (lists `docs/adr/` and `d
 | `close-thread` | Per `### Landing`. |
 | `consult-adrs` → `consult-decisions`, `consult-glossary` retired, `consult-descriptions` new | Per `### Citation and read order`. |
 
-`suite/authoring/skill-roles.md` and `body-structure.md` change only where they name the retired skills or the `## Inputs` opening pair *(Inference: minimal touch, since `suite/authoring/` is otherwise out of scope)*.
+~~`suite/authoring/skill-roles.md` and `body-structure.md` change only where they name the retired skills or the `## Inputs` opening pair *(Inference: minimal touch, since `suite/authoring/` is otherwise out of scope)*.~~ *(superseded 2026-09-21: the write-boundary map in `side-effects.md` describes what the skills write, not a rule for authors, and is brought to the model in this thread)*
+
+`suite/authoring/skill-roles.md` and `body-structure.md` change only where they name the retired skills or the `## Inputs` opening pair; `side-effects.md` changes only in its `## The suite-wide write boundaries` map and the paragraph beneath it, where a line names a retired skill, a retired thread file (`spec.md`, the thread's `adr/`, the thread-root `glossary.md`) or a write that this work moves; `interaction-posture.md` changes only where it names the retired skill *(Inference: minimal touch, since `suite/authoring/` is otherwise out of scope)*.
 
 ## This repository's adoption
 
@@ -256,7 +258,7 @@ The reference project adopts the model as written, with the admission rules appl
 - `docs/adr/` and `docs/pdr/` are created lazily by the first thread whose decision passes the test. Here the sort is: "how the suite is built" is an ADR, "what the method does for its users" is a PDR.
 - `docs/product/` holds one method-level overview, `docs/product/method.md` *(Inference: file name)*: how the method works, how the skills relate, what each produces, the thread shape cited from `suite/shared/references/formats/thread.md` rather than restated. It absorbs the method-level content of `docs/working-with-threads.md`, which is removed, and of `README.md`, which keeps installation, the skill index and the terminal-outcome protocol.
 - `docs/architecture/` appears only for what no single file makes readable; the one expected candidate is how shared references are declared in `suite/shared/manifest.yaml` and mirrored by the sync script.
-- `suite/authoring/` is untouched. `docs/documentation-rules.md` stays a maintainer document, edited only where its citation paragraph changes; its three-kinds section gains `docs/product/` and `docs/architecture/` as maintainer documentation of this repository *(Inference)*; its `AGENTS.md` paragraph is untouched.
+- `suite/authoring/` is untouched beyond the references to retired skills, the `## Inputs` opening pair and the write-boundary map named under `## Skills whose roles change` ~~(was: `suite/authoring/` is untouched.)~~ *(superseded 2026-09-21: the write-boundary map in `side-effects.md` describes what the skills write, not a rule for authors, and is brought to the model in this thread)*. `docs/documentation-rules.md` stays a maintainer document, edited only where its citation paragraph changes; its three-kinds section gains `docs/product/` and `docs/architecture/` as maintainer documentation of this repository *(Inference)*; its `AGENTS.md` paragraph is untouched.
 - The root `AGENTS.md` table of governing documents points at the new files *(Inference)*.
 - The published one-line search recipe for a project gate is stated once, in the README's project-layer section *(Inference: location)*.
 
@@ -299,7 +301,7 @@ Each is marked inline where it shapes the text.
 - Direct-request bypass kept; user may request any delta document.
 - Skill names `change` and `review-change`; `consult-decisions`, `consult-descriptions`.
 - Implementer discoveries go to `## Follow-ups`.
-- `suite/authoring/` touched only where it names retired skills or the inputs opening pair.
+- `suite/authoring/` touched only where it names retired skills, the inputs opening pair, or — in `side-effects.md` — a write-boundary map line that names a retired skill, a retired thread file or a write this work moves ~~(was: touched only where it names retired skills or the inputs opening pair)~~ *(superseded 2026-09-21: the write-boundary map in `side-effects.md` describes what the skills write, not a rule for authors, and is brought to the model in this thread)*.
 - `docs/product/method.md` as the overview's name; `docs/documentation-rules.md` three-kinds section lists the new maintainer paths; root `AGENTS.md` table updated; search recipe published in the README.
 - Version-scoped statements: present-tense stance, revisit condition in optional consequences, deferred part in the roadmap's out-of-scope list.
 - A record whose kind changes is a `delete` plus a `create` in the new home; git is the history.
@@ -358,7 +360,7 @@ Thread-local, as the current method requires; a reviewer checks each against the
 
 **FR-10 — Reference-project adoption**
 - AC-10.1 `docs/product/method.md` exists, covers how the method works, how the skills relate, what each produces, and cites the thread format rather than restating it; `docs/working-with-threads.md` is gone; `README.md` keeps installation, the skill index and the terminal-outcome protocol.
-- AC-10.2 `suite/authoring/` differs from today only in references to retired skills or the inputs opening pair.
+- AC-10.2 `suite/authoring/` differs from today only in references to retired skills, the inputs opening pair, and the write-boundary map of `side-effects.md` where a line names a retired skill, a retired thread file or a write this work moves ~~(was: only in references to retired skills or the inputs opening pair)~~ *(superseded 2026-09-21: the write-boundary map in `side-effects.md` describes what the skills write, not a rule for authors, and is brought to the model in this thread)*.
 - AC-10.3 No file under `cli/` differs from today; the implementation report lists the drift.
 - AC-10.4 The root `AGENTS.md` governing-documents table names the new files, and the README's project-layer section carries the one-line search recipe.
 

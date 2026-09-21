@@ -20,7 +20,7 @@
 
 ```sh
 grep -q 'change.md' suite/shared/references/formats/thread.md && grep -q 'delta/' suite/shared/references/formats/thread.md
-! grep -n -E 'spec\.md|^├── adr/|glossary\.md' suite/shared/references/formats/thread.md
+! grep -n -E 'spec\.md|^├── adr/|[├└]── glossary\.md' suite/shared/references/formats/thread.md   # thread-root files only; `delta/docs/glossary.md` in the tree is required
 test -f suite/shared/references/formats/delta-document.md && grep -q '^type: edit' suite/shared/references/formats/delta-document.md && grep -q 'git hash-object' suite/shared/references/formats/delta-document.md && grep -q '^## add' suite/shared/references/formats/delta-document.md && grep -q '^## replace' suite/shared/references/formats/delta-document.md && grep -q '^## remove' suite/shared/references/formats/delta-document.md && grep -q 'under:' suite/shared/references/formats/delta-document.md && grep -q 'after:' suite/shared/references/formats/delta-document.md
 test -f suite/shared/references/formats/change-document.md && grep -q '| goes to |' suite/shared/references/formats/change-document.md && grep -c '^| ' suite/shared/references/formats/change-document.md   # header + separator + 8 rows = 10
 grep -q -i 'verbatim' suite/shared/references/formats/change-document.md && grep -q 'FR-' suite/shared/references/formats/change-document.md
