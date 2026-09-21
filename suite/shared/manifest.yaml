@@ -53,11 +53,15 @@ skills/capture-discussion/resolve-pending-decisions:
   - instructions/emit-pending-decisions.md
   - formats/glossary.md
 
-skills/spec/spec:
-  - formats/change-document.md
-  - formats/delta-document.md
+skills/change/change:
   - formats/log-line.md
   - formats/pending-decision-bundle.md
+  - formats/change-document.md
+  - formats/delta-document.md
+  - formats/decision-record.md
+  - formats/product-behavior.md
+  - formats/architecture-description.md
+  - formats/glossary.md
   - instructions/append-log-line.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md

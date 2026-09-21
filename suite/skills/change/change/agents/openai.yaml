@@ -1,0 +1,5 @@
+interface:
+  display_name: Change
+  short_description: Author the change document and its delta
+policy:
+  allow_implicit_invocation: false

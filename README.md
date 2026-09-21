@@ -96,14 +96,14 @@ Expects a thread whose `.pending-decisions/` queue holds bundles waiting on a hu
 npx skills add Jei-sKappa/antmay --skill resolve-pending-decisions
 ```
 
-### Spec
+### Change
 
-#### [`spec`](./suite/skills/spec/spec/SKILL.md)
+#### [`change`](./suite/skills/change/change/SKILL.md)
 
-Expects a thread whose discussion has settled — the live conversation or `log.md`; leaves `spec.md` at the thread root and one `event` line in the log.
+Expects a thread whose discussion has settled — the live conversation or `log.md`; leaves `change.md` at the thread root, its delta documents under `delta/`, and one `event` line in the log.
 
 ```sh
-npx skills add Jei-sKappa/antmay --skill spec
+npx skills add Jei-sKappa/antmay --skill change
 ```
 
 ### Plan
