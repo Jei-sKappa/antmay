@@ -18,9 +18,9 @@
         "./skills/plan/check-plan",
         "./skills/plan/plan-brief",
         "./skills/plan/plan-strict",
+        "./skills/review/review-change",
         "./skills/review/review-code",
         "./skills/review/review-implementation",
-        "./skills/review/review-spec",
         "./skills/roadmap/roadmap"
       ]
     }

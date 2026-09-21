@@ -17,9 +17,9 @@
     "plan-brief",
     "plan-strict",
     "resolve-pending-decisions",
+    "review-change",
     "review-code",
     "review-implementation",
-    "review-spec",
     "roadmap"
   ]
 }

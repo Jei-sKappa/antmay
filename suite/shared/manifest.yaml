@@ -112,12 +112,13 @@ skills/implement/implement-plan-with-subagents:
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
 
-skills/review/review-spec:
-  - formats/change-document.md
-  - formats/delta-document.md
+skills/review/review-change:
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
+  - formats/change-document.md
+  - formats/delta-document.md
+  - formats/decision-record.md
 
 skills/review/review-implementation:
   - formats/implementation-report.md

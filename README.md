@@ -172,12 +172,12 @@ npx skills add Jei-sKappa/antmay --skill implement-plan-with-subagents
 
 Reviews are strictly read-only. A clean review passes in chat and writes nothing; a review with findings records a single pending-review bundle for later attention.
 
-#### [`review-spec`](./suite/skills/review/review-spec/SKILL.md)
+#### [`review-change`](./suite/skills/review/review-change/SKILL.md)
 
-Expects a thread holding a `spec.md` to judge as a downstream handoff; leaves nothing when the spec is ready to plan from, and one findings bundle under `.pending-reviews/` when it is not.
+Expects a thread holding a `change.md` and its `delta/` to judge as a downstream handoff; leaves nothing when they are ready to plan from, and one findings bundle under `.pending-reviews/` when they are not.
 
 ```sh
-npx skills add Jei-sKappa/antmay --skill review-spec
+npx skills add Jei-sKappa/antmay --skill review-change
 ```
 
 #### [`review-implementation`](./suite/skills/review/review-implementation/SKILL.md)

@@ -1,0 +1,5 @@
+interface:
+  display_name: Review Change
+  short_description: Check a change document's planning readiness
+policy:
+  allow_implicit_invocation: false
