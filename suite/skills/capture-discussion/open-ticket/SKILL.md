@@ -28,10 +28,10 @@ written.
 Gather the following before composing; the composition below works from what you
 gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the
   idea.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms,
-  to be used in everything you write.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be
+  used in everything you write.
 - The repository's convention files, found and read as
   `<skill_path>/references/repository-conventions.md` directs. A convention can
   decide the title's shape, and a title composed without it has to be rewritten.

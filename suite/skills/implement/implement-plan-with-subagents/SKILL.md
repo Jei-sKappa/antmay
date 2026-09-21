@@ -27,8 +27,8 @@ No parallel implementer dispatch. No per-task worktree branch. The orchestration
 
 The orchestrator gathers all of these before dispatching the first subagent; everything below works from what it gathers here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the plan.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the plan.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The thread's `spec.md` — the thread's design truth, and what the implementation answers to.
 - **The plan folder to execute** — the primary input and the artifact this run carries to code, in one of two accepted forms. When the invocation **names a folder** under `plans/`, that folder is the form; otherwise the form is the **newest folder under `plans/` by stamp**. It resolves to `plans/<folder>/plan.md` — the index, authoritative for task count and order — together with the `plan-tasks/NN-<kebab-slug>.md` brief each index entry points at. When the index's `Source:` line names an artifact other than the thread's `spec.md`, the orchestrator reads that artifact too: it holds the intent the plan was compiled from, and the orchestrator holds the intent while the subagents hold the mechanics.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records; these are the records the spec cites by stem.
@@ -204,7 +204,7 @@ Three situations stop the run once substantive execution has begun (step 4 onwar
 
 **Missing human intent.** This applies whenever completing a plan task requires a genuine human decision the run cannot settle on its own from the gathered inputs and the observed code state (an implementer `NEEDS_CONTEXT` token the orchestrator validated as genuinely missing intent). Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat.
 
-**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it as `/consult-adrs` instructs, and route it here rather than overriding the project record.
+**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it as `/consult-decisions` instructs, and route it here rather than overriding the project record.
 
 Both take the same route. First finish everything the run can safely derive without the decision, then the orchestrator writes the report per `## Implementation report` reflecting the blocked outcome, commits it (`## Procedure`, step 8), and follows `<skill_path>/references/instructions/emit-pending-decisions.md` with itself as the producer, this invocation's implementation folder's `report.md` as the target, and the originating user request. Then stop with a concise notification naming where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 

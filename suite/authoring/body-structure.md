@@ -28,13 +28,13 @@ sentence above the list.
 The list opens with the same two project-layer items in every skill that has one:
 
 ```markdown
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on <the target>.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on <the target>.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 ```
 
 The input is the file, the skill is how it is read, and the target clause is
 adapted to the skill. Where a body invokes the conflict rule those decisions come
-with, it names `/consult-adrs` as a procedure — "classify it as `/consult-adrs`
+with, it names `/consult-decisions` as a procedure — "classify it as `/consult-decisions`
 instructs" — never as a document that carries text.
 
 The thread files the skill reads follow. A skill with one primary input names it

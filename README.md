@@ -210,20 +210,20 @@ npx skills add Jei-sKappa/antmay --skill close-thread
 
 The two skills below are **model-invoked**: the model may reach for them on its own whenever they help, whether or not another skill is running, because what they read is useful in any situation. They ship as part of the suite, so installing it installs them too; the snippets are here for completeness.
 
-#### [`consult-adrs`](./suite/skills/model-invoked/consult-adrs/SKILL.md)
+#### [`consult-decisions`](./suite/skills/model-invoked/consult-decisions/SKILL.md)
 
-Expects a project whose `docs/adr/` holds at least one record, and is not invoked otherwise; leaves nothing on disk — it prints the catalog of records, opens the ones that touch the work at hand, and says what to do when the work contradicts one.
+Expects a project whose `docs/adr/` or `docs/pdr/` holds at least one record, and is not invoked otherwise; leaves nothing on disk — it prints the catalog of records across both folders, opens the ones that touch the work at hand, and says how a record is cited, how long it binds, and what to do when the work contradicts one.
 
 ```sh
-npx skills add Jei-sKappa/antmay --skill consult-adrs
+npx skills add Jei-sKappa/antmay --skill consult-decisions
 ```
 
-#### [`consult-glossary`](./suite/skills/model-invoked/consult-glossary/SKILL.md)
+#### [`consult-descriptions`](./suite/skills/model-invoked/consult-descriptions/SKILL.md)
 
-Expects a project holding `docs/glossary.md`, and is not invoked otherwise; leaves nothing on disk — it fixes which term to write for which meaning, so every document and every agent uses the same word for the same thing.
+Expects a project whose `docs/product/` or `docs/architecture/` holds at least one description, and is not invoked otherwise; leaves nothing on disk — it lists what the project has described of itself, opens the product behavior and the architecture description the work touches, and says how each is cited and read.
 
 ```sh
-npx skills add Jei-sKappa/antmay --skill consult-glossary
+npx skills add Jei-sKappa/antmay --skill consult-descriptions
 ```
 
 ## Contributing

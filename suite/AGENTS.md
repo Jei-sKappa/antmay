@@ -30,7 +30,7 @@ skills/
 ├── capture-discussion/  discussion, open-thread, open-ticket, resolve-pending-decisions
 ├── close/               close-thread
 ├── implement/           implement, implement-plan, implement-plan-with-subagents
-├── model-invoked/       consult-adrs, consult-glossary
+├── model-invoked/       consult-decisions, consult-descriptions
 ├── plan/                check-plan, plan-brief, plan-strict
 ├── review/              review-code, review-implementation, review-spec
 ├── roadmap/             roadmap

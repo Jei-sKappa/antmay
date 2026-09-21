@@ -15,8 +15,8 @@ Close one thread, end to end. You gather the thread's material, run every check 
 
 Gather all of these before running the checks; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the thread's drafts, which land beside them.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the thread's drafts, which land beside them.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The thread to close — the folder the invocation names, in the shape `<skill_path>/references/formats/thread.md` defines. Everything below is read inside it.
 - The thread's `log.md` — the thread's memory and the place closure is recorded, in the shape `<skill_path>/references/formats/log-line.md` defines.
 - The thread's `seed.md` — why the thread exists and what it set out to reach. When its frontmatter carries a `roadmap` mapping, `roadmap.path` and `roadmap.entry` name the roadmap index this thread was opened from and the slug of its entry.
@@ -41,7 +41,7 @@ Run all five, in order, and all of them before the first write. They are reads; 
 
    The check is narrow: it reads recorded deviations and delivered changes, and it is not a review of the implementation at large. Do not open the code to audit it, and do not treat an unrecorded improvement as a divergence. A divergence you cannot settle from the thread's material goes to `## Blocked`.
 
-3. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; its stem exists in neither `docs/adr/` nor `docs/adr/superseded/`; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-adrs` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft or a stem collision is a refusal, per `## Refusals`.
+3. **Landing preflight** — every draft in `adr/` is landable: each carries a `name` and a `description` in its frontmatter; its stem exists in neither `docs/adr/` nor `docs/adr/superseded/`; every stem listed under `supersedes` resolves to a file in `docs/adr/`; and no draft contradicts a project ADR it does not supersede. Whether a contradiction is intentional or an unnoticed conflict is classified as `/consult-decisions` instructs. An unresolved stem or an unnoticed conflict goes to `## Blocked`; a structurally malformed draft or a stem collision is a refusal, per `## Refusals`.
 
 4. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry is written.
 

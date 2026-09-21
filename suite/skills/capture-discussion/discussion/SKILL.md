@@ -41,8 +41,8 @@ A point is an **inference** when it follows from the points already settled or h
 Gather all of these once, before interviewing; the procedure below works from what you gather here.
 A freshly opened thread holds only `seed.md` and an empty `log.md`; everything else below appears only once later work has produced it.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the topic.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the topic.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The thread's `seed.md` — why the thread exists.
 - The thread's `log.md` — the thread's memory, read once here at session start when it has entries, and never re-read for the rest of the session.
 - The thread's `spec.md`, when the file exists — the thread's design truth.
@@ -55,7 +55,7 @@ A freshly opened thread holds only `seed.md` and an empty `log.md`; everything e
 
 2. **Ask one question at a time.** Stay conversational. Let questions emerge from the user's answers, not from a pre-built checklist. If codebase context would sharpen a question, inspect the relevant files before asking.
 
-3. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term the project glossary fixes, classify it against the thread's delta as `/consult-adrs` instructs. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
+3. **Raise a conflict with the project layer the moment you see one.** When a leaning contradicts a project ADR or a term the project glossary fixes, classify it against the thread's delta as `/consult-decisions` instructs. An intentional contradiction passes without remark. Every other one goes to the user before the conversation goes further — name the record or term, state what it says, and let the user decide whether to follow it or supersede it. Never resolve it yourself by overriding the project record.
 
 4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands and the point is a fork under `## Forks and inferences`, present exactly that one fork in chat, framed following the `<skill_path>/references/formats/discussion-point.md` format, then let the user settle it. A point that sorts as an inference is held back for step 7. Otherwise stay conversational; do not force a decision point onto every exchange.
 

@@ -117,8 +117,9 @@ skills/roadmap/roadmap:
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
 
-skills/model-invoked/consult-adrs:
+skills/model-invoked/consult-decisions:
   - formats/decision-record.md
 
-skills/model-invoked/consult-glossary:
-  - formats/glossary.md
+skills/model-invoked/consult-descriptions:
+  - formats/product-behavior.md
+  - formats/architecture-description.md

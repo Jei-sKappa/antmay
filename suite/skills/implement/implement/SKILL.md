@@ -17,8 +17,8 @@ This skill is single-agent: the current session is the implementer and runs the 
 
 Gather all of these before deriving implicit tasks; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the implementation.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the implementation.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The thread's `spec.md`, when the file exists — the thread's design truth, and what the implementation answers to.
 - The thread's `seed.md` — why the thread exists and what triggered it.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records.
@@ -136,7 +136,7 @@ Three situations stop the run once substantive execution has begun (step 4 onwar
 
 **Missing human intent.** This applies whenever completing an implicit task requires a genuine human decision you cannot settle yourself from the gathered inputs and the observed code state. Per the run's autonomous posture, do not invent the intent and do not stall waiting in chat.
 
-**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it as `/consult-adrs` instructs, and route it here rather than overriding the project record.
+**A change of intent.** This applies to a contradiction of a thread ADR or of a spec decision, per `## Deviations`. An unnoticed conflict between the implementation's material and a project ADR or a project glossary term is the same situation: classify it as `/consult-decisions` instructs, and route it here rather than overriding the project record.
 
 Both take the same route. First finish everything the run can safely derive without the decision, then write the report per `## Implementation report` reflecting the blocked outcome, commit it (`## Procedure`, step 8), and follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, this invocation's implementation folder's `report.md` as the target, and the originating user request. Then stop with a concise notification naming where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 

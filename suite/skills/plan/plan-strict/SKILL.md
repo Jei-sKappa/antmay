@@ -15,8 +15,8 @@ Forward-design a strict-granularity plan for the active thread. You gather the t
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the design.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the design.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form when the file exists, and it is the plan's authority: its intended goal, expected behavior, and constraints drive the task list directly, its acceptance criteria map cleanly onto per-task acceptance criteria, and its degrees-of-freedom section tells the plan which *hows* are open. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue (a full `https://github.com/<owner>/<repo>/issues/<NNN>` URL or the short `owner/repo#NNN` form), another thread's artifact read as history, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
 - The thread's `seed.md` — why the thread exists and what triggered it.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records. A task cites a record by its stem where it rests on one, rather than restating it.
@@ -119,7 +119,7 @@ Run the four checks against the drafted plan (index + task files). If any check 
 
 This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-A task that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that task, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a project glossary term is another: classify it as `/consult-adrs` instructs, and queue it rather than overriding the project record.
+A task that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that task, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a project glossary term is another: classify it as `/consult-decisions` instructs, and queue it rather than overriding the project record.
 
 Finish everything safely derivable first, then follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, the plan folder as the target, and the originating user request. Then stop with a concise notification of where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 

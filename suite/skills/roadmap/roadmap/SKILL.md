@@ -17,8 +17,8 @@ The index is a map, not a plan: it records where the direction is going and what
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the direction.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the direction.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The thread's `seed.md` — why the thread exists and what the direction is meant to reach.
 - The thread's `spec.md`, when the file exists — the direction's design truth.
 - The thread's `adr/` and `glossary.md` — the direction's settled constraints and terms, which inside the thread take precedence over the project records. These records are the constraints that bind the threads opened from the index's entries, and they reach those threads by landing in `docs/adr/` when this thread closes, so the index restates none of them.

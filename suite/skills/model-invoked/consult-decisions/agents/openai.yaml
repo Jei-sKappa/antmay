@@ -1,0 +1,3 @@
+interface:
+  display_name: Consult Decisions
+  short_description: Read the project's ADRs and PDRs first

@@ -17,8 +17,8 @@ This is the quality pass. The quality, safety, idiom, and testability axes apply
 
 Gather all of these before judging; the procedure below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the code under review.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the code under review.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
 - That folder's `report.md` — the implementer's account of the delivered work, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Changes` locates the code and its `## Deviations` says which departures were deliberate.
 - The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.
@@ -35,7 +35,7 @@ Quality does not require intent to exist, but where a finding turns on what the 
 2. else the plan folder the report's `Plan:` line names — `plans/<folder>/plan.md`, a one-screen brief or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
-The thread's `adr/` applies on top of the resolved anchor as a binding constraint source, alongside the project's ADRs and the project glossary terms the thread's delta does not redefine; code that contradicts one of those records is a finding. Whether such a contradiction is intentional or a finding is classified as `/consult-adrs` instructs.
+The thread's `adr/` applies on top of the resolved anchor as a binding constraint source, alongside the project's ADRs and the project glossary terms the thread's delta does not redefine; code that contradicts one of those records is a finding. Whether such a contradiction is intentional or a finding is classified as `/consult-decisions` instructs.
 
 The anchor matters only at this margin where intent determines what "right" means; the four axes otherwise stand on their own. When the resolved anchor is coarse — `seed.md` only, with no acceptance criteria the thread ever recorded — name it explicitly in the bundle's `## Context` and scope any intent-dependent finding to what that anchor actually says. Never invent acceptance criteria the thread never recorded and then fault the code for missing them. When the thread records no anchor at all, run a pure quality pass and say so.
 

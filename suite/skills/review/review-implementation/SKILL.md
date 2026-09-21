@@ -17,8 +17,8 @@ This is a fidelity audit, not a code-quality pass: you check whether it delivers
 
 Gather all of these before judging; the procedure below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the reviewed work.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the reviewed work.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
 - That folder's `report.md` — the implementer's account of the delivered work and the claim under test, in the shape `<skill_path>/references/formats/implementation-report.md` defines.
 - The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.
@@ -35,7 +35,7 @@ The definition of intended behavior is the most specific durable intent the thre
 2. else the plan folder the report's `Plan:` line names — `plans/<folder>/plan.md`, a one-screen brief or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
-The thread's `adr/` applies on top of the resolved anchor as a binding constraint source: delivered work that contradicts a thread ADR is a finding no matter which anchor you resolved, and so is work that contradicts a project ADR or a project glossary term the thread's delta does not redefine. Whether such a contradiction is intentional or a finding is classified as `/consult-adrs` instructs.
+The thread's `adr/` applies on top of the resolved anchor as a binding constraint source: delivered work that contradicts a thread ADR is a finding no matter which anchor you resolved, and so is work that contradicts a project ADR or a project glossary term the thread's delta does not redefine. Whether such a contradiction is intentional or a finding is classified as `/consult-decisions` instructs.
 
 When the resolved anchor is coarse — `seed.md` only, with no acceptance criteria the thread ever recorded — name it explicitly in the bundle's `## Context` and scope every finding to what that anchor actually says. Never invent acceptance criteria the thread never recorded and then fault the work for missing them.
 

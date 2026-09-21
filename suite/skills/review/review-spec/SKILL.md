@@ -17,8 +17,8 @@ This is a quality-of-handoff and planning-readiness review; your concern is whet
 
 Gather all of these before judging; the procedure below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the spec's subject.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the spec's subject.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The thread's `spec.md` — the reviewed target, and the review's only target; it comes in that one form, at the thread root. Read it end to end at least once, as a downstream planner with no memory of the conversation that produced it.
 - The thread's `seed.md` — why the thread exists.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer and the constraint sources a spec must not contradict; inside the thread they take precedence over the project records.
@@ -50,7 +50,7 @@ Read the spec against these axes; each weakness you find maps to the axis it con
 
 A spec's section names, ordering, and structure are the author's discretion; what you check is that the substance behind these axes is present and coherent.
 
-You do not perform an exhaustive claim-by-claim fidelity mapping between the spec and the records that bind it. You may, however, report an **obvious contradiction** with the thread's `adr/` or `glossary.md`, or with a project ADR or a project glossary term, when you notice one, because a spec that visibly commits to the opposite of a record authoritative over it harms readiness — a downstream agent would act on a claim that has already been overruled. A contradiction the thread has deliberately taken on is not one of these; classify it as `/consult-adrs` instructs. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
+You do not perform an exhaustive claim-by-claim fidelity mapping between the spec and the records that bind it. You may, however, report an **obvious contradiction** with the thread's `adr/` or `glossary.md`, or with a project ADR or a project glossary term, when you notice one, because a spec that visibly commits to the opposite of a record authoritative over it harms readiness — a downstream agent would act on a claim that has already been overruled. A contradiction the thread has deliberately taken on is not one of these; classify it as `/consult-decisions` instructs. Treat this as a readiness finding when it is plain on the page, not as a mandate to audit fidelity line by line.
 
 ## Recording findings
 

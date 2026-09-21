@@ -15,8 +15,8 @@ Turn a user's starting point into a durable thread on disk. You interpret the ra
 
 Gather the following before composing any field; the composition below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the starting point.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the starting point.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - The ticket, when supplied — material for composing the seed; read it as `<skill_path>/references/supplied-ticket.md` directs.
 - The roadmap index under `.work/roadmaps/`, when supplied — a project-level file for composing the seed. Find the entry in it as a heading whose text is the supplied slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read that entry's sketch and scope boundary. When the index carries no heading with that slug, create nothing: tell the user the slug is absent and name the slugs the index does carry, so they can correct the invocation.
 

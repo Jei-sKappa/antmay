@@ -17,8 +17,8 @@ A handoff-grade spec is one a downstream reader with no prior context can read a
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the thread's subject.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the thread's subject.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - **The discussion that settled the design** — the primary input, in one of two accepted forms. When the same session ran the discussion, that **live conversation** is the form, and you author from it. Otherwise the form is the thread's **`log.md`**, the thread's memory, which is complete enough to author from; read it in full.
 - The thread's `seed.md` — why the thread exists.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records. The spec cites each record by stem where it is operative and does not restate it.
@@ -122,6 +122,6 @@ This path is reachable only after preflight has passed and forward-designing fro
 
 Finish everything safely derivable first, then follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, `spec.md` as the target, and the originating user request. Then stop with a concise notification of where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 
-An unnoticed conflict between what the thread settled and a project ADR or a project glossary term is one of these decisions: classify it as `/consult-adrs` instructs, and queue it rather than overriding the project record.
+An unnoticed conflict between what the thread settled and a project ADR or a project glossary term is one of these decisions: classify it as `/consult-decisions` instructs, and queue it rather than overriding the project record.
 
 A blocked run still writes `spec.md` as complete as the settled inputs allow — every section fully elaborated, each blocked specific marked inline at its exact location pointing at the pending bundle — and appends its `event` line. The only permitted gaps are those marked ones tied to queued decisions.

@@ -64,9 +64,9 @@ wherever that capability is wanted.
 A user-invoked skill's name uses the user's intent language: the words a person
 reaches for when deliberately invoking the operation, as in `open-thread` and
 `check-plan`. A model-invoked skill's name is the act an agent performs, as in
-`consult-adrs`, so it reads as something the agent does in the middle of other
-work. Keeping the two registers distinct is what makes the role legible from the
-name alone.
+`consult-decisions`, so it reads as something the agent does in the middle of
+other work. Keeping the two registers distinct is what makes the role legible
+from the name alone.
 
 A body that points at another skill names it as a `/skill-name` invocation in
 prose. The suite is authored and installed as one coherent set: a skill assumes

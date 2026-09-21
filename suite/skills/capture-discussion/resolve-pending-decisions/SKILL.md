@@ -15,8 +15,8 @@ Work through queued pending-decision bundles with the user, one bundle and one p
 
 Gather all of these before settling any point; the procedure below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-adrs` — the project decisions bearing on the queued points.
-- `docs/glossary.md`, read via `/consult-glossary` — the project's fixed terms, to be used in everything you write.
+- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the queued points.
+- `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
 - **The queued bundles** under the thread's `.pending-decisions/` — the primary input, in one of two accepted forms, each in the shape `<skill_path>/references/formats/pending-decision-bundle.md` defines. When the invocation names a **bundle path**, that file is the form. Otherwise the form is the **folder's queue** of bundles.
 - The thread's `spec.md`, when the file exists — the thread's design truth, which a settled point amends.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands; inside the thread they take precedence over the project records.
