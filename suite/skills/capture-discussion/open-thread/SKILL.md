@@ -56,7 +56,7 @@ Follow `<skill_path>/references/instructions/create-thread.md` with those fields
 
 ## What you write
 
-The new thread folder with its `seed.md` and `log.md` is the whole result; `<skill_path>/references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and `docs/adr/`, `docs/glossary.md`, and the roadmap index are read here and never written.
+The new thread folder with its `seed.md` and `log.md` is the whole result; `<skill_path>/references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and the roadmap index — is read here and never written.
 
 ## Report
 

@@ -9,7 +9,7 @@ metadata:
 
 # Resolve Pending Decisions
 
-Work through queued pending-decision bundles with the user, one bundle and one point at a time. A bundle is the transient queue of open human decisions an earlier run could not settle on its own; you are the interactive bridge that empties it, framing each point live and writing what the user settles into the thread's memory, its design truth, and its delta of the project layer. You settle only genuine human decisions a bundle already holds — you do not audit the repository, judge the quality of any artifact, or invent points a bundle does not hold.
+Work through queued pending-decision bundles with the user, one bundle and one point at a time. A bundle is the transient queue of open human decisions an earlier run could not settle on its own; you are the interactive bridge that empties it, framing each point live and writing what the user settles into the thread's memory, its `log.md`. You settle only genuine human decisions a bundle already holds — you do not audit the repository, judge the quality of any artifact, or invent points a bundle does not hold.
 
 ## Inputs
 
@@ -22,8 +22,8 @@ Gather all of these before settling any point; the procedure below works from wh
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the queued points.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The queued bundles** under the thread's `.pending-decisions/` — the primary input, in one of two accepted forms, each in the shape `<skill_path>/references/formats/pending-decision-bundle.md` defines. When the invocation names a **bundle path**, that file is the form. Otherwise the form is the **folder's queue** of bundles.
-- The thread's `spec.md`, when the file exists — the thread's design truth, which a settled point amends.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands; inside the thread they take precedence over the project records.
+- The thread's `change.md`, when the file exists — the change document, read so the framing knows what the design already pins.
+- The thread's `delta/`, when present — the thread's delta of the project layer as it stands, read for the same reason; inside the thread it takes precedence over the project records.
 - The thread's `seed.md` — why the thread exists.
 
 ## Select a bundle
@@ -49,25 +49,19 @@ For the selected bundle, work its points one at a time:
 
 An answer that merely repairs which input the producer meant is a clarification rather than new intent: it settles the point — the point is consumed from the queue like any other — and is written nowhere.
 
-Every other answer is written the moment it settles, in this order:
+Every other answer is written the moment it settles. **Append the log line first**, before acting on the answer in any other way: follow `<skill_path>/references/instructions/append-log-line.md`.
 
-1. **Append the log line first**, before acting on the answer in any other way: follow `<skill_path>/references/instructions/append-log-line.md`.
+That line is the whole write. A point that changes the design, fixes a term or earns a decision record reaches the change document and the thread's `delta/` through the change authoring's amendment pass, which works from the log entries appended since the change document last stood current; `## Follow-through` is where you recommend that pass. When the answer is instead that the code must change, the design already states the intent: say in chat that running an implementation is the next step.
 
-2. **Amend `spec.md` when the answer changes the design** and the thread holds a spec. Amend each affected passage in place: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. Leave every passage the answer does not touch exactly as it stands.
-
-   When the answer is that the code and not the spec must change, the spec already states the intent: leave it as it stands and say in chat that running an implementation is the next step.
-
-3. **Write the project-level record when the point passes the binding test** — a later thread could build against the settled point incorrectly if not told, and could not read it off the code. Show the user the `name`, the `description`, and the body text first; once they confirm or redirect it, write the draft at `adr/<yymmddhhmm>-<slug>.md` inside the thread following the `<skill_path>/references/formats/decision-record.md` format, creating `adr/` on demand. When the answer reverses a draft this thread already holds, edit that draft in place rather than adding a second record. A project term the answer introduces or changes is written to the thread's `glossary.md` following the `<skill_path>/references/formats/glossary.md` format the same way, with the same confirmation of the wording.
-
-You write exactly these: lines appended to the thread's `log.md`, in-place amendments to the thread's `spec.md`, files under the thread's `adr/`, entries in the thread's `glossary.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — `docs/adr/` and `docs/glossary.md` are read here and never written.
+You write exactly these: lines appended to the thread's `log.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — the thread's `change.md` and `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`) are read here and never written.
 
 ## Follow-through
 
-Once the bundle's last point is settled and its file deleted, recommend the next action that follows from what was just written: re-invoking the producer so it runs again against the amended design, running an implementation when the answer was that the code must change, or nothing further when the outcomes call for nothing.
+Once the bundle's last point is settled and its file deleted, recommend the next action that follows from what was just written: re-invoking `/change`, so its amendment pass carries the settled points into the change document and its delta documents; re-invoking the producer the bundle named, so it runs again from what the log now holds; running an implementation when the answer was that the code must change; or nothing further when the outcomes call for nothing.
 
 State it as a recommendation, then WAIT for the user's choice — do not act first.
 
-- **If the user accepts**, carry the action out the way it was recommended. When the recommended action belongs to a skill — the producer the bundle named, or the implementation skill when the code is what must change — invoke that skill as `/<skill-name>` and let it do the work against the amended design; never redo its work inline. Only an accepted action that no skill owns is carried out yourself, directly from the target and the outcomes just written. If the continuation uncovers genuinely new human judgment that only the user can settle, queue it by following `<skill_path>/references/instructions/emit-pending-decisions.md`, with yourself as the producer, and stop.
+- **If the user accepts**, carry the action out the way it was recommended. When the recommended action belongs to a skill — `/change`, the producer the bundle named, or the implementation skill when the code is what must change — invoke that skill as `/<skill-name>` and let it do the work from what the log now holds; never redo its work inline. Only an accepted action that no skill owns is carried out yourself, directly from the target and the outcomes just written. If the continuation uncovers genuinely new human judgment that only the user can settle, queue it by following `<skill_path>/references/instructions/emit-pending-decisions.md`, with yourself as the producer, and stop.
 - **If the user declines or defers**, stop cleanly; the outcomes are already written.
 
 The continuation runs exactly once. Never open, discuss, or consume a newly emitted bundle in the same run — the user reinvokes you when they are ready for it.

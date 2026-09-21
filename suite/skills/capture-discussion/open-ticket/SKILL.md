@@ -20,8 +20,9 @@ moment the wording is chosen. Write it as the seed's opening account, not as a
 note toward one.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
-the whole result; `docs/adr/` and `docs/glossary.md` are read here and never
-written.
+the whole result; the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`,
+`docs/architecture/`, `docs/glossary.md`, and the roadmap index — is read here
+and never written.
 
 ## Inputs
 

@@ -82,7 +82,7 @@ npx skills add Jei-sKappa/antmay --skill open-ticket
 
 #### [`discussion`](./suite/skills/capture-discussion/discussion/SKILL.md)
 
-Expects a thread and a topic to think through; leaves one log line per settled point, draft records under the thread's `adr/`, and term entries in the thread's `glossary.md`.
+Expects a thread and a topic to think through; leaves one log line per settled point.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill discussion
@@ -90,7 +90,7 @@ npx skills add Jei-sKappa/antmay --skill discussion
 
 #### [`resolve-pending-decisions`](./suite/skills/capture-discussion/resolve-pending-decisions/SKILL.md)
 
-Expects a thread whose `.pending-decisions/` queue holds bundles waiting on a human; leaves each answer written into the thread's log, spec, and delta, and leaves the exhausted bundle deleted.
+Expects a thread whose `.pending-decisions/` queue holds bundles waiting on a human; leaves each answer written into the thread's log, and leaves the exhausted bundle deleted.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill resolve-pending-decisions
