@@ -9,7 +9,7 @@ A task file `plan-tasks/01-add-jwt-helper.md`:
 
 **Objective:** Provide a reusable verification function that the auth middleware will call.
 
-**Input / context:** Settled decision per `adr/2609051230-use-jose-for-jwt` — use the `jose` library, not `jsonwebtoken`.
+**Input / context:** Settled by the decision record `2609051230-use-jose-for-jwt`, drafted in this thread as `delta/docs/adr/2609051230-use-jose-for-jwt.md` — use the `jose` library, not `jsonwebtoken`.
 
 **Steps:**
 1. Add `jose` to `package.json` dependencies and run install.
@@ -22,6 +22,7 @@ A task file `plan-tasks/01-add-jwt-helper.md`:
 **Verification:** `npm test src/lib/jwt.test.ts` exits 0; `grep -q "jose" package.json` returns success.
 
 **Acceptance criteria:**
+- A request carrying an expired token is rejected rather than served.
 - `verifyToken` exported from `src/lib/jwt.ts` with the signature above.
 - Three unit tests pass: valid token, expired token, malformed token.
 - `package.json` declares `jose` as a runtime dependency.
@@ -34,7 +35,7 @@ A task file `plan-tasks/01-add-jwt-helper.md`:
 The matching index excerpt in `plan.md`:
 
 ```markdown
-Source: spec.md
+Source: change.md
 
 ## Global Constraints
 
@@ -47,4 +48,4 @@ Source: spec.md
 2. **Wire the auth middleware** — call `verifyToken` on every protected route. → `plan-tasks/02-wire-auth-middleware.md`
 ```
 
-That is what a strict plan looks like: an index carrying the `Source:` line, the verbatim Global Constraints block, and the ordered task list; and one task file per task with eight labeled elements — prescriptive substeps, mechanical verification, observable acceptance, and the `Consumes:`/`Produces:` hand-off. An agent-leaning implementer handed a single task file can execute it without inferring anything beyond what is written. The absence of any wave number, `depends_on` array, or fork/join construct is observable throughout — the plan is sequential.
+The first acceptance line is a criterion of the change document carried across word for word — no identifier, no number, no rewording — and the three lines under it are the task's own observable post-conditions. That is what a strict plan looks like: an index carrying the `Source:` line, the verbatim Global Constraints block, and the ordered task list; and one task file per task with eight labeled elements — prescriptive substeps, mechanical verification, observable acceptance, and the `Consumes:`/`Produces:` hand-off. An agent-leaning implementer handed a single task file can execute it without inferring anything beyond what is written. The absence of any wave number, `depends_on` array, or fork/join construct is observable throughout — the plan is sequential.

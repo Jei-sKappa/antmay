@@ -110,7 +110,7 @@ npx skills add Jei-sKappa/antmay --skill change
 
 #### [`plan-brief`](./suite/skills/plan/plan-brief/SKILL.md)
 
-Expects a thread holding a `spec.md`, or a referenced artifact to plan against; leaves a one-screen `plan.md` inside a fresh stamped folder under `plans/`.
+Expects a thread holding a `change.md`, or a referenced artifact to plan against; leaves a one-screen `plan.md` inside a fresh stamped folder under `plans/`.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill plan-brief
@@ -118,7 +118,7 @@ npx skills add Jei-sKappa/antmay --skill plan-brief
 
 #### [`plan-strict`](./suite/skills/plan/plan-strict/SKILL.md)
 
-Expects a thread holding a `spec.md`, or a referenced artifact to plan against; leaves a fresh stamped folder under `plans/` holding a `plan.md` index and one dispatchable brief per task under `plan-tasks/`.
+Expects a thread holding a `change.md`, or a referenced artifact to plan against; leaves a fresh stamped folder under `plans/` holding a `plan.md` index and one dispatchable brief per task under `plan-tasks/`.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill plan-strict
@@ -126,7 +126,7 @@ npx skills add Jei-sKappa/antmay --skill plan-strict
 
 #### [`check-plan`](./suite/skills/plan/check-plan/SKILL.md)
 
-Expects a thread holding both a `spec.md` and a plan folder; leaves that plan folder corrected in place, with whatever the spec does not settle queued as a pending decision.
+Expects a thread holding both a `change.md` and a plan folder; leaves that plan folder corrected in place, with whatever the change document does not settle queued as a pending decision.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill check-plan

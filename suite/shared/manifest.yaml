@@ -65,18 +65,21 @@ skills/change/change:
 
 skills/plan/plan-brief:
   - formats/pending-decision-bundle.md
+  - formats/change-document.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
 
 skills/plan/plan-strict:
   - formats/pending-decision-bundle.md
+  - formats/change-document.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
 
 skills/plan/check-plan:
   - formats/pending-decision-bundle.md
+  - formats/change-document.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md

@@ -23,19 +23,19 @@ Gather all of these before drafting; everything below works from what you gather
 - `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the design.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
-- **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form when the file exists, and it is the plan's authority. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue, another thread's artifact read as history, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
+- **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`change.md`** is the form when the file exists, and it is the plan's authority; it comes in the shape `<skill_path>/references/formats/change-document.md` defines. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `change.md` the thread holds.
 - The thread's `seed.md` — why the thread exists and what triggered it.
-- The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records. The plan cites a record by its stem where a step rests on it, rather than restating it.
+- The thread's `delta/`, when present — the thread's delta of the project layer, which inside the thread takes precedence over the project records. Where a step rests on one, the plan cites a delta document by its path and a decision record by its stem, rather than restating it; the form each kind is cited by is the one `<skill_path>/references/instructions/read-and-cite-the-project-layer.md` fixes.
 
 The emitted `plan.md` must be self-contained: a fresh reader with only the plan and the thread's durable inputs can execute it, with no dependency on the originating chat.
 
-If which input is meant is ambiguous — a reference names "the spec" with no clear referent, or several artifacts could be intended — that is a preflight failure, not an in-run decision: refuse before drafting, name the ambiguous reference and how to disambiguate it, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the ambiguous reference and how to re-invoke. Never silently pick by recency.
+If which input is meant is ambiguous — a reference names "the design" with no clear referent, or several artifacts could be intended — that is a preflight failure, not an in-run decision: refuse before drafting, name the ambiguous reference and how to disambiguate it, write nothing, and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the ambiguous reference and how to re-invoke. Never silently pick by recency.
 
 ## Plan folder
 
 Every invocation writes into its own new folder `plans/<yymmddhhmm>[-<slug>]/` under the thread root, creating `plans/` on demand. The stamp is the folder's creation time in UTC at minute resolution. Append `-<slug>`, a short kebab-case name for the plan's purpose, when the invocation names one, or when a folder carrying that stamp already exists. Inside that folder you write `plan.md`, and nothing else; never write into a plan folder an earlier invocation created.
 
-You write exactly one file: `plan.md` inside the plan folder you created. Nothing else you touch is written — the thread's `spec.md`, `adr/`, and `glossary.md`, and the project's `docs/adr/` and `docs/glossary.md`, are read here and never written.
+You write exactly one file: `plan.md` inside the plan folder you created. Nothing else you touch is written — the thread's `change.md` and its `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/`) — are read here and never written.
 
 ## Plan shape
 
@@ -44,7 +44,7 @@ Always write the plan folder's `plan.md` in this shape:
 ```markdown
 # Plan: <title>
 
-Source: <thread-relative source>
+Source: <what the plan was compiled from>
 
 ## Outcome
 
@@ -66,10 +66,12 @@ Source: <thread-relative source>
 ```
 
 - **`Source`** and the **`## Outcome`**, **`## Steps`**, and **`## Verification`** sections are required. **`## Notes`** is optional — include it only for constraints, assumptions, or cautions the implementer genuinely needs.
+- **`Source`** carries exactly one of four values: `change.md`, when the thread's change document is the authority; a repo-relative path to a project-level artifact; an issue URL; or `none — raw prompt` when the plan was forward-designed from a user prompt with no artifact.
 - **Steps** are a small numbered list in execution order, each step one short paragraph. They order the work; the implementer derives the obvious substeps.
+- A step that delivers one of the change document's criteria quotes that criterion verbatim, never numbered, labelled or paraphrased, so the wording the implementation and the review match on is the same wording.
 - **Verification** records the overall checks that demonstrate the change works — not a separate verification contract for every step.
 - The plan should normally fit on one screen: a single flat markdown file containing only the sections above.
-- Within-thread references in the body are thread-relative (`spec.md`, `adr/<stem>.md`); cross-thread and project-level references are repo-relative (`docs/adr/<stem>.md`, `.work/threads/<other>/…`).
+- Within-thread references in the body are thread-relative (`change.md`, `delta/docs/adr/<stem>.md`); project-level references are repo-relative (`docs/adr/<stem>.md`). The plan cites no other thread.
 
 ## When to recommend plan-strict
 
@@ -87,7 +89,7 @@ When safe planning requires detailed substeps, per-task verification, explicit f
 
 This path is reachable only after preflight has passed and drafting from otherwise-valid inputs has begun — substantive execution. Invocation and input-reference failures are preflight refusals (`## Procedure` step 1), not this path. It applies whenever a human decision is genuinely indispensable to a sound plan — one you cannot settle yourself from the gathered inputs. There is no separate interactive path and no check for whether a person is present; behavior is identical however the skill is invoked. Do not invent the intent and do not stall waiting in chat.
 
-A step that would rest on a thread ADR or a spec decision you find wrong is one of these decisions: planning does not proceed on that step, and the record is corrected before it does. An unnoticed conflict between the plan's material and a project ADR or a project glossary term is another: classify it as `/consult-decisions` instructs, and queue it rather than overriding the project record.
+A step that would rest on a delta document or a decision of the change document you find wrong is one of these decisions: planning does not proceed on that step, and the document is corrected before it does. An unnoticed conflict between the plan's material and a project decision record or a project glossary term is another: classify it as `/consult-decisions` instructs, and queue it rather than overriding the project record.
 
 Finish everything safely derivable first, then follow `<skill_path>/references/instructions/emit-pending-decisions.md` with yourself as the producer, the plan folder as the target, and the originating user request. Then stop with a concise notification of where the bundle was written and follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `BLOCKED` and `pending decisions at <bundle path>`.
 
