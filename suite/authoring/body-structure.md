@@ -25,17 +25,27 @@ stated once in the prose that uses it, never per item. A body normally invoked
 while the thread holds only `seed.md` and an empty `log.md` says so in one
 sentence above the list.
 
-The list opens with the same two project-layer items in every skill that has one:
+The list opens with the project layer, read by path in the fixed order, in every
+skill that has one:
 
 ```markdown
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on <the target>.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on <the target>.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 ```
 
-The input is the file, the skill is how it is read, and the target clause is
-adapted to the skill. Where a body invokes the conflict rule those decisions come
-with, it names `/consult-decisions` as a procedure — "classify it as `/consult-decisions`
-instructs" — never as a document that carries text.
+A skill invoked before a thread exists lists the items down to the decision
+folders, adds the roadmap entry when the invocation supplies one, and omits the
+thread; the thread's own files follow as further items.
+
+The input is the file, the consulting skill is how a folder of them is read, and
+the target clause is adapted to the skill. Where a body invokes the conflict rule
+those decisions come with, it names `/consult-decisions` as a procedure —
+"classify it as `/consult-decisions` instructs" — never as a document that
+carries text.
 
 The thread files the skill reads follow. A skill with one primary input names it
 and its accepted forms in the same section, so a reader learns there what the

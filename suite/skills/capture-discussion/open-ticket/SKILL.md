@@ -28,10 +28,16 @@ written.
 Gather the following before composing; the composition below works from what you
 gather here.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the
-  idea.
+- The project's `AGENTS.md`, when the file exists — the project's standing
+  guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be
   used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches,
+  read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches,
+  read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project
+  decisions bearing on the idea.
 - The repository's convention files, found and read as
   `<skill_path>/references/repository-conventions.md` directs. A convention can
   decide the title's shape, and a title composed without it has to be rewritten.

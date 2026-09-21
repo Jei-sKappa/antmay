@@ -23,6 +23,7 @@ skills/close/close-thread:
   - formats/glossary.md
   - formats/log-line.md
   - instructions/append-log-line.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/capture-discussion/open-thread:
   - trackers/github.md
@@ -57,21 +58,25 @@ skills/spec/spec:
   - instructions/append-log-line.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/plan/plan-brief:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/plan/plan-strict:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/plan/check-plan:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/implement/implement:
   - formats/implementation-report.md
@@ -80,6 +85,7 @@ skills/implement/implement:
   - instructions/write-implementation-report.md
   - instructions/commit-the-implementation-report.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/implement/implement-plan:
   - formats/implementation-report.md
@@ -88,6 +94,7 @@ skills/implement/implement-plan:
   - instructions/write-implementation-report.md
   - instructions/commit-the-implementation-report.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/implement/implement-plan-with-subagents:
   - formats/implementation-report.md
@@ -96,15 +103,18 @@ skills/implement/implement-plan-with-subagents:
   - instructions/write-implementation-report.md
   - instructions/commit-the-implementation-report.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/review/review-spec:
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/review/review-implementation:
   - formats/implementation-report.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/review/review-code:
   - formats/implementation-report.md
@@ -116,6 +126,7 @@ skills/roadmap/roadmap:
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
+  - instructions/read-and-cite-the-project-layer.md
 
 skills/model-invoked/consult-decisions:
   - formats/decision-record.md

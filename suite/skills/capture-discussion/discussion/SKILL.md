@@ -41,13 +41,16 @@ A point is an **inference** when it follows from the points already settled or h
 Gather all of these once, before interviewing; the procedure below works from what you gather here.
 A freshly opened thread holds only `seed.md` and an empty `log.md`; everything else below appears only once later work has produced it.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the topic.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the topic.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines.
 - The thread's `seed.md` — why the thread exists.
 - The thread's `log.md` — the thread's memory, read once here at session start when it has entries, and never re-read for the rest of the session.
 - The thread's `spec.md`, when the file exists — the thread's design truth.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer as it stands; inside the thread they take precedence over the project records.
-- The roadmap index named by the seed frontmatter's `roadmap.path`, when the seed carries a `roadmap` mapping — a project-level file under `.work/roadmaps/`; locate the entry whose heading text is the `roadmap.entry` slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read its sketch and scope boundary.
 
 ## Procedure
 

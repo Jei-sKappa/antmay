@@ -17,8 +17,12 @@ This skill is single-agent: the current session is the implementer and runs the 
 
 Gather all of these before executing the first task; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the plan.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the plan.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's `spec.md` — the thread's design truth, and what the implementation answers to.
 - **The plan folder to execute** — the primary input and the artifact this run carries to code, in one of two accepted forms. When the invocation **names a folder** under `plans/`, that folder is the form; otherwise the form is the **newest folder under `plans/` by stamp**. It resolves to `plans/<folder>/plan.md` — the index, authoritative for task count and order — together with the `plan-tasks/NN-<kebab-slug>.md` brief each index entry points at. When the index's `Source:` line names an artifact other than the thread's `spec.md`, read that artifact too: it holds the intent the plan was compiled from.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records; these are the records the spec cites by stem.

@@ -17,8 +17,12 @@ This is a fidelity audit, not a code-quality pass: you check whether it delivers
 
 Gather all of these before judging; the procedure below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the reviewed work.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the reviewed work.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
 - That folder's `report.md` — the implementer's account of the delivered work and the claim under test, in the shape `<skill_path>/references/formats/implementation-report.md` defines.
 - The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.

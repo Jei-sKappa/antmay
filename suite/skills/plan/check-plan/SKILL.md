@@ -15,8 +15,12 @@ Check one plan folder against the thread's spec and correct it in place, end to 
 
 Gather all of these before checking; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the plan.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the plan.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's **`spec.md`** — the sole authority for every correction you make. A fault is a fault only because the spec says so, and a fix is available only because the spec settles it. Required: the check does not run on a thread that holds no spec.
 - **The plan folder to check** — the edit target, in one of two accepted forms. When the invocation **names a folder** under `plans/`, that folder is the form. Otherwise the form is the **newest folder under `plans/` by stamp**. Read everything in it: its index `plan.md`, and the task briefs under `plan-tasks/` when the plan is strict.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records; these are the records the spec cites by stem.

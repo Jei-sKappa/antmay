@@ -15,8 +15,12 @@ Forward-design a strict-granularity plan for the active thread. You gather the t
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the design.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the design.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form when the file exists, and it is the plan's authority: its intended goal, expected behavior, and constraints drive the task list directly, its acceptance criteria map cleanly onto per-task acceptance criteria, and its degrees-of-freedom section tells the plan which *hows* are open. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue (a full `https://github.com/<owner>/<repo>/issues/<NNN>` URL or the short `owner/repo#NNN` form), another thread's artifact read as history, or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
 - The thread's `seed.md` — why the thread exists and what triggered it.
 - The thread's `adr/` and `glossary.md` — the thread's delta of the project layer, which inside the thread takes precedence over the project records. A task cites a record by its stem where it rests on one, rather than restating it.

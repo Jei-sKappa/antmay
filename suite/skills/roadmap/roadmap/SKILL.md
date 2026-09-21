@@ -17,8 +17,12 @@ The index is a map, not a plan: it records where the direction is going and what
 
 Gather all of these before drafting; everything below works from what you gather here.
 
-- `docs/adr/`, read via `/consult-decisions` — the project decisions bearing on the direction.
+- The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
+- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
+- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
+- `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the direction.
+- The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's `seed.md` — why the thread exists and what the direction is meant to reach.
 - The thread's `spec.md`, when the file exists — the direction's design truth.
 - The thread's `adr/` and `glossary.md` — the direction's settled constraints and terms, which inside the thread take precedence over the project records. These records are the constraints that bind the threads opened from the index's entries, and they reach those threads by landing in `docs/adr/` when this thread closes, so the index restates none of them.
