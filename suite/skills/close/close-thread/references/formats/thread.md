@@ -8,9 +8,11 @@ A thread is the folder holding one unit of work, from the idea that opened it to
 .work/threads/yyyy/mm/dd-hhmm-slug/
 ├── seed.md                                 what the thread was opened to do
 ├── log.md                                  the thread's memory, one line per entry
-├── spec.md                                 what the work must do, once it is specified
-├── adr/                                    project decisions drafted in this thread
-├── glossary.md                             the terms this thread fixes, changes, or retires
+├── change.md                               the change document, once authored
+├── delta/                                  the thread's delta: one delta document per target
+│   └── docs/…                              mirrors the target path, e.g. delta/docs/adr/<stem>.md,
+│                                           delta/docs/pdr/<stem>.md, delta/docs/product/<capability>.md,
+│                                           delta/docs/architecture/<module>.md, delta/docs/glossary.md
 ├── plans/<yymmddhhmm>[-<slug>]/            one plan: its index and its task briefs
 ├── implementations/<yymmddhhmm>[-<slug>]/  one implementation run
 │   ├── report.md                           that run's outcome
@@ -24,6 +26,6 @@ A thread is the folder holding one unit of work, from the idea that opened it to
 - Two threads created in the same minute differ in slug.
 - `seed.md` and `log.md` exist from the moment the thread is created; every other file and folder is created on demand by the skill that writes it.
 - A plan folder and an implementation folder are stamped with their creation time in UTC at minute resolution and an optional slug, so a thread may hold several of each; one implementation folder belongs to one run.
-- Before closing, `adr/` and `glossary.md` are the thread's delta of the project layer, and they are authoritative inside the thread.
+- Before closing, `delta/` is the thread's delta of the project layer, and it is authoritative inside the thread.
 - `.pending-decisions/`, `.pending-reviews/`, and each implementation's `.runs/` are workspaces: every invocation that produces material there writes one uniquely named bundle or run directory of its own.
-- A closed thread stays where it is with its delta intact: its ADRs are immutable historical snapshots of the records copied into the project layer, its glossary records the terms merged there, and its log carries the closing event recording whether each delta category was absent or applied.
+- A closed thread stays where it is: `delta/` stays in place as the historical snapshot of what landed, and the log carries the closing event recording whether the delta landed.

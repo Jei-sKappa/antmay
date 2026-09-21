@@ -24,7 +24,7 @@
 - `direction` — where the work is heading, above the level of any single choice.
   Example: `- (direction) the thread is moving the whole reporting surface off the synchronous path`
 - `event` — a moment in the thread's life, such as an artifact being authored or the thread closing.
-  Example: `- (event) spec authored from the conversation`
+  Example: `- (event) change document authored from the conversation`
 
 ## Rules
 
@@ -35,5 +35,5 @@
 - Every line uses one of the seven types listed under `### Types`.
 - A thought that fits none of the seven types is not a log entry and is left out of the file.
 - A terminal moment — an artifact authored, a run blocked, the thread closed — is an `event` line; the log carries no lifecycle status field.
-- Successful closing is recorded as `- (event) thread closed; ADRs: <none|landed>; glossary: <none|merged>`, where each value states whether that delta category was absent or applied during closing.
+- Successful closing is recorded as `- (event) thread closed; delta: <landed|none>`, where the value states whether the thread's delta was applied to the project layer or was absent.
 - The file is append-only: a later entry supersedes an earlier one on the same point, and the earlier one stays where it is, so the history remains intact.

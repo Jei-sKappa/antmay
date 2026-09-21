@@ -20,6 +20,7 @@ skills/close/close-thread:
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
   - formats/thread.md
+  - formats/delta-document.md
   - formats/glossary.md
   - formats/log-line.md
   - instructions/append-log-line.md
@@ -53,6 +54,8 @@ skills/capture-discussion/resolve-pending-decisions:
   - formats/glossary.md
 
 skills/spec/spec:
+  - formats/change-document.md
+  - formats/delta-document.md
   - formats/log-line.md
   - formats/pending-decision-bundle.md
   - instructions/append-log-line.md
@@ -106,6 +109,8 @@ skills/implement/implement-plan-with-subagents:
   - instructions/read-and-cite-the-project-layer.md
 
 skills/review/review-spec:
+  - formats/change-document.md
+  - formats/delta-document.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
