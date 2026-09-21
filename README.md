@@ -200,7 +200,7 @@ npx skills add Jei-sKappa/antmay --skill review-code
 
 #### [`close-thread`](./suite/skills/close/close-thread/SKILL.md)
 
-Expects a thread whose work is delivered and whose `adr/` and `glossary.md` drafts are ready to become the project's own; leaves the landed records in `docs/adr/`, the merged `docs/glossary.md`, a closing line beneath the thread's roadmap entry, a closing event in its log, and the thread folder in place.
+Expects a thread whose work is delivered and whose `delta/` is ready to land; leaves the delta landed in the project layer, a closing line beneath the thread's roadmap entry, a closing event in its log, and the thread folder in place.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill close-thread

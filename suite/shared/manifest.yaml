@@ -14,15 +14,14 @@
 
 skills/close/close-thread:
   - formats/decision-record.md
+  - formats/delta-document.md
   - formats/roadmap-index.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
+  - formats/thread.md
+  - formats/log-line.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
-  - formats/thread.md
-  - formats/delta-document.md
-  - formats/glossary.md
-  - formats/log-line.md
   - instructions/append-log-line.md
   - instructions/read-and-cite-the-project-layer.md
   - instructions/search-for-thread-references.md
