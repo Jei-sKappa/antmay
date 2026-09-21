@@ -69,7 +69,7 @@ A freshly opened thread holds only `seed.md` and an empty `log.md`; everything e
 
 A settled point passes the binding test when a later thread could build against it incorrectly if not told, and could not read it off the code. Such a point becomes an ADR. Only a settled point is tested; an inference never becomes an ADR.
 
-When a point passes, propose the record in chat: show the `name`, the `description`, and the body text you intend to write. The user confirms the text or redirects it, and only then do you write the file at `adr/<yymmddhhmm>-<slug>.md` inside the thread following the `<skill_path>/references/formats/adr.md` format, creating `adr/` on demand. The user may also ask for a record directly, without the test: write it the same way, with the same confirmation of its text.
+When a point passes, propose the record in chat: show the `name`, the `description`, and the body text you intend to write. The user confirms the text or redirects it, and only then do you write the file at `adr/<yymmddhhmm>-<slug>.md` inside the thread following the `<skill_path>/references/formats/decision-record.md` format, creating `adr/` on demand. The user may also ask for a record directly, without the test: write it the same way, with the same confirmation of its text.
 
 When the same discussion later reverses a draft it wrote, edit that draft in place rather than adding a second record, and append the reversal's own log line.
 

@@ -21,7 +21,7 @@ Gather all of these before running the checks; everything below works from what 
 - The thread's `log.md` — the thread's memory and the place closure is recorded, in the shape `<skill_path>/references/formats/log-line.md` defines.
 - The thread's `seed.md` — why the thread exists and what it set out to reach. When its frontmatter carries a `roadmap` mapping, `roadmap.path` and `roadmap.entry` name the roadmap index this thread was opened from and the slug of its entry.
 - The thread's `spec.md`, when the file exists — the design claims the currency check reads.
-- The thread's `adr/` — the draft records to land, in the shape `<skill_path>/references/formats/adr.md` defines.
+- The thread's `adr/` — the draft records to land, in the shape `<skill_path>/references/formats/decision-record.md` defines.
 - The thread's `glossary.md`, when the file exists — the terms to merge into the project's, in the shape `<skill_path>/references/formats/glossary.md` defines.
 - Every `implementations/<folder>/report.md` the thread holds — what each implementation delivered, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Deviations` entries and the delivered changes it describes are what the currency check reads.
 - The roadmap index named by the seed frontmatter's `roadmap.path`, when the seed carries a `roadmap` mapping — a project-level file under `.work/roadmaps/`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines; the heading whose text is the `roadmap.entry` slug is where the closing line goes.

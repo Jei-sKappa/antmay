@@ -78,8 +78,9 @@ What stays inline is what makes the skill that skill — its posture, its inputs
 its write boundary, the order of its acts, and the judgment between them.
 
 Every pointer to a file inside the skill's own folder is written with the literal
-prefix `<skill_path>/`, as in `<skill_path>/references/formats/adr.md`, never a
-filename plus a folder description and never a bare folder. The placeholder
+prefix `<skill_path>/`, as in
+`<skill_path>/references/formats/decision-record.md`, never a filename plus a
+folder description and never a bare folder. The placeholder
 resolves to the skill's base directory as the harness reports it at invocation,
 and it is what tells a skill-local path apart from a project path such as
 `docs/adr/`, which stays bare.
@@ -90,7 +91,7 @@ and the pointer is the step: "Follow
 `<skill_path>/references/instructions/append-log-line.md`", "by following
 `<skill_path>/references/instructions/emit-pending-review.md`". A format is what
 a write or a read conforms to, and is always named as one: "following the
-`<skill_path>/references/formats/adr.md` format", "in the shape
+`<skill_path>/references/formats/decision-record.md` format", "in the shape
 `<skill_path>/references/formats/thread.md` defines". A bare "following
 `<path>`" is never used for a format, because it leaves the reader to guess
 whether the file is a procedure or a shape. Other verbs are fine where they read

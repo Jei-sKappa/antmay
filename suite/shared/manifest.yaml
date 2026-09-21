@@ -13,7 +13,7 @@
 # below does not delete its previously generated copy — delete that by hand.
 
 skills/close/close-thread:
-  - formats/adr.md
+  - formats/decision-record.md
   - formats/roadmap-index.md
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md
@@ -36,7 +36,7 @@ skills/capture-discussion/open-ticket:
 
 skills/capture-discussion/discussion:
   - formats/discussion-point.md
-  - formats/adr.md
+  - formats/decision-record.md
   - formats/log-line.md
   - formats/roadmap-index.md
   - instructions/append-log-line.md
@@ -44,7 +44,7 @@ skills/capture-discussion/discussion:
 
 skills/capture-discussion/resolve-pending-decisions:
   - formats/discussion-point.md
-  - formats/adr.md
+  - formats/decision-record.md
   - formats/log-line.md
   - formats/pending-decision-bundle.md
   - instructions/append-log-line.md
@@ -118,7 +118,7 @@ skills/roadmap/roadmap:
   - instructions/emit-terminal-outcome.md
 
 skills/model-invoked/consult-adrs:
-  - formats/adr.md
+  - formats/decision-record.md
 
 skills/model-invoked/consult-glossary:
   - formats/glossary.md
