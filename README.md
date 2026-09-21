@@ -182,7 +182,7 @@ npx skills add Jei-sKappa/antmay --skill review-change
 
 #### [`review-implementation`](./suite/skills/review/review-implementation/SKILL.md)
 
-Expects a thread holding an implementation folder and its `report.md`; leaves nothing when the delivered work matches the thread's durable intent and the report describes it honestly, and one findings bundle under `.pending-reviews/` when it does not.
+Expects a thread holding an implementation folder and its `report.md`; checks every row of the report's acceptance table against the change document and the code, and searches the delivered work for thread references. Leaves nothing when the delivered work matches the thread's durable intent and the report describes it honestly, and one findings bundle under `.pending-reviews/` when it does not.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-implementation

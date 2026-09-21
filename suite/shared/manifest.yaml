@@ -25,6 +25,7 @@ skills/close/close-thread:
   - formats/log-line.md
   - instructions/append-log-line.md
   - instructions/read-and-cite-the-project-layer.md
+  - instructions/search-for-thread-references.md
 
 skills/capture-discussion/open-thread:
   - trackers/github.md
@@ -121,12 +122,15 @@ skills/review/review-change:
 
 skills/review/review-implementation:
   - formats/implementation-report.md
+  - formats/change-document.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
+  - instructions/search-for-thread-references.md
 
 skills/review/review-code:
   - formats/implementation-report.md
+  - formats/change-document.md
   - instructions/emit-pending-review.md
   - instructions/emit-terminal-outcome.md
 
