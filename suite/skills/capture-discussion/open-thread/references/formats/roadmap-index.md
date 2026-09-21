@@ -19,6 +19,11 @@ A roadmap index holds one direction: where it is going and the entries that get 
 
 Scope: <the boundary of this entry — what it includes and where it stops>
 
+Planned behavior:
+
+- <one statement of what the product does once the thread opened from this entry has built it>
+- <another statement>
+
 ### <next-kebab-slug>
 
 …
@@ -35,8 +40,10 @@ Scope: <the boundary of this entry — what it includes and where it stops>
 ## Rules
 
 - An entry's heading text is a short kebab-case slug, unique within the index, and that slug is the entry's identifier: the seed of a thread opened from the entry records the index path and the slug.
+- An entry's `Planned behavior:` list holds the behavior the thread opened from that entry will build, one present-tense statement per line, each written in the form a product behavior statement takes once the behavior is built. The list is the only home of behavior that is settled but not built: behavior no entry owns is not planned.
 - An entry is pinned once a thread is opened from it, and its slug is never renamed after that.
 - Unstarted entries may be reordered, merged, or dropped by the index's owner, who edits the file in place. Merging two entries keeps one slug and drops the other.
 - When a thread opened from an entry closes, the closing skill writes `Closed: <thread path relative to .work/threads/> — <one-line outcome>` as the first line beneath that entry's heading.
-- Entries carry no status field and no checkbox, and the index holds no child briefs. Constraints that bind the threads opened from these entries are ADRs.
-- When the destination is reached or abandoned, the owner deletes the index; the outcome lives in the code, the ADRs, and the threads.
+- Entries carry no status field and no checkbox, and the index holds no child briefs. Constraints that bind the threads opened from an entry are written in the entry, as planned behavior or as a decision the thread will record.
+- The direction's release scope is the `## Out of scope` list and lives only as long as the index does: it dies with the index, and no separate release brief carries it.
+- When the destination is reached or abandoned, the owner deletes the index; the outcome lives in the code, the descriptions, the decision records and the threads.

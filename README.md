@@ -136,7 +136,7 @@ npx skills add Jei-sKappa/antmay --skill check-plan
 
 #### [`roadmap`](./suite/skills/roadmap/roadmap/SKILL.md)
 
-Expects a thread that has agreed where a larger direction is going; leaves a new roadmap index under `.work/roadmaps/` — a destination, ordered slug-headed entries, an out-of-scope list, and a note for what cannot yet be seen.
+Expects a thread that has agreed where a larger direction is going; leaves a new roadmap index under `.work/roadmaps/` — a destination, ordered slug-headed entries each carrying a sketch, a scope boundary and the planned behavior its thread will build, an out-of-scope list, and a note for what cannot yet be seen.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill roadmap

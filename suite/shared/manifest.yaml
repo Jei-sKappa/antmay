@@ -129,6 +129,7 @@ skills/review/review-code:
 
 skills/roadmap/roadmap:
   - formats/roadmap-index.md
+  - formats/product-behavior.md
   - formats/pending-decision-bundle.md
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
