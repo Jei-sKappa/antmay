@@ -1,0 +1,4 @@
+- (decision) the thread-reference search matches paths with a concrete thread identifier shape, because a plausible thread reference deserves inspection even if its folder is absent; verifying directory existence was rejected because it could miss references to removed threads
+- (decision) the repository-wide thread-reference search also catches bare identifiers of any thread, because references to other threads outside .work/ can be mistaken for standing requirements; limiting bare identifiers to the current thread was rejected because it leaves those references unseen
+- (event) spec authored from the live discussion
+- (event) spec amended from the user request to omit the decision record and its delta
