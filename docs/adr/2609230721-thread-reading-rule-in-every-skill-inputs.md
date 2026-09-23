@@ -1,8 +1,4 @@
 ---
-type: create
----
-
----
 name: The rule that another thread is history is stated in the Inputs of every skill that gathers thread inputs, with the read-and-cite instruction holding the canonical wording.
 description: The "another thread is history" rule is repeated in every thread-reading skill's Inputs.
 ---

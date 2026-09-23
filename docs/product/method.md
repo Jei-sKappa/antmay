@@ -4,10 +4,11 @@
 
 - A unit of work is a thread, one folder on disk whose shape is fixed by `suite/shared/references/formats/thread.md`.
 - Intent is written down before it is built, so that a teammate reviewing a pull request and a fresh agent session resuming the work read the same durable Markdown rather than a chat log.
-- A thread's design of one change is its change document, which holds only what is thread-only and cites the thread's delta documents for every standing behavior or structure the change adds, replaces or removes.
+- A thread's design of one change is its spec, which holds only what is thread-only and cites the thread's delta documents for every standing behavior or structure the change adds, replaces or removes.
 - Everything a thread drafts for the project layer is its delta, authoritative inside the thread from the moment it is written and landed only when the thread closes.
 - The skills are composable rather than sequential: a session reaches for the one that matches the situation it is in, skips what the work does not need, and comes back for a skipped skill when it turns out to be needed.
 - A thread stays where it is once its work is delivered, as the record of how the work was understood while it was being done.
+- Every skill that reads a thread treats any other thread as history and reads it only when the user or the thread's seed names it.
 
 ## The project layer
 
@@ -32,12 +33,12 @@
 - An idea worth filing rather than starting now goes to `open-ticket`, which leaves a tracker ticket and nothing on disk.
 - A topic that needs thinking through with someone who pushes back goes to `discussion`, which leaves one log line per settled point.
 - A queue waiting on a human under a thread's `.pending-decisions/` is emptied by `resolve-pending-decisions`, which writes each answer into the log.
-- A design that has settled is written down by `change`, which leaves the change document, the thread's delta documents under `delta/`, and one event line in the log.
-- A change document and its delta are judged as a downstream handoff by `review-change`, before anyone plans from them.
+- A design that has settled is written down by `spec`, which leaves the spec, the thread's delta documents under `delta/`, and one event line in the log.
+- A spec and its delta are judged as a downstream handoff by `review-spec`, before anyone plans from them.
 - Turning the design into an implementation order is `plan-brief` for lightweight work and `plan-strict` when the implementer is an agent that needs a prescriptive brief per task; each leaves a fresh stamped folder under `plans/`.
-- A plan that must be made to match the change document before anyone builds from it goes to `check-plan`, which corrects that plan folder in place.
+- A plan that must be made to match the spec before anyone builds from it goes to `check-plan`, which corrects that plan folder in place.
 - Carrying work to code is `implement` from any input, `implement-plan` from a strict plan, and `implement-plan-with-subagents` when the work wants a reviewer loop and the runtime supports subagents; each leaves the delivered work on the working tree and one implementation folder holding its `report.md`.
-- The implementation report is the one home of traceability: its acceptance table carries one row per criterion of the change document, with the method and the evidence for each.
+- The implementation report is the one home of traceability: its acceptance table carries one row per criterion of the spec, with the method and the evidence for each.
 - Delivered work is judged by `review-implementation` for fidelity to the thread's durable intent and by `review-code` for quality on the code's own merits.
 - Every review is read-only: a clean review passes in chat, and a review with findings leaves one bundle under the thread's `.pending-reviews/`.
 - A larger direction that has been agreed is written down by `roadmap` as a project-level index of ordered entries under `.work/roadmaps/`.

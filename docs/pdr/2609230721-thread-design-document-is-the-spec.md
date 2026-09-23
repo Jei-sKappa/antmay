@@ -1,8 +1,4 @@
 ---
-type: create
----
-
----
 name: A thread's design document is called the spec, in spec.md, written and reviewed by the spec and review-spec skills.
 description: The thread design document is named the spec, not the change document.
 ---
