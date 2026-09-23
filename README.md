@@ -58,10 +58,10 @@ A thread's `delta/` is its draft of that layer, authoritative inside the thread 
 
 ### Keeping thread references out of code
 
-Nothing under `.work/` is cited from `docs/` or from code. A thread path left in a comment, a test name or a migration outlives the thread that wrote it, and a later reader takes it for a standing rule. Nothing in the method enforces this — the skills run the search where the reading already happens — so a project that wants a hard gate wires this one line into its own tooling:
+Nothing under `.work/` is cited from `docs/` or from code. A thread path left in a comment, a test name or a migration outlives the thread that wrote it, and a later reader takes it for a standing rule. The search matches a concrete thread identifier, rooted or bare, and not a mere mention of the threads folder. Nothing in the method enforces this — the skills run the search where the reading already happens — so a project that wants a hard gate wires this one line into its own tooling:
 
 ```sh
-git grep -n -e '.work/threads/' -- ':!.work'
+git grep -n -E -e '[0-9]{4}/[0-9]{2}/[0-9]{2}-[0-9]{4}-[a-z0-9]' -- ':!.work'
 ```
 
 ## Terminal outcomes

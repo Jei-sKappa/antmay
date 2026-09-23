@@ -4,10 +4,12 @@ Find every place outside a thread that names that thread or one of its artifacts
 
 ## The pattern
 
-The pattern is fixed, and is never widened or narrowed by improvisation:
+The pattern is fixed, and is never widened or narrowed by improvisation. It matches a thread identifier — `yyyy/mm/dd-hhmm-slug`, a thread's path relative to `.work/threads/` — written with a concrete date, time and slug:
 
-- the literal path fragment `.work/threads/`, which catches a thread path however it is written;
-- when a thread is in hand, that thread's identifier — `yyyy/mm/dd-hhmm-slug`, its path relative to `.work/threads/` — which catches a reference that names the thread without the root above it.
+- the identifier under its root, `.work/threads/` followed by an identifier, which catches a thread path however much of it is written after the identifier;
+- the bare identifier of any thread, not only the one in hand, which catches a reference that names a thread without the root above it.
+
+One expression covers both, because the rooted form contains the bare one. The identifier need not resolve to a folder that exists: a reference to a removed or mistyped thread is still a reference. A mention of the threads folder alone — `.work/threads/`, a glob over it, or the placeholder `.work/threads/yyyy/mm/dd-hhmm-slug/` — names no thread and is not a hit.
 
 Nothing else is part of the pattern. A hit is a place to look at, not a verdict on its own.
 
@@ -16,13 +18,7 @@ Nothing else is part of the pattern. A hit is a place to look at, not a verdict 
 Run this one line from the repository root, over tracked files outside `.work/`:
 
 ```sh
-git grep -n -e '.work/threads/' -- ':!.work'
-```
-
-When a thread is in hand, run it a second time with that thread's identifier added:
-
-```sh
-git grep -n -e '.work/threads/' -e '<thread identifier>' -- ':!.work'
+git grep -n -E -e '[0-9]{4}/[0-9]{2}/[0-9]{2}-[0-9]{4}-[a-z0-9]' -- ':!.work'
 ```
 
 ## Over delivered work

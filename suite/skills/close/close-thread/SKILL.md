@@ -46,7 +46,7 @@ Run all six, in order, and all of them before the first write. They are reads; n
 
    The check is narrow: it reads recorded deviations and delivered changes, and it is not a review of the implementation at large. Do not open the code to audit it, and do not treat an unrecorded improvement as a divergence. A divergence you cannot settle from the thread's material goes to `## Blocked`.
 
-3. **Thread-reference search** — follow `<skill_path>/references/instructions/search-for-thread-references.md` over the repository outside `.work/`, with this thread's identifier as the thread in hand. A hit is put to the user before anything is written: stop per `## Blocked`, naming each hit by file and line. When the search returns nothing, the check passes.
+3. **Thread-reference search** — follow `<skill_path>/references/instructions/search-for-thread-references.md` over the repository outside `.work/`. A hit is put to the user before anything is written: stop per `## Blocked`, naming each hit by file and line. When the search returns nothing, the check passes.
 
 4. **Delta dry run** — walk every delta document under `delta/` and decide, without writing anything, whether it will land against the project layer as it stands:
    - a `create` whose target already exists stops the close for that file;
