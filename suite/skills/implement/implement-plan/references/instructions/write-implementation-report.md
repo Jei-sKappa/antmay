@@ -11,8 +11,8 @@ Draw the report from the run's own outcome material — the progress the run rec
 - what completed, what completed partially, what was blocked, and what was found already satisfied;
 - the resulting changes, by area or by path, at the level a reader needs to find them;
 - the checks actually run, with their results, any failure, and any check deliberately skipped with its reason;
-- the acceptance rows — every criterion of the change document quoted verbatim, with the method and the evidence the run's own verification records supply;
-- the deviations, each naming what was built, the change document section or the decision record stem it departs from, and why;
+- the acceptance rows — every criterion of the spec quoted verbatim, with the method and the evidence the run's own verification records supply;
+- the deviations, each naming what was built, the spec section or the decision record stem it departs from, and why;
 - any remaining concerns;
 - any follow-ups.
 

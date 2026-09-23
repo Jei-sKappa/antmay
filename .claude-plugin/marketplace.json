@@ -8,7 +8,6 @@
         "./skills/capture-discussion/open-thread",
         "./skills/capture-discussion/open-ticket",
         "./skills/capture-discussion/resolve-pending-decisions",
-        "./skills/change/change",
         "./skills/close/close-thread",
         "./skills/implement/implement",
         "./skills/implement/implement-plan",
@@ -18,10 +17,11 @@
         "./skills/plan/check-plan",
         "./skills/plan/plan-brief",
         "./skills/plan/plan-strict",
-        "./skills/review/review-change",
         "./skills/review/review-code",
         "./skills/review/review-implementation",
-        "./skills/roadmap/roadmap"
+        "./skills/review/review-spec",
+        "./skills/roadmap/roadmap",
+        "./skills/spec/spec"
       ]
     }
   ]

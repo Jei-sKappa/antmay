@@ -8,7 +8,7 @@ A thread is the folder holding one unit of work, from the idea that opened it to
 .work/threads/yyyy/mm/dd-hhmm-slug/
 ├── seed.md                                 what the thread was opened to do
 ├── log.md                                  the thread's memory, one line per entry
-├── change.md                               the change document, once authored
+├── spec.md                               the spec, once authored
 ├── delta/                                  the thread's delta: one delta document per target
 │   └── docs/…                              mirrors the target path, e.g. delta/docs/adr/<stem>.md,
 │                                           delta/docs/pdr/<stem>.md, delta/docs/product/<capability>.md,

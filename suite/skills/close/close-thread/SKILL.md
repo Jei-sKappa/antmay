@@ -24,11 +24,13 @@ Gather all of these before running the checks; everything below works from what 
 - The thread to close — the folder the invocation names, in the shape `<skill_path>/references/formats/thread.md` defines. Everything below is read inside it.
 - The thread's `log.md` — the thread's memory and the place closure is recorded, in the shape `<skill_path>/references/formats/log-line.md` defines.
 - The thread's `seed.md` — why the thread exists and what it set out to reach. When its frontmatter carries a `roadmap` mapping, `roadmap.path` and `roadmap.entry` name the roadmap index this thread was opened from and the slug of its entry.
-- The thread's `change.md`, when the file exists — the change document, whose claims the currency check reads.
+- The thread's `spec.md`, when the file exists — the spec, whose claims the currency check reads.
 - The thread's `delta/`, when present — the delta to land: every delta document in the shape `<skill_path>/references/formats/delta-document.md` defines, each `create` under `delta/docs/adr/` or `delta/docs/pdr/` carrying a body in the shape `<skill_path>/references/formats/decision-record.md` defines.
 - For every `edit` and `delete` delta document, its target file and that file's current blob hash from `git hash-object <target>` on the working tree — what the dry run reads the recorded `hash` and every quoted operation against.
 - Every `implementations/<folder>/report.md` the thread holds — what each implementation delivered, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Deviations` entries and the delivered changes it describes are what the currency check reads.
 - The contents of `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/` — the thread's workspaces, inspected by listing what each holds. You need their names and whether they are empty, not their contents.
+
+Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
 ## Checks before any write
 
@@ -36,11 +38,11 @@ Run all six, in order, and all of them before the first write. They are reads; n
 
 1. **Prior closure** — when `log.md` already contains the closing event, refuse per `## Refusals` unless the invocation explicitly says to proceed anyway.
 
-2. **Currency check** — does the thread's design truth still match what the thread produced? Read each report's `## Deviations` entries and the delivered changes it describes against the change document's claims and against the thread's delta documents. A deviation touching the target of a delta document blocks the close until the change document and that delta document are amended: stop per `## Blocked`, naming the deviation and the delta document whose target it touches. Scale the rest to the material the thread holds:
-   - **With implementations and a change document:** read the reports against both the change document and the delta documents.
-   - **With a change document and no implementations:** read the delta documents against the change document.
-   - **With implementations and no change document:** read the reports and the delivered changes against the delta documents and the seed's intent.
-   - **With neither a change document nor an implementation:** no divergence is possible and the check passes.
+2. **Currency check** — does the thread's design truth still match what the thread produced? Read each report's `## Deviations` entries and the delivered changes it describes against the spec's claims and against the thread's delta documents. A deviation touching the target of a delta document blocks the close until the spec and that delta document are amended: stop per `## Blocked`, naming the deviation and the delta document whose target it touches. Scale the rest to the material the thread holds:
+   - **With implementations and a spec:** read the reports against both the spec and the delta documents.
+   - **With a spec and no implementations:** read the delta documents against the spec.
+   - **With implementations and no spec:** read the reports and the delivered changes against the delta documents and the seed's intent.
+   - **With neither a spec nor an implementation:** no divergence is possible and the check passes.
 
    The check is narrow: it reads recorded deviations and delivered changes, and it is not a review of the implementation at large. Do not open the code to audit it, and do not treat an unrecorded improvement as a divergence. A divergence you cannot settle from the thread's material goes to `## Blocked`.
 

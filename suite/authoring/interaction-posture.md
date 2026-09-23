@@ -16,7 +16,7 @@ skill interactive.
   expected output, more than one turn is normal, and needing another answer is
   not failure.
 - **Completion-oriented** — the skill consumes supplied and durable inputs and
-  produces an outcome without ongoing conversation: `change`, the plan skills,
+  produces an outcome without ongoing conversation: `spec`, the plan skills,
   `check-plan`, the implement skills, the reviews, `roadmap`, and `close-thread`.
   It finishes autonomously whenever that is safe. Asking is exceptional,
   justified only when the inputs are insufficient and proceeding would invent
@@ -97,7 +97,7 @@ The vocabulary is closed to three tokens, and no other token exists:
 
 The line composes with the skill's own confirmation message: the confirmation
 becomes the reason part, as in
-`Outcome: DONE — Change document written: change.md`. The emission procedure
+`Outcome: DONE — Spec written: spec.md`. The emission procedure
 itself is the shared instruction `instructions/emit-terminal-outcome.md`, which
 each emitting skill declares and points at from every exit the run can reach.
 

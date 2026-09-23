@@ -1,0 +1,5 @@
+interface:
+  display_name: Spec
+  short_description: Author the spec and its delta
+policy:
+  allow_implicit_invocation: false

@@ -35,7 +35,7 @@ A task file `plan-tasks/01-add-jwt-helper.md`:
 The matching index excerpt in `plan.md`:
 
 ```markdown
-Source: change.md
+Source: spec.md
 
 ## Global Constraints
 
@@ -48,4 +48,4 @@ Source: change.md
 2. **Wire the auth middleware** — call `verifyToken` on every protected route. → `plan-tasks/02-wire-auth-middleware.md`
 ```
 
-The first acceptance line is a criterion of the change document carried across word for word — no identifier, no number, no rewording — and the three lines under it are the task's own observable post-conditions. That is what a strict plan looks like: an index carrying the `Source:` line, the verbatim Global Constraints block, and the ordered task list; and one task file per task with eight labeled elements — prescriptive substeps, mechanical verification, observable acceptance, and the `Consumes:`/`Produces:` hand-off. An agent-leaning implementer handed a single task file can execute it without inferring anything beyond what is written. The absence of any wave number, `depends_on` array, or fork/join construct is observable throughout — the plan is sequential.
+The first acceptance line is a criterion of the spec carried across word for word — no identifier, no number, no rewording — and the three lines under it are the task's own observable post-conditions. That is what a strict plan looks like: an index carrying the `Source:` line, the verbatim Global Constraints block, and the ordered task list; and one task file per task with eight labeled elements — prescriptive substeps, mechanical verification, observable acceptance, and the `Consumes:`/`Produces:` hand-off. An agent-leaning implementer handed a single task file can execute it without inferring anything beyond what is written. The absence of any wave number, `depends_on` array, or fork/join construct is observable throughout — the plan is sequential.

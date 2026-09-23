@@ -48,7 +48,7 @@ The orchestrator reads each lane's `Verdict:` and its findings / concerns / out-
 ## Hard constraints (both lanes)
 
 - DO NOT modify code. You are a reviewer, not an implementer. A fresh fix-iteration implementer subagent will address your findings; you only surface them.
-- DO NOT modify the plan folder (its index or its task files). It is immutable. Read it; do not write to it. The thread's `change.md` and `delta/`, handed to you as the constraint sources, are read the same way.
+- DO NOT modify the plan folder (its index or its task files). It is immutable. Read it; do not write to it. The thread's `spec.md` and `delta/`, handed to you as the constraint sources, are read the same way.
 - DO NOT commit. The orchestrator commits per the skill's `## Commit Policy` once both lane verdicts are clean; subagents do not commit.
 
 Each lane's method file adds its own lane-scoping constraint and any lane-specific limit in its `## Hard Constraints`.

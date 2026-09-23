@@ -14,9 +14,9 @@ skill writes outside its own slice or into another thread's files:
 
 - Thread creation writes the new thread folder with `seed.md` and `log.md`, and
   nothing else.
-- `discussion`, `resolve-pending-decisions`, `change`, and `close-thread` append
+- `discussion`, `resolve-pending-decisions`, `spec`, and `close-thread` append
   lines to the thread's `log.md`; they are its only writers.
-- `change` writes the thread's `change.md` and its delta documents under
+- `spec` writes the thread's `spec.md` and its delta documents under
   `delta/`, and amends both in place.
 - A plan skill writes the plan folder it creates; `check-plan` writes inside the
   one plan folder it targets.
@@ -31,11 +31,11 @@ skill writes outside its own slice or into another thread's files:
   event and leaves the thread folder where it is.
 - `roadmap` alone creates a roadmap index under `.work/roadmaps/`.
 
-An implement skill reads its change document and its plan and edits neither: a
+An implement skill reads its spec and its plan and edits neither: a
 plan is input, not a record rewritten afterwards to make delivered work look
 planned. A deviation that stays within accepted intent proceeds and is recorded
 in the report's deviations section; a contradiction of a delta document or of a
-change document decision is a change of intent and is queued as a pending
+spec decision is a change of intent and is queued as a pending
 decision.
 
 ## Reviews

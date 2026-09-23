@@ -12,6 +12,8 @@ The project layer is what the method owns at fixed paths in every project: `docs
 6. The roadmap entry, when the thread was opened from one — its sketch, its scope boundary and its planned behavior.
 7. The thread.
 
+Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
+
 ## Cite by kind
 
 - Nothing under `.work/` is cited from `docs/` or from code. A thread path appears outside its thread only as commit provenance.

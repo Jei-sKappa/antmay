@@ -24,7 +24,7 @@
 - `direction` — where the work is heading, above the level of any single choice.
   Example: `- (direction) the thread is moving the whole reporting surface off the synchronous path`
 - `event` — a moment in the thread's life, such as an artifact being authored or the thread closing.
-  Example: `- (event) change document authored from the conversation`
+  Example: `- (event) spec authored from the conversation`
 
 ## Rules
 

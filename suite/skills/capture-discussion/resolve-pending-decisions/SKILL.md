@@ -22,9 +22,11 @@ Gather all of these before settling any point; the procedure below works from wh
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the queued points.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The queued bundles** under the thread's `.pending-decisions/` — the primary input, in one of two accepted forms, each in the shape `<skill_path>/references/formats/pending-decision-bundle.md` defines. When the invocation names a **bundle path**, that file is the form. Otherwise the form is the **folder's queue** of bundles.
-- The thread's `change.md`, when the file exists — the change document, read so the framing knows what the design already pins.
+- The thread's `spec.md`, when the file exists — the spec, read so the framing knows what the design already pins.
 - The thread's `delta/`, when present — the thread's delta of the project layer as it stands, read for the same reason; inside the thread it takes precedence over the project records.
 - The thread's `seed.md` — why the thread exists.
+
+Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
 ## Select a bundle
 
@@ -51,17 +53,17 @@ An answer that merely repairs which input the producer meant is a clarification 
 
 Every other answer is written the moment it settles. **Append the log line first**, before acting on the answer in any other way: follow `<skill_path>/references/instructions/append-log-line.md`.
 
-That line is the whole write. A point that changes the design, fixes a term or earns a decision record reaches the change document and the thread's `delta/` through the change authoring's amendment pass, which works from the log entries appended since the change document last stood current; `## Follow-through` is where you recommend that pass. When the answer is instead that the code must change, the design already states the intent: say in chat that running an implementation is the next step.
+That line is the whole write. A point that changes the design, fixes a term or earns a decision record reaches the spec and the thread's `delta/` through the spec authoring's amendment pass, which works from the log entries appended since the spec last stood current; `## Follow-through` is where you recommend that pass. When the answer is instead that the code must change, the design already states the intent: say in chat that running an implementation is the next step.
 
-You write exactly these: lines appended to the thread's `log.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — the thread's `change.md` and `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`) are read here and never written.
+You write exactly these: lines appended to the thread's `log.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — the thread's `spec.md` and `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`) are read here and never written.
 
 ## Follow-through
 
-Once the bundle's last point is settled and its file deleted, recommend the next action that follows from what was just written: re-invoking `/change`, so its amendment pass carries the settled points into the change document and its delta documents; re-invoking the producer the bundle named, so it runs again from what the log now holds; running an implementation when the answer was that the code must change; or nothing further when the outcomes call for nothing.
+Once the bundle's last point is settled and its file deleted, recommend the next action that follows from what was just written: re-invoking `/spec`, so its amendment pass carries the settled points into the spec and its delta documents; re-invoking the producer the bundle named, so it runs again from what the log now holds; running an implementation when the answer was that the code must change; or nothing further when the outcomes call for nothing.
 
 State it as a recommendation, then WAIT for the user's choice — do not act first.
 
-- **If the user accepts**, carry the action out the way it was recommended. When the recommended action belongs to a skill — `/change`, the producer the bundle named, or the implementation skill when the code is what must change — invoke that skill as `/<skill-name>` and let it do the work from what the log now holds; never redo its work inline. Only an accepted action that no skill owns is carried out yourself, directly from the target and the outcomes just written. If the continuation uncovers genuinely new human judgment that only the user can settle, queue it by following `<skill_path>/references/instructions/emit-pending-decisions.md`, with yourself as the producer, and stop.
+- **If the user accepts**, carry the action out the way it was recommended. When the recommended action belongs to a skill — `/spec`, the producer the bundle named, or the implementation skill when the code is what must change — invoke that skill as `/<skill-name>` and let it do the work from what the log now holds; never redo its work inline. Only an accepted action that no skill owns is carried out yourself, directly from the target and the outcomes just written. If the continuation uncovers genuinely new human judgment that only the user can settle, queue it by following `<skill_path>/references/instructions/emit-pending-decisions.md`, with yourself as the producer, and stop.
 - **If the user declines or defers**, stop cleanly; the outcomes are already written.
 
 The continuation runs exactly once. Never open, discuss, or consume a newly emitted bundle in the same run — the user reinvokes you when they are ready for it.

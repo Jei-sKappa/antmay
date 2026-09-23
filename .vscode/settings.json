@@ -2,7 +2,6 @@
   "conventionalCommits.gitmoji": false,
   "conventionalCommits.promptFooter": false,
   "conventionalCommits.scopes": [
-    "change",
     "check-plan",
     "cli",
     "close-thread",
@@ -17,9 +16,10 @@
     "plan-brief",
     "plan-strict",
     "resolve-pending-decisions",
-    "review-change",
     "review-code",
     "review-implementation",
-    "roadmap"
+    "review-spec",
+    "roadmap",
+    "spec"
   ]
 }

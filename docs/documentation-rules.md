@@ -69,7 +69,7 @@ its rows into prose, and keep the runtime source of that listing accurate
 instead.
 
 Citation runs one way, and the direction is fixed by where the cited thing
-lives. Nothing under `.work/` — a thread's log entries, its change document, its
+lives. Nothing under `.work/` — a thread's log entries, its spec, its
 delta documents, its plans or implementation folders, or a roadmap entry — is
 cited from `docs/` or from code: each is one thread's record of one moment, and
 a reader outside it cannot resolve the reference. A thread path appears outside

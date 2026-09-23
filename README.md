@@ -8,7 +8,7 @@
 
 **Antmay** optimizes Spec Driven Development. It offers a thread-based method for SDD, a suite of skills that support that method, and a CLI that automates it.
 
-The method is simple: every unit of work lives in its own **thread** under `.work/threads/`, where a **change document** records the design of the work and a **delta** drafts whatever that work adds to the project's standing documentation. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log. When a thread closes, its delta lands in the **project layer**, the fixed set of paths that outlive any single thread.
+The method is simple: every unit of work lives in its own **thread** under `.work/threads/`, where a **spec** records the design of the work and a **delta** drafts whatever that work adds to the project's standing documentation. Intent is written down before it is built, and it is written where a teammate reviewing a PR and a fresh agent session resuming work both read the same durable truth — reviewable Markdown on disk, not a chat log. When a thread closes, its delta lands in the **project layer**, the fixed set of paths that outlive any single thread.
 
 The **skills** are composable and harness-agnostic `SKILL.md` files that work inside Claude Code, Codex, Gemini CLI, OpenCode, or any harness that loads them. They are not a runtime or a project-local state file: they are individual capabilities you install and compose, one at a time for a single job or one after another to carry a change end to end.
 
@@ -37,7 +37,7 @@ A **thread** is one unit of work as a folder on disk, at `.work/threads/yyyy/mm/
 ```text
 seed.md            why the thread was opened
 log.md             the thread's append-only memory, one entry per line
-change.md          the thread's design of the change, once it is authored
+spec.md            the thread's design of the change, once it is authored
 delta/             what the thread drafts for the project layer, one file per target
 plans/             one folder per plan
 implementations/   one folder per implementation run
@@ -112,21 +112,21 @@ Expects a thread whose `.pending-decisions/` queue holds bundles waiting on a hu
 npx skills add Jei-sKappa/antmay --skill resolve-pending-decisions
 ```
 
-### Change
+### Spec
 
-#### [`change`](./suite/skills/change/change/SKILL.md)
+#### [`spec`](./suite/skills/spec/spec/SKILL.md)
 
-Expects a thread whose discussion has settled — the live conversation or `log.md`; leaves `change.md` at the thread root, its delta documents under `delta/`, and one `event` line in the log.
+Expects a thread whose discussion has settled — the live conversation or `log.md`; leaves `spec.md` at the thread root, its delta documents under `delta/`, and one `event` line in the log.
 
 ```sh
-npx skills add Jei-sKappa/antmay --skill change
+npx skills add Jei-sKappa/antmay --skill spec
 ```
 
 ### Plan
 
 #### [`plan-brief`](./suite/skills/plan/plan-brief/SKILL.md)
 
-Expects a thread holding a `change.md`, or a referenced artifact to plan against; leaves a one-screen `plan.md` inside a fresh stamped folder under `plans/`.
+Expects a thread holding a `spec.md`, or a referenced artifact to plan against; leaves a one-screen `plan.md` inside a fresh stamped folder under `plans/`.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill plan-brief
@@ -134,7 +134,7 @@ npx skills add Jei-sKappa/antmay --skill plan-brief
 
 #### [`plan-strict`](./suite/skills/plan/plan-strict/SKILL.md)
 
-Expects a thread holding a `change.md`, or a referenced artifact to plan against; leaves a fresh stamped folder under `plans/` holding a `plan.md` index and one dispatchable brief per task under `plan-tasks/`.
+Expects a thread holding a `spec.md`, or a referenced artifact to plan against; leaves a fresh stamped folder under `plans/` holding a `plan.md` index and one dispatchable brief per task under `plan-tasks/`.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill plan-strict
@@ -142,7 +142,7 @@ npx skills add Jei-sKappa/antmay --skill plan-strict
 
 #### [`check-plan`](./suite/skills/plan/check-plan/SKILL.md)
 
-Expects a thread holding both a `change.md` and a plan folder; leaves that plan folder corrected in place, with whatever the change document does not settle queued as a pending decision.
+Expects a thread holding both a `spec.md` and a plan folder; leaves that plan folder corrected in place, with whatever the spec does not settle queued as a pending decision.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill check-plan
@@ -188,17 +188,17 @@ npx skills add Jei-sKappa/antmay --skill implement-plan-with-subagents
 
 Reviews are strictly read-only. A clean review passes in chat and writes nothing; a review with findings records a single pending-review bundle for later attention.
 
-#### [`review-change`](./suite/skills/review/review-change/SKILL.md)
+#### [`review-spec`](./suite/skills/review/review-spec/SKILL.md)
 
-Expects a thread holding a `change.md` and its `delta/` to judge as a downstream handoff; leaves nothing when they are ready to plan from, and one findings bundle under `.pending-reviews/` when they are not.
+Expects a thread holding a `spec.md` and its `delta/` to judge as a downstream handoff; leaves nothing when they are ready to plan from, and one findings bundle under `.pending-reviews/` when they are not.
 
 ```sh
-npx skills add Jei-sKappa/antmay --skill review-change
+npx skills add Jei-sKappa/antmay --skill review-spec
 ```
 
 #### [`review-implementation`](./suite/skills/review/review-implementation/SKILL.md)
 
-Expects a thread holding an implementation folder and its `report.md`; checks every row of the report's acceptance table against the change document and the code, and searches the delivered work for thread references. Leaves nothing when the delivered work matches the thread's durable intent and the report describes it honestly, and one findings bundle under `.pending-reviews/` when it does not.
+Expects a thread holding an implementation folder and its `report.md`; checks every row of the report's acceptance table against the spec and the code, and searches the delivered work for thread references. Leaves nothing when the delivered work matches the thread's durable intent and the report describes it honestly, and one findings bundle under `.pending-reviews/` when it does not.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill review-implementation

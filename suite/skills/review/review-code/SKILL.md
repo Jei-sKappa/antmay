@@ -26,16 +26,18 @@ Gather all of these before judging; the procedure below works from what you gath
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
 - That folder's `report.md` — the implementer's account of the delivered work, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Changes` locates the code and its `## Deviations` says which departures were deliberate.
 - The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.
-- The thread's `change.md`, when the file exists — the thread's design of the change, in the shape `<skill_path>/references/formats/change-document.md` defines; its acceptance checklist defines what the code is meant to do, which is what an intent-dependent finding rests on.
+- The thread's `spec.md`, when the file exists — the thread's design of the change, in the shape `<skill_path>/references/formats/spec.md` defines; its acceptance checklist defines what the code is meant to do, which is what an intent-dependent finding rests on.
 - The thread's `delta/`, when present — every delta document the thread holds, the constraint sources the code must not contradict; inside the thread the delta takes precedence over the project records.
-- The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a change document nor a plan.
+- The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a spec nor a plan.
 - The code under review — as the user names it (a git ref, a commit range, a saved or inline diff, or a file or directory path) or as the report's `## Changes` describes it, plus the surrounding code it must live with. Read the diff or the files; never check out a branch, run tests, modify the working tree, or mutate any git state.
+
+Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
 ## The authority anchor
 
 Quality does not require intent to exist, but where a finding turns on what the code is *for* — whether an error path can be reached, whether an edge case is possible, whether a behavior is the intended one — you judge it against the most specific durable intent the thread records. Resolve that anchor in this order and use the first that exists:
 
-1. `change.md` at the thread root — its acceptance checklist defines what the code is meant to do.
+1. `spec.md` at the thread root — its acceptance checklist defines what the code is meant to do.
 2. else the plan folder the report's `Plan:` line names — `plans/<folder>/plan.md`, a one-screen brief or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
@@ -70,7 +72,7 @@ When you hold one or more findings, record them by following `<skill_path>/refer
 
 Your category vocabulary is `quality`, `safety`, `idioms`, `testability`, or an additional axis you used, and the evidence for a finding is the file-and-line location, plus the anchor section when the finding turns on intent. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 
-That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the code, the implementation folder and its `report.md`, the plan folder the report names, `change.md`, the thread's `delta/`, `seed.md`, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md` and the roadmap indexes. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
+That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the code, the implementation folder and its `report.md`, the plan folder the report names, `spec.md`, the thread's `delta/`, `seed.md`, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md` and the roadmap indexes. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
 
 ## After the review
 

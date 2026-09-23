@@ -26,16 +26,18 @@ Gather all of these before judging; the procedure below works from what you gath
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
 - That folder's `report.md` — the implementer's account of the delivered work and the claim under test, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Acceptance` table is the claim under test for the acceptance category.
 - The plan folder the report's `Plan:` line names, when present — `plans/<folder>/plan.md`, together with the `plan-tasks/` briefs the index points at for a strict plan.
-- The thread's `change.md`, when the file exists — the thread's design of the change, in the shape `<skill_path>/references/formats/change-document.md` defines; its acceptance checklist is the contract the delivered work answers to.
+- The thread's `spec.md`, when the file exists — the thread's design of the change, in the shape `<skill_path>/references/formats/spec.md` defines; its acceptance checklist is the contract the delivered work answers to.
 - The thread's `delta/`, when present — every delta document the thread holds, the constraint sources delivered work must not contradict; inside the thread the delta takes precedence over the project records.
-- The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a change document nor a plan.
+- The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a spec nor a plan.
 - The delivered code — the files and changes the implementation produced, as the user names them (a git ref, a commit range, a saved or inline diff, or a file or directory path) or as the report's `## Changes` describes them. Read the diff or the files; never check out a branch, run tests, modify the working tree, or mutate any git state.
+
+Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
 ## The authority anchor
 
 The definition of intended behavior is the most specific durable intent the thread records. Resolve it in this order and use the first that exists:
 
-1. `change.md` at the thread root — its acceptance checklist is the contract.
+1. `spec.md` at the thread root — its acceptance checklist is the contract.
 2. else the plan folder the report's `Plan:` line names — `plans/<folder>/plan.md`, a one-screen brief or a strict index paired with the per-task briefs under `plan-tasks/`.
 3. else `seed.md` — the thread's founding intent.
 
@@ -47,9 +49,9 @@ When the resolved anchor is coarse — `seed.md` only, with no acceptance criter
 
 `implementations/<folder>/report.md` is the implementer's account of the work — its `## Outcome`, `## Changes`, and `## Verification`, plus any deviations, remaining concerns, and follow-ups. You test that account against the actual delivered work: a report that claims an outcome the code does not show, describes changes that are not there, or records a verification check the diff gives no sign was run is itself a finding.
 
-Each entry under the report's `## Deviations` is a claim of its own — that something was built differently on purpose, departing from the change document section or the decision record stem it names, for the reason it states. Test each one against the code and against the anchor: a deviation the code does not show, one that misdescribes what the anchor it names actually says, or one presented as deliberate where the work simply misses the anchor is a finding.
+Each entry under the report's `## Deviations` is a claim of its own — that something was built differently on purpose, departing from the spec section or the decision record stem it names, for the reason it states. Test each one against the code and against the anchor: a deviation the code does not show, one that misdescribes what the anchor it names actually says, or one presented as deliberate where the work simply misses the anchor is a finding.
 
-Each row of the report's `## Acceptance` table is a claim of its own too, and each of its three columns is checkable. The quoted criterion must exist verbatim in the change document; the method must be one of `automated test`, `manual check` or `code review`; and the evidence must hold up — the named test exists in the named file and exercises the behavior the criterion states, or the walked-through observation matches what the code does. A row whose criterion is nowhere in the change document, or whose evidence the code does not bear out, is a finding.
+Each row of the report's `## Acceptance` table is a claim of its own too, and each of its three columns is checkable. The quoted criterion must exist verbatim in the spec; the method must be one of `automated test`, `manual check` or `code review`; and the evidence must hold up — the named test exists in the named file and exercises the behavior the criterion states, or the walked-through observation matches what the code does. A row whose criterion is nowhere in the spec, or whose evidence the code does not bear out, is a finding.
 
 Read the report to learn what the implementer claims, then judge the claim, not just the code. When the folder holds no report, note its absence and judge the code against the anchor directly.
 
@@ -67,7 +69,7 @@ Read the report to learn what the implementer claims, then judge the claim, not 
 
 These categories are your own; adapt or extend them when the work warrants, but cover this ground:
 
-- **Acceptance** — every criterion of the change document has a row in the report's `## Acceptance` table and a corresponding change in the delivered work. A criterion without a row is a finding of severity `blocker`, and so is a criterion nothing in the work addresses; a row whose evidence the code does not bear out is a finding, and so is a criterion covered only in part, or covered by something that resembles it but behaves differently. When the resolved anchor is not the change document and records no acceptance criteria, this category narrows to whether the work delivers the intent the anchor does state.
+- **Acceptance** — every criterion of the spec has a row in the report's `## Acceptance` table and a corresponding change in the delivered work. A criterion without a row is a finding of severity `blocker`, and so is a criterion nothing in the work addresses; a row whose evidence the code does not bear out is a finding, and so is a criterion covered only in part, or covered by something that resembles it but behaves differently. When the resolved anchor is not the spec and records no acceptance criteria, this category narrows to whether the work delivers the intent the anchor does state.
 - **Constraints** — the "must" / "must not" / "must use" / "must avoid" statements of the anchor and of the thread's delta documents are honored: technology choices, API and data-shape contracts, safety limits, repository layout. Before flagging a choice as a violation, check whether the anchor explicitly left that choice to the implementer's discretion — a granted freedom is never drift.
 - **Scope** — the work stays inside the intended boundary. Changes to files or behavior the anchor did not call for, refactors done because they seemed cleaner rather than to make the intended work possible, and features named only as a possibility or placed out of scope are findings even when they look like improvements.
 - **Behavior** — the observable behaviors the anchor named are present and correct: state changes, outputs, error surfaces, and side effects. A missing behavior, a behavior that resembles the intended one but differs in inputs, outputs, side effects, or error handling, and an unrequested new behavior are all findings.
@@ -82,7 +84,7 @@ When you hold one or more findings, record them by following `<skill_path>/refer
 
 Your category vocabulary is `acceptance`, `constraints`, `scope`, `behavior`, `test-coverage`, `citation`, or the variation you used, and the evidence for a finding is the code location together with the anchor section or report claim it fails against. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 
-That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the delivered code, the implementation folder and its `report.md`, the plan folder the report names, `change.md`, the thread's `delta/`, `seed.md`, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md` and the roadmap indexes. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
+That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the delivered code, the implementation folder and its `report.md`, the plan folder the report names, `spec.md`, the thread's `delta/`, `seed.md`, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md` and the roadmap indexes. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
 
 ## After the review
 

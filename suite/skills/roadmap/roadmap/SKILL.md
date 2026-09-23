@@ -24,8 +24,10 @@ Gather all of these before drafting; everything below works from what you gather
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the direction.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's `seed.md` — why the thread exists and what the direction is meant to reach.
-- The thread's `change.md`, when the file exists — the direction's change document.
+- The thread's `spec.md`, when the file exists — the direction's spec.
 - The thread's `delta/`, when present — the direction's settled records and descriptions as the thread drafted them, which inside the thread take precedence over the project layer. They reach the project layer when the thread closes, so the index restates none of them; what they leave unbuilt is what the entries carry as planned behavior.
+
+Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
 Run a mandatory preflight before any substantive execution (authoring the index). Every preflight failure writes nothing, emits no bundle, and follows `<skill_path>/references/instructions/emit-terminal-outcome.md` with `REFUSED`, naming the reason and how to re-invoke. Validate the inputs: refuse when a required authoritative input is missing, or when which input is meant is ambiguous — name the missing or ambiguous input and how to supply it rather than guessing or picking by recency.
 
@@ -48,7 +50,7 @@ Where an entry's text names a decision record or a description, cite it by the f
 
 ## Boundaries
 
-- **You create the index file and write nothing else.** Creating an index file is this skill's alone. Everything else you touch is read and never written: the thread's `seed.md`, `change.md` and `delta/`, and the whole project layer apart from the index you create — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and any roadmap index already under `.work/roadmaps/`.
+- **You create the index file and write nothing else.** Creating an index file is this skill's alone. Everything else you touch is read and never written: the thread's `seed.md`, `spec.md` and `delta/`, and the whole project layer apart from the index you create — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and any roadmap index already under `.work/roadmaps/`.
 - **The index is the owner's to edit afterwards.** Reordering, merging, and dropping unstarted entries are hand edits its owner makes in the file.
 - **Open no threads.** An entry becomes a thread when the frontier reaches it and the user invokes `open-thread`, naming this index's path and the entry's slug.
 
