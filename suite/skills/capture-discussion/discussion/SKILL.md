@@ -9,7 +9,7 @@ metadata:
 
 # Discussion
 
-Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges, then present that one fork and let the user settle it; present only real forks, and hold back the points that are not. The durable output is one thing: the one-line entries you append to the thread's `log.md`. The spec and every delta document under the thread's `delta/` are written afterwards, from what this discussion settles.
+Drive an open-ended interview about a topic the user wants to think through. Discover the questions live as the conversation unfolds — do not seed them up front, do not impose a point list. Stay conversational until a concrete decision fork emerges, then present that one fork and let the user settle it; present only real forks, and hold back the points that are not. The durable output is one thing: the one-line entries you append to the thread's `log.md`. The spec and every delta document under the thread's `delta/` are written afterwards, from what this discussion settles and the documents it accepts.
 
 ## Peer framing
 
@@ -43,8 +43,6 @@ A freshly opened thread holds only `seed.md` and an empty `log.md`; everything e
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the topic.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines.
 - The thread's `seed.md` — why the thread exists.
@@ -64,15 +62,25 @@ Any other thread is history: it records how its own work was understood at the t
 
 4. **Recognize when a concrete decision fork emerges.** Signals: the user asks "what should I do?", concrete alternatives are being weighed, or the conversation has narrowed to a single fork. When the signal lands and the point is a fork under `## Forks and inferences`, present exactly that one fork in chat, framed following the `<skill_path>/references/formats/discussion-point.md` format, then let the user settle it. A point that sorts as an inference is held back for step 7. Otherwise stay conversational; do not force a decision point onto every exchange.
 
-5. **Append the log line the moment a point settles**, before doing anything else with the point: follow `<skill_path>/references/instructions/append-log-line.md`. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
+5. **Append the log line the moment a point settles**, before doing anything else with the point: follow `<skill_path>/references/instructions/append-log-line.md`. A point that only fixes a term is the exception step 6 holds back. What stays your judgment is recognizing what was actually settled and writing it as a durable projection a fresh agent can act on.
 
-6. **Carry a fixed term and a directly requested delta document in the line itself.** When the settled point fixes a term — introduces one, changes its meaning, or retires it — the log line is a `decision` line stating the term and its meaning. When the user asks for a delta document directly, the request is what settled the point: record it as a `decision` line naming the document asked for, because the drafting belongs to the spec authoring.
+6. **Hold every document for the closing offer.** A point that fixes a term — introduces one, changes its meaning, or retires it — gets no log line when it settles: the term becomes a glossary candidate for step 8. When such a point settles something else as well, log that part under step 5, and leave the term out of its line. A document the user asks for directly during the discussion — a record, a glossary term, an agents-file change — joins the list step 8 offers, and is not logged when asked.
 
-7. **Close when no real fork remains.** There is no fixed limit on questions or points: work through the forks as they emerge without asking whether to continue, and ask about stopping exactly once, at the moment you judge that no real fork is left. Say that you see no more real forks, then list every point you are holding back as an inference — one bullet each, labelled either with the answer you would settle it with or as a choice best left to the implementer. The list is everything you hold back at that moment, never a sample; it is not an attempt to enumerate every inference the thread's `spec.md` will pin, which normally holds more, so do not stall trying to be exhaustive. State that these answers are non-binding, and that a point whose specific answer matters to the user is a fork to promote now. Then ask whether any bullet should be promoted or the discussion can stop. A promoted bullet is presented as a fork in the `<skill_path>/references/formats/discussion-point.md` format and settled like any other through steps 5 and 6; the rest stay unlogged. Name no next skill — the list already says where the material goes. The choice to stop is the user's.
+7. **Close when no real fork remains.** There is no fixed limit on questions or points: work through the forks as they emerge without asking whether to continue, and ask about stopping exactly once, at the moment you judge that no real fork is left. Say that you see no more real forks, then list every point you are holding back as an inference — one bullet each, labelled either with the answer you would settle it with or as a choice best left to the implementer. The list is everything you hold back at that moment, never a sample; it is not an attempt to enumerate every inference the thread's `spec.md` will pin, which normally holds more, so do not stall trying to be exhaustive. State that these answers are non-binding, and that a point whose specific answer matters to the user is a fork to promote now. Then ask whether any bullet should be promoted or the discussion can stop. A promoted bullet is presented as a fork in the `<skill_path>/references/formats/discussion-point.md` format and settled like any other through steps 5 and 6; the rest stay unlogged. Name no next skill — the list already says where the material goes. The choice to stop is the user's; once they agree to stop, move to step 8.
+
+8. **Offer the documents.** Run this step only after the user has agreed to stop at the inference list. Propose the candidates this thread would land in the project layer, in three groups:
+
+   - **Records** — each ADR or PDR, named with a concise gist of what it records, the settled points it covers, and its kind.
+   - **Agents-file changes** — each a short gist naming the file.
+   - **Glossary terms** — a bare list of the terms, with no meanings.
+
+   A record candidate passes the decision test `<skill_path>/references/formats/decision-record.md` states. A term candidate passes the admission test `<skill_path>/references/formats/glossary.md` states. An agents-file candidate holds only the content `<skill_path>/references/formats/agents-file.md` admits. Candidates cover additions, rewrites and removals of what the project layer holds, and the list includes every document the user asked for directly. Few or no candidates is a valid proposal; propose nothing just to fill a group.
+
+   The user accepts, merges or rejects each candidate. For each accepted candidate, counting a merge as one, append one `document` line by following `<skill_path>/references/instructions/append-log-line.md`, in the shape `<skill_path>/references/formats/log-line.md` fixes. A rejected candidate is logged nowhere. The line carries the gist only; the document's text is drafted by the spec authoring. Then state that the discussion is finished.
 
 ## What you write
 
-You write exactly one thing: lines appended to `log.md`. Nothing else you touch is written — the thread's `spec.md` and `delta/`, the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`) and the roadmap index are read here and never written.
+You write exactly one thing: lines appended to `log.md`. Nothing else you touch is written — the thread's `spec.md` and `delta/`, the project layer (`docs/adr/`, `docs/pdr/`, `docs/glossary.md` and every agents file) and the roadmap index are read here and never written.
 
 ## Scope drift
 
@@ -83,7 +91,7 @@ When the user opens a branch outside the topic under discussion, do not silently
 When the user signals they want to stop:
 
 1. Say so plainly.
-2. List the points settled this session, one per line, as the log lines you appended.
+2. List the points settled this session, one per line, as the log lines you appended — including the `document` lines appended at the closing offer.
 3. Name any deferred branches so they are not lost.
 4. Point the user at `log.md`.
 
