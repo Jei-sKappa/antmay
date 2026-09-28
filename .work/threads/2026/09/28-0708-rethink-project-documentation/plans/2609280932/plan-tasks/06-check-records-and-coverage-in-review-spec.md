@@ -4,7 +4,7 @@
 
 **Input / context:**
 - `spec.md`, `## The change` → `### Suite: skills`, the `review-spec` bullet.
-- This task drops the check that a drafted record passes the decision test. The reason is settled in `delta/docs/pdr/2609280900-project-layer-documents-enter-by-user-acceptance.md`: a document enters because the user accepted it, and an agent re-applying the test afterwards is the rejected alternative. The folder check and the argued-alternative check stay, because they judge the draft's fidelity rather than whether it should exist.
+- This task drops the check that a drafted record passes the decision test. `delta/docs/pdr/2609280900-project-layer-documents-enter-by-user-acceptance.md` settles that a document enters because the user accepted it, and `spec.md` `## Inferences` pins that `spec` does not re-apply the decision test to an accepted `document` entry, because re-applying it would let an agent veto an accepted document; a review re-applying the test would do the same. The folder check and the argued-alternative check stay, because they judge the draft's fidelity rather than whether it should exist.
 - Starts from the repository as task 5 left it. Task 1 gave `review-spec` a copy of `formats/agents-file.md` and rewrote its `formats/decision-record.md` copy. Task 3 rewrote its `formats/spec.md` copy with the new one rule.
 - The file to edit is `suite/skills/review/review-spec/SKILL.md`. Read it whole before editing.
 

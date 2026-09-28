@@ -22,7 +22,7 @@
 3. `suite/skills/roadmap/roadmap/SKILL.md`:
    - Apply step 1's two edits: the Inputs items and the never-written list after `**You create the index file and write nothing else.**`.
    - In the `delta/` item under `## Inputs`, change `the direction's settled records and descriptions as the thread drafted them` to `the direction's settled records, glossary terms and agents-file changes as the thread drafted them`.
-   - In the entries bullet, replace `each written in the form <skill_path>/references/formats/product-behavior.md fixes for a statement of what the product does` with `each one present-tense statement of what the product does once built`.
+   - In the entries bullet, replace ``each written in the form `<skill_path>/references/formats/product-behavior.md` fixes for a statement of what the product does`` with `each one present-tense statement of what the product does once built`.
    - Change `Where an entry's text names a decision record or a description, cite it` to `Where an entry's text names a decision record, cite it`.
 4. `suite/shared/manifest.yaml`: remove `formats/product-behavior.md` from the `skills/roadmap/roadmap` list.
 5. Delete the orphaned generated copy `suite/skills/roadmap/roadmap/references/formats/product-behavior.md` with `rm`. The manifest header says to delete an orphan by hand once its entry is removed.

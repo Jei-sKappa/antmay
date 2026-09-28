@@ -35,7 +35,7 @@
    - The `Planned behavior:` rule: replace `one present-tense statement per line, each written in the form a product behavior statement takes once the behavior is built` with `one present-tense statement per line, each stating what the product does once built`.
    - The last rule: change `the outcome lives in the code, the descriptions, the decision records and the threads` to `the outcome lives in the code, the decision records and the threads`.
 5. Edit `suite/shared/references/instructions/read-and-cite-the-project-layer.md`:
-   - Opening paragraph: the project-layer list becomes `docs/adr/` and `docs/pdr/` for its decision records, `docs/glossary.md` for its terms, the agents files (every `AGENTS.md` or `CLAUDE.md`) for its standing guidance to agents, and the roadmap indexes under `.work/roadmaps/`.
+   - Opening paragraph: the project-layer list becomes `docs/adr/` and `docs/pdr/` for its decision records, `docs/glossary.md` for its terms, the agents files (every `AGENTS.md` or `CLAUDE.md`) for its standing guidance to agents, and the roadmap indexes under `.work/roadmaps/`. The lead-in `what the method owns at fixed paths in every project` no longer fits a list holding files found anywhere in the project; reword it so it does not claim every path is fixed.
    - `## Read in this order`: delete items 3 (architecture description) and 4 (product behavior), and renumber the rest 1–5.
    - `## Cite by kind`: delete the bullet `A description is cited by path and heading.`
 6. From `suite/`, run `node scripts/sync-shared-references.mjs`, then `node scripts/check-skill-text.mjs`, then `node scripts/check-marketplace-skills.mjs`.

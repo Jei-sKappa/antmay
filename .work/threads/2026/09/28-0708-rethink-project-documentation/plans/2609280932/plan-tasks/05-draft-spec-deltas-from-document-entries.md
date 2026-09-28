@@ -10,7 +10,9 @@
 
 **Steps:**
 1. `## Inputs`: delete the `docs/architecture/<module>.md …` and `docs/product/<capability>.md …` items.
-2. The second opening paragraph (`A spec a downstream reader…`): change its closing clause to `— with every project-layer document the change lands carried by a delta document and cited rather than restated.`
+2. The opening paragraphs:
+   - First paragraph: change `draft the spec body and the delta documents that carry everything standing` to `draft the spec body and the delta documents that carry what the thread lands in the project layer`.
+   - Second paragraph (`A spec a downstream reader…`): change its closing clause to `— with every project-layer document the change lands carried by a delta document and cited rather than restated.`
 3. `## The spec`, the paragraph beginning `One rule governs every sentence`: change the rule to `every project-layer document the change lands is carried by a delta document and cited from here, never restated in the body.` Keep the `What stays in the body is what is thread-only…` sentence that follows.
 4. Rewrite `## Draft the delta documents`:
    - First paragraph: draft one delta document, or one operation within one, for each `document` entry of the log still in force, and from no other log line. An entry is in force until a later `document` entry on the same document supersedes it. The user accepted each entry when the discussion closed, so do not apply the decision test to it again. The entry's gist names what the document records; its text is drafted from the settled points the gist covers. The routing table in `<skill_path>/references/formats/spec.md` gives each entry its home.

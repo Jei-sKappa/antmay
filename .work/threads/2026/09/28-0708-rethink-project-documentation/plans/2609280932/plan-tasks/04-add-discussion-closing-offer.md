@@ -14,7 +14,7 @@
 2. Opening paragraph: change its last sentence to `The spec and every delta document under the thread's delta/ are written afterwards, from what this discussion settles and the documents it accepts.`, with `delta/` in backticks.
 3. `## Procedure` step 5: keep it. Add a clause saying a point that only fixes a term is the exception step 6 holds back.
 4. `## Procedure` step 6: replace it with a step headed along the lines of **Hold every document for the closing offer.** It says two things:
-   - A point that fixes a term, whether it introduces one, changes a meaning or retires one, gets no log line when it settles. The term becomes a glossary candidate for the closing offer.
+   - A point that fixes a term, whether it introduces one, changes a meaning or retires one, gets no log line when it settles. The term becomes a glossary candidate for the closing offer. A point that settles something else as well is logged for that part under step 5, and its line does not state the term.
    - A document the user asks for directly during the discussion (a record, a glossary term, an agents-file change) joins the closing offer's list and is not logged when asked.
 5. `## Procedure` step 7: keep it. Where it says a promoted bullet is settled `through steps 5 and 6`, keep that. After `The choice to stop is the user's.`, add that once the user agrees to stop, the discussion moves to step 8.
 6. Add `## Procedure` step 8, headed along the lines of **Offer the documents.** It runs only after the user has agreed to stop at the inference list, and it says:

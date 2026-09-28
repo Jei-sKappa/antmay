@@ -5,7 +5,7 @@
 **Input / context:**
 - `spec.md`, `## The change` → `### Suite: skills`, the `close-thread` bullet and its sub-bullets. The superseded path-check bullet is not in force.
 - The reasons are settled in `delta/docs/pdr/2609280900-project-layer-holds-no-descriptive-kinds.md`: agents files are project layer, bounded and reviewed.
-- `spec.md` `## Degrees of freedom` leaves open how `close-thread` works out what the thread changed. This task settles it with git: the diff from the parent of the commit that added the thread's `seed.md` to the working tree, plus untracked files, plus the targets of the thread's `delete` delta documents. That covers removed, renamed and touched paths.
+- `spec.md` `## Degrees of freedom` leaves open how `close-thread` works out what the thread changed. This task settles it with git: the diff from the parent of the commit that added the thread's `seed.md` to the working tree, plus untracked files, plus the target of every delta document the thread holds, and the folders those paths sit in. That covers removed, renamed and touched paths, and the touched folders.
 - Why the word count is arithmetic: every check runs before the first write, so the "after" count is worked out without applying the landing. Blocks are whole lines, so each operation changes the count by exactly the words of its blocks. Applying the arithmetic to this thread's `delta/AGENTS.md` gives 1,093 → 1,068, and to `delta/suite/AGENTS.md` 835 → 844, the counts `spec.md` states.
 - Starts from the repository as task 6 left it. Task 1 gave `close-thread` a copy of `formats/agents-file.md`. Task 3 let its `formats/delta-document.md` copy target agents files.
 - The file to edit is `suite/skills/close/close-thread/SKILL.md`. Read it whole before editing. Every command in the new text is inline code: `check-skill-text` rejects a fence with leading whitespace, and a fence inside a list item would need one.
@@ -28,9 +28,9 @@
    - List what the thread changed, outside `.work/`:
      - Take the base commit as `git log --diff-filter=A --format=%H -- <thread>/seed.md | tail -n 1`.
      - Collect `git diff --name-status -M <base>^ -- . ':(exclude).work'`. This covers the thread's commits and the working tree together. When the seed has no commit, use `git diff --name-status -M HEAD -- . ':(exclude).work'` instead.
-     - Add the untracked files from `git ls-files --others --exclude-standard -- . ':(exclude).work'` and the target of every `delete` delta document.
-     - The list holds the paths removed, both sides of each rename, and the paths added or modified. A folder counts as removed when no file under it remains.
-   - Search each agents file for mentions with `grep -n -F`. Search for every listed path, both repo-relative and relative to that agents file's folder. Also search for the last segment of every removed or renamed path and every removed folder.
+     - Add the untracked files from `git ls-files --others --exclude-standard -- . ':(exclude).work'` and the target of every delta document, whatever its type.
+     - The list holds the paths removed, both sides of each rename, and the paths added or modified. It also holds, as a touched folder, each folder a listed path sits in directly. A folder counts as removed when no file under it remains.
+   - Search each agents file for mentions with `grep -n -F`. Search for every listed path and touched folder, both repo-relative and relative to that agents file's folder. Also search for the last segment of every removed or renamed path and every removed folder.
    - Read only the matching passages, meaning the paragraph, list item or table row around each hit. Read them as they will stand once the landing applies. Where one of this thread's agents-file delta documents replaces or removes a passage, judge its new text. Search the text such a document adds as well.
    - Judge in natural language whether the thread's work made each passage false. Refuse per `## Refusals` on every false passage, quoting it together with the change that falsified it.
    - Make no finding about a passage that mentions nothing the thread changed. Propose no addition to any agents file: new content enters only through a discussion's closing offer.
