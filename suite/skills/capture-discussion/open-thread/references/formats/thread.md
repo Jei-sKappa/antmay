@@ -10,9 +10,8 @@ A thread is the folder holding one unit of work, from the idea that opened it to
 ├── log.md                                  the thread's memory, one line per entry
 ├── spec.md                               the spec, once authored
 ├── delta/                                  the thread's delta: one delta document per target
-│   └── docs/…                              mirrors the target path, e.g. delta/docs/adr/<stem>.md,
-│                                           delta/docs/pdr/<stem>.md, delta/docs/product/<capability>.md,
-│                                           delta/docs/architecture/<module>.md, delta/docs/glossary.md
+│   └── …                                   mirrors the target path, e.g. delta/docs/adr/<stem>.md,
+│                                           delta/docs/pdr/<stem>.md, delta/docs/glossary.md, delta/AGENTS.md
 ├── plans/<yymmddhhmm>[-<slug>]/            one plan: its index and its task briefs
 ├── implementations/<yymmddhhmm>[-<slug>]/  one implementation run
 │   ├── report.md                           that run's outcome

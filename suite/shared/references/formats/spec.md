@@ -1,6 +1,6 @@
 # Spec format
 
-`spec.md` at the thread root is **the spec**: the thread's design of one change, written once the discussion has settled, amended in place while the work runs, and historical once the thread closes. It is cited from every downstream artifact of the thread — the plan, the implementation report, the reviews — and it holds only what is thread-only. Everything the change makes standing lives in the thread's delta documents and is cited from here.
+`spec.md` at the thread root is **the spec**: the thread's design of one change, written once the discussion has settled, amended in place while the work runs, and historical once the thread closes. It is cited from every downstream artifact of the thread — the plan, the implementation report, the reviews — and it holds only what is thread-only. Every project-layer document the change lands lives in the thread's delta documents and is cited from here.
 
 ## Shape
 
@@ -44,12 +44,12 @@ plus any one-off work such as a migration or a data fix>
 ## Delta index
 
 - `delta/docs/adr/<stem>.md` — create
-- `delta/docs/product/<capability>.md` — edit
+- `delta/docs/glossary.md` — edit
 ```
 
 ## Rules
 
-- The one rule: a sentence that describes standing behavior of the product or standing structure of the system is written in a delta document and cited from the spec, never written in the spec's body.
+- The one rule: every project-layer document the change lands is carried by a delta document and cited from the spec, never restated in the body.
 - Heading names and their order are the author's choice; the body covers the goal, the context, scope and non-scope, constraints, the change, acceptance, degrees of freedom, inferences, and the delta index.
 - Acceptance is a flat checklist of behavior statements, one `- ` bullet per line, covering everything the implementer builds including what is obvious from the code.
 - A criterion carries no `FR-`, `AC-` or other identifier and no numbering. A plan task, a report row or a review finding references a criterion by quoting it verbatim.
@@ -61,13 +61,12 @@ plus any one-off work such as a migration or a data fix>
 
 ### Routing
 
-| A settled sentence that… | goes to | drafted by | lands |
+| A settled point that… | goes to | drafted by | lands |
 | --- | --- | --- | --- |
-| records a choice with a named rejected alternative about how the system is built | ADR (`create` delta) | the spec authoring | close |
-| records such a choice about what the product does or for whom | PDR (`create` delta) | the spec authoring | close |
-| describes built behavior the code does not make obvious | product behavior (`edit`/`create` delta) | the spec authoring | close |
-| describes built structure no single file makes obvious | architecture description (`edit`/`create` delta) | the spec authoring | close |
-| fixes a term | glossary (`edit`/`create` delta) | the spec authoring | close |
+| is a `document` entry naming an ADR | ADR (`create` delta) | the spec authoring | close |
+| is a `document` entry naming a PDR | PDR (`create` delta) | the spec authoring | close |
+| is a `document` entry naming the glossary | glossary (`edit`/`create` delta) | the spec authoring | close |
+| is a `document` entry naming an agents file | that agents file (`edit`/`create`/`delete` delta) | the spec authoring | close |
+| is a rule or guideline for agents | an agents file, through a `document` entry naming it | the spec authoring | close |
 | describes behavior settled but not yet built | the roadmap entry that will build it | the `roadmap` skill or its owner | in place |
 | is thread-only design, a criterion, a constraint of this change | the spec body | the spec authoring | never |
-| is a rule or guideline for agents | no method-owned home | — | — |

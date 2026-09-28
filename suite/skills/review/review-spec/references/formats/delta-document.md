@@ -1,6 +1,6 @@
 # Delta-document format
 
-A **delta document** is one file in a thread's `delta/`, naming one project-layer file as its target and carrying one of three types: `create`, whose body is the whole new file; `edit`, whose body is literal `add`, `replace` and `remove` operations against the target's recorded blob hash; or `delete`, which names the target and its hash and nothing else. It names its target by mirroring the target's path under `delta/`, so a document at `delta/docs/product/onboarding.md` targets `docs/product/onboarding.md`. The thread's **delta** is the whole folder: authoritative inside the thread from the moment a document is written, and applied to the project layer only when the thread closes.
+A **delta document** is one file in a thread's `delta/`, naming one project-layer file as its target and carrying one of three types: `create`, whose body is the whole new file; `edit`, whose body is literal `add`, `replace` and `remove` operations against the target's recorded blob hash; or `delete`, which names the target and its hash and nothing else. It names its target by mirroring the target's path under `delta/`, so a document at `delta/suite/AGENTS.md` targets `suite/AGENTS.md`. The thread's **delta** is the whole folder: authoritative inside the thread from the moment a document is written, and applied to the project layer only when the thread closes.
 
 ## Shape
 
@@ -23,22 +23,22 @@ hash: <git blob hash>
 ---
 
 ## add
-under: `## Saving`
+under: `## Layout`
 ```
-- Saving a card that is already saved is a no-op and shows no error.
+- `scripts/` holds the release helpers.
 ```
 
 ## replace
 ```
-- Reset codes expire after 30 minutes.
+- Run `npm test` before every commit.
 ```
 ```
-- Reset codes expire after 15 minutes.
+- Run `npm run check` before every commit.
 ```
 
 ## remove
 ```
-- Explore shows a second feed.
+- `legacy/` holds the old importer.
 ```
 ````
 
@@ -61,5 +61,6 @@ hash: <git blob hash>
 - A `replace` carries two blocks: the exact existing text, then the new text. A `remove` carries one block: the exact existing text.
 - Exact means exact after normalising line ends and trailing spaces.
 - An `edit` may carry several `## add`, `## replace` and `## remove` sections; they apply in document order.
-- A `create` targets a file that does not exist. For `docs/adr/` or `docs/pdr/` its body is the decision-record format, and the record's stem is assigned when the document is first written and never changes; for `docs/glossary.md`, `docs/product/<capability>.md` or `docs/architecture/<module>.md` its body is the whole file in that kind's format.
+- A `create` targets a file that does not exist. For `docs/adr/` or `docs/pdr/` its body is the decision-record format, and the record's stem is assigned when the document is first written and never changes; for `docs/glossary.md` or an agents file its body is the whole file in that kind's format.
+- An `edit` or a `delete` targets a project-layer file that exists, an agents file included.
 - A `delete` has no body: the frontmatter is the whole document.
