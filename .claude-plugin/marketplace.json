@@ -13,7 +13,6 @@
         "./skills/implement/implement-plan",
         "./skills/implement/implement-plan-with-subagents",
         "./skills/model-invoked/consult-decisions",
-        "./skills/model-invoked/consult-descriptions",
         "./skills/plan/check-plan",
         "./skills/plan/plan-brief",
         "./skills/plan/plan-strict",

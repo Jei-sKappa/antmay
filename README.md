@@ -72,7 +72,7 @@ Every completion-oriented skill ends its final message with exactly one **termin
 Outcome: <DONE | BLOCKED | REFUSED> — <one-line reason or pointer>
 ```
 
-`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the one outcome vocabulary the whole suite shares. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills such as `discussion` emit no terminal outcome, and neither do the one-shot deliverables `open-thread` and `open-ticket`, nor the two model-invoked skills below — their questions, their finished deliverable, or their narrow written artifact are the output.
+`DONE` means the requested job completed (non-blocking concerns included), `BLOCKED` means substantive execution started but stopped — on queued pending decisions or an unfixable defect — and `REFUSED` means preflight prevented the run from starting. This three-token protocol is the one outcome vocabulary the whole suite shares. A skill may define **skill-local return tokens** for its own internals — such as the subagent reply tokens and reviewer lane verdicts inside `implement-plan-with-subagents` — but those are private routing inputs, never terminal outcomes, and never appear outside the skill that defines them. Dialogue-driven skills such as `discussion` emit no terminal outcome, and neither do the one-shot deliverables `open-thread` and `open-ticket`, nor the model-invoked skill below — their questions, their finished deliverable, or their narrow written artifact are the output.
 
 ## Skills
 
@@ -224,7 +224,7 @@ npx skills add Jei-sKappa/antmay --skill close-thread
 
 ## Model-invoked skills
 
-The two skills below are **model-invoked**: the model may reach for them on its own whenever they help, whether or not another skill is running, because what they read is useful in any situation. They ship as part of the suite, so installing it installs them too; the snippets are here for completeness.
+The skill below is **model-invoked**: the model may reach for it on its own whenever it helps, whether or not another skill is running, because what it reads is useful in any situation. It ships as part of the suite, so installing the suite installs it too; the snippets are here for completeness.
 
 #### [`consult-decisions`](./suite/skills/model-invoked/consult-decisions/SKILL.md)
 
@@ -232,14 +232,6 @@ Expects a project whose `docs/adr/` or `docs/pdr/` holds at least one record, an
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill consult-decisions
-```
-
-#### [`consult-descriptions`](./suite/skills/model-invoked/consult-descriptions/SKILL.md)
-
-Expects a project whose `docs/product/` or `docs/architecture/` holds at least one description, and is not invoked otherwise; leaves nothing on disk — it lists what the project has described of itself, opens the product behavior and the architecture description the work touches, and says how each is cited and read.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill consult-descriptions
 ```
 
 ## Contributing
