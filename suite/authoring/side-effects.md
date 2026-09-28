@@ -25,10 +25,10 @@ skill writes outside its own slice or into another thread's files:
   own implementation folder with its `report.md` and its `.runs/`, and nothing
   in the project layer.
 - `close-thread` alone writes the project layer by landing the thread's delta
-  documents — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`,
-  `docs/glossary.md`, and the `superseded/` folders records move into — plus the
-  closing line beneath one roadmap entry; it also appends the thread's closing
-  event and leaves the thread folder where it is.
+  documents — `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, the agents files,
+  and the `superseded/` folders records move into — plus the closing line
+  beneath one roadmap entry; it also appends the thread's closing event and
+  leaves the thread folder where it is.
 - `roadmap` alone creates a roadmap index under `.work/roadmaps/`.
 
 An implement skill reads its spec and its plan and edits neither: a

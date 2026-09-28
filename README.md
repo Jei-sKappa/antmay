@@ -43,18 +43,15 @@ plans/             one folder per plan
 implementations/   one folder per implementation run
 ```
 
-The **project layer** is what outlives any single thread. It is created lazily, never a prerequisite, and always at the same paths:
+The **project layer** is what outlives any single thread. It is created lazily, never a prerequisite, and made of these documents:
 
 - `docs/adr/` — the project's current decisions about how the system is structured or built, one file per record.
 - `docs/pdr/` — the same, for decisions about what the product does or for whom.
-- `docs/product/` — what the product does now, one file per capability.
-- `docs/architecture/` — how the system is structured now, one file per module.
 - `docs/glossary.md` — the project's terms, one meaning each.
+- Every `AGENTS.md` or `CLAUDE.md`, wherever it sits — the agents files: critical rules, how the repository is structured and where to find things, and pointers, each kept under 1,000 words.
 - `.work/roadmaps/` — one index per larger direction, as ordered entries carrying the behavior each will build.
 
 A thread's `delta/` is its draft of that layer, authoritative inside the thread from the moment it is written. `close-thread` alone lands it: each delta document is applied to the project-layer file it names, a closing line goes under the roadmap entry the thread came from, and the thread log records whether the delta landed. The thread folder stays exactly where it is, as the record of how the work was understood while it was being done.
-
-[`docs/product/method.md`](./docs/product/method.md) describes the whole method: how the skills relate, what each produces, and how this repository runs on it.
 
 ### Keeping thread references out of code
 
@@ -98,7 +95,7 @@ npx skills add Jei-sKappa/antmay --skill open-ticket
 
 #### [`discussion`](./suite/skills/capture-discussion/discussion/SKILL.md)
 
-Expects a thread and a topic to think through; leaves one log line per settled point.
+Expects a thread and a topic to think through; leaves one log line per settled point, and one `document` line per project-layer document you accept when the discussion closes.
 
 ```sh
 npx skills add Jei-sKappa/antmay --skill discussion
@@ -236,4 +233,4 @@ npx skills add Jei-sKappa/antmay --skill consult-decisions
 
 ## Contributing
 
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) covers how issues are classified and estimated, the commit and pull-request conventions, and the checks to run before proposing a change. Beyond it: [`docs/documentation-rules.md`](./docs/documentation-rules.md) is how this repository's documents are written, [`docs/product/method.md`](./docs/product/method.md) is the method it runs on itself, and [`suite/authoring/`](./suite/authoring/) holds the conventions every skill is authored to.
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) covers how issues are classified and estimated, the commit and pull-request conventions, and the checks to run before proposing a change. Beyond it: [`docs/documentation-rules.md`](./docs/documentation-rules.md) is how this repository's documents are written, and [`suite/authoring/`](./suite/authoring/) holds the conventions every skill is authored to.
