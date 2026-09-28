@@ -17,15 +17,14 @@ Gather all of these before running the checks; everything below works from what 
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write, and the target of the thread's glossary delta document when it carries one.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now, and the targets of the thread's architecture delta documents.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now, and the targets of the thread's product delta documents.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the thread, and the folders the thread's records land beside.
+- Every agents file in the project, in the shape `<skill_path>/references/formats/agents-file.md` defines, listed with `git ls-files --cached --others --exclude-standard -- ':(glob)**/AGENTS.md' ':(glob)**/CLAUDE.md' ':(exclude).work'`; a `CLAUDE.md` that is a symlink (`test -L`) is counted once, with the file it links to. The project's `AGENTS.md` is still read as standing guidance, but the budget check and the passage check read no agents file whole: each is what the budget check counts and what the passage check searches.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`, in the shape `<skill_path>/references/formats/roadmap-index.md` defines; that heading is where the closing line goes.
 - The thread to close — the folder the invocation names, in the shape `<skill_path>/references/formats/thread.md` defines. Everything below is read inside it.
 - The thread's `log.md` — the thread's memory and the place closure is recorded, in the shape `<skill_path>/references/formats/log-line.md` defines.
 - The thread's `seed.md` — why the thread exists and what it set out to reach. When its frontmatter carries a `roadmap` mapping, `roadmap.path` and `roadmap.entry` name the roadmap index this thread was opened from and the slug of its entry.
 - The thread's `spec.md`, when the file exists — the spec, whose claims the currency check reads.
-- The thread's `delta/`, when present — the delta to land: every delta document in the shape `<skill_path>/references/formats/delta-document.md` defines, each `create` under `delta/docs/adr/` or `delta/docs/pdr/` carrying a body in the shape `<skill_path>/references/formats/decision-record.md` defines.
+- The thread's `delta/`, when present — the delta to land: every delta document in the shape `<skill_path>/references/formats/delta-document.md` defines, each `create` under `delta/docs/adr/` or `delta/docs/pdr/` carrying a body in the shape `<skill_path>/references/formats/decision-record.md` defines, and each delta document whose target is an agents file carrying content in the shape `<skill_path>/references/formats/agents-file.md` defines.
 - For every `edit` and `delete` delta document, its target file and that file's current blob hash from `git hash-object <target>` on the working tree — what the dry run reads the recorded `hash` and every quoted operation against.
 - Every `implementations/<folder>/report.md` the thread holds — what each implementation delivered, in the shape `<skill_path>/references/formats/implementation-report.md` defines; its `## Deviations` entries and the delivered changes it describes are what the currency check reads.
 - The contents of `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/` — the thread's workspaces, inspected by listing what each holds. You need their names and whether they are empty, not their contents.
@@ -34,7 +33,7 @@ Any other thread is history: it records how its own work was understood at the t
 
 ## Checks before any write
 
-Run all six, in order, and all of them before the first write. They are reads; none of them changes anything.
+Run all eight, in order, and all of them before the first write. They are reads; none of them changes anything.
 
 1. **Prior closure** — when `log.md` already contains the closing event, refuse per `## Refusals` unless the invocation explicitly says to proceed anyway.
 
@@ -56,9 +55,28 @@ Run all six, in order, and all of them before the first write. They are reads; n
 
    Every stop goes to `## Blocked`, naming the file and the mismatch, with nothing written for it. A delta document that is structurally malformed is a refusal, per `## Refusals`, not this path.
 
-5. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry line is written.
+5. **Agents-file budget** — for each agents file a `create` or an `edit` delta document targets, count its words before and after the landing, without reading the file:
+   - before is `wc -w < <file>`, or zero for a `create`;
+   - after, for a `create`, is the word count of its body;
+   - after, for an `edit`, is the before count, minus the words of every block the operations take out — each `remove` block, and each `replace` block's existing text — plus the words of every block they put in — each `add` block, and each `replace` block's new text. Skip any operation the dry run found already done;
+   - count each block by passing it to `wc -w` through a quoted heredoc, so nothing in the block is expanded;
+   - a `delete` is never over budget.
 
-6. **Workspaces** — list `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/`. A non-empty `.pending-decisions/` blocks the close: name its bundles and stop per `## Blocked`, unless the invocation says explicitly to close anyway, in which case the close proceeds and the bundles are named in the report. Non-empty `.pending-reviews/` folders and run-state folders never block: leave them in place and name them in the report.
+   When a file's after count is over 1,000 and greater than its before count, refuse per `## Refusals`, naming the file and both counts.
+
+6. **Agents-file passages** — does every agents file still say something true once the thread's work stands? First list what the thread changed, outside `.work/`:
+   - take the base commit as `git log --diff-filter=A --format=%H -- <thread>/seed.md | tail -n 1`;
+   - collect `git diff --name-status -M <base>^ -- . ':(exclude).work'`, which covers the thread's commits and the working tree together; when the seed has no commit, collect `git diff --name-status -M HEAD -- . ':(exclude).work'` instead;
+   - add the untracked files from `git ls-files --others --exclude-standard -- . ':(exclude).work'`, and the target of every delta document, whatever its type;
+   - the list holds the paths removed, both sides of each rename, and the paths added or modified, and, as a touched folder, each folder a listed path sits in directly. A folder counts as removed when no file under it remains.
+
+   Search each agents file for mentions with `grep -n -F`: every listed path and touched folder, both repo-relative and relative to that agents file's folder, and the last segment of every removed or renamed path and every removed folder. Read only the matching passages — the paragraph, list item or table row around each hit — as they will stand once the landing applies: where one of this thread's agents-file delta documents replaces or removes a passage, judge its new text, and search the text such a document adds as well.
+
+   Judge in natural language whether the thread's work made each passage false, and refuse per `## Refusals` on every false passage, quoting it together with the change that falsified it. Make no finding about a passage that mentions nothing the thread changed, and propose no addition to any agents file: new content reaches an agents file only through a discussion's closing offer.
+
+7. **Roadmap reference** — when the seed frontmatter carries a `roadmap` mapping, the index file exists at `roadmap.path` and a heading whose text is `roadmap.entry` exists inside it. A missing file or a missing heading goes to `## Blocked`. When the seed carries no such mapping, this check passes and no entry line is written.
+
+8. **Workspaces** — list `.pending-decisions/`, `.pending-reviews/`, and every `implementations/<folder>/.runs/`. A non-empty `.pending-decisions/` blocks the close: name its bundles and stop per `## Blocked`, unless the invocation says explicitly to close anyway, in which case the close proceeds and the bundles are named in the report. Non-empty `.pending-reviews/` folders and run-state folders never block: leave them in place and name them in the report.
 
 ## Blocked
 
@@ -96,8 +114,10 @@ Refuse before any write, naming what is wrong and how to re-invoke, and follow `
 - A delta document's path under `delta/` does not mirror a project-layer path, so it names no target.
 - An `edit` delta document carries an operation that is not literal text — an instruction to make a change rather than the text to add, replace or remove.
 - A `create` under `delta/docs/adr/` or `delta/docs/pdr/` whose stem already exists in that folder's `superseded/`; re-invoke after resolving the duplicate record. A stem present in the folder itself is an existing target, which the dry run stops on and puts to the user.
+- An agents file the landing changes would end over 1,000 words and longer than it was. Name the file with both counts; re-invoke once an `edit` delta document for that file, drafted through `spec` from an accepted `document` entry, brings it within budget or no longer than it was.
+- An agents-file passage the thread's work made false. Quote each such passage with the change that falsified it; re-invoke once an `edit` delta document for that agents file, drafted through `spec` from an accepted `document` entry, corrects it.
 - The thread log already contains the closing event and the invocation does not explicitly say to proceed anyway.
 
 ## Write boundary
 
-You write exactly these: the project-layer files the thread's delta documents target — under `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, and `docs/glossary.md` — the records moved into a `superseded/` folder beside them, one `Closed:` line beneath one entry heading of the roadmap index the seed names, and the closing event in this thread's `log.md`. Nothing else you touch is written, and no file of any other thread is written under any circumstance. The thread's `delta/` stays in place as its historical snapshot. You do not stage, commit, or push.
+You write exactly these: the project-layer files the thread's delta documents target — under `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, and every agents file — the records moved into a `superseded/` folder beside them, one `Closed:` line beneath one entry heading of the roadmap index the seed names, and the closing event in this thread's `log.md`. Nothing else you touch is written, and no file of any other thread is written under any circumstance. The thread's `delta/` stays in place as its historical snapshot. You do not stage, commit, or push.
