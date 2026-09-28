@@ -23,7 +23,7 @@ outside it:
 - a `## Rules` section, one rule per bullet, covering which parts are required,
   what each part carries, naming, ordering, and what never appears.
 
-Vocabulary an artifact fixes — the log's seven entry types, say — is a rule with
+Vocabulary an artifact fixes — the log's eight entry types, say — is a rule with
 its enumeration inline. A command, a procedure, or a policy is never a format
 section: it belongs in an instruction or in a model-invoked skill. One skeleton
 for every format makes each of them readable in the same way, and makes behaviour

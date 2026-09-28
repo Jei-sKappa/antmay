@@ -25,6 +25,10 @@
   Example: `- (direction) the thread is moving the whole reporting surface off the synchronous path`
 - `event` — a moment in the thread's life, such as an artifact being authored or the thread closing.
   Example: `- (event) spec authored from the conversation`
+- `document` — a project-layer document the user accepted when a discussion closed, naming the document and what it will record. The first slot is `ADR`, `PDR`, `glossary`, or the path of an agents file.
+  Shape: `- (document) <ADR|PDR|glossary|agents-file path>: <gist>`
+  Example: `- (document) ADR: exports run on the queue worker, because the request path cannot hold a multi-minute job`
+  Example: `- (document) glossary: export run, one execution of an export from request to stored file`
 
 ## Rules
 
@@ -32,8 +36,9 @@
 - Each entry is exactly one line, and its gist states what settled and carries its reason in the same sentence.
 - A `decision` entry that carries a rejected alternative states it after what settled, with the reason it was rejected, and names every alternative the point had to overcome while remaining one line.
 - A line has no identifier and no timestamp; order in the file is the only structure.
-- Every line uses one of the seven types listed under `### Types`.
-- A thought that fits none of the seven types is not a log entry and is left out of the file.
+- Every line uses one of the eight types listed under `### Types`.
+- A thought that fits none of the eight types is not a log entry and is left out of the file.
+- A `document` line is written only by a discussion's closing offer, one line per candidate the user accepted.
 - A terminal moment — an artifact authored, a run blocked, the thread closed — is an `event` line; the log carries no lifecycle status field.
 - Successful closing is recorded as `- (event) thread closed; delta: <landed|none>`, where the value states whether the thread's delta was applied to the project layer or was absent.
 - The file is append-only: a later entry supersedes an earlier one on the same point, and the earlier one stays where it is, so the history remains intact.
