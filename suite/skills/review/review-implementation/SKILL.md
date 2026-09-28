@@ -19,8 +19,6 @@ Gather all of these before judging; the procedure below works from what you gath
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the reviewed work.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The implementation folder under review** — the primary input, in one of two accepted forms. When the invocation **names a folder** under `implementations/`, that folder is the form; otherwise the form is the **newest folder under `implementations/` by stamp**. It is the boundary of what this review covers.
@@ -84,7 +82,7 @@ When you hold one or more findings, record them by following `<skill_path>/refer
 
 Your category vocabulary is `acceptance`, `constraints`, `scope`, `behavior`, `test-coverage`, `citation`, or the variation you used, and the evidence for a finding is the code location together with the anchor section or report claim it fails against. You emit one bundle per review run: that bundle is the only place findings go, and recording them there is where your job ends.
 
-That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the delivered code, the implementation folder and its `report.md`, the plan folder the report names, `spec.md`, the thread's `delta/`, `seed.md`, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md` and the roadmap indexes. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
+That bundle is the one thing a review run writes, and only when it holds findings. Everything else you touch is read and never written: the delivered code, the implementation folder and its `report.md`, the plan folder the report names, `spec.md`, the thread's `delta/`, `seed.md`, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/glossary.md` and the roadmap indexes. A criterion, constraint, or record you judge to be wrong is a finding you record in the bundle, never an edit you make.
 
 ## After the review
 

@@ -20,9 +20,8 @@ moment the wording is chosen. Write it as the seed's opening account, not as a
 note toward one.
 
 You write nothing to disk. The ticket in the tracker and the URL you report are
-the whole result; the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`,
-`docs/architecture/`, `docs/glossary.md`, and the roadmap index — is read here
-and never written.
+the whole result; the project layer — `docs/adr/`, `docs/pdr/`,
+`docs/glossary.md`, and the roadmap index — is read here and never written.
 
 ## Inputs
 
@@ -33,10 +32,6 @@ gather here.
   guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be
   used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches,
-  read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches,
-  read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project
   decisions bearing on the idea.
 - The repository's convention files, found and read as

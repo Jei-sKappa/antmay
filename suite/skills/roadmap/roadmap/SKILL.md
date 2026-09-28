@@ -19,13 +19,11 @@ Gather all of these before drafting; everything below works from what you gather
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the direction.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's `seed.md` — why the thread exists and what the direction is meant to reach.
 - The thread's `spec.md`, when the file exists — the direction's spec.
-- The thread's `delta/`, when present — the direction's settled records and descriptions as the thread drafted them, which inside the thread take precedence over the project layer. They reach the project layer when the thread closes, so the index restates none of them; what they leave unbuilt is what the entries carry as planned behavior.
+- The thread's `delta/`, when present — the direction's settled records, glossary terms and agents-file changes as the thread drafted them, which inside the thread take precedence over the project layer. They reach the project layer when the thread closes, so the index restates none of them; what they leave unbuilt is what the entries carry as planned behavior.
 
 Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
@@ -42,15 +40,15 @@ Write one file, `.work/roadmaps/<yymmddhhmm>-<slug>.md`, in the shape `<skill_pa
 What the file holds:
 
 - **The destination** — what reaching this direction means, and how it will be recognised.
-- **The entries**, in order, each a heading whose text is a short kebab-case slug unique within the index. That slug is the entry's identifier, recorded together with the index path in the seed of a thread opened from it, so choose slugs that read as names and keep them distinct. Beneath the heading goes a one-paragraph sketch of the work the entry covers, then a `Scope:` line drawing its boundary — what it includes and where it stops, then a `Planned behavior:` list: the behavior the thread opened from that entry will build, one statement per line, each written in the form `<skill_path>/references/formats/product-behavior.md` fixes for a statement of what the product does. The entry is the only home that behavior has until it is built, so behavior the direction settled and no entry owns is behavior nothing will build.
+- **The entries**, in order, each a heading whose text is a short kebab-case slug unique within the index. That slug is the entry's identifier, recorded together with the index path in the seed of a thread opened from it, so choose slugs that read as names and keep them distinct. Beneath the heading goes a one-paragraph sketch of the work the entry covers, then a `Scope:` line drawing its boundary — what it includes and where it stops, then a `Planned behavior:` list: the behavior the thread opened from that entry will build, one statement per line, each one present-tense statement of what the product does once built. The entry is the only home that behavior has until it is built, so behavior the direction settled and no entry owns is behavior nothing will build.
 - **The out-of-scope list** — what the direction deliberately excludes. It is where the release scope of the direction lives, and it lasts exactly as long as the index does.
 - **The not-yet-specified note** — what cannot yet be seen well enough to become an entry.
 
-Where an entry's text names a decision record or a description, cite it by the form its kind fixes, as set out in `<skill_path>/references/instructions/read-and-cite-the-project-layer.md`.
+Where an entry's text names a decision record, cite it by the form its kind fixes, as set out in `<skill_path>/references/instructions/read-and-cite-the-project-layer.md`.
 
 ## Boundaries
 
-- **You create the index file and write nothing else.** Creating an index file is this skill's alone. Everything else you touch is read and never written: the thread's `seed.md`, `spec.md` and `delta/`, and the whole project layer apart from the index you create — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and any roadmap index already under `.work/roadmaps/`.
+- **You create the index file and write nothing else.** Creating an index file is this skill's alone. Everything else you touch is read and never written: the thread's `seed.md`, `spec.md` and `delta/`, and the whole project layer apart from the index you create — `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, and any roadmap index already under `.work/roadmaps/`.
 - **The index is the owner's to edit afterwards.** Reordering, merging, and dropping unstarted entries are hand edits its owner makes in the file.
 - **Open no threads.** An entry becomes a thread when the frontier reaches it and the user invokes `open-thread`, naming this index's path and the entry's slug.
 

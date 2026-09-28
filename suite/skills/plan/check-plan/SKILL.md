@@ -17,8 +17,6 @@ Gather all of these before checking; everything below works from what you gather
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the plan.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's **`spec.md`** — the spec, the sole authority for every correction you make; it comes in the shape `<skill_path>/references/formats/spec.md` defines. A fault is a fault only because the spec says so, and a fix is available only because the spec settles it. Required: the check does not run on a thread that holds no `spec.md`.
@@ -50,7 +48,7 @@ Every correction edits the task the fault sits in, or adds the missing coverage 
 
 ## Write boundary
 
-You write files inside the checked plan folder only: its `plan.md`, and its `plan-tasks/NN-<kebab-slug>.md` files when the plan is strict. Nothing else you touch is written — the thread's `spec.md` and its `delta/`, other plan folders, the thread's implementations, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/`) — are read here and never written.
+You write files inside the checked plan folder only: its `plan.md`, and its `plan-tasks/NN-<kebab-slug>.md` files when the plan is strict. Nothing else you touch is written — the thread's `spec.md` and its `delta/`, other plan folders, the thread's implementations, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/`) — are read here and never written.
 
 ## Procedure
 

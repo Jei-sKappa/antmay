@@ -17,8 +17,6 @@ Gather the following before composing any field; the composition below works fro
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the starting point.
 - The roadmap index under `.work/roadmaps/`, when supplied — a project-level file for composing the seed. Find the entry in it as a heading whose text is the supplied slug, in the shape `<skill_path>/references/formats/roadmap-index.md` defines, and read that entry's sketch and scope boundary. When the index carries no heading with that slug, create nothing: tell the user the slug is absent and name the slugs the index does carry, so they can correct the invocation.
 - The ticket, when supplied — material for composing the seed; read it as `<skill_path>/references/supplied-ticket.md` directs.
@@ -56,7 +54,7 @@ Follow `<skill_path>/references/instructions/create-thread.md` with those fields
 
 ## What you write
 
-The new thread folder with its `seed.md` and `log.md` is the whole result; `<skill_path>/references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and the roadmap index — is read here and never written.
+The new thread folder with its `seed.md` and `log.md` is the whole result; `<skill_path>/references/formats/thread.md` fixes the layout it belongs to. Nothing else you touch is written: the ticket is read through its tracker with no tracker writes at all, and the project layer — `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, and the roadmap index — is read here and never written.
 
 ## Report
 

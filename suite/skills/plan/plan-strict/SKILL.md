@@ -17,8 +17,6 @@ Gather all of these before drafting; everything below works from what you gather
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the design.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The design the plan implements** — the primary input, in one of two accepted forms. The thread's **`spec.md`** is the form when the file exists, and it is the plan's authority: its goal, its account of the change, and its constraints drive the task list directly, its acceptance checklist maps onto per-task acceptance criteria, and its degrees-of-freedom section tells the plan which *hows* are open. It comes in the shape `<skill_path>/references/formats/spec.md` defines. When the invocation names a **referenced artifact** instead — a repository path, a GitHub issue (a full `https://github.com/<owner>/<repo>/issues/<NNN>` URL or the short `owner/repo#NNN` form), or the user's own prompt when nothing else is named — that reference is the form; it is material, and it carries no authority over a `spec.md` the thread holds.
@@ -35,7 +33,7 @@ If which input is meant is ambiguous — a reference names "the design" with no 
 
 Every invocation writes into its own new folder `plans/<yymmddhhmm>[-<slug>]/` under the thread root, creating `plans/` on demand. The stamp is the folder's creation time in UTC at minute resolution. Append `-<slug>`, a short kebab-case name for the plan's purpose, when the invocation names one, or when a folder carrying that stamp already exists. Inside that folder you write the index `plan.md` and the task briefs under `plan-tasks/`, and nothing else; never write into a plan folder an earlier invocation created.
 
-You write exactly those files: `plan.md` and `plan-tasks/NN-<kebab-slug>.md` inside the plan folder you created. Nothing else you touch is written — the thread's `spec.md` and its `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/`) — are read here and never written.
+You write exactly those files: `plan.md` and `plan-tasks/NN-<kebab-slug>.md` inside the plan folder you created. Nothing else you touch is written — the thread's `spec.md` and its `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/glossary.md`, and the roadmap indexes under `.work/roadmaps/`) — are read here and never written.
 
 ## Plan Artifact Contract
 

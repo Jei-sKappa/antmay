@@ -17,8 +17,6 @@ Gather all of these before settling any point; the procedure below works from wh
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the queued points.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The queued bundles** under the thread's `.pending-decisions/` — the primary input, in one of two accepted forms, each in the shape `<skill_path>/references/formats/pending-decision-bundle.md` defines. When the invocation names a **bundle path**, that file is the form. Otherwise the form is the **folder's queue** of bundles.
@@ -53,9 +51,9 @@ An answer that merely repairs which input the producer meant is a clarification 
 
 Every other answer is written the moment it settles. **Append the log line first**, before acting on the answer in any other way: follow `<skill_path>/references/instructions/append-log-line.md`.
 
-That line is the whole write. A point that changes the design, fixes a term or earns a decision record reaches the spec and the thread's `delta/` through the spec authoring's amendment pass, which works from the log entries appended since the spec last stood current; `## Follow-through` is where you recommend that pass. When the answer is instead that the code must change, the design already states the intent: say in chat that running an implementation is the next step.
+That line is the whole write. A point that changes the design, or the content of a document the log already carries a `document` entry for, reaches the spec and the thread's `delta/` through the spec authoring's amendment pass, which works from the log entries appended since the spec last stood current. The line you append is never a `document` line: a document enters the project layer only through a discussion's closing offer. `## Follow-through` is where you recommend that pass. When the answer is instead that the code must change, the design already states the intent: say in chat that running an implementation is the next step.
 
-You write exactly these: lines appended to the thread's `log.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — the thread's `spec.md` and `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`) are read here and never written.
+You write exactly these: lines appended to the thread's `log.md`, and the bundle files under `.pending-decisions/`. Nothing else you touch is written — the thread's `spec.md` and `delta/`, and the project layer (`docs/adr/`, `docs/pdr/`, `docs/glossary.md`) are read here and never written.
 
 ## Follow-through
 
