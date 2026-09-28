@@ -19,12 +19,10 @@ Gather all of these before deriving implicit tasks; everything below works from 
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the implementation.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - The thread's `spec.md`, when the file exists — the spec, whose acceptance checklist the implementation answers to.
-- The thread's `delta/`, when present — the thread's delta of the project layer, which inside the thread takes precedence over the project records and holds the standing behavior and structure the change adds.
+- The thread's `delta/`, when present — the thread's delta of the project layer, which inside the thread takes precedence over the project records and holds the decision records, glossary terms and agents-file changes the change lands.
 - The thread's `seed.md` — why the thread exists and what triggered it.
 - **The work to carry to code** — the primary input, in one of two accepted forms. When the invocation points at a **plan folder** under `plans/`, that folder is the form: the folder it names, or the newest folder under `plans/` by stamp when it points at `plans/` without naming one. Read its `plan.md`, whose ordered steps are what the run executes, together with the brief each step indexes under `plan-tasks/` when the folder holds them — a brief carries its step's files, verification, and acceptance criteria. Otherwise the form is a **referenced artifact or the user's prompt**: a repository path, a directory, a git ref, a GitHub issue (full URL or the short `owner/repo#NNN` form), or the user's prompt itself when nothing else is named; the run derives its implicit tasks from it either way.
 - Every `implementations/*/report.md` whose `Plan:` line names the same plan folder, when present — the record of what earlier passes over that plan already delivered; a task one of them records as completed is skipped once it is verified against the code.
@@ -136,7 +134,7 @@ The policy is judgment-based and surfaced through the factual progress block and
 
 **A discovery with parent- or sibling-level impact** — something that would change a project decision, or that belongs to a direction wider than this thread — is surfaced to the user in chat and reported under the report's `## Follow-ups`. It is never drafted as a decision record, a delta document or a roadmap entry; surfacing and reporting it is the whole action.
 
-**Write boundary.** You write the project's code, tests, configuration and living documentation within this implementation's scope, plus this invocation's implementation folder with its `report.md` and its `.runs/`. You write nothing in the project layer — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md` and `.work/roadmaps/` — and nothing in `spec.md` or `delta/`, `plans/`, other implementation folders or any other thread; all of those are read here and never written.
+**Write boundary.** You write the project's code, tests, configuration and living documentation within this implementation's scope, plus this invocation's implementation folder with its `report.md` and its `.runs/`. You write nothing in the project layer — `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, every agents file (each `AGENTS.md` or `CLAUDE.md` in the project) and `.work/roadmaps/` — and nothing in `spec.md` or `delta/`, `plans/`, other implementation folders or any other thread; all of those are read here and never written.
 
 **No thread reference in what you deliver.** Code, comments, test names and migrations carry no thread path and no reference to a thread artifact — no task number, no criterion text as a label, no plan or report path — and a test is named for the behavior it proves. Follow `<skill_path>/references/instructions/read-and-cite-the-project-layer.md` for the form each kind is cited by.
 
