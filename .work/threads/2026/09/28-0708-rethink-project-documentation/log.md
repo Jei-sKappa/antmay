@@ -24,3 +24,4 @@
 - (event) spec amended from the live conversation: the close-time path check became a judgment check scoped to what the thread changed, and a delete delta for PDR 2609230721-thread-design-document-is-the-spec was added
 - (decision) the agents-file format fixes three headings, `## Rules`, `## Layout` and `## Where to look`, with rules and pointers written as lists, so every agents file reads the same way; suggesting the names while letting a file keep its own headings was rejected, and the root and suite agents-file deltas restructure both files to fit
 - (event) spec amended from the live conversation: the agents-file format fixes its three headings, and the root and suite agents-file deltas restructure both files under them
+- (event) thread closed; delta: landed
