@@ -48,9 +48,11 @@ Out of scope:
   - says terms, decisions and the agents files are settled through threads;
   - adds the `.work/` dot-folder line;
   - makes the update rule route changes through a thread's delta. *(Inference: once every agents file is in the project layer, "update this file" by hand contradicts "do not edit the project layer by hand".)*
+  - restructures the file under the agents-file format's three headings: the update rule, the rules and the two CLI sections, as `###` subsections, go under `## Rules`; the repository paragraph, the layout tree and the `CLAUDE.md` note go under `## Layout`; the governing-documents table becomes trigger pointers under `## Where to look`. The subsection `### Keep the CLI stage support reference current` keeps the heading text `cli/src/pipeline/documentation.test.ts` looks for.
 
-  The file goes from 1,093 to 1,068 words, so the ratchet lets it land.
-- `delta/suite/AGENTS.md` drops `consult-descriptions` from the layout and routes its update rule the same way (835 → 844 words, under budget). *(Inference: same reason as the root file.)*
+  The file goes from 1,093 to 1,033 words, so the ratchet lets it land.
+- `delta/suite/AGENTS.md` drops `consult-descriptions` from the layout, routes its update rule the same way, and restructures the file under the same three headings: the update rule and the `## Before anything else` rules under `## Rules`, the suite paragraph and the tree under `## Layout`, the authoring conventions as trigger pointers under `## Where to look` (835 → 806 words, under budget). *(Inference: same reason as the root file.)*
+- `cli/AGENTS.md` is not restructured and stays outside the format, over budget at 7,052 words, because the CLI is on hold; the realignment thread brings it in.
 - `delta/docs/pdr/2609230721-thread-design-document-is-the-spec.md` deletes that PDR outright rather than superseding it, so the spec's naming starts with no record behind it.
 - `delta/docs/product/method.md` and `delta/docs/architecture/suite.md` delete both documents. The one fact neither the code nor another file carries, the `.work/` dot-folder rationale, moves into the root `AGENTS.md`. *(Inference: the rest restates the README, `suite/AGENTS.md` and the scripts.)*
 
@@ -60,11 +62,12 @@ Out of scope:
 - New `formats/agents-file.md`, in the format skeleton:
   - what an agents file is: every `AGENTS.md` or `CLAUDE.md` in the project, with a symlink counted once;
   - its three kinds of content: critical rules, how the repository is structured and where to find things, pointers that name a trigger the agent can observe;
+  - the three fixed headings that hold them, `## Rules`, `## Layout` and `## Where to look`, with the rules and the pointers written as lists;
   - it changes only through delta documents landed at close;
   - the 1,000-word budget and the ratchet;
   - ~~the rule on cited paths, which is pending (see closing).~~ *(Superseded 2026-09-28: the user replaced the literal path rule with a judgment check at close, which lives in `close-thread`, so the format carries no path rule.)*
 
-  *(Inference: the format fixes the three kinds of content and no section headings, so a hand-written file can meet it unchanged.)*
+  ~~*(Inference: the format fixes the three kinds of content and no section headings, so a hand-written file can meet it unchanged.)*~~ *(Superseded 2026-09-28: the user fixed the three headings, so a file meets the format only under them.)*
 - `formats/decision-record.md`:
   - frontmatter is `description` plus optional `supersedes`, and `name` is dropped. `description` is written so a reader of the catalog can judge whether the body is worth opening;
   - the body is the decision and its reason in at most three sentences, with context only where the decision is unreadable without it, counted within the three, and a revisit condition, when argued, as one of them;
@@ -149,7 +152,7 @@ Out of scope:
 - `suite/shared/references/formats/product-behavior.md` and `suite/shared/references/formats/architecture-description.md` do not exist, and no skill folder carries a copy of either.
 - `suite/skills/model-invoked/consult-descriptions/` does not exist, and neither `.claude-plugin/marketplace.json`, `.vscode/settings.json`, `suite/shared/manifest.yaml` nor `README.md` names `consult-descriptions`.
 - Outside `.work/` and `cli/`, no file names `consult-descriptions`, `docs/product/`, `docs/architecture/`, `product-behavior.md` or `architecture-description.md`, except where a delta document or this repository's own history requires it.
-- `suite/shared/references/formats/agents-file.md` exists in the format skeleton, and states that an agents file is every `AGENTS.md` or `CLAUDE.md` in the project with a symlink counted once, its three kinds of content, that pointers name a trigger the agent can observe, that it changes only through delta documents landed at close, and the 1,000-word ratchet.
+- `suite/shared/references/formats/agents-file.md` exists in the format skeleton, and states that an agents file is every `AGENTS.md` or `CLAUDE.md` in the project with a symlink counted once, its three kinds of content under the fixed headings `## Rules`, `## Layout` and `## Where to look`, that pointers name a trigger the agent can observe, that it changes only through delta documents landed at close, and the 1,000-word ratchet.
 - The decision-record format's frontmatter has `description` and an optional `supersedes`, and no `name`.
 - The decision-record format limits the body to the decision and its reason in at most three sentences, requires `## Rejected alternatives` with one line per alternative, and has no `## Consequences` section.
 - The decision test in the decision-record format has four clauses: a named argued alternative, a reason not readable off the code, hard to reverse, and a costly miss.
@@ -187,7 +190,7 @@ Out of scope:
 - This thread's two PDRs use the new record shape, because they land after the implementation that introduces it (`## The change`, first bullet).
 - The root and suite agents files route their update rules through a thread's delta, because agents files are now project layer, which is not edited by hand (`delta/AGENTS.md`, `delta/suite/AGENTS.md`).
 - Only the `.work/` rationale moves out of the two deleted documents, because the rest restates the README, `suite/AGENTS.md` and the scripts (the delete bullet).
-- The agents-file format fixes three kinds of content and no headings, so a hand-written file fits (the `formats/agents-file.md` bullet).
+- ~~The agents-file format fixes three kinds of content and no headings, so a hand-written file fits (the `formats/agents-file.md` bullet).~~ *(Superseded 2026-09-28: the user fixed the three headings.)*
 - The decision-record format drops its example that names the architecture description (the `formats/decision-record.md` bullet).
 - The spec format's one rule is narrowed to "project-layer documents live in the delta and are cited", because standing behavior now lives in code (the `formats/spec.md` bullet).
 - A roadmap entry keeps its planned behavior, and only the pointer to the product-behavior form goes (the `formats/roadmap-index.md` bullet).
