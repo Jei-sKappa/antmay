@@ -25,6 +25,7 @@ skills/close/close-thread:
   - instructions/append-log-line.md
   - instructions/read-and-cite-the-project-layer.md
   - instructions/search-for-thread-references.md
+  - formats/agents-file.md
 
 skills/capture-discussion/open-thread:
   - trackers/github.md
@@ -41,6 +42,9 @@ skills/capture-discussion/discussion:
   - formats/log-line.md
   - formats/roadmap-index.md
   - instructions/append-log-line.md
+  - formats/decision-record.md
+  - formats/glossary.md
+  - formats/agents-file.md
 
 skills/capture-discussion/resolve-pending-decisions:
   - formats/discussion-point.md
@@ -62,6 +66,7 @@ skills/spec/spec:
   - instructions/emit-pending-decisions.md
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
+  - formats/agents-file.md
 
 skills/plan/plan-brief:
   - formats/pending-decision-bundle.md
@@ -118,6 +123,7 @@ skills/review/review-spec:
   - formats/spec.md
   - formats/delta-document.md
   - formats/decision-record.md
+  - formats/agents-file.md
 
 skills/review/review-implementation:
   - formats/implementation-report.md

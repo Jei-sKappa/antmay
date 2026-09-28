@@ -12,10 +12,10 @@ metadata:
 
 ## Print the catalog
 
-Neither folder carries an index. Print the folder, stem, name, and description of every record in both, without loading a single body:
+Neither folder carries an index. Print the folder, stem, and description of every record in both, without loading a single body:
 
 ```sh
-find docs/adr docs/pdr -maxdepth 1 -name '*.md' 2>/dev/null | sort | while read -r f; do awk -v dir="$(dirname "$f")" -v stem="$(basename "$f" .md)" '/^---$/{n++; next} n==1 && /^name: /{sub(/^name: /,""); name=$0} n==1 && /^description: /{sub(/^description: /,""); desc=$0} n==2{print dir "\t" stem "\t" name "\t" desc; exit}' "$f"; done
+find docs/adr docs/pdr -maxdepth 1 -name '*.md' 2>/dev/null | sort | while read -r f; do awk -v dir="$(dirname "$f")" -v stem="$(basename "$f" .md)" '/^---$/{n++; next} n==1 && /^description: /{sub(/^description: /,""); desc=$0} n==2{print dir "\t" stem "\t" desc; exit}' "$f"; done
 ```
 
 A folder that does not exist yet prints nothing: the project layer is created lazily, and an absent folder means no record of that kind has been landed.
@@ -26,7 +26,7 @@ From the catalog, open every record whose subject touches the work at hand, and 
 
 ## How a record is cited and binds
 
-A record is cited by its stem, and only for the reason behind a choice. What the system does now is never cited from a record: that is read from the code, from the product behavior in `docs/product/`, and from the architecture description in `docs/architecture/`.
+A record is cited by its stem, and only for the reason behind a choice. What the system does now is never cited from a record: that is read from the code.
 
 A record binds from the moment it lands and keeps binding until a later record naming it under `supersedes` lands and moves it into its folder's `superseded/`. Nothing inside a record says whether it is current — the folder it sits in does.
 
