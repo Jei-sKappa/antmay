@@ -59,8 +59,6 @@ skills/spec/spec:
   - formats/spec.md
   - formats/delta-document.md
   - formats/decision-record.md
-  - formats/product-behavior.md
-  - formats/architecture-description.md
   - formats/glossary.md
   - instructions/append-log-line.md
   - instructions/emit-pending-decisions.md

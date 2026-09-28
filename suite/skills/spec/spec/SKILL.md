@@ -9,9 +9,9 @@ metadata:
 
 # Spec
 
-Author the thread's spec and every delta document under `delta/`, end to end, from what the thread settled. You gather the thread's context, sort each settled point to its home, draft the spec body and the delta documents that carry everything standing, audit the draft against what the thread actually settled, write the files, and append one `event` line to the thread's log. On a thread whose `spec.md` already exists you run the amendment pass instead of authoring. You work straight from what the thread settled, without interviewing the user element by element. Writing the files and the log line is where you stop — do not stage, commit, or push.
+Author the thread's spec and every delta document under `delta/`, end to end, from what the thread settled. You gather the thread's context, draft the spec body and one delta document for each `document` entry still in force, audit the draft against what the thread actually settled, write the files, and append one `event` line to the thread's log. On a thread whose `spec.md` already exists you run the amendment pass instead of authoring. You work straight from what the thread settled, without interviewing the user element by element. Writing the files and the log line is where you stop — do not stage, commit, or push.
 
-A spec a downstream reader with no prior context can work from is one that says what the outcome is, what is in and out of scope, what binds it, what the change adds, replaces and removes, what the implementer must satisfy, what is deliberately left free, and what the authoring settled on its own — with every standing behavior and structure carried by a delta document and cited rather than restated.
+A spec a downstream reader with no prior context can work from is one that says what the outcome is, what is in and out of scope, what binds it, what the change adds, replaces and removes, what the implementer must satisfy, what is deliberately left free, and what the authoring settled on its own — with every project-layer document the change lands carried by a delta document and cited rather than restated.
 
 ## Inputs
 
@@ -19,8 +19,6 @@ Gather all of these before drafting; everything below works from what you gather
 
 - The project's `AGENTS.md`, when the file exists — the project's standing guidance for agents working in it.
 - `docs/glossary.md`, when the file exists — the project's fixed terms, to be used in everything you write.
-- `docs/architecture/<module>.md` for each module the work touches, read via `/consult-descriptions` — how the system is structured now.
-- `docs/product/<capability>.md` for each capability the work touches, read via `/consult-descriptions` — what the product does now.
 - `docs/adr/` and `docs/pdr/`, read via `/consult-decisions` — the project decisions bearing on the thread's subject.
 - The roadmap entry named by the seed frontmatter's `roadmap` mapping, when the seed carries one — the entry this thread answers: its sketch, its scope boundary and its planned behavior, found as the heading whose text is `roadmap.entry` in the index at `roadmap.path`.
 - **The discussion that settled the design** — the primary input, in one of two accepted forms. When the same session ran the discussion, that **live conversation** is the form, and you author from it. Otherwise the form is the thread's **`log.md`**, the thread's memory, which is complete enough to author from; read it in full.
@@ -39,7 +37,7 @@ If the primary input cannot be resolved — this session did not run the discuss
 
 Author the body in the shape `<skill_path>/references/formats/spec.md` defines. It covers the goal, the context, scope and non-scope, the constraints, the change, acceptance, degrees of freedom, inferences and the delta index; heading names and their order are yours to choose, and the whole reads end to end for a stranger with no prior context.
 
-One rule governs every sentence you write into it: a sentence that describes standing behavior of the product or standing structure of the system is written in a delta document and cited from here, never written in the body. What stays in the body is what is thread-only — why this change, what it covers, what binds it, what the implementer builds, and how a reviewer will know it is right.
+One rule governs every sentence you write into it: every project-layer document the change lands is carried by a delta document and cited from here, never restated in the body. What stays in the body is what is thread-only — why this change, what it covers, what binds it, what the implementer builds, and how a reviewer will know it is right.
 
 Four of the elements carry obligations beyond their shape.
 
@@ -55,19 +53,16 @@ The delta index closes the body: every delta document of the thread by path with
 
 ## Draft the delta documents
 
-Sort every settled point of the thread, one point at a time, by the routing table the `<skill_path>/references/formats/spec.md` format carries. The table is what decides the home before you write the sentence anywhere, and the home is what decides whether the point becomes a delta document, a citation in the body, prose in the body, or nothing at all.
+Draft one delta document, or one operation within one, for each `document` entry of the log still in force, and from no other log line. An entry is in force until a later `document` entry on the same document supersedes it. The user accepted each entry when the discussion closed, so do not apply the decision test to it again. The entry's gist names what the document records; its text is drafted from the settled points the gist covers. The routing table in `<skill_path>/references/formats/spec.md` gives each entry its home.
 
-- A point recording a choice that had to overcome a named rejected alternative becomes a `create` delta document, under `delta/docs/adr/` when the choice settles how the system is structured or built and under `delta/docs/pdr/` when it settles what the product does or for whom, following the `<skill_path>/references/formats/decision-record.md` format. Draft it only when the decision test that format states holds against the log; file it by the question it answers rather than by how it is enforced, split a mixed point and test each half on its own, and assign the stem when you first write the document — from then on the stem never changes.
-- A point describing built behavior the code does not make obvious becomes an `edit` delta document for `delta/docs/product/<capability>.md`, or a `create` when that target does not exist yet, following the `<skill_path>/references/formats/product-behavior.md` format.
-- A point describing built structure no single file makes obvious becomes an `edit`, or a `create` when the target is absent, for `delta/docs/architecture/<module>.md`, following the `<skill_path>/references/formats/architecture-description.md` format.
-- A term the discussion fixed, which reaches you as a `decision` log line stating the term and its meaning, becomes an `edit` or a `create` for `delta/docs/glossary.md`, following the `<skill_path>/references/formats/glossary.md` format.
+- An ADR or PDR entry becomes a `create` delta document under `delta/docs/adr/` or `delta/docs/pdr/`, following `<skill_path>/references/formats/decision-record.md`. File it by the question it answers rather than by how it is enforced, and assign the stem when you first write it; the stem never changes after that.
+- A glossary entry becomes an `edit`, or a `create` when the file is absent, for `delta/docs/glossary.md`, following `<skill_path>/references/formats/glossary.md`.
+- An agents-file entry becomes an `edit`, a `create` or a `delete` at that agents file's mirrored path under `delta/` (for example `delta/AGENTS.md`), following `<skill_path>/references/formats/agents-file.md`.
 - A point describing behavior the thread settled but this change does not build gets no delta document at all: its home is the roadmap entry that will build it, and the spec names that entry.
 
 Every delta document follows the `<skill_path>/references/formats/delta-document.md` format. For an `edit` or a `delete`, read the target at drafting time: that read is what lets an operation quote the target's existing text exactly, and it is where the document's recorded hash comes from, taken with `git hash-object <target>` on the working tree. A `create` targets a file that does not exist, so it has nothing to read and records no hash.
 
-A delta document the user asked for directly is drafted the same way, without the decision test — the request is what settles the point.
-
-Cite each delta document from the spec by path, and list all of them in the delta index. Where the body cites a decision record, a description or a roadmap entry instead, cite it by the form its kind fixes, as set out in `<skill_path>/references/instructions/read-and-cite-the-project-layer.md`.
+Cite each delta document from the spec by path, and list all of them in the delta index. Where the body cites a decision record or a roadmap entry instead, cite it by the form its kind fixes, as set out in `<skill_path>/references/instructions/read-and-cite-the-project-layer.md`.
 
 ## Lossless authoring
 
@@ -89,7 +84,7 @@ Pinning an undiscussed decision into an acceptance criterion or a constraint as 
 
 Authoring runs one audit pass over the draft, after drafting and before anything is written.
 
-Walk the primary input claim by claim — the conversation when you authored from it, otherwise the log — and confirm three things of each claim. That it landed somewhere: a settled point with no home in the spec and no delta document is one the draft is missing. That it landed in the home the routing table gives it: a point passing the decision test has a delta document under `delta/docs/adr/` or `delta/docs/pdr/`, and a point describing standing behavior or standing structure has one under `delta/docs/product/` or `delta/docs/architecture/`. And that the body is clean of it where the table sends it elsewhere: no sentence describing standing behavior of the product or standing structure of the system sits in the spec body.
+Walk the primary input claim by claim — the conversation when you authored from it, otherwise the log — and confirm three things of each claim. That it landed somewhere: a settled point with no home in the spec and no delta document is one the draft is missing. That `document` entries and delta documents correspond one to one: every `document` entry in force has its delta document, or its operation within one, and no delta document stands without a `document` entry in force; name each failure of either kind and repair the draft before writing — draft the missing document, and leave the unwarranted one out. And that no passage of the body restates a project-layer document the delta carries.
 
 Then read the draft back the other way. Anything the spec or a delta document states that the conversation or the log, the seed, and the thread's delta do not support is labelled inline, at the exact place it appears, as an **inference** or as an **open question**, and an inference so labelled is listed among the inferences. Such a claim is never deleted, and it is never left standing as though it were settled.
 
@@ -101,7 +96,7 @@ When `spec.md` already exists at the thread root, the run amends it and the thre
 
 The material for the pass is the live conversation when this session holds one; otherwise it is the `log.md` entries after the last `event` line stating that the spec was authored or amended. Those entries are exactly what settled since the spec last stood current, and a point settled after the spec exists reaches the thread through this pass alone.
 
-Amend in place every passage the material affects and every delta document it affects, routing each new point exactly as authoring does: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. An inference the user has since settled is such a passage, and its bullet among the inferences is amended with it. A new point whose home is a delta document the thread does not have yet gets one drafted now, cited from the body and added to the delta index. Before amending an `edit` or a `delete`, read its target again: if the target has changed since the document was drafted, re-record the hash with `git hash-object <target>` and re-quote any operation whose exact text moved. Leave every other passage and every unaffected delta document untouched — what the new material does not touch is not rewritten, re-worded, or re-derived.
+Amend in place every passage the material affects and every delta document it affects, routing each new point exactly as authoring does: keep the superseded text, mark it superseded, and annotate it with the date and the reason it changed. An inference the user has since settled is such a passage, and its bullet among the inferences is amended with it. A new `document` entry whose document the thread's delta does not hold yet gets its delta document drafted now, cited from the body and added to the delta index. Before amending an `edit` or a `delete`, read its target again: if the target has changed since the document was drafted, re-record the hash with `git hash-object <target>` and re-quote any operation whose exact text moved. Leave every other passage and every unaffected delta document untouched — what the new material does not touch is not rewritten, re-worded, or re-derived.
 
 Amending in place under these rules, with one line appended to `log.md` by following `<skill_path>/references/instructions/append-log-line.md`, recording the change, is the one way the spec and its delta documents change once they are authored — whether this skill performs the amendment or the user asks the agent to amend them directly.
 
@@ -111,17 +106,17 @@ Amending in place under these rules, with one line appended to `log.md` by follo
 
 2. **Gather the inputs.** Read everything under `## Inputs` now, in that order. That picture is what keeps the spec from contradicting a project record or something the thread has already settled.
 
-3. **Author or amend.** If the thread root holds a `spec.md`, run the `## Amendment pass`. Otherwise sort every settled point per `## Draft the delta documents`, draft each delta document from its target, and draft the body per `## The spec`. Honor the lossless constraint (`## Lossless authoring`) for any specific the thread did not settle. Adapt length to what the thread warrants — a tight spec is better than a padded one.
+3. **Author or amend.** If the thread root holds a `spec.md`, run the `## Amendment pass`. Otherwise draft the delta documents per `## Draft the delta documents` and the body per `## The spec`. Honor the lossless constraint (`## Lossless authoring`) for any specific the thread did not settle. Adapt length to what the thread warrants — a tight spec is better than a padded one.
 
 4. **Audit the draft.** On an authoring run, run the `## Audit pass` before writing.
 
-5. **Write the artifacts.** Write `spec.md` at the thread root — literally that name, with no frontmatter — and each delta document at its mirrored path under the thread's `delta/`, creating the folders it needs as you go. References within the thread are thread-relative (`log.md`, `delta/docs/pdr/<stem>.md`), never repo-rooted or absolute; references to anything in the project are repo-relative (`docs/product/<capability>.md`, `.work/roadmaps/<index>.md`).
+5. **Write the artifacts.** Write `spec.md` at the thread root — literally that name, with no frontmatter — and each delta document at its mirrored path under the thread's `delta/`, creating the folders it needs as you go. References within the thread are thread-relative (`log.md`, `delta/docs/pdr/<stem>.md`), never repo-rooted or absolute; references to anything in the project are repo-relative (`docs/adr/<stem>.md`, `.work/roadmaps/<index>.md`).
 
 6. **Append the log line.** Follow `<skill_path>/references/instructions/append-log-line.md` with exactly one `event` line stating that the spec was authored or amended and from which form of the primary input. This line is the position the next amendment pass starts after, so every authoring and every amendment appends one.
 
 7. **Confirm.** Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `Spec written: spec.md` after authoring, or `DONE` and `Spec amended: spec.md` after an amendment, and nothing before it — no preamble, no summary, no closing remark.
 
-You write exactly three things: `spec.md` at the thread root, the delta documents under the thread's `delta/`, and one line appended to the thread's `log.md`. Nothing else you touch is written — `docs/adr/`, `docs/pdr/`, `docs/product/`, `docs/architecture/`, `docs/glossary.md`, the roadmap index, and every file a delta document targets are read here and never written.
+You write exactly three things: `spec.md` at the thread root, the delta documents under the thread's `delta/`, and one line appended to the thread's `log.md`. Nothing else you touch is written — `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, every agents file, the roadmap index, and every file a delta document targets are read here and never written.
 
 ## Blocked
 
