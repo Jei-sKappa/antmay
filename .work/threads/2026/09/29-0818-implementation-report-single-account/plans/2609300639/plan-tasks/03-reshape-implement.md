@@ -89,17 +89,13 @@
 
 **Acceptance criteria:**
 
-The spec criteria covering both remaining skills are quoted verbatim in Task 4, which completes them. The post-conditions below are this task's half of those criteria.
+The first five criteria below cover both remaining skills. This task delivers each of them for `implement`; Task 4 delivers them for `implement-plan-with-subagents`, which completes them.
 
-- In `implement`:
-  - the run progress file is defined as append-only typed one-line entries of exactly the eight types `done`, `blocked`, `deviation`, `judgment`, `concern`, `check`, `discovery` and `follow-up`;
-  - no per-task progress block is described.
-- `implement` records no reply tokens, dispatch counts or fix-iteration counts in the progress file.
-- `implement` states that recovery within an invocation resumes after the last `done` entry of the progress file, read together with `git log`.
-- `implement` takes earlier reports of the same plan as the only cross-invocation resume source, reading their ledgers and verifying each completed task against the code.
-- `implement`'s final message:
-  - carries one sentence of outcome, the counts of deviations and judgment calls, any parent-level discovery, the report path, and the closing report commit or why the report stayed uncommitted, then the terminal outcome line;
-  - restates no progress entry and no report section.
+- In `implement` and `implement-plan-with-subagents`, the run progress file is described as append-only typed one-line entries of the types `done`, `blocked`, `deviation`, `judgment`, `concern`, `check`, `discovery` and `follow-up`, and neither skill describes a per-task progress block.
+- Neither `implement` nor `implement-plan-with-subagents` records reply tokens, dispatch counts or fix-iteration counts in the progress file.
+- Both skills state that recovery within an invocation resumes after the last `done` entry of the progress file, read together with `git log`.
+- Both skills take earlier reports of the same plan as the only cross-invocation resume source, reading their ledgers and verifying each completed task against the code.
+- Both skills' final message carries one sentence of outcome, the counts of deviations and judgment calls, any parent-level discovery, the report path and the closing report commit or why the report stayed uncommitted, then the terminal outcome line, and restates no progress entry and no report section.
 - `implement` sends judgment calls to `## Judgment calls` and never to `## Deviations`.
 - The terminal outcome tokens and reasons `implement` emits are unchanged.
 - `node scripts/check-marketplace-skills.mjs` and `node scripts/check-skill-text.mjs`, run from `suite/`, both pass.
