@@ -27,7 +27,7 @@ Gather all of these before judging; the procedure below works from what you gath
 - The thread's `spec.md`, when the file exists — the thread's design of the change, in the shape `<skill_path>/references/formats/spec.md` defines; its acceptance checklist is the contract the delivered work answers to.
 - The thread's `delta/`, when present — every delta document the thread holds, the constraint sources delivered work must not contradict; inside the thread the delta takes precedence over the project records.
 - The thread's `seed.md` — the thread's founding intent, and the anchor when the thread holds neither a spec nor a plan.
-- The delivered code — the files and changes the implementation produced, as the user names them (a git ref, a commit range, a saved or inline diff, or a file or directory path) or as the report's `## Changes` describes them. Read the diff or the files; never check out a branch, run tests, modify the working tree, or mutate any git state.
+- The delivered code — the files and changes the implementation produced, as the user names them (a git ref, a commit range, a saved or inline diff, or a file or directory path), or else the commits the report's `## Changes` task ledger records. Read the diff, the files, or a recorded commit with `git show`; never check out a branch, run tests, modify the working tree, or mutate any git state.
 
 Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
@@ -45,9 +45,15 @@ When the resolved anchor is coarse — `seed.md` only, with no acceptance criter
 
 ## The report is the claim under test
 
-`implementations/<folder>/report.md` is the implementer's account of the work — its `## Outcome`, `## Changes`, and `## Verification`, plus any deviations, remaining concerns, and follow-ups. You test that account against the actual delivered work: a report that claims an outcome the code does not show, describes changes that are not there, or records a verification check the diff gives no sign was run is itself a finding.
+`implementations/<folder>/report.md` is the implementer's account of the work — its `## Outcome`, the `## Changes` task ledger, and `## Verification`, plus any deviations, judgment calls, remaining concerns, and follow-ups. You test that account against the actual delivered work: a report that claims an outcome the code does not show is itself a finding, and so is every section below that does not hold up.
+
+Each line of the `## Changes` task ledger is a claim of its own — that the task it names reached the state it records. Test each one against the code. A line whose commit does not exist, or does not carry that task's change, is a finding. So is a `not run`, `blocked`, `already done` or `no change needed` state the code does not bear out, a ledger that omits a task the run's plan or scope covers, and a line that describes a task that followed its brief rather than only listing it.
 
 Each entry under the report's `## Deviations` is a claim of its own — that something was built differently on purpose, departing from the spec section or the decision record stem it names, for the reason it states. Test each one against the code and against the anchor: a deviation the code does not show, one that misdescribes what the anchor it names actually says, or one presented as deliberate where the work simply misses the anchor is a finding.
+
+Each entry under the report's `## Judgment calls` is a claim that the spec pinned nothing at that point — that the choice filled a granted degree of freedom or the spec's silence. Test each one against the spec and the thread's delta documents: an entry that departs from something they pin is a finding, as an undeclared deviation, and so is an entry the code does not show.
+
+`## Verification` claims to list the checks run against the final state, plus every check that failed or was deliberately skipped, each with its result or its reason. A failure or a skip the report or the code shows elsewhere but `## Verification` does not list is a finding, and so is a listed check the work gives no sign was run.
 
 Each row of the report's `## Acceptance` table is a claim of its own too, and each of its three columns is checkable. The quoted criterion must exist verbatim in the spec; the method must be one of `automated test`, `manual check` or `code review`; and the evidence must hold up — the named test exists in the named file and exercises the behavior the criterion states, or the walked-through observation matches what the code does. A row whose criterion is nowhere in the spec, or whose evidence the code does not bear out, is a finding.
 
