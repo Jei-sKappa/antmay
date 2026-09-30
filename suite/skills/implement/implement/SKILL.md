@@ -9,7 +9,7 @@ metadata:
 
 # Implement
 
-Execute an input end-to-end on the current working tree. You gather the thread's context, create this invocation's implementation folder, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, record a factual progress block per implicit task, and write the folder's report on the way out. Do not pause for clarifying questions at each step and do not ask before committing; the execution posture is identical whether or not a person is present. Do not rewrite history.
+Execute an input end-to-end on the current working tree. You gather the thread's context, create this invocation's implementation folder, derive implicit tasks if the input does not already enumerate them, implement each task, self-review, auto-commit per implicit task or per explicit Git instruction the user passes through, append typed entries to the run progress file as the run proceeds, and write the folder's report on the way out. Do not pause for clarifying questions at each step and do not ask before committing; the execution posture is identical whether or not a person is present. Do not rewrite history.
 
 This skill is single-agent: the current session is the implementer and runs the self-review pass after each implicit task. No subagents are spawned.
 
@@ -25,7 +25,7 @@ Gather all of these before deriving implicit tasks; everything below works from 
 - The thread's `delta/`, when present — the thread's delta of the project layer, which inside the thread takes precedence over the project records and holds the decision records, glossary terms and agents-file changes the change lands.
 - The thread's `seed.md` — why the thread exists and what triggered it.
 - **The work to carry to code** — the primary input, in one of two accepted forms. When the invocation points at a **plan folder** under `plans/`, that folder is the form: the folder it names, or the newest folder under `plans/` by stamp when it points at `plans/` without naming one. Read its `plan.md`, whose ordered steps are what the run executes, together with the brief each step indexes under `plan-tasks/` when the folder holds them — a brief carries its step's files, verification, and acceptance criteria. Otherwise the form is a **referenced artifact or the user's prompt**: a repository path, a directory, a git ref, a GitHub issue (full URL or the short `owner/repo#NNN` form), or the user's prompt itself when nothing else is named; the run derives its implicit tasks from it either way.
-- Every `implementations/*/report.md` whose `Plan:` line names the same plan folder, when present — the record of what earlier passes over that plan already delivered; a task one of them records as completed is skipped once it is verified against the code.
+- Every `implementations/*/report.md` whose `Plan:` line names the same plan folder, when present — its `## Changes` task ledger is the record of what earlier passes over that plan already delivered, and the only source this run resumes from across invocations; a task a ledger records as completed is skipped once it is verified against the code.
 
 Any other thread is history: it records how its own work was understood at the time, not what holds now, so do not read it unless the user or this thread's seed names it.
 
@@ -37,31 +37,30 @@ Every invocation writes into its own new folder `implementations/<yymmddhhmm>[-<
 
 Every invocation allocates its own folder and is that folder's only writer; a folder an earlier invocation created is read, never written.
 
-## Factual progress records
+## Run progress file
 
-This skill defines no per-task status token. The run's terminal outcome (`## Procedure`, final step) is the only closing signal it emits. Each attempted implicit task is recorded as an ordinary factual progress block — plain prose or ordinary structured fields, never a status token.
+This skill defines no per-task status token. The run's terminal outcome (`## Procedure`, final step) is the only closing signal it emits. What the run must carry to its report is recorded in the run progress file, `.runs/progress.md` (see `## Run workspace`).
 
-One append-only block per attempted implicit task lives in the run workspace's `progress.md` (see `## Run workspace`). Each block records:
+The file exists to carry deviations, judgment calls and concerns through context compaction to the report written at the end. It is append-only: one typed entry per line, of the shape
 
-- **Task attempted** — which implicit task, named from the derived task list.
-- **Changes made** — what the diff did.
-- **Verification** — the checks actually run and their results, including failures and justified skips.
-- **Concerns** — non-blocking concerns to surface (partial coverage, a code smell, a judgment call, a possible-but-unverified edge case, a deviation applied per `## Deviations`), or `none`.
-- **Commit** — the SHA + subject for a committed task, else `none`.
-- **Next action** — the suggested follow-up ("ready for next task", "ready for review", "stop and surface this finding", etc.).
-
-Suggested block shape (exact wording is at the implementer's discretion; keep it in the 5–10 line range):
-
-```
-Task <N> — <short label>
-Changes made: <what the diff did>
-Verification: <checks run and their results>
-Concerns: <non-blocking concerns, or "none">
-Commit: <SHA + subject, or "none">
-Next action: <suggested follow-up>
+```text
+- (<type>) <task ordinal, where one applies> <content>
 ```
 
-The `progress.md` blocks and the git history together are the audit trail; no separate per-task status artifact is written.
+and an entry once written is never rewritten or reordered. The file carries no per-task block, no list of tasks to execute, no status or return token, and no tally of dispatches, fix attempts or commit retries.
+
+The entry types form a closed set:
+
+- `done` — the task ordinal, then its commit as SHA and subject, `no change needed`, or `already done` with the commit an earlier report records.
+- `blocked` — the task ordinal and the diagnosis.
+- `deviation` — what was built, what it departs from, and why.
+- `judgment` — the choice, the degree of freedom or the silence it filled, and why.
+- `concern` — a non-blocking concern, a known risk, or a discrepancy between an earlier report and the code.
+- `check` — a whole-change check run against the final state, with its result; or a check that failed and stayed unresolved, or was deliberately skipped, with its result or reason.
+- `discovery` — a discovery with parent- or sibling-level impact.
+- `follow-up` — work this implementation leaves for later.
+
+An entry names its task ordinal wherever one applies; an implicit task's ordinal is its position in the derived task list. A per-task check that passed is not recorded, and neither is a failure fixed within its task before the task's commit. The progress file and the git history together are the audit trail; no separate per-task status artifact is written.
 
 ## Dirty worktree handling
 
@@ -84,21 +83,29 @@ Steps 1–3 are preflight. They complete in full — with no thread artifact wri
 
 3. **Validate the input and required tooling, and derive the implicit tasks.** Translate the primary input into an ordered list of implicit tasks. When the input is a plan folder, each of the `plan.md` steps is an implicit task, in order, detailed by the `plan-tasks/` brief it indexes where the folder holds one, and you have the freedom to derive the obvious substeps a step implies. Otherwise derive the tasks from the input's stated intent and the observed code state. Each implicit task should be implementable in one sitting, observable on completion (a file written, a test passing, a behavior visible), and small enough that the self-review pass after it is meaningful. If the input is fully resolved (e.g., "do X to file Y, then add a test"), the implicit task list may be one or two tasks; if broader, one entry per cohesive implementation unit. Avoid both under-splitting (a single "do the whole thing" task) and over-splitting (a separate task per line touched). Confirm the input is coherent enough to derive tasks from and that any tooling and credentials the run explicitly requires are present. A structural input problem, a garbled invocation, or missing required tooling or credentials caught here is a preflight refusal.
 
-4. **Allocate the implementation folder.** Preflight has passed; create this invocation's folder per `## Implementation folder`, allocate its run workspace per `## Run workspace`, and record the derived implicit task list and its state in `progress.md` so progress stays legible.
+4. **Allocate the implementation folder.** Preflight has passed; create this invocation's folder per `## Implementation folder` and allocate its run workspace and `.runs/progress.md` per `## Run workspace`. Record no task list in it: the derived implicit task list is re-derivable from the input and is not stored.
 
-5. **Honour the earlier reports of the same plan.** When a plan folder is the primary input, take the reports gathered per `## Inputs` — every `implementations/*/report.md` whose `Plan:` line names that folder — and mark as already done each implicit task they record as completed, after verifying against the code that the change is actually in place. A task a report claims but the code does not carry is implemented in this run; note the discrepancy in its factual progress block. Record which tasks were skipped and why in `progress.md`.
+5. **Honour the earlier reports of the same plan.** When a plan folder is the primary input, read the `## Changes` ledger of each report gathered per `## Inputs` — every `implementations/*/report.md` whose `Plan:` line names that folder; the ledgers are the only resume source across invocations. A task a ledger records with a commit, or as `already done` or `no change needed`, counts as completed once you verify against the code that the change is actually in place: append a `done` entry for it reading `already done` with that commit, or `no change needed`. A task a ledger claims but the code does not carry is implemented in this run, and the discrepancy is appended as a `concern` entry.
 
 6. **For each implicit task still to do, in order:**
-   a. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — surface the deviation in the factual progress block per `## Deviations`.
-   b. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent with the input, does not break adjacent code paths the implementer can see, and matches the project's conventions. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced judgment calls you took, and any known risks the diff alone would not reveal; carry them into the factual progress block and the report. Self-review is in-session — no artifact file is written.
-   c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, follow `### Failed commit` under `## Commit Policy` — diagnose and fix in-authority causes within the retry cap; only when it cannot be resolved does the run hit an operational defect: record the diagnosis and end the run `BLOCKED` per `## Blocked`.
-   d. **Append the factual progress block.** Append exactly one block for this attempted task to `progress.md` per `## Factual progress records` — after the commit for a committed task (carrying its SHA + subject), or with `Commit: none` otherwise. Emit a one-line chat summary for the task.
+   a. **Implement.** Make the code changes the task calls for. Use judgment if the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress — append each deviation you apply as a `deviation` entry as it happens, per `## Deviations`.
+   b. **Self-review.** Re-read the diff against the implicit task's stated objective. Check that the change is coherent with the input, does not break adjacent code paths the implementer can see, and matches the project's conventions. As a first-class input to this pass — not an afterthought — explicitly surface the assumptions you made, the forced choices you took, and any known risks the diff alone would not reveal. Append each assumption or forced choice as a `judgment` entry where the input pins nothing at that point, or as a `deviation` entry where it departs from something pinned; append each known risk as a `concern` entry. Self-review is in-session — no artifact file is written.
+   c. **Commit per `## Commit Policy`.** If commit succeeds, capture the SHA + subject. If commit fails, follow `### Failed commit` under `## Commit Policy` — diagnose and fix in-authority causes within the retry cap; only when it cannot be resolved does the run hit an operational defect: close the task with a `blocked` entry carrying the diagnosis, per step 6d, and end the run `BLOCKED` per `## Blocked`.
+   d. **Close the task in the progress file.** Append exactly one closing entry for the task per `## Run progress file`: a `done` entry carrying its commit SHA and subject after the commit lands, a `done` entry reading `no change needed` when the task's diff is empty, or a `blocked` entry carrying the diagnosis when the task stops the run. Emit a one-line chat summary for the task.
 
 7. **Write the report.** Once all implicit tasks have run (or the run stopped early per `## Blocked`), write this folder's report per `## Implementation report`.
 
 8. **Commit the report.** With the report written, you make the closing report commit yourself by following `<skill_path>/references/instructions/commit-the-implementation-report.md`, at every terminal outcome step 7 was reached from. Skip it only when the invocation carries an explicit suppression instruction per `## Commit Policy`; the report then stays uncommitted and the terminal outcome reason carries the instruction's uncommitted marker. A closing report commit that fails past its cap never routes through `## Blocked` and never changes the token the run's work earned.
 
-9. **Final out-message.** Emit a final summary folding the factual progress blocks from `progress.md`: name each attempted implicit task, the tasks skipped because an earlier report already carried them, the commit SHA + subject for each commit made, the report that was written, and the closing report commit's SHA + subject — or that the report was left uncommitted, and why. Name any parent-level discovery surfaced per `## Discoveries`. Follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `<report path>` when the requested operation completed, including completion with non-blocking concerns; `<diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `<reason>` when preflight prevented execution (steps 1–3).
+9. **Final out-message.** Once the report is written and committed, or left uncommitted, emit a short final message that says only whether the report is worth opening. It carries, in this order:
+   - one sentence of outcome;
+   - how many deviations and how many judgment calls the report records;
+   - any discovery with parent-level impact surfaced per `## Discoveries`;
+   - the report path;
+   - the closing report commit's SHA and subject, or that the report was left uncommitted, and why;
+   - then the terminal outcome line: follow `<skill_path>/references/instructions/emit-terminal-outcome.md` with `DONE` and `<report path>` when the requested operation completed, including completion with non-blocking concerns; `<diagnosis or bundle path>` when substantive execution began but could not finish (per `## Blocked`); `<reason>` when preflight prevented execution (steps 1–3).
+
+   The message restates no progress entry and no report section: no per-task list, no commit list, no list of skipped tasks. A preflight refusal writes no report, so its message keeps to the reason and how to re-invoke.
 
 ## Run workspace
 
@@ -108,31 +115,32 @@ Keep all operational progress for a run inside this invocation's implementation 
 implementations/<yymmddhhmm>[-<slug>]/.runs/progress.md
 ```
 
-Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it by appending as the run proceeds — the derived implicit task list first, then one factual progress block per attempted task — so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, reads only this folder's own `.runs/progress.md` and resumes from the last block it holds; it never reads another folder's run state and never re-derives the task list from scratch while `progress.md` carries it.
+Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it only by appending typed entries per `## Run progress file` as the run proceeds, so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, re-derives the task list from the input, reads this folder's own `.runs/progress.md` together with `git log`, and resumes after the last `done` entry; it never reads another folder's run state.
 
 `.runs/` is operational, not durable: no durable artifact — not the report, not a commit message, nothing — ever cites a path inside it. It stays in place after the run as the run's trace.
 
 ## Implementation report
 
-At every terminal outcome an executing run reaches — completion, partial completion, a `BLOCKED` halt, or a no-op where the requested state already held — follow `<skill_path>/references/instructions/write-implementation-report.md` once, drawing the outcome material from `progress.md` re-read from disk, and the deviations per `## Deviations`.
+At every terminal outcome an executing run reaches — completion, partial completion, a `BLOCKED` halt, or a no-op where the requested state already held — follow `<skill_path>/references/instructions/write-implementation-report.md` once, folding the report from the typed entries of `progress.md`, re-read from disk, together with `git log` for the commits the run made.
 
-The report's acceptance rows are drawn from the spec's acceptance checklist, one row per criterion quoted verbatim, and from the verification the run recorded per task, which supplies the method and the evidence each row names. When the thread holds no spec, the criteria the plan or the input stated take their place.
+The report's acceptance rows are drawn from the spec's acceptance checklist, one row per criterion quoted verbatim; when the thread holds no spec, the criteria the plan or the input stated take their place. Each row's method and evidence come from the `check` entries, the ledger's commits and the code as it stands at the end of the run.
 
-The assumptions, forced judgment calls, and known risks your per-task self-review surfaced feed this material: assumptions and forced judgment calls into the deviations, each with what it departs from and why; known risks into remaining concerns, or into problems already hit where the risk was realized during the run.
+`deviation` entries go to `## Deviations`. `judgment` entries go to `## Judgment calls`, and never to `## Deviations`. `concern` entries go to `## Remaining concerns`.
 
 ## Deviations
 
-The policy is judgment-based and surfaced through the factual progress block and the report — not pre-clearance, not blanket permission.
+The policy is judgment-based and surfaced through the progress file and the report — not pre-clearance, not blanket permission.
 
 - **Follow the input or the implicit task list derived from it.** The input is the contract; the implicit task list is the implementer's interpretation. Do not silently invent tasks the input does not call for. Do not silently skip tasks the input does call for.
 - **Use judgment when warranted.** If the input is unclear, contradicts the observed code state, or omits an obvious step that blocks progress, apply the obvious correction and move on — DO NOT stop to ask if the correction is trivially in service of the input's intent. A blocked import path, a missing helper the input assumed existed, a renamed dependency the input did not know about: fix and continue.
-- **A deviation that stays within accepted intent proceeds, and is recorded.** It goes into the task's factual progress block as it happens, and into the report's `## Deviations`, one entry naming what was built, the spec section or the decision record stem it departs from, and why. Minor deviations (a missing import added, a `Map` chosen where the input named no structure) carry a one-sentence entry and the run continues. This run is autonomous; it does not stop to pre-clear a judgment call, and the progress block and the report are where the user reads the trail.
+- **A deviation that stays within accepted intent proceeds, and is recorded.** It is appended as a `deviation` entry as it happens, and lands in the report's `## Deviations`, one entry naming what was built, the spec section or the decision record stem it departs from, and why. A minor deviation (a missing import added) carries a one-sentence entry and the run continues.
+- **A judgment call is not a deviation.** A choice made where the input pins nothing — inside a granted degree of freedom or in the input's silence, such as a `Map` chosen where the input named no structure — departs from nothing; it is appended as a `judgment` entry and lands in the report's `## Judgment calls`, never in `## Deviations`. This run is autonomous; it does not stop to pre-clear either, and the progress file and the report are where the user reads the trail.
 - **A contradiction of a delta document or of a spec decision is a change of intent, and is never applied.** Finish everything safely derivable without it, then route it per `## Blocked`: the run ends `BLOCKED` once the report is written.
-- **Never edit the input to justify the run.** If you discover the input itself is wrong — a step contradicts the observed code, a settled decision names a change already applied — surface it in the factual progress block and in the report, and let the surrounding session decide. You author no new such artifact inside this run, and you write only what the write boundary in `## Discoveries` allows.
+- **Never edit the input to justify the run.** If you discover the input itself is wrong — a step contradicts the observed code, a settled decision names a change already applied — append it as a `concern` entry, or as a `blocked` entry when it stops the run, so the report carries it, and let the surrounding session decide. You author no new such artifact inside this run, and you write only what the write boundary in `## Discoveries` allows.
 
 ## Discoveries
 
-**A discovery with parent- or sibling-level impact** — something that would change a project decision, or that belongs to a direction wider than this thread — is surfaced to the user in chat and reported under the report's `## Follow-ups`. It is never drafted as a decision record, a delta document or a roadmap entry; surfacing and reporting it is the whole action.
+**A discovery with parent- or sibling-level impact** — something that would change a project decision, or that belongs to a direction wider than this thread — is appended as a `discovery` entry, surfaced to the user in chat, and reported under the report's `## Follow-ups`. It is never drafted as a decision record, a delta document or a roadmap entry; surfacing and reporting it is the whole action.
 
 **Write boundary.** You write the project's code, tests, configuration and living documentation within this implementation's scope, plus this invocation's implementation folder with its `report.md` and its `.runs/`. You write nothing in the project layer — `docs/adr/`, `docs/pdr/`, `docs/glossary.md`, every agents file (each `AGENTS.md` or `CLAUDE.md` in the project) and `.work/roadmaps/` — and nothing in `spec.md` or `delta/`, `plans/`, other implementation folders or any other thread; all of those are read here and never written.
 
@@ -160,7 +168,7 @@ This skill auto-commits.
 - **Closing report commit:** the run's `report.md` is committed on its own at `## Procedure` step 8, after the last task commit has landed, and stands outside the task cadence. An explicit instruction reaches it according to its kind: a **suppression** instruction ("do not commit, just leave the changes staged") suppresses the closing report commit too, and the terminal outcome reason then carries the uncommitted marker; a **cadence** instruction ("commit at the end as one commit", "make one commit per file touched") does not reach it, because the closing report commit is not a member of the code commit cadence — such a run makes the instructed code commits plus the closing report commit.
 - **Baseline gate (before each commit):** A task's self-review confirms THAT task's objective; it does not necessarily capture the project's *standing* required gates: the bar a project enforces on any code allowed to land (discoverable from the project's tooling or conventions — for example a `check` / `lint` / `format` / `typecheck` script, a documented pre-commit command, or a CI gate). **A project may define no such gate**, in which case there is nothing to run beyond the self-review and this clause is a no-op. When the project DOES define standing gates, run them on the changed code and resolve any failure BEFORE committing the task — even when the task's own verification omits it. Scope the gate to the changed code where the project's tooling allows it, so an unrelated pre-existing failure elsewhere does not block this task. Only genuinely expensive, churn-heavy *whole-change* gates (full end-to-end suites, golden regeneration, living-docs, a full build) are legitimately deferred to a closing task — a cheap standing commit-gate is not one of those and is not deferred.
 
-Commits use the project's conventional-commit shape where applicable. Stage only the files the implicit task touched — the closing report commit stages the report alone; never run `git add -A` blindly. A commit message explains the change concisely in its own words, may name the thread path once as provenance, and never carries a task number, a criterion, a progress block or a thread artifact as the explanation; the subject describes the implicit task's objective, not its substeps. Follow `<skill_path>/references/instructions/read-and-cite-the-project-layer.md` for that form.
+Commits use the project's conventional-commit shape where applicable. Stage only the files the implicit task touched — the closing report commit stages the report alone; never run `git add -A` blindly. A commit message explains the change concisely in its own words, may name the thread path once as provenance, and never carries a task number, a criterion, a progress entry or a thread artifact as the explanation; the subject describes the implicit task's objective, not its substeps. Follow `<skill_path>/references/instructions/read-and-cite-the-project-layer.md` for that form.
 
 ### Failed commit
 
@@ -168,9 +176,9 @@ A failed task commit is diagnosed and fixed within the current task before it is
 
 - **Diagnose first.** Read the actual error the commit emitted; never retry blind. What failed — a pre-commit hook, a lint or format check, a test, a commit-message linter, a missing sign-off — determines whether it is yours to fix.
 - **Fix in-authority causes as part of the current task.** When the cause sits inside the task's own footprint — a lint or format violation in the task's files, a hook that auto-modified files that now need re-staging, a test the task's own diff broke, a commit subject a message linter rejected — fix it, re-run the failed check, and retry the commit.
-- **Bounded retries.** Make at most 3 fix-and-retry attempts for the task. Past the cap, or when the cause is outside the task's authority (missing sign-off configuration, credentials, failures in files the task does not own, infrastructure errors), the run has hit an operational defect: record the diagnosis in the factual progress block — the specific failure and what was tried, not a bare "commit failed" — and stop the entire run `BLOCKED` per `## Blocked`. Subsequent implicit tasks are NOT attempted.
+- **Bounded retries.** Make at most 3 fix-and-retry attempts for the task. Past the cap, or when the cause is outside the task's authority (missing sign-off configuration, credentials, failures in files the task does not own, infrastructure errors), the run has hit an operational defect: append a `blocked` entry carrying the diagnosis — the specific failure and what was tried, not a bare "commit failed" — and stop the entire run `BLOCKED` per `## Blocked`. Subsequent implicit tasks are NOT attempted.
 - **Guardrails (never traded for a green commit).** Never bypass hooks (`--no-verify` or any equivalent), never weaken, delete, or skip a check to make it pass, and never stash-and-retry. A fix addresses the real cause inside the task's footprint, or the run stops `BLOCKED`.
-- **Audit trail.** The factual progress block notes that the commit failed N times and what was fixed; the retries stay visible there and nowhere else.
+- **Audit trail.** A retry that succeeds leaves no entry: a failure fixed within the task before its commit is not recorded. Only a run that stops on the failed commit records it, in the `blocked` entry above.
 
 ### No history rewriting
 
