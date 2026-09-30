@@ -96,15 +96,6 @@ skills/implement/implement:
   - instructions/emit-terminal-outcome.md
   - instructions/read-and-cite-the-project-layer.md
 
-skills/implement/implement-plan:
-  - formats/implementation-report.md
-  - formats/pending-decision-bundle.md
-  - instructions/emit-pending-decisions.md
-  - instructions/write-implementation-report.md
-  - instructions/commit-the-implementation-report.md
-  - instructions/emit-terminal-outcome.md
-  - instructions/read-and-cite-the-project-layer.md
-
 skills/implement/implement-plan-with-subagents:
   - formats/implementation-report.md
   - formats/pending-decision-bundle.md

@@ -165,14 +165,6 @@ Expects a plan folder, a referenced artifact, an issue, or your own prompt; leav
 npx skills add Jei-sKappa/antmay --skill implement
 ```
 
-#### [`implement-plan`](./suite/skills/implement/implement-plan/SKILL.md)
-
-Expects a strict plan folder — a `plan.md` index plus its `plan-tasks/` briefs; leaves the delivered code on the working tree and a new implementation folder with its `report.md`, committing per task.
-
-```sh
-npx skills add Jei-sKappa/antmay --skill implement-plan
-```
-
 #### [`implement-plan-with-subagents`](./suite/skills/implement/implement-plan-with-subagents/SKILL.md)
 
 Expects a strict plan folder and a runtime that supports subagents; leaves the delivered code on the working tree and a new implementation folder with its `report.md`, committing per reviewed task.

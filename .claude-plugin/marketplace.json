@@ -10,7 +10,6 @@
         "./skills/capture-discussion/resolve-pending-decisions",
         "./skills/close/close-thread",
         "./skills/implement/implement",
-        "./skills/implement/implement-plan",
         "./skills/implement/implement-plan-with-subagents",
         "./skills/model-invoked/consult-decisions",
         "./skills/plan/check-plan",
