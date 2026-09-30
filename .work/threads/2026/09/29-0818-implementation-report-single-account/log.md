@@ -12,3 +12,5 @@
 - (document) suite/AGENTS.md: the implement layout line no longer names implement-plan, which the suite removes
 - (document) glossary: task ledger, the section of an implementation report listing each task the run executed with its commit, or not run or blocked, and pointers to its deviations and judgment calls, without describing a task that followed its brief
 - (event) spec authored from the conversation, with delta documents for the glossary and suite/AGENTS.md
+- (decision) recovery within an invocation resumes at the first task, in task order, that has no `done` entry in the progress file, read together with `git log`, because the resume step writes `already done` entries up front and an earlier ledger with gaps can put a `done` entry after a task this run still has to do; resuming after the last `done` entry was rejected because it silently skips that task after a compaction, and writing `already done` entries lazily in task order was rejected because it keeps a rule that any out-of-order entry would break again
+- (event) spec amended from the conversation: recovery within an invocation resumes at the first task with no `done` entry

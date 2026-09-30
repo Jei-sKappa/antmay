@@ -61,11 +61,13 @@ Optional sections are left out entirely when empty, so a clean run reads as the 
 
 ### The run progress file
 
-In both remaining skills, `.runs/progress.md` becomes an append-only file of typed one-line entries. It replaces the per-task factual progress blocks and the list of tasks to execute written at allocation. *(Inference: the task list goes too, because the plan index or the derived task list already gives the order, and recovery needs only the last `done` entry.)* The file exists to carry deviations, judgment calls and concerns through context compaction to the report written at the end. Reply tokens and dispatch counts leave it.
+In both remaining skills, `.runs/progress.md` becomes an append-only file of typed one-line entries. It replaces the per-task factual progress blocks and the list of tasks to execute written at allocation. *(Inference: the task list goes too, because the plan index or the derived task list already gives the order, and recovery needs only the `done` entries the file holds.)* ~~*(Inference: the task list goes too, because the plan index or the derived task list already gives the order, and recovery needs only the last `done` entry.)*~~ *(Superseded 2026-09-30: recovery no longer reads the last `done` entry, as the recovery paragraph below records.)* The file exists to carry deviations, judgment calls and concerns through context compaction to the report written at the end. Reply tokens and dispatch counts leave it.
 
 *(Inference: the entry types are `done`, carrying the task ordinal and its commit or `no change needed`; `blocked`, carrying the task ordinal and the diagnosis; `deviation`; `judgment`; `concern`; `check`, for a whole-change check run and for a failed or deliberately skipped check, with its result or reason; `discovery`; and `follow-up`. Each entry names its task ordinal where one applies. `check` is added beyond the discussion's closing list because `## Verification` is folded from this file and needs a source for failures and skips.)* *(Inference: an entry reads `- (<type>) <task ordinal, where one applies> <content>`, borrowing the shape of a thread log entry.)*
 
-Recovery within an invocation reads the progress file and `git log` and resumes after the last `done` entry. *(Inference: the discussion's closing list, accepted without promotion.)*
+Recovery within an invocation reads the progress file and `git log` and resumes at the first task, in task order, that has no `done` entry (`log.md`). The order of the entries does not matter. The resume step writes `already done` entries at the start of the run, and an earlier ledger can have gaps: an invocation may have run only a later task, or a ledger may claim a task the code does not carry. Either way, a `done` entry can sit ahead of a task this run still has to do. *(Inference: task order is the plan index's order, narrowed to any task the invocation named, or the order of the derived task list for a run with no plan.)* *(Inference: the rule does not need to mention `blocked` entries, because a `blocked` entry always ends the run.)*
+
+~~Recovery within an invocation reads the progress file and `git log` and resumes after the last `done` entry. *(Inference: the discussion's closing list, accepted without promotion.)*~~ *(Superseded 2026-09-30: the resume step's up-front `already done` entries can put a `done` entry after a task still to run, so resuming after the last one would silently skip that task after a compaction; see `log.md`.)*
 
 ### Resume from earlier reports
 
@@ -116,7 +118,8 @@ The `README.md` section for `implement-plan-with-subagents` stays and keeps stat
 - The report-writing instruction folds the report from the progress file's typed entries and names the section each entry type feeds.
 - In `implement` and `implement-plan-with-subagents`, the run progress file is described as append-only typed one-line entries of the types `done`, `blocked`, `deviation`, `judgment`, `concern`, `check`, `discovery` and `follow-up`, and neither skill describes a per-task progress block.
 - Neither `implement` nor `implement-plan-with-subagents` records reply tokens, dispatch counts or fix-iteration counts in the progress file.
-- Both skills state that recovery within an invocation resumes after the last `done` entry of the progress file, read together with `git log`.
+- Both skills state that recovery within an invocation resumes at the first task, in task order, that has no `done` entry in the progress file, read together with `git log`.
+- ~~Both skills state that recovery within an invocation resumes after the last `done` entry of the progress file, read together with `git log`.~~ *(Superseded 2026-09-30 by the criterion above: resuming after the last `done` entry can skip a task; see `log.md`.)*
 - Both skills take earlier reports of the same plan as the only cross-invocation resume source, reading their ledgers and verifying each completed task against the code.
 - Both skills' final message carries one sentence of outcome, the counts of deviations and judgment calls, any parent-level discovery, the report path and the closing report commit or why the report stayed uncommitted, then the terminal outcome line, and restates no progress entry and no report section.
 - `implement-plan-with-subagents` defines no implementer outcome file: no template, no output path, and no step reading one.
@@ -144,7 +147,9 @@ The `README.md` section for `implement-plan-with-subagents` stays and keeps stat
 - `## Remaining concerns` and `## Follow-ups` keep their place at the end. Shapes: The report format.
 - The progress entry types are `done`, `blocked`, `deviation`, `judgment`, `concern`, `check`, `discovery` and `follow-up`, and `check` is added so that `## Verification` has a source. Shapes: The run progress file.
 - A progress entry is shaped like a thread log entry. Shapes: The run progress file.
-- Recovery within an invocation resumes after the last `done` entry. Shapes: The run progress file.
+- ~~Recovery within an invocation resumes after the last `done` entry. Shapes: The run progress file.~~ *(Superseded 2026-09-30: the user has since settled recovery as a decision, resuming at the first task with no `done` entry; see `log.md`.)*
+- Task order for recovery is the plan index's order, narrowed to any named task, or the derived task list's order. Shapes: The run progress file.
+- The recovery rule does not mention `blocked` entries, because a `blocked` entry ends the run. Shapes: The run progress file.
 - The progress file no longer opens with the list of tasks to execute. Shapes: The run progress file.
 - Earlier reports' ledgers are the only cross-invocation resume source, each completed task verified against the code. Shapes: Resume from earlier reports.
 - A preflight refusal keeps its current final message. Shapes: The final chat message.

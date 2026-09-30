@@ -115,7 +115,7 @@ Keep all operational progress for a run inside this invocation's implementation 
 implementations/<yymmddhhmm>[-<slug>]/.runs/progress.md
 ```
 
-Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it only by appending typed entries per `## Run progress file` as the run proceeds, so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, re-derives the task list from the input, reads this folder's own `.runs/progress.md` together with `git log`, and resumes after the last `done` entry; it never reads another folder's run state.
+Create `.runs/` inside the folder allocated per `## Implementation folder` and name the progress file `progress.md`. Write to it only by appending typed entries per `## Run progress file` as the run proceeds, so an interrupted run leaves everything it had reached. Recovery within an invocation, after a compaction or any other loss of context, re-derives the task list from the input, reads this folder's own `.runs/progress.md` together with `git log`, and resumes at the first task, in task order, that has no `done` entry — never after the last `done` entry, because step 5 appends `already done` entries up front and one can sit ahead of a task this run still has to do; it never reads another folder's run state.
 
 `.runs/` is operational, not durable: no durable artifact — not the report, not a commit message, nothing — ever cites a path inside it. It stays in place after the run as the run's trace.
 

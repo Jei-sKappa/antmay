@@ -176,7 +176,7 @@ Create `.runs/` inside the folder allocated per `## Implementation folder`. Reco
 
 - **Append-only typed entries.** The orchestrator writes to it only by appending typed entries per `## Run progress file` as the run proceeds, so an interrupted run leaves everything it had reached. A pre-flight halt appends nothing — no task cycle ever started. The progress file is never rewritten or reordered.
 - **Chat shrinks to one line per task** (e.g. `Task 04: done, commit abc1234`).
-- **Compaction recovery.** Recovery within an invocation, after a compaction or any other loss of context, reads `progress.md` together with `git log` and resumes after the last `done` entry; for a task still in flight, its `.runs/task-NN/` review files restore the state of its fix loop. The report is folded from the progress file RE-READ from disk at the end.
+- **Compaction recovery.** Recovery within an invocation, after a compaction or any other loss of context, reads `progress.md` together with `git log` and resumes at the first task, in the index's order, that has no `done` entry — never after the last `done` entry, because step 5 appends `already done` entries up front and one can sit ahead of a task this run still has to do; for a task still in flight, its `.runs/task-NN/` review files restore the state of its fix loop. The report is folded from the progress file RE-READ from disk at the end.
 
 ## Implementation report
 
