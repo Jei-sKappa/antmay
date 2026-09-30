@@ -32,7 +32,7 @@ The suite is the reference implementation of the Antmay method: refined `SKILL.m
 skills/
 ├── capture-discussion/  discussion, open-thread, open-ticket, resolve-pending-decisions
 ├── close/               close-thread
-├── implement/           implement, implement-plan, implement-plan-with-subagents
+├── implement/           implement, implement-plan-with-subagents
 ├── model-invoked/       consult-decisions
 ├── plan/                check-plan, plan-brief, plan-strict
 ├── review/              review-code, review-implementation, review-spec
