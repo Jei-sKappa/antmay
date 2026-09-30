@@ -6,20 +6,24 @@ Write it following the `<skill_path>/references/formats/implementation-report.md
 
 ## What the report folds in
 
-Draw the report from the run's own outcome material — the progress the run recorded as it went:
+Fold the report from the typed entries of the run's progress file, re-read from disk rather than recalled, together with `git log` for the commits the run made. Each entry type feeds one section:
 
-- what completed, what completed partially, what was blocked, and what was found already satisfied;
-- the resulting changes, by area or by path, at the level a reader needs to find them;
-- the checks actually run, with their results, any failure, and any check deliberately skipped with its reason;
-- the acceptance rows — every criterion of the spec quoted verbatim, with the method and the evidence the run's own verification records supply;
-- the deviations, each naming what was built, the spec section or the decision record stem it departs from, and why;
-- any remaining concerns;
-- any follow-ups.
+- `done` feeds that task's line in `## Changes`: its commit, `no change needed`, or `already done` with the commit the earlier report records.
+- `blocked` feeds that task's line in `## Changes`, reading `blocked`, and `## Outcome` names that task and the diagnosis.
+- A task in the run's scope with neither a `done` nor a `blocked` entry is listed in `## Changes` as `not run`.
+- `deviation` feeds `## Deviations`.
+- `judgment` feeds `## Judgment calls`, and never `## Deviations`.
+- `concern` feeds `## Remaining concerns`.
+- `check` feeds `## Verification`.
+- `discovery` and `follow-up` feed `## Follow-ups`.
 
-State partial, blocked, and no-op outcomes plainly. Partial or blocked work names what changed and what prevented completion; a no-op explains that the requested state already existed and how that was verified.
+A ledger line that carries a deviation or a judgment call points at it, following the format. `## Acceptance` rows come from the spec's checklist, each criterion quoted verbatim; their method and evidence come from the `check` entries, the ledger's commits, and the code as it stands at the end of the run.
+
+State partial, blocked, and no-op outcomes plainly, in the one or two sentences of `## Outcome`. A stopped run names the task it stopped at and what prevented completion; a no-op says that the requested state already held and how that was checked.
 
 ## Rules
 
 - Never claim a check that was not run: an input naming a check is not evidence that it happened.
-- Keep out of the report per-task status blocks, transcripts, dispatch counts, fix-loop detail, and any path under the folder's `.runs/`. Those are transient working material, and the durable report never cites them.
+- Copy no progress entry into the report verbatim as a log line: rewrite each into the entry shape of the section it feeds.
+- Keep out of the report transcripts, reply tokens, dispatch counts, fix-loop detail, and any path under the folder's `.runs/`. Those are transient working material, and the durable report never cites them.
 - `report.md` is the only file this act writes.
