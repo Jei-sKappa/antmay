@@ -88,7 +88,12 @@ Rules the format states:
   - `old_string` occurs exactly once in the target, unless `replace_all` is `true`, in which case it occurs at least once and every occurrence is replaced.
   - An addition is an edit whose `old_string` is neighboring text and whose `new_string` is that text plus the addition. A removal is an edit with an empty `new_string`.
   - Edits apply in order, each against the result of the previous one. The document lands all or nothing.
-  - An edit whose `old_string` does not occur but whose `new_string` does occur counts as already done, and changes nothing. This holds for a `replace_all` edit too *(Inference: the already-done rule applies to `replace_all` edits exactly as to single edits)*.
+  - ~~An edit whose `old_string` does not occur but whose `new_string` does occur counts as already done, and changes nothing. This holds for a `replace_all` edit too *(Inference: the already-done rule applies to `replace_all` edits exactly as to single edits)*.~~ *(Superseded 2026-10-02: an addition already landed keeps its `old_string` inside the landed text, so this rule would apply it a second time and duplicate it. Replaced by the rule below (`log.md`).)*
+  - An edit counts as already done, and changes nothing, when its `new_string` occurs in the target and every occurrence of its `old_string` lies inside an occurrence of `new_string`.
+    - When `old_string` does not occur at all, this is the case of an absent `old_string` and a present `new_string`.
+    - It also covers an addition already landed, whose `old_string` still occurs inside the landed text.
+    - The already-done test comes before the occurrence count, so an edit that is already done is never applied and never a conflict.
+    - This holds for a `replace_all` edit too *(Inference: the already-done rule applies to `replace_all` edits exactly as to single edits)*.
   - Exact means exact after normalizing line ends and trailing spaces *(Inference: the normalization rule carries over unchanged)*.
 - One delta document per target per thread: a `delta/<target>` and a `delta/<target>.json` for the same target together are malformed *(Inference: one document per target carries over)*.
 
@@ -183,6 +188,7 @@ No one-off migration is needed.
 - `check-delta.mjs` exits non-zero and names the edit when an `old_string` occurs more than once without `replace_all`.
 - `check-delta.mjs` exits non-zero and names the edit when an `old_string` does not occur and its `new_string` does not occur either.
 - `check-delta.mjs` reports an edit whose `old_string` is absent and whose `new_string` is present as already done, not as a failure.
+- `check-delta.mjs` reports an addition already in the target, whose `new_string` occurs and every occurrence of whose `old_string` lies inside an occurrence of `new_string`, as already done, and the landing does not apply it again.
 - `check-delta.mjs` reports a `create` whose target exists, and an `edit` or `delete` whose target does not exist, as conflicts.
 - `check-delta.mjs` reports unparsable JSON, a missing, unknown or mistyped key, an unmirrored path, and two documents for one target as malformed.
 - `check-delta.mjs` reports every failure in the delta in one run, each with its kind.
