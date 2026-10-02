@@ -42,7 +42,7 @@
 - `grep -n -i -E 'hash|anchor|## add|## replace|## remove|under:|after:|operation within' skills/spec/spec/SKILL.md` prints nothing.
 - `grep -n -F 'delta/docs/glossary.md.json' skills/spec/spec/SKILL.md` and `grep -n -F 'delta/AGENTS.md.json' skills/spec/spec/SKILL.md` each print at least one line.
 - `grep -n -F '<skill_path>/references/scripts/check-delta.mjs' skills/spec/spec/SKILL.md` prints the new procedure step.
-- `grep -n -E '^[0-9]+\. \*\*' skills/spec/spec/SKILL.md` lists the procedure steps numbered 1–8 with no gap, with **Check the delta.** directly before **Append the log line.**
+- `sed -n '/^## Procedure/,/^## Blocked/p' skills/spec/spec/SKILL.md | grep -E '^[0-9]+\. \*\*'` lists the procedure steps numbered 1–8 with no gap, with **Check the delta.** directly before **Append the log line.** The range keeps out the numbered list in `## Lossless authoring`.
 - `test -f skills/spec/spec/references/scripts/check-delta.mjs` succeeds.
 - `node scripts/check-skill-text.mjs` exits 0, and `node scripts/check-marketplace-skills.mjs` exits 0.
 
