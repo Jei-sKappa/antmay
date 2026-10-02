@@ -2,9 +2,9 @@
 // Check a thread's delta against the project layer, and compute what landing
 // it would write.
 //
-// Usage: node check-delta.mjs <thread root>
+// Usage: node check-delta.mjs <thread root> [--landed <target path>]
 // Run from the project root: every delta document's target is read relative
-// to the current working directory.
+// to the current working directory, and `<target path>` is relative to it too.
 //
 // Each file under `<thread root>/delta/` is one delta document. A name ending
 // `.json` is an `edit` or `delete` document for the path without the suffix;
@@ -19,12 +19,26 @@
 //     tabs; a landed edit keeps every other byte of its target unchanged.
 //   * An edit already done (its `new_string` occurs and every occurrence of
 //     its `old_string` lies inside one) changes nothing and is no failure.
+//   * The report renders each edit as a pair of literal text blocks, its
+//     `old_string` then its `new_string`, each fenced by a line of tildes
+//     followed by ` old` or ` new` and closed by the same tildes alone. The
+//     fence is three tildes, or one more than the longest run of tildes in
+//     the content. A string not ending in a newline gets one for display.
+//   * For every document with no failure whose target is an `AGENTS.md` or
+//     `CLAUDE.md`, the report carries `words <target>: <before> -> <after>`,
+//     counting words as `wc -w` does; before is 0 for a `create`, after is 0
+//     for a `delete`.
+//   * `--landed <target path>` prints, instead of the report, that target as
+//     it will stand after landing: exactly its content on stdout, nothing
+//     added. On any failure it prints the report to stderr and nothing to
+//     stdout.
 //   * The computation is exported (`checkDelta`, `formatReport`,
-//     `isProjectLayerPath`), so a landing script reuses it; the command runs
-//     only when this file is run directly.
+//     `landedView`, `countWords`, `isProjectLayerPath`), so a landing script
+//     reuses it; the command runs only when this file is run directly.
 //
-// Exit codes: 0 no failure; 1 any failure; 2 usage error (a missing argument,
-// or a thread root that is not a directory).
+// Exit codes: 0 no failure; 1 any failure; 2 usage error (a missing or extra
+// argument, a thread root that is not a directory, or a `--landed` target
+// with no `create` or `edit` in the delta).
 //
 // Dependency-free: only `node:` built-ins.
 
@@ -424,11 +438,52 @@ export function checkDelta(threadRoot, projectRoot = process.cwd()) {
 }
 
 // ---------------------------------------------------------------------------
-// Report
+// Word counts and the landed view
 
 /**
- * Render a check result as text: one header per document, one line per edit,
- * one line per failure, and a closing count.
+ * Count words as `wc -w` does: maximal runs of characters other than space,
+ * `\t`, `\n`, `\v`, `\f` and `\r`.
+ * @param {string} text
+ * @returns {number}
+ */
+export function countWords(text) {
+  const words = text.match(/[^ \t\n\v\f\r]+/g);
+  return words === null ? 0 : words.length;
+}
+
+/**
+ * The content `target` will have after landing, when the delta creates or
+ * edits it; `null` otherwise, including when that document failed.
+ * @param {CheckResult} result
+ * @param {string} target
+ * @returns {string | null}
+ */
+export function landedView(result, target) {
+  const doc = result.documents.find((d) => d.target === target);
+  if (!doc || (doc.type !== "create" && doc.type !== "edit")) return null;
+  return doc.landed;
+}
+
+function isAgentsFile(target) {
+  const last = target.split("/").pop();
+  return last === "AGENTS.md" || last === "CLAUDE.md";
+}
+
+// ---------------------------------------------------------------------------
+// Report
+
+// A literal block: a tilde fence long enough that no run in `content` closes it.
+function block(label, content) {
+  const longest = Math.max(0, ...(content.match(/~+/g) ?? []).map((run) => run.length));
+  const fence = "~".repeat(Math.max(3, longest + 1));
+  const body = content === "" || content.endsWith("\n") ? content : `${content}\n`;
+  return `${fence} ${label}\n${body}${fence}`;
+}
+
+/**
+ * Render a check result as text: one header per document; one line per edit
+ * followed by its old and new blocks; a word-count line per agents-file
+ * document with no failure; one line per failure; and a closing count.
  * @param {CheckResult} result
  * @returns {string}
  */
@@ -439,7 +494,17 @@ export function formatReport(result) {
     const type = doc.type ?? "unknown type";
     lines.push(`${doc.path} -> ${doc.target} (${type}${doc.malformed ? ", malformed" : ""})`);
     if (doc.type === "edit") {
-      for (const edit of doc.edits) lines.push(`  edit ${edit.index}: ${edit.status}`);
+      for (const edit of doc.edits) {
+        lines.push(`  edit ${edit.index}: ${edit.status}`);
+        lines.push(block("old", edit.old_string));
+        lines.push(block("new", edit.new_string));
+      }
+    }
+    const failed = result.failures.some((f) => f.document === doc.path);
+    if (!failed && !doc.malformed && isAgentsFile(doc.target)) {
+      const before = doc.type === "create" || doc.before === null ? 0 : countWords(doc.before);
+      const after = doc.type === "delete" || doc.landed === null ? 0 : countWords(doc.landed);
+      lines.push(`words ${doc.target}: ${before} -> ${after}`);
     }
   }
   if (result.failures.length > 0) lines.push("");
@@ -456,19 +521,49 @@ export function formatReport(result) {
 // ---------------------------------------------------------------------------
 // Command
 
+const USAGE = "usage: node check-delta.mjs <thread root> [--landed <target path>]";
+
 function main(args) {
-  if (args.length !== 1) {
-    console.error("usage: node check-delta.mjs <thread root>");
+  let threadRoot = null;
+  let landed = null;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--landed" && i + 1 < args.length && landed === null) {
+      landed = args[++i];
+    } else if (args[i] !== "--landed" && threadRoot === null) {
+      threadRoot = args[i];
+    } else {
+      console.error(USAGE);
+      process.exit(2);
+    }
+  }
+  if (threadRoot === null) {
+    console.error(USAGE);
     process.exit(2);
   }
-  const threadRoot = args[0];
   if (!isDirectory(threadRoot)) {
     console.error(`check-delta: "${threadRoot}" is not a directory`);
     process.exit(2);
   }
   const result = checkDelta(threadRoot);
-  process.stdout.write(formatReport(result));
-  process.exitCode = result.failures.length === 0 ? 0 : 1;
+  const ok = result.failures.length === 0;
+  if (landed === null) {
+    process.stdout.write(formatReport(result));
+    process.exitCode = ok ? 0 : 1;
+    return;
+  }
+  if (!ok) {
+    process.stderr.write(formatReport(result));
+    process.exitCode = 1;
+    return;
+  }
+  const view = landedView(result, landed);
+  if (view === null) {
+    console.error(`check-delta: the delta holds no create or edit for "${landed}"`);
+    process.exitCode = 2;
+    return;
+  }
+  process.stdout.write(view);
+  process.exitCode = 0;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
