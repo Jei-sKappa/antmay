@@ -8,8 +8,8 @@ physical copy of it — and those copies are generated rather than authored twic
 ## The canonical folder
 
 Canonical shared files live once under `shared/references/`. A file earns a place
-there when it is passive material that more than one skill must reproduce
-identically. Three kinds live there.
+there when it is canonical material, passive text or a script a skill runs, that
+more than one skill must reproduce identically. Four kinds live there.
 
 **Formats** (`formats/`) describe one artifact each: what it is, where it lives,
 and how it is shaped. Every format file follows one skeleton and holds nothing
@@ -36,6 +36,13 @@ format says what an artifact is; an instruction says how one act is done; the tw
 never mix. `body-structure.md` carries the test that decides whether a block of a
 body is an act of this kind.
 
+**Scripts** (`scripts/`) are dependency-free Node programs that use only `node:`
+built-ins, because a skill folder cannot carry `node_modules`. A script is
+mirrored byte for byte like every other shared reference, and a body runs it
+through its `<skill_path>/references/scripts/` path. A script that imports another
+by relative path is declared together with it for every skill that runs it, so
+the import resolves inside each skill's own copy.
+
 **Conventions the suite reads rather than defines** — the tracker material under
 `trackers/` and `repository-conventions.md` — describe an environment the skills
 work against.
@@ -53,8 +60,8 @@ defect.
 files it needs, each named relative to `shared/references/`. It is a deliberately
 restricted flat map — skill-path keys, string-list values, one list level, no
 anchors, no nested keys — so a dependency-free parser suffices. A skill declares
-every shared file it reads or writes through, and declares nothing it does not
-use.
+every shared file it reads or writes through and every script it runs, and
+declares nothing it does not use.
 
 ## The sync script
 
