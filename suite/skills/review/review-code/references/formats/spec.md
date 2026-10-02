@@ -44,7 +44,7 @@ plus any one-off work such as a migration or a data fix>
 ## Delta index
 
 - `delta/docs/adr/<stem>.md` — create
-- `delta/docs/glossary.md` — edit
+- `delta/docs/glossary.md.json` — edit
 ```
 
 ## Rules

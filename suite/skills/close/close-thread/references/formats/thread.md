@@ -11,7 +11,7 @@ A thread is the folder holding one unit of work, from the idea that opened it to
 ├── spec.md                               the spec, once authored
 ├── delta/                                  the thread's delta: one delta document per target
 │   └── …                                   mirrors the target path, e.g. delta/docs/adr/<stem>.md,
-│                                           delta/docs/pdr/<stem>.md, delta/docs/glossary.md, delta/AGENTS.md
+│                                           delta/docs/glossary.md.json, delta/AGENTS.md.json
 ├── plans/<yymmddhhmm>[-<slug>]/            one plan: its index and its task briefs
 ├── implementations/<yymmddhhmm>[-<slug>]/  one implementation run
 │   ├── report.md                           that run's outcome
